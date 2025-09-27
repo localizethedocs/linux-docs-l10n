@@ -1,0 +1,529 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../trace/ftrace-design.rst:3
+msgid "Function Tracer Design"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:0
+msgid "Author"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:5
+msgid "Mike Frysinger"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:8
+msgid ""
+"This document is out of date. Some of the description below doesn't match "
+"current implementation now."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:12
+msgid "Introduction"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:14
+msgid ""
+"Here we will cover the architecture pieces that the common function tracing "
+"code relies on for proper functioning.  Things are broken down into "
+"increasing complexity so that you can start simple and at least get basic "
+"functionality."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:18
+msgid ""
+"Note that this focuses on architecture implementation details only.  If you "
+"want more explanation of a feature in terms of common code, review the "
+"common ftrace.txt file."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:22
+msgid ""
+"Ideally, everyone who wishes to retain performance while supporting tracing "
+"in their kernel should make it all the way to dynamic ftrace support."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:27
+msgid "Prerequisites"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:29
+msgid "Ftrace relies on these features being implemented:"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:30
+msgid "STACKTRACE_SUPPORT - implement save_stack_trace()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:31
+msgid "TRACE_IRQFLAGS_SUPPORT - implement include/asm/irqflags.h"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:35
+msgid "HAVE_FUNCTION_TRACER"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:37
+msgid "You will need to implement the mcount and the ftrace_stub functions."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:39
+msgid ""
+"The exact mcount symbol name will depend on your toolchain.  Some call it "
+"\"mcount\", \"_mcount\", or even \"__mcount\".  You can probably figure it "
+"out by running something like::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:46
+msgid ""
+"We'll make the assumption below that the symbol is \"mcount\" just to keep "
+"things nice and simple in the examples."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:49
+msgid ""
+"Keep in mind that the ABI that is in effect inside of the mcount function is "
+"*highly* architecture/toolchain specific.  We cannot help you in this "
+"regard, sorry.  Dig up some old documentation and/or find someone more "
+"familiar than you to bang ideas off of.  Typically, register usage (argument/"
+"scratch/etc...) is a major issue at this point, especially in relation to "
+"the location of the mcount call (before/after function prologue).  You might "
+"also want to look at how glibc has implemented the mcount function for your "
+"architecture.  It might be (semi-)relevant."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:58
+msgid ""
+"The mcount function should check the function pointer ftrace_trace_function "
+"to see if it is set to ftrace_stub.  If it is, there is nothing for you to "
+"do, so return immediately.  If it isn't, then call that function in the same "
+"way the mcount function normally calls __mcount_internal -- the first "
+"argument is the \"frompc\" while the second argument is the "
+"\"selfpc\" (adjusted to remove the size of the mcount call that is embedded "
+"in the function)."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:65
+msgid ""
+"For example, if the function foo() calls bar(), when the bar() function "
+"calls mcount(), the arguments mcount() will pass to the tracer are:"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:68
+msgid "\"frompc\" - the address bar() will use to return to foo()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:69
+msgid "\"selfpc\" - the address bar() (with mcount() size adjustment)"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:71
+msgid ""
+"Also keep in mind that this mcount function will be called *a lot*, so "
+"optimizing for the default case of no tracer will help the smooth running of "
+"your system when tracing is disabled.  So the start of the mcount function "
+"is typically the bare minimum with checking things before returning.  That "
+"also means the code flow should usually be kept linear (i.e. no branching in "
+"the nop case).  This is of course an optimization and not a hard requirement."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:78
+msgid ""
+"Here is some pseudo code that should help (these functions should actually "
+"be implemented in assembly)::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:109
+msgid "Don't forget to export mcount for modules ! ::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:117
+msgid "HAVE_FUNCTION_GRAPH_TRACER"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:119
+msgid ""
+"Deep breath ... time to do some real work.  Here you will need to update the "
+"mcount function to check ftrace graph function pointers, as well as "
+"implement some functions to save (hijack) and restore the return address."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:123
+msgid ""
+"The mcount function should check the function pointers ftrace_graph_return "
+"(compare to ftrace_stub) and ftrace_graph_entry (compare to "
+"ftrace_graph_entry_stub).  If either of those is not set to the relevant "
+"stub function, call the arch-specific function ftrace_graph_caller which in "
+"turn calls the arch-specific function prepare_ftrace_return.  Neither of "
+"these function names is strictly required, but you should use them anyway to "
+"stay consistent across the architecture ports -- easier to compare & "
+"contrast things."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:132
+msgid ""
+"The arguments to prepare_ftrace_return are slightly different than what are "
+"passed to ftrace_trace_function.  The second argument \"selfpc\" is the "
+"same, but the first argument should be a pointer to the \"frompc\".  "
+"Typically this is located on the stack.  This allows the function to hijack "
+"the return address temporarily to have it point to the arch-specific "
+"function return_to_handler. That function will simply call the common "
+"ftrace_return_to_handler function and that will return the original return "
+"address with which you can return to the original call site."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:141
+msgid "Here is the updated mcount pseudo code::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:160
+msgid ""
+"Here is the pseudo code for the new ftrace_graph_caller assembly function::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:176
+msgid ""
+"For information on how to implement prepare_ftrace_return(), simply look at "
+"the x86 version (the frame pointer passing is optional; see the next section "
+"for more information).  The only architecture-specific piece in it is the "
+"setup of the fault recovery table (the asm(...) code).  The rest should be "
+"the same across architectures."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:182
+msgid ""
+"Here is the pseudo code for the new return_to_handler assembly function.  "
+"Note that the ABI that applies here is different from what applies to the "
+"mcount code.  Since you are returning from a function (after the epilogue), "
+"you might be able to skimp on things saved/restored (usually just registers "
+"used to pass return values). ::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:205
+msgid "HAVE_FUNCTION_GRAPH_FP_TEST"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:207
+msgid ""
+"An arch may pass in a unique value (frame pointer) to both the entering and "
+"exiting of a function.  On exit, the value is compared and if it does not "
+"match, then it will panic the kernel.  This is largely a sanity check for "
+"bad code generation with gcc.  If gcc for your port sanely updates the frame "
+"pointer under different optimization levels, then ignore this option."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:213
+msgid ""
+"However, adding support for it isn't terribly difficult.  In your assembly "
+"code that calls prepare_ftrace_return(), pass the frame pointer as the 3rd "
+"argument. Then in the C version of that function, do what the x86 port does "
+"and pass it along to ftrace_push_return_trace() instead of a stub value of 0."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:218
+msgid ""
+"Similarly, when you call ftrace_return_to_handler(), pass it the frame "
+"pointer."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:221
+msgid "HAVE_SYSCALL_TRACEPOINTS"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:223
+msgid "You need very few things to get the syscalls tracing in an arch."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:225
+msgid "Support HAVE_ARCH_TRACEHOOK (see arch/Kconfig)."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:226
+msgid ""
+"Have a NR_syscalls variable in <asm/unistd.h> that provides the number of "
+"syscalls supported by the arch."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:228
+msgid "Support the TIF_SYSCALL_TRACEPOINT thread flags."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:229
+msgid ""
+"Put the trace_sys_enter() and trace_sys_exit() tracepoints calls from ptrace "
+"in the ptrace syscalls tracing path."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:231
+msgid ""
+"If the system call table on this arch is more complicated than a simple "
+"array of addresses of the system calls, implement an arch_syscall_addr to "
+"return the address of a given system call."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:234
+msgid ""
+"If the symbol names of the system calls do not match the function names on "
+"this arch, define ARCH_HAS_SYSCALL_MATCH_SYM_NAME in asm/ftrace.h and "
+"implement arch_syscall_match_sym_name with the appropriate logic to return "
+"true if the function name corresponds with the symbol name."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:238
+msgid "Tag this arch as HAVE_SYSCALL_TRACEPOINTS."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:242
+msgid "HAVE_DYNAMIC_FTRACE"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:244
+msgid ""
+"See scripts/recordmcount.pl for more info.  Just fill in the arch-specific "
+"details for how to locate the addresses of mcount call sites via objdump. "
+"This option doesn't make much sense without also implementing dynamic ftrace."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:248
+msgid ""
+"You will first need HAVE_FUNCTION_TRACER, so scroll your reader back up if "
+"you got over eager."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:251
+msgid "Once those are out of the way, you will need to implement:"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:252
+msgid "asm/ftrace.h:"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:253
+msgid "MCOUNT_ADDR"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:254
+msgid "ftrace_call_adjust()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:255
+msgid "struct dyn_arch_ftrace{}"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:256
+msgid "asm code:"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:257
+msgid "mcount() (new stub)"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:258 ../../../trace/ftrace-design.rst:377
+msgid "ftrace_caller()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:259
+msgid "ftrace_call()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:260
+msgid "ftrace_stub()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:261
+msgid "C code:"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:262
+msgid "ftrace_dyn_arch_init()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:263
+msgid "ftrace_make_nop()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:264
+msgid "ftrace_make_call()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:265
+msgid "ftrace_update_ftrace_func()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:267
+msgid "First you will need to fill out some arch details in your asm/ftrace.h."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:269
+msgid "Define MCOUNT_ADDR as the address of your mcount symbol similar to::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:273
+msgid ""
+"Since no one else will have a decl for that function, you will need to::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:277
+msgid ""
+"You will also need the helper function ftrace_call_adjust().  Most people "
+"will be able to stub it out like so::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:285 ../../../trace/ftrace-design.rst:384
+msgid "<details to be filled>"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:287
+msgid ""
+"Lastly you will need the custom dyn_arch_ftrace structure.  If you need some "
+"extra state when runtime patching arbitrary call sites, this is the place.  "
+"For now though, create an empty struct::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:295
+msgid ""
+"With the header out of the way, we can fill out the assembly code.  While we "
+"did already create a mcount() function earlier, dynamic ftrace only wants a "
+"stub function.  This is because the mcount() will only be used during boot "
+"and then all references to it will be patched out never to return.  Instead, "
+"the guts of the old mcount() will be used to create a new ftrace_caller() "
+"function.  Because the two are hard to merge, it will most likely be a lot "
+"easier to have two separate definitions split up by #ifdefs.  Same goes for "
+"the ftrace_stub() as that will now be inlined in ftrace_caller()."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:304
+msgid ""
+"Before we get confused anymore, let's check out some pseudo code so you can "
+"implement your own stuff in assembly::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:328
+msgid ""
+"This might look a little odd at first, but keep in mind that we will be "
+"runtime patching multiple things.  First, only functions that we actually "
+"want to trace will be patched to call ftrace_caller().  Second, since we "
+"only have one tracer active at a time, we will patch the ftrace_caller() "
+"function itself to call the specific tracer in question.  That is the point "
+"of the ftrace_call label."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:334
+msgid ""
+"With that in mind, let's move on to the C code that will actually be doing "
+"the runtime patching.  You'll need a little knowledge of your arch's opcodes "
+"in order to make it through the next section."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:338
+msgid ""
+"Every arch has an init callback function.  If you need to do something early "
+"on to initialize some state, this is the time to do that.  Otherwise, this "
+"simple function below should be sufficient for most people::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:347
+msgid ""
+"There are two functions that are used to do runtime patching of arbitrary "
+"functions.  The first is used to turn the mcount call site into a nop (which "
+"is what helps us retain runtime performance when not tracing).  The second "
+"is used to turn the mcount call site into a call to an arbitrary location "
+"(but typically that is ftracer_caller()).  See the general function "
+"definition in linux/ftrace.h for the functions::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:357
+msgid ""
+"The rec->ip value is the address of the mcount call site that was collected "
+"by the scripts/recordmcount.pl during build time."
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:360
+msgid ""
+"The last function is used to do runtime patching of the active tracer.  This "
+"will be modifying the assembly code at the location of the ftrace_call "
+"symbol inside of the ftrace_caller() function.  So you should have "
+"sufficient padding at that location to support the new function calls you'll "
+"be inserting.  Some people will be using a \"call\" type instruction while "
+"others will be using a \"branch\" type instruction.  Specifically, the "
+"function is::"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:371
+msgid "HAVE_DYNAMIC_FTRACE + HAVE_FUNCTION_GRAPH_TRACER"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:373
+msgid ""
+"The function grapher needs a few tweaks in order to work with dynamic "
+"ftrace. Basically, you will need to:"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:376
+msgid "update:"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:378
+msgid "ftrace_graph_call()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:379
+msgid "ftrace_graph_caller()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:380
+msgid "implement:"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:381
+msgid "ftrace_enable_ftrace_graph_caller()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:382
+msgid "ftrace_disable_ftrace_graph_caller()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:386
+msgid "Quick notes:"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:388
+msgid ""
+"add a nop stub after the ftrace_call location named ftrace_graph_call; stub "
+"needs to be large enough to support a call to ftrace_graph_caller()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:390
+msgid ""
+"update ftrace_graph_caller() to work with being called by the new "
+"ftrace_caller() since some semantics may have changed"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:392
+msgid ""
+"ftrace_enable_ftrace_graph_caller() will runtime patch the ftrace_graph_call "
+"location with a call to ftrace_graph_caller()"
+msgstr ""
+
+#: ../../../trace/ftrace-design.rst:394
+msgid ""
+"ftrace_disable_ftrace_graph_caller() will runtime patch the "
+"ftrace_graph_call location with nops"
+msgstr ""

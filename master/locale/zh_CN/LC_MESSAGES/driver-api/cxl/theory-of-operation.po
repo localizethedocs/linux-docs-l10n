@@ -1,0 +1,3856 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:6
+msgid "Compute Express Link Driver Theory of Operation"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:8
+msgid ""
+"A Compute Express Link Memory Device is a CXL component that implements the "
+"CXL.mem protocol. It contains some amount of volatile memory, persistent "
+"memory, or both. It is enumerated as a PCI device for configuration and "
+"passing messages over an MMIO mailbox. Its contribution to the System "
+"Physical Address space is handled via HDM (Host Managed Device Memory) "
+"decoders that optionally define a device's contribution to an interleaved "
+"address range across multiple devices underneath a host-bridge or "
+"interleaved across host-bridges."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:18
+msgid "The CXL Bus"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:19
+msgid ""
+"Similar to how a RAID driver takes disk objects and assembles them into a "
+"new logical device, the CXL subsystem is tasked to take PCIe and ACPI "
+"objects and assemble them into a CXL.mem decode topology. The need for "
+"runtime configuration of the CXL.mem topology is also similar to RAID in "
+"that different environments with the same hardware configuration may decide "
+"to assemble the topology in contrasting ways. One may choose performance "
+"(RAID0) striping memory across multiple Host Bridges and endpoints while "
+"another may opt for fault tolerance and disable any striping in the CXL.mem "
+"topology."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:28
+msgid ""
+"Platform firmware enumerates a menu of interleave options at the \"CXL root "
+"port\" (Linux term for the top of the CXL decode topology). From there, PCIe "
+"topology dictates which endpoints can participate in which Host Bridge "
+"decode regimes. Each PCIe Switch in the path between the root and an "
+"endpoint introduces a point at which the interleave can be split. For "
+"example, platform firmware may say a given range only decodes to one Host "
+"Bridge, but that Host Bridge may in turn interleave cycles across multiple "
+"Root Ports. An intervening Switch between a port and an endpoint may "
+"interleave cycles across multiple Downstream Switch Ports, etc."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:38
+msgid ""
+"Here is a sample listing of a CXL topology defined by 'cxl_test'. The "
+"'cxl_test' module generates an emulated CXL topology of 2 Host Bridges each "
+"with 2 Root Ports. Each of those Root Ports are connected to 2-way switches "
+"with endpoints connected to those downstream ports for a total of 8 "
+"endpoints::"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:183
+msgid ""
+"In that listing each \"root\", \"port\", and \"endpoint\" object correspond "
+"a kernel 'struct cxl_port' object. A 'cxl_port' is a device that can decode "
+"CXL.mem to its descendants. So \"root\" claims non-PCIe enumerable platform "
+"decode ranges and decodes them to \"ports\", \"ports\" decode to "
+"\"endpoints\", and \"endpoints\" represent the decode from SPA (System "
+"Physical Address) to DPA (Device Physical Address)."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:190
+msgid ""
+"Continuing the RAID analogy, disks have both topology metadata and on-device "
+"metadata that determine RAID set assembly. CXL Port topology and CXL Port "
+"link status is metadata for CXL.mem set assembly. The CXL Port topology is "
+"enumerated by the arrival of a CXL.mem device. I.e. unless and until the "
+"PCIe core attaches the cxl_pci driver to a CXL Memory Expander there is no "
+"role for CXL Port objects. Conversely for hot-unplug / removal scenarios, "
+"there is no need for the Linux PCI core to tear down switch-level CXL "
+"resources because the endpoint ->remove() event cleans up the port data that "
+"was established to support that Memory Expander."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:200
+msgid ""
+"The port metadata and potential decode schemes that a given memory device "
+"may participate can be determined via a command like::"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:249
+msgid ""
+"...which queries the CXL topology to ask \"given CXL Memory Expander with a "
+"kernel device name of 'mem3' which platform level decode ranges may this "
+"device participate\". A given expander can participate in multiple CXL.mem "
+"interleave sets simultaneously depending on how many decoder resources it "
+"has. In this example mem3 can participate in one or more of a PMEM "
+"interleave that spans two Host Bridges, a PMEM interleave that targets a "
+"single Host Bridge, a Volatile memory interleave that spans 2 Host Bridges, "
+"and a Volatile memory interleave that only targets a single Host Bridge."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:258
+msgid ""
+"Conversely the memory devices that can participate in a given platform level "
+"decode scheme can be determined via a command like the following::"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:312
+msgid ""
+"...where the naming scheme for decoders is \"decoder<port_id>."
+"<instance_id>\"."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:315
+msgid "Driver Infrastructure"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:317
+msgid "This section covers the driver infrastructure for a CXL memory device."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:320
+msgid "CXL Memory Device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:408: drivers/cxl/pci.c:21
+msgid ""
+"This implements the PCI exclusive functionality for a CXL device as it is "
+"defined by the Compute Express Link specification. CXL devices may surface "
+"certain functionality even if it isn't CXL enabled. While this driver is "
+"focused around the PCI specific aspects of a CXL device, it binds to the "
+"specific CXL memory device class code, and therefore the implementation of "
+"cxl_pci is focused around CXL memory devices."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:408: drivers/cxl/pci.c:28
+msgid "The driver has several responsibilities, mainly:"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:408: drivers/cxl/pci.c:29
+msgid "Create the memX device and register on the CXL bus."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:408: drivers/cxl/pci.c:30
+msgid "Enumerate device's register interface and map them."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:408: drivers/cxl/pci.c:31
+msgid "Registers nvdimm bridge device with cxl_core."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:408: drivers/cxl/pci.c:32
+msgid "Registers a CXL mailbox with cxl_core."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:411: drivers/cxl/pci.c:177
+msgid "Execute a mailbox command"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:411: drivers/cxl/pci.c:181
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:563 drivers/cxl/core/memdev.c:583
+#: drivers/cxl/core/memdev.c:716 drivers/cxl/core/memdev.c:750
+#: drivers/cxl/core/memdev.c:783
+#: ../../../driver-api/cxl/theory-of-operation:436: drivers/cxl/acpi.c:808
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:150
+#: drivers/cxl/core/hdm.c:309 drivers/cxl/core/hdm.c:1171
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:550
+#: drivers/cxl/core/cdat.c:618 drivers/cxl/core/cdat.c:746
+#: drivers/cxl/core/cdat.c:863 drivers/cxl/core/cdat.c:907
+#: drivers/cxl/core/cdat.c:957 drivers/cxl/core/cdat.c:979
+#: ../../../driver-api/cxl/theory-of-operation:451: drivers/cxl/core/port.c:918
+#: drivers/cxl/core/port.c:1202 drivers/cxl/core/port.c:1233
+#: drivers/cxl/core/port.c:1279 drivers/cxl/core/port.c:1738
+#: drivers/cxl/core/port.c:1791 drivers/cxl/core/port.c:1845
+#: drivers/cxl/core/port.c:1882 drivers/cxl/core/port.c:1915
+#: drivers/cxl/core/port.c:1971 drivers/cxl/core/port.c:2016
+#: drivers/cxl/core/port.c:2159
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:75
+#: drivers/cxl/core/pci.c:396 drivers/cxl/core/pci.c:595
+#: drivers/cxl/core/pci.c:807 drivers/cxl/core/pci.c:998
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:59
+#: drivers/cxl/core/pmem.c:123 drivers/cxl/core/pmem.c:243
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:32
+#: drivers/cxl/core/regs.c:116 drivers/cxl/core/regs.c:352
+#: drivers/cxl/core/regs.c:372 drivers/cxl/core/regs.c:390
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:232
+#: drivers/cxl/core/mbox.c:315 drivers/cxl/core/mbox.c:482
+#: drivers/cxl/core/mbox.c:571 drivers/cxl/core/mbox.c:744
+#: drivers/cxl/core/mbox.c:832 drivers/cxl/core/mbox.c:1114
+#: drivers/cxl/core/mbox.c:1140 drivers/cxl/core/mbox.c:1176
+#: drivers/cxl/core/mbox.c:1275
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:871 drivers/cxl/core/region.c:1059
+#: drivers/cxl/core/region.c:1826 drivers/cxl/core/region.c:2526
+#: drivers/cxl/core/region.c:3149
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:411: drivers/cxl/pci.c:183
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:234
+#: drivers/cxl/core/mbox.c:481 drivers/cxl/core/mbox.c:573
+msgid "``struct cxl_mailbox *cxl_mbox``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:411: drivers/cxl/pci.c:178
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:428
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:229
+#: drivers/cxl/core/mbox.c:480
+msgid "CXL mailbox context"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:411: drivers/cxl/pci.c:180
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:231
+#: drivers/cxl/core/mbox.c:484 drivers/cxl/core/mbox.c:570
+msgid "``struct cxl_mbox_cmd *mbox_cmd``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:411: drivers/cxl/pci.c:179
+msgid "Command to send to the memory device."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:411: drivers/cxl/pci.c:181
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1922 drivers/cxl/core/port.c:1975
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:232
+msgid "**Context**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:411: drivers/cxl/pci.c:181
+msgid "Any context. Expects mbox_mutex to be held."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:411: drivers/cxl/pci.c:183
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:719 drivers/cxl/core/memdev.c:754
+#: drivers/cxl/core/memdev.c:786
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:621
+#: drivers/cxl/core/cdat.c:748 drivers/cxl/core/cdat.c:863
+#: drivers/cxl/core/cdat.c:907 ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1791 drivers/cxl/core/port.c:1845
+#: drivers/cxl/core/port.c:1881 drivers/cxl/core/port.c:1926
+#: drivers/cxl/core/port.c:2160
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:997
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:123
+#: drivers/cxl/core/pmem.c:243 ../../../driver-api/cxl/theory-of-operation:469:
+#: drivers/cxl/core/regs.c:355 drivers/cxl/core/regs.c:373
+#: drivers/cxl/core/regs.c:391 ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:234 drivers/cxl/core/mbox.c:315
+#: drivers/cxl/core/mbox.c:483 drivers/cxl/core/mbox.c:575
+#: drivers/cxl/core/mbox.c:1145 drivers/cxl/core/mbox.c:1175
+#: drivers/cxl/core/mbox.c:1275
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1832 drivers/cxl/core/region.c:2530
+#: drivers/cxl/core/region.c:3148
+msgid "**Return**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:411: drivers/cxl/pci.c:182
+msgid ""
+"-ETIMEDOUT if timeout occurred waiting for completion. 0 on success. Caller "
+"should check the return code in **mbox_cmd** to make sure it succeeded."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:411: drivers/cxl/pci.c:186
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:261
+#: drivers/cxl/cxlmem.h:432 drivers/cxl/cxlmem.h:491 drivers/cxl/cxlmem.h:796
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:563 drivers/cxl/core/memdev.c:715
+#: drivers/cxl/core/memdev.c:750 drivers/cxl/core/memdev.c:782
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:411
+#: drivers/cxl/cxl.h:477 ../../../driver-api/cxl/theory-of-operation:436:
+#: drivers/cxl/acpi.c:807 ../../../driver-api/cxl/theory-of-operation:442:
+#: drivers/cxl/core/hdm.c:311 ../../../driver-api/cxl/theory-of-operation:445:
+#: drivers/cxl/core/cdat.c:623 drivers/cxl/core/cdat.c:751
+#: drivers/cxl/core/cdat.c:979 ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1204 drivers/cxl/core/port.c:1235
+#: drivers/cxl/core/port.c:1279 drivers/cxl/core/port.c:1738
+#: drivers/cxl/core/port.c:1917 drivers/cxl/core/port.c:1973
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:74
+#: drivers/cxl/core/pci.c:397 drivers/cxl/core/pci.c:594
+#: drivers/cxl/core/pci.c:999 ../../../driver-api/cxl/theory-of-operation:469:
+#: drivers/cxl/core/regs.c:33 drivers/cxl/core/regs.c:117
+#: drivers/cxl/core/regs.c:357 drivers/cxl/core/regs.c:375
+#: drivers/cxl/core/regs.c:390 ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:240 drivers/cxl/core/mbox.c:318
+#: drivers/cxl/core/mbox.c:490 drivers/cxl/core/mbox.c:583
+#: drivers/cxl/core/mbox.c:745 drivers/cxl/core/mbox.c:831
+#: drivers/cxl/core/mbox.c:1114 drivers/cxl/core/mbox.c:1139
+#: drivers/cxl/core/mbox.c:1177 drivers/cxl/core/mbox.c:1282
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:872 drivers/cxl/core/region.c:1061
+#: drivers/cxl/core/region.c:1825 drivers/cxl/core/region.c:2528
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:123 include/uapi/linux/cxl_mem.h:156
+#: include/uapi/linux/cxl_mem.h:205
+msgid "**Description**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:411: drivers/cxl/pci.c:185
+msgid ""
+"This is a generic form of the CXL mailbox send command thus only using the "
+"registers defined by the mailbox capability ID - CXL 2.0 8.2.8.4. Memory "
+"devices, and perhaps other types of CXL devices may have further information "
+"available upon error conditions. Driver facilities wishing to send mailbox "
+"commands should use the wrapper command."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:411: drivers/cxl/pci.c:191
+msgid ""
+"The CXL spec allows for up to two mailboxes. The intention is for the "
+"primary mailbox to be OS controlled and the secondary mailbox to be used by "
+"system firmware. This allows the OS and firmware to communicate with the "
+"device and not need to coordinate with each other. The driver only uses the "
+"primary mailbox."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:414: drivers/cxl/mem.c:12
+msgid ""
+"CXL memory endpoint devices and switches are CXL capable devices that are "
+"participating in CXL.mem protocol. Their functionality builds on top of the "
+"CXL.io protocol that allows enumerating and configuring components via "
+"standard PCI mechanisms."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:414: drivers/cxl/mem.c:17
+msgid ""
+"The cxl_mem driver owns kicking off the enumeration of this CXL.mem "
+"capability. With the detection of a CXL capable endpoint, the driver will "
+"walk up to find the platform specific port it is connected to, and determine "
+"if there are intervening switches in the path. If there are switches, a "
+"secondary action is to enumerate those (implemented in cxl_core). Finally "
+"the cxl_mem driver adds the device it is bound to as a CXL endpoint-port for "
+"use in higher level operations."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:38
+msgid "CXL bus object representing a Type-3 Memory Device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:42
+#: drivers/cxl/cxlmem.h:221 drivers/cxl/cxlmem.h:256 drivers/cxl/cxlmem.h:337
+#: drivers/cxl/cxlmem.h:354 drivers/cxl/cxlmem.h:387 drivers/cxl/cxlmem.h:401
+#: drivers/cxl/cxlmem.h:413 drivers/cxl/cxlmem.h:471 drivers/cxl/cxlmem.h:793
+#: drivers/cxl/cxlmem.h:913 ../../../driver-api/cxl/theory-of-operation:433:
+#: drivers/cxl/cxl.h:276 drivers/cxl/cxl.h:355 drivers/cxl/cxl.h:390
+#: drivers/cxl/cxl.h:408 drivers/cxl/cxl.h:429 drivers/cxl/cxl.h:469
+#: drivers/cxl/cxl.h:513 drivers/cxl/cxl.h:581 drivers/cxl/cxl.h:628
+#: drivers/cxl/cxl.h:662 drivers/cxl/cxl.h:688 drivers/cxl/cxl.h:701
+#: drivers/cxl/cxl.h:800 ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:106 include/uapi/linux/cxl_mem.h:150
+#: include/uapi/linux/cxl_mem.h:186
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:59
+#: drivers/cxl/cxlmem.h:228 drivers/cxl/cxlmem.h:265 drivers/cxl/cxlmem.h:347
+#: drivers/cxl/cxlmem.h:365 drivers/cxl/cxlmem.h:396 drivers/cxl/cxlmem.h:409
+#: drivers/cxl/cxlmem.h:434 drivers/cxl/cxlmem.h:490 drivers/cxl/cxlmem.h:802
+#: drivers/cxl/cxlmem.h:924 ../../../driver-api/cxl/theory-of-operation:433:
+#: drivers/cxl/cxl.h:291 drivers/cxl/cxl.h:370 drivers/cxl/cxl.h:401
+#: drivers/cxl/cxl.h:416 drivers/cxl/cxl.h:442 drivers/cxl/cxl.h:482
+#: drivers/cxl/cxl.h:529 drivers/cxl/cxl.h:607 drivers/cxl/cxl.h:635
+#: drivers/cxl/cxl.h:677 drivers/cxl/cxl.h:696 drivers/cxl/cxl.h:713
+#: drivers/cxl/cxl.h:809 ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:118 include/uapi/linux/cxl_mem.h:158
+#: include/uapi/linux/cxl_mem.h:211
+msgid "**Members**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:39
+#: drivers/cxl/cxlmem.h:415 ../../../driver-api/cxl/theory-of-operation:433:
+#: drivers/cxl/cxl.h:352 drivers/cxl/cxl.h:510 drivers/cxl/cxl.h:580
+msgid "``dev``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:40
+msgid "driver core device object"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:40
+msgid "``cdev``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:41
+msgid "char dev core object for ioctl operations"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:41
+#: drivers/cxl/cxlmem.h:473
+msgid "``cxlds``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:42
+msgid "The device state backing this device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:42
+msgid "``detach_work``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:43
+msgid "active memdev lost a port in its ancestry"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:43
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:514
+msgid "``cxl_nvb``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:44
+msgid "coordinate removal of **cxl_nvd** if present"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:44
+msgid "``cxl_nvd``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:45
+msgid "optional bridge to an nvdimm if the device supports pmem"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:45
+msgid "``endpoint``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:46
+msgid "connection to the CXL port topology for this memory device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:46
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:353
+#: drivers/cxl/cxl.h:511 drivers/cxl/cxl.h:583
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:103 include/uapi/linux/cxl_mem.h:183
+msgid "``id``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:47
+msgid "id number of this memdev instance."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:47
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:594
+msgid "``depth``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:48
+msgid "endpoint port depth"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:48
+msgid "``scrub_cycle``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:49
+msgid "current scrub cycle set for this device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:49
+msgid "``scrub_region_id``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:50
+msgid "id number of a backed region (if any) for which current scrub cycle set"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:50
+msgid "``err_rec_array``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:51
+msgid ""
+"List of xarrarys to store the memdev error records to check attributes for a "
+"memory repair operation are from current boot."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:217
+msgid "Event log driver state"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:219
+msgid "``buf``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:220
+msgid "Buffer to receive event data"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:220
+msgid "``log_lock``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:221
+msgid "Serialize event_buf and log use"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:252
+msgid "Driver poison state info"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:254
+msgid "``max_errors``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:255
+msgid "Maximum media error records held in device cache"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:255
+#: drivers/cxl/cxlmem.h:353
+msgid "``enabled_cmds``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:256
+msgid "All poison commands enabled in the CEL"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:256
+msgid "``list_out``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:257
+msgid "The poison list payload returned by device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:257
+msgid "``mutex``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:258
+msgid "Protect reads of the poison list"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:258
+msgid ""
+"Reads of the poison list are synchronized to ensure that a reader does not "
+"get an incomplete list because their request overlapped (was interrupted or "
+"preceded by) another read request of the same DPA range. CXL Spec 3.0 "
+"Section 8.2.9.8.4.1"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:333
+msgid "Firmware upload / activation state"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:335
+#: drivers/cxl/cxlmem.h:352 ../../../driver-api/cxl/theory-of-operation:433:
+#: drivers/cxl/cxl.h:390 drivers/cxl/cxl.h:466
+msgid "``state``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:336
+msgid "fw_uploader state bitmask"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:336
+msgid "``oneshot``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:337
+msgid "whether the fw upload fits in a single transfer"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:337
+msgid "``num_slots``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:338
+msgid "Number of FW slots available"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:338
+msgid "``cur_slot``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:339
+msgid "Slot number currently active"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:339
+msgid "``next_slot``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:340
+msgid "Slot number for the new firmware"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:350
+msgid "Device security state"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:353
+msgid "state of last security operation"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:354
+msgid "All security commands enabled in the CEL"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:354
+msgid "``poll_tmo_secs``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:355
+msgid "polling timeout"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:355
+msgid "``sanitize_active``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:356
+msgid "sanitize completion pending"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:356
+msgid "``poll_dwork``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:357
+msgid "polling work item"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:357
+msgid "``sanitize_node``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:358
+msgid "sanitation sysfs file to notify"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:383
+msgid "DPA performance property entry"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:384
+msgid "``dpa_range``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:385
+msgid "range for DPA address"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:385
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:518
+#: drivers/cxl/cxl.h:666
+msgid "``coord``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:386
+msgid "QoS performance data (i.e. latency, bandwidth)"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:386
+msgid "``cdat_coord``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:387
+msgid "raw QoS performance data from CDAT"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:387
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:432
+msgid "``qos_class``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:388
+msgid "QoS Class cookies"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:397
+msgid "DPA partition descriptor"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:398
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:426
+#: drivers/cxl/cxl.h:470
+msgid "``res``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:399
+msgid "shortcut to the partition in the DPA resource tree (cxlds->dpa_res)"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:399
+msgid "``perf``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:400
+msgid "performance attributes of the partition from CDAT"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:400
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:512
+msgid "``mode``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:401
+msgid "operation mode for the DPA capacity, e.g. ram, pmem, dynamic..."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:409
+msgid "The driver device state"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:416
+msgid "The device associated with this CXL state"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:416
+msgid "``cxlmd``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:417
+msgid "The device representing the CXL.mem capabilities of **dev**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:417
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:589
+#: drivers/cxl/cxl.h:660
+msgid "``reg_map``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:418
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:590
+#: drivers/cxl/cxl.h:661
+msgid "component and ras register mapping parameters"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:418
+#: drivers/cxl/cxlmem.h:910 ../../../driver-api/cxl/theory-of-operation:433:
+#: drivers/cxl/cxl.h:665
+msgid "``regs``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:419
+msgid "Parsed register blocks"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:419
+msgid "``cxl_dvsec``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:420
+msgid "Offset to the PCIe device DVSEC"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:420
+msgid "``rcd``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:421
+msgid "operating in RCD mode (CXL 3.0 9.11.8 CXL Devices Attached to an RCH)"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:421
+msgid "``media_ready``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:422
+msgid "Indicate whether the device media is usable"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:422
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:388
+msgid "``dpa_res``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:423
+msgid "Overall DPA resource tree for the device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:423
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:391
+msgid "``part``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:424
+msgid "DPA partition array"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:424
+msgid "``nr_partitions``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:425
+msgid "Number of DPA partitions"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:425
+msgid "``serial``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:426
+msgid "PCIe Device Serial Number"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:426
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:513
+msgid "``type``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:427
+msgid "Generic Memory Class device or Vendor Specific Memory device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:427
+msgid "``cxl_mbox``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:428
+msgid "``cxlfs``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:429
+msgid "CXL features context"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:410
+msgid ""
+"cxl_dev_state represents the CXL driver/device state.  It provides an "
+"interface to mailbox commands as well as some cached data about the device. "
+"Currently only memory devices are represented."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:467
+msgid "Generic Type-3 Memory Device Class driver data"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:474
+msgid "Core driver state common across Type-2 and Type-3 devices"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:474
+msgid "``lsa_size``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:475
+msgid "Size of Label Storage Area (CXL 2.0 8.2.9.5.1.1 Identify Memory Device)"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:476
+msgid "``firmware_version``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:477
+msgid "Firmware version for the memory device."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:477
+msgid "``total_bytes``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:478
+msgid "sum of all possible capacities"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:478
+msgid "``volatile_only_bytes``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:479
+msgid "hard volatile capacity"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:479
+msgid "``persistent_only_bytes``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:480
+msgid "hard persistent capacity"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:480
+msgid "``partition_align_bytes``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:481
+msgid "alignment size for partition-able capacity"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:481
+msgid "``active_volatile_bytes``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:482
+msgid "sum of hard + soft volatile"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:482
+msgid "``active_persistent_bytes``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:483
+msgid "sum of hard + soft persistent"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:483
+msgid "``event``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:484
+msgid "event log driver state"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:484
+msgid "``poison``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:485
+msgid "poison driver state info"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:485
+msgid "``security``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:486
+msgid "security driver state info"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:486
+msgid "``fw``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:487
+msgid "firmware upload / activation state"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:487
+msgid "``mce_notifier``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:488
+msgid "MCE notifier"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:468
+msgid ""
+"CXL 8.1.12.1 PCI Header - Class Code Register Memory Device defines common "
+"memory device functionality like the presence of a mailbox and the "
+"functionality related to that like Identify Memory Device and Get Partition "
+"Info"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:473
+msgid ""
+"See CXL 3.0 8.2.9.8.2 Capacity Configuration and Label Storage for details "
+"on capacity parameters."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:789
+msgid "Driver representation of a memory device command"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:790
+msgid "``info``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:791
+msgid "Command information as it exists for the UAPI"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:791
+msgid "``opcode``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:792
+msgid "The actual bits used for the mailbox protocol"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:792
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:359
+#: drivers/cxl/cxl.h:516 ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:104 include/uapi/linux/cxl_mem.h:185
+msgid "``flags``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:793
+msgid "Set of flags effecting driver behavior."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:793
+msgid ""
+"``CXL_CMD_FLAG_FORCE_ENABLE``: In cases of error, commands with this flag "
+"will be enabled by the driver regardless of what hardware may have "
+"advertised."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:797
+msgid ""
+"The cxl_mem_command is the driver's internal representation of commands that "
+"are supported by the driver. Some of these commands may not be supported by "
+"the hardware. The driver will use **info** to validate the fields passed in "
+"by the user then submit the **opcode** to the hardware."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:802
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:162
+msgid "See struct cxl_command_info."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:909
+msgid "HDM Decoder registers and cached / decoded capabilities"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:911
+msgid "mapped registers, see devm_cxl_setup_hdm()"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:911
+msgid "``decoder_count``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:912
+msgid "number of decoders for this port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:912
+msgid "``target_count``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:913
+msgid "for switch decoders, max downstream port targets"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:913
+msgid "``interleave_mask``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:914
+msgid "interleave granularity capability, see check_interleave_cap()"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:914
+msgid "``iw_cap_mask``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:915
+msgid "bitmask of supported interleave ways, see check_interleave_cap()"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:915
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:626
+#: drivers/cxl/cxl.h:664 drivers/cxl/cxl.h:698 drivers/cxl/cxl.h:799
+msgid "``port``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:417: drivers/cxl/cxlmem.h:916
+msgid "mapped cxl_port, see devm_cxl_setup_hdm()"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:559
+msgid "atomically disable user cxl commands"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:565 drivers/cxl/core/memdev.c:585
+#: drivers/cxl/core/memdev.c:718 drivers/cxl/core/memdev.c:752
+#: drivers/cxl/core/memdev.c:785
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:746
+#: drivers/cxl/core/mbox.c:834 drivers/cxl/core/mbox.c:1116
+#: drivers/cxl/core/mbox.c:1142 drivers/cxl/core/mbox.c:1178
+msgid "``struct cxl_memdev_state *mds``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:560
+msgid "The device state to operate on"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:562 drivers/cxl/core/memdev.c:582
+msgid "``unsigned long *cmds``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:561
+msgid "bitmap of commands to mark exclusive"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:562
+msgid ""
+"Grab the cxl_memdev_rwsem in write mode to flush in-flight invocations of "
+"the ioctl path and then disable future execution of commands with the "
+"command ids set in **cmds**."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:579
+msgid "atomically enable user cxl commands"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:580
+msgid "The device state to modify"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:581
+msgid "bitmap of commands to mark available for userspace"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:712
+msgid "Get Firmware info"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:713 drivers/cxl/core/memdev.c:747
+#: drivers/cxl/core/memdev.c:780
+msgid "The device data for the operation"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:714
+msgid "Retrieve firmware info for the device specified."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:717
+msgid "See CXL-3.0 8.2.9.3.1 Get FW Info"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:717 drivers/cxl/core/memdev.c:752
+#: drivers/cxl/core/memdev.c:784
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1143
+msgid "0 if no error: or the result of the mailbox command."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:746
+msgid "Activate Firmware"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:749
+msgid "``int slot``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:748
+msgid "slot number to activate"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:749
+msgid "Activate firmware in a given slot for the device specified."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:752
+msgid "See CXL-3.0 8.2.9.3.3 Activate FW"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:779
+msgid "Abort an in-progress FW transfer"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:781
+msgid "Abort an in-progress firmware transfer for the device specified."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:420:
+#: drivers/cxl/core/memdev.c:784
+msgid "See CXL-3.0 8.2.9.3.2 Transfer FW"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:338
+msgid "CXL Port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:425: drivers/cxl/port.c:11
+msgid ""
+"The port driver enumerates dport via PCI and scans for HDM (Host-managed-"
+"Device-Memory) decoder resources via the **component_reg_phys** value passed "
+"in by the agent that registered the port. All descendant ports of a CXL root "
+"port (described by platform firmware) are managed in this drivers context. "
+"Each driver instance is responsible for tearing down the driver context of "
+"immediate descendant ports. The locking for this is validated by "
+"CONFIG_PROVE_CXL_LOCKING."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:425: drivers/cxl/port.c:20
+msgid ""
+"The primary service this driver provides is presenting APIs to other drivers "
+"to utilize the decoders, and indicating to userspace (via bind status) the "
+"connectivity of the CXL.mem protocol throughout the PCIe topology."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:343
+msgid "CXL Core"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:430: drivers/cxl/cxl.h:19
+msgid ""
+"The CXL core objects like ports, decoders, and regions are shared between "
+"the subsystem drivers cxl_acpi, cxl_pci, and core drivers (port-driver, "
+"region-driver, nvdimm object-drivers... etc)."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:272
+msgid "DVSEC harvested register block mapping parameters"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:273
+msgid "``host``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:274
+msgid "device for devm operations and logging"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:274
+msgid "``base``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:275
+msgid "virtual base of the register-block-BAR + **block_offset**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:275
+msgid "``resource``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:276
+msgid "physical resource base of the register block"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:276
+msgid "``max_size``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:277
+msgid "maximum mapping size to perform register search"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:277
+msgid "``reg_type``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:278
+msgid "see enum cxl_regloc_type"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:1
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:1
+msgid "``{unnamed_union}``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:2
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:2
+msgid "anonymous"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:278
+msgid "``component_map``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:279
+msgid "cxl_reg_map for component registers"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:279
+msgid "``device_map``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:280
+msgid "cxl_reg_maps for device registers"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:280
+msgid "``pmu_map``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:281
+msgid "cxl_reg_maps for CXL Performance Monitoring Units"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:351
+msgid "Common CXL HDM Decoder Attributes"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:353
+msgid "this decoder's device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:354
+msgid "kernel device name id"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:354
+msgid "``hpa_range``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:355
+msgid "Host physical address range mapped by this decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:355
+#: drivers/cxl/cxl.h:468
+msgid "``interleave_ways``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:356
+msgid "number of cxl_dports in this decode"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:356
+#: drivers/cxl/cxl.h:469
+msgid "``interleave_granularity``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:357
+msgid "data stride per dport"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:357
+msgid "``target_type``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:358
+msgid "accelerator vs expander (type2 vs type3) selector"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:358
+#: drivers/cxl/cxl.h:700
+msgid "``region``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:359
+msgid "currently assigned region for this decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:360
+msgid "memory type capabilities and locking"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:360
+msgid "``commit``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:361
+msgid "device/decoder-type specific callback to commit settings to hw"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:361
+msgid "``reset``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:362
+msgid "device/decoder-type specific callback to reset hw settings"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:386
+msgid "Endpoint / SPA to DPA decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:387
+#: drivers/cxl/cxl.h:405
+msgid "``cxld``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:388
+msgid "base cxl_decoder_object"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:389
+msgid "actively claimed DPA span of this decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:389
+msgid "``skip``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:390
+msgid "offset into **dpa_res** where **cxld.hpa_range** maps"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:391
+msgid "autodiscovery state"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:392
+msgid "partition index this decoder maps"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:392
+msgid "``pos``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:393
+msgid "interleave position in **cxld.region**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:404
+msgid "Switch specific CXL HDM Decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:406
+msgid "base cxl_decoder object"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:406
+#: drivers/cxl/cxl.h:472 drivers/cxl/cxl.h:704
+msgid "``nr_targets``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:407
+msgid "number of elements in **target**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:407
+msgid "``target``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:408
+msgid "active ordered target list in current decoder configuration"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:408
+msgid ""
+"The 'switch' decoder type represents the decoder instances of cxl_port's "
+"that route from the root of a CXL memory decode topology to the endpoints. "
+"They come in two flavors, root-level decoders, statically defined by "
+"platform firmware, and mid-level decoders, where interleave-granularity, "
+"interleave-width, and the target list are mutable."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:425
+msgid "Static platform CXL address decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:427
+msgid "host / parent resource for region allocations"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:427
+#: drivers/cxl/cxl.h:473
+msgid "``cache_size``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:428
+#: drivers/cxl/cxl.h:474
+msgid "extended linear cache size if exists, otherwise zero."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:428
+msgid "``region_id``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:429
+msgid "region id for next region provisioning event"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:429
+msgid "``hpa_to_spa``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:430
+msgid "translate CXL host-physical-address to Platform system-physical-address"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:430
+msgid "``platform_data``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:431
+msgid "platform specific configuration data"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:431
+msgid "``range_lock``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:432
+msgid "sync region autodiscovery by address range"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:433
+msgid "QoS performance class cookie"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:433
+msgid "``cxlsd``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:434
+msgid "base cxl switch decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:465
+msgid "region settings"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:467
+msgid "allow the driver to lockdown further parameter changes"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:467
+msgid "``uuid``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:468
+msgid "unique id for persistent regions"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:469
+msgid "number of endpoints in the region"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:470
+msgid "capacity each endpoint contributes to a stripe"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:471
+msgid "allocated iomem capacity for this region"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:471
+msgid "``targets``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:472
+msgid "active ordered targets in current decoder configuration"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:473
+msgid "number of targets"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:474
+msgid "State transitions are protected by cxl_rwsem.region"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:509
+msgid "CXL region"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:511
+msgid "This region's device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:512
+msgid "This region's id. Id is globally unique across all regions"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:513
+msgid "Operational mode of the mapped capacity"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:514
+msgid "Endpoint decoder target type"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:515
+msgid "nvdimm bridge for coordinating **cxlr_pmem** setup / shutdown"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:515
+msgid "``cxlr_pmem``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:516
+msgid "(for pmem regions) cached copy of the nvdimm bridge"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:517
+msgid "Region state flags"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:517
+msgid "``params``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:518
+msgid "active + config params for the region"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:519
+msgid "QoS access coordinates for the region"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:519
+msgid "``node_notifier``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:520
+msgid "notifier for setting the access coordinates to node"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:520
+msgid "``adist_notifier``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:521
+msgid "notifier for calculating the abstract distance of node"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:577
+msgid ""
+"logical collection of upstream port devices and downstream port devices to "
+"construct a CXL memory decode hierarchy."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:581
+msgid "this port's device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:581
+msgid "``uport_dev``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:582
+msgid "PCI or platform device implementing the upstream port capability"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:582
+msgid "``host_bridge``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:583
+msgid "Shortcut to the platform attach point for this port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:584
+msgid "id for port device-name"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:584
+msgid "``dports``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:585
+msgid "cxl_dport instances referenced by decoders"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:585
+#: drivers/cxl/cxl.h:701
+msgid "``endpoints``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:586
+msgid "cxl_ep instances, endpoints that are a descendant of this port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:586
+msgid "``regions``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:587
+msgid "cxl_region_ref instances, regions mapped by this port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:587
+msgid "``parent_dport``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:588
+msgid "dport that points to this port in the parent"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:588
+msgid "``decoder_ida``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:589
+msgid "allocator for decoder ids"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:590
+msgid "``nr_dports``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:591
+msgid "number of entries in **dports**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:591
+msgid "``hdm_end``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:592
+msgid "track last allocated HDM decoder instance for allocation ordering"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:592
+msgid "``commit_end``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:593
+msgid "cursor to track highest committed decoder for commit ordering"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:593
+msgid "``dead``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:594
+msgid "last ep has been removed, force port re-creation"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:595
+msgid "How deep this port is relative to the root. depth 0 is the root."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:595
+msgid "``cdat``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:596
+msgid "Cached CDAT data"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:596
+msgid "``cdat_available``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:597
+msgid "Should a CDAT attribute be available in sysfs"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:597
+msgid "``pci_latency``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:598
+msgid "Upstream latency in picoseconds"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:624
+msgid "logical collection of root cxl_port items"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:627
+msgid "cxl_port member"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:627
+msgid "``ops``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:628
+msgid "cxl root operations"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:658
+msgid "CXL downstream port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:659
+msgid "``dport_dev``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:660
+msgid "PCI bridge or firmware device representing the downstream link"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:661
+msgid "``port_id``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:662
+msgid "unique hardware identifier for dport in decoder target list"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:662
+msgid "``rcrb``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:663
+msgid "Data about the Root Complex Register Block layout"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:663
+msgid "``rch``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:664
+msgid "Indicate whether this dport was enumerated in RCH or VH mode"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:665
+msgid "reference to cxl_port that contains this downstream port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:666
+msgid "Dport parsed register blocks"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:667
+msgid "access coordinates (bandwidth and latency performance attributes)"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:667
+msgid "``link_latency``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:668
+msgid "calculated PCIe downstream latency"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:668
+msgid "``gpf_dvsec``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:669
+msgid "Cached GPF port DVSEC"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:684
+msgid "track an endpoint's interest in a port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:685
+msgid "``ep``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:686
+msgid "device that hosts a generic CXL endpoint (expander or accelerator)"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:686
+msgid "``dport``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:687
+msgid "which dport routes to this endpoint on **port**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:687
+msgid "``next``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:688
+msgid ""
+"cxl switch port across the link attached to **dport** NULL if attached to an "
+"endpoint"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:697
+msgid "track a region's interest in a port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:699
+msgid "point in topology to install this reference"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:699
+msgid "``decoder``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:700
+msgid "decoder assigned for **region** in **port**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:701
+msgid "region for this reference"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:702
+msgid "cxl_ep references for region members beneath **port**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:702
+msgid "``nr_targets_set``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:703
+msgid "track how many targets have been programmed during setup"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:703
+msgid "``nr_eps``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:704
+msgid "number of endpoints beneath **port**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:705
+msgid "number of distinct targets needed to reach **nr_eps**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:796
+msgid "Cached DVSEC info"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:797
+msgid "``mem_enabled``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:798
+msgid "cached value of mem_enabled in the DVSEC at init time"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:798
+msgid "``ranges``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:799
+msgid "Number of active HDM ranges this device uses."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:800
+msgid "endpoint port associated with this info instance"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:800
+msgid "``dvsec_range``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:433: drivers/cxl/cxl.h:801
+msgid "cached attributes of the ranges in the DVSEC, PCIE_DEVICE"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:436: drivers/cxl/acpi.c:804
+msgid "reflect CXL fixed memory windows in iomem_resource"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:436: drivers/cxl/acpi.c:810
+msgid "``struct resource *cxl_res``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:436: drivers/cxl/acpi.c:805
+msgid "A standalone resource tree where each CXL window is a sibling"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:436: drivers/cxl/acpi.c:806
+msgid ""
+"Walk each CXL window in **cxl_res** and add it to iomem_resource potentially "
+"expanding its boundaries to ensure that any conflicting resources become "
+"children. If a window is expanded it may then conflict with a another window "
+"entry and require the window to be truncated or trimmed. Consider this "
+"situation::"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:436: drivers/cxl/acpi.c:815
+msgid ""
+"...where platform firmware has established as System RAM resource across 2 "
+"windows, but has left some portion of window 1 for dynamic CXL region "
+"provisioning. In this case \"Window 0\" will span the entirety of the "
+"\"System RAM\" span, and \"CXL Window 1\" is truncated to the remaining tail "
+"past the end of that \"System RAM\" resource."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:439: drivers/cxl/core/hdm.c:11
+msgid ""
+"Compute Express Link Host Managed Device Memory, starting with the CXL 2.0 "
+"specification, is managed by an array of HDM Decoder register instances per "
+"CXL port and per CXL endpoint. Define common helpers for enumerating these "
+"registers and capabilities."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:146
+msgid "map HDM decoder component registers"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:152
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1204 drivers/cxl/core/port.c:1235
+#: drivers/cxl/core/port.c:1740 drivers/cxl/core/port.c:1793
+#: drivers/cxl/core/port.c:1847 drivers/cxl/core/port.c:1884
+#: drivers/cxl/core/port.c:2161
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:77
+#: drivers/cxl/core/pci.c:597 ../../../driver-api/cxl/theory-of-operation:463:
+#: drivers/cxl/core/pmem.c:61 drivers/cxl/core/pmem.c:122
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:873 drivers/cxl/core/region.c:1061
+msgid "``struct cxl_port *port``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:147
+msgid "cxl_port to map"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:149
+#: drivers/cxl/core/hdm.c:1170 ../../../driver-api/cxl/theory-of-operation:457:
+#: drivers/cxl/core/pci.c:396
+msgid "``struct cxl_endpoint_dvsec_info *info``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:148
+#: drivers/cxl/core/hdm.c:1169
+msgid "cached DVSEC range register info"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:305
+msgid "Track DPA 'skip' in **cxlds->dpa_res** resource tree"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:311
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:398
+msgid "``struct cxl_dev_state *cxlds``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:306
+msgid "CXL.mem device context that parents **cxled**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:308
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:617
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:870 drivers/cxl/core/region.c:1059
+#: drivers/cxl/core/region.c:1828
+msgid "``struct cxl_endpoint_decoder *cxled``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:307
+msgid "Endpoint decoder establishing new allocation that skips lower DPA"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:309
+msgid "``const resource_size_t skip_base``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:308
+msgid "DPA < start of new DPA allocation (DPAnew)"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:310
+msgid "``const resource_size_t skip_len``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:309
+msgid "**skip_base** + **skip_len** == DPAnew"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:310
+msgid ""
+"DPA 'skip' arises from out-of-sequence DPA allocation events relative to "
+"free capacity across multiple partitions. It is a wasteful event as usable "
+"DPA gets thrown away, but if a deployment has, for example, a dual RAM+PMEM "
+"device, wants to use PMEM, and has unallocated RAM DPA, the free RAM DPA "
+"must be sacrificed to start allocating PMEM. See third \"Implementation "
+"Note\" in CXL 3.1 8.2.4.19.13 \"Decoder Protection\" for more details."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:318
+msgid ""
+"A 'skip' always covers the last allocated DPA in a previous partition to the "
+"start of the current partition to allocate.  Allocations never start in the "
+"middle of a partition, and allocations are always de-allocated in reverse "
+"order (see cxl_dpa_free(), or natural devm unwind order from forced in-order "
+"allocation)."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:324
+msgid ""
+"If **cxlds->nr_partitions** was guaranteed to be <= 2 then the 'skip' would "
+"always be contained to a single partition. Given **cxlds->nr_partitions** "
+"may be > 2 it results in cases where the 'skip' might span \"tail capacity "
+"of partition[0], all of partition[1], ..., all of partition[N-1]\" to "
+"support allocating from partition[N]. That in turn interacts with the "
+"partition 'struct resource' boundaries within **cxlds->dpa_res** whereby "
+"'skip' requests need to be divided by partition. I.e. this is a quirk of "
+"using a 'struct resource' tree to detect range conflicts while also tracking "
+"partition boundaries in **cxlds->dpa_res**."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:1167
+msgid "add decoder objects per HDM register set"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:1173
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:395
+msgid "``struct cxl_hdm *cxlhdm``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:442: drivers/cxl/core/hdm.c:1168
+msgid "Structure to populate with HDM capabilities"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:546
+msgid "Combine the two input coordinates"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:552
+msgid "``struct access_coordinate *out``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:548
+msgid "Output coordinate of c1 and c2 combined"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:550
+msgid "``struct access_coordinate *c1``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:549
+#: drivers/cxl/core/cdat.c:550
+msgid "input coordinates"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:551
+msgid "``struct access_coordinate *c2``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:614
+msgid "collect all the endpoint bandwidth in an xarray"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:620
+#: drivers/cxl/core/cdat.c:748 drivers/cxl/core/cdat.c:959
+#: drivers/cxl/core/cdat.c:981 ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:871 drivers/cxl/core/region.c:1058
+#: drivers/cxl/core/region.c:3151
+msgid "``struct cxl_region *cxlr``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:615
+msgid "CXL region for the bandwidth calculation"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:616
+msgid "endpoint decoder to start on"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:618
+msgid "``struct xarray *usp_xa``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:617
+msgid ""
+"(output) the xarray that collects all the bandwidth coordinates indexed by "
+"the upstream device with data of 'struct cxl_perf_ctx'."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:620
+#: drivers/cxl/core/cdat.c:747
+msgid "``bool *gp_is_root``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:619
+#: drivers/cxl/core/cdat.c:746
+msgid "(output) bool of whether the grandparent is cxl root."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:621
+msgid "0 for success or -errno"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:622
+msgid ""
+"Collects aggregated endpoint bandwidth and store the bandwidth in an xarray "
+"indexed by the upstream device of the switch or the RP device. Each endpoint "
+"consists the minimum of the bandwidth from DSLBIS from the endpoint CDAT, "
+"the endpoint upstream link bandwidth, and the bandwidth from the SSLBIS of "
+"the switch CDAT for the switch upstream port to the downstream port that's "
+"associated with the endpoint. If the device is directly connected to a RP, "
+"then no SSLBIS is involved."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:742
+msgid "collect all the bandwidth at switch level in an xarray"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:743
+#: drivers/cxl/core/cdat.c:954
+msgid "The region being operated on"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:745
+#: drivers/cxl/core/cdat.c:956
+msgid "``struct xarray *input_xa``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:744
+msgid ""
+"xarray indexed by upstream device of a switch with data of 'struct "
+"cxl_perf_ctx'"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:748
+msgid ""
+"a xarray of resulting cxl_perf_ctx per parent switch or root port or "
+"ERR_PTR(-errno)"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:750
+msgid ""
+"Iterate through the xarray. Take the minimum of the downstream calculated "
+"bandwidth, the upstream link bandwidth, and the SSLBIS of the upstream "
+"switch if exists. Sum the resulting bandwidth under the switch upstream "
+"device or a RP device. The function can be iterated over multiple switches "
+"if the switches are present."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:859
+msgid "handle the root port level bandwidth collection"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:865
+#: drivers/cxl/core/cdat.c:909
+msgid "``struct xarray *xa``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:860
+msgid ""
+"the xarray that holds the cxl_perf_ctx that has the bandwidth calculated "
+"below each root port device."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:863
+msgid "xarray that holds cxl_perf_ctx per host bridge or ERR_PTR(-errno)"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:903
+msgid "handle the host bridge level bandwidth collection"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:904
+msgid ""
+"the xarray that holds the cxl_perf_ctx that has the bandwidth calculated "
+"below each host bridge."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:907
+msgid "xarray that holds cxl_perf_ctx per ACPI0017 device or ERR_PTR(-errno)"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:953
+msgid "Update the bandwidth access coordinates of a region"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:955
+msgid ""
+"xarray holds cxl_perf_ctx wht calculated bandwidth per ACPI0017 instance"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:975
+msgid "Recalculate the bandwidth for the region"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:977
+msgid "the cxl region to recalculate"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:445: drivers/cxl/core/cdat.c:978
+msgid ""
+"The function walks the topology from bottom up and calculates the bandwidth. "
+"It starts at the endpoints, processes at the switches if any, processes at "
+"the rootport level, at the host bridge level, and finally aggregates at the "
+"region."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:448: drivers/cxl/core/port.c:20
+msgid ""
+"The CXL core provides a set of interfaces that can be consumed by CXL aware "
+"drivers. The interfaces allow for creation, modification, and destruction of "
+"regions, memory devices, ports, and decoders. CXL aware drivers must "
+"register with the CXL core via these interfaces in order to be able to "
+"participate in cross-device interleave coordination. The CXL core also "
+"establishes and maintains the bridge to the nvdimm subsystem."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:448: drivers/cxl/core/port.c:27
+msgid ""
+"CXL core introduces sysfs hierarchy to control the devices that are "
+"instantiated by the core."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451: drivers/cxl/core/port.c:914
+msgid "register a cxl_port in CXL memory decode hierarchy"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451: drivers/cxl/core/port.c:920
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:806
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:125
+msgid "``struct device *host``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451: drivers/cxl/core/port.c:915
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:805
+msgid "host device for devm operations"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451: drivers/cxl/core/port.c:917
+msgid "``struct device *uport_dev``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451: drivers/cxl/core/port.c:916
+msgid "\"physical\" device implementing this upstream port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451: drivers/cxl/core/port.c:918
+#: drivers/cxl/core/port.c:1203
+msgid "``resource_size_t component_reg_phys``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451: drivers/cxl/core/port.c:917
+msgid "(optional) for configurable cxl_port instances"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451: drivers/cxl/core/port.c:919
+msgid "``struct cxl_dport *parent_dport``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451: drivers/cxl/core/port.c:918
+msgid "next hop up in the CXL memory decode hierarchy"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1198
+msgid "append VH downstream port data to a cxl_port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1199 drivers/cxl/core/port.c:1230
+msgid "the cxl_port that references this dport"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1201 drivers/cxl/core/port.c:1232
+msgid "``struct device *dport_dev``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1200 drivers/cxl/core/port.c:1231
+msgid "firmware or PCI device representing the dport"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1202 drivers/cxl/core/port.c:1233
+msgid "``int port_id``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1201 drivers/cxl/core/port.c:1232
+msgid "identifier for this dport in a decoder's target list"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1202
+msgid "optional location of CXL component registers"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1203
+msgid ""
+"Note that dports are appended to the devm release action's of the either the "
+"port's host (for root ports), or the port itself (for switch ports)"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1229
+msgid "append RCH downstream port data to a cxl_port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1234
+msgid "``resource_size_t rcrb``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1233
+msgid "mandatory location of a Root Complex Register Block"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1234
+msgid "See CXL 3.0 9.11.8 CXL Devices Attached to an RCH"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1275
+msgid "register an endpoint's interest in a port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1281
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:809
+msgid "``struct cxl_dport *dport``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1276
+msgid "the dport that routes to **ep_dev**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1278
+msgid "``struct device *ep_dev``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1277
+msgid "device representing the endpoint"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1278
+msgid ""
+"Intermediate CXL ports are scanned based on the arrival of endpoints. When "
+"those endpoints depart the port can be destroyed once all endpoints that "
+"care about that port have been removed."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1734
+msgid "Common decoder setup / initialization"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1735 drivers/cxl/core/port.c:1879
+msgid "owning port of this decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1737 drivers/cxl/core/port.c:1917
+#: drivers/cxl/core/port.c:1973
+msgid "``struct cxl_decoder *cxld``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1736
+msgid "common decoder properties to initialize"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1737
+msgid ""
+"A port may contain one or more decoders. Each of those decoders enable some "
+"address space for CXL.mem utilization. A decoder is expected to be "
+"configured by the caller before registering via cxl_decoder_add()"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1787
+msgid "Allocate a root level decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1788
+msgid "owning CXL root of this decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1790 drivers/cxl/core/port.c:1844
+msgid "``unsigned int nr_targets``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1789
+msgid "static number of downstream targets"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1791
+msgid ""
+"A new cxl decoder to be registered by cxl_decoder_add(). A 'CXL root' "
+"decoder is one that decodes from a top-level / static platform firmware "
+"description of CXL resources into a CXL standard decode topology."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1841
+msgid "Allocate a switch level decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1842
+msgid "owning CXL switch port of this decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1843
+msgid "max number of dynamically addressable downstream targets"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1845
+msgid ""
+"A new cxl decoder to be registered by cxl_decoder_add(). A 'switch' decoder "
+"is any decoder that can be enumerated by PCIe topology and the HDM Decoder "
+"Capability. This includes the decoders that sit between Switch Upstream "
+"Ports / Switch Downstream Ports and Host Bridges / Root Ports."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1878
+msgid "Allocate an endpoint decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1881
+msgid "A new cxl decoder to be registered by cxl_decoder_add()"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1911 drivers/cxl/core/port.c:1967
+msgid "Add a decoder with targets"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1912 drivers/cxl/core/port.c:1968
+msgid "The cxl decoder allocated by cxl_<type>_decoder_alloc()"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1914 drivers/cxl/core/port.c:1970
+msgid "``int *target_map``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1913 drivers/cxl/core/port.c:1969
+msgid ""
+"A list of downstream ports that this decoder can direct memory traffic to. "
+"These numbers should correspond with the port number in the PCIe Link "
+"Capabilities structure."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1916
+msgid ""
+"Certain types of decoders may not have any targets. The main example of this "
+"is an endpoint device. A more awkward example is a hostbridge whose root "
+"ports get hot added (technically possible, though unlikely)."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1920
+msgid "This is the locked variant of cxl_decoder_add()."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1923
+msgid ""
+"Process context. Expects the device lock of the port that owns the **cxld** "
+"to be held."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1926
+msgid ""
+"Negative error code if the decoder wasn't properly configured; else returns "
+"0."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1972
+msgid ""
+"This is the unlocked variant of cxl_decoder_add_locked(). See "
+"cxl_decoder_add_locked()."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:1976
+msgid ""
+"Process context. Takes and releases the device lock of the port that owns "
+"the **cxld**."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:2012
+msgid "register a driver for the cxl bus"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:2018
+msgid "``struct cxl_driver *cxl_drv``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:2013
+msgid "cxl driver structure to attach"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:2015
+msgid "``struct module *owner``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:2014
+msgid "owning module/driver"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:2016
+msgid "``const char *modname``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:2015
+msgid "KBUILD_MODNAME for parent driver"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:2155
+msgid "Retrieve performance numbers stored in dports of CXL path"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:2157
+msgid "endpoint cxl_port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:2159
+msgid "``struct access_coordinate *coord``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:2158
+msgid "output performance data"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:451:
+#: drivers/cxl/core/port.c:2160
+msgid "errno on failure, 0 on success."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:454: drivers/cxl/core/pci.c:17
+msgid ""
+"Compute Express Link protocols are layered on top of PCIe. CXL core provides "
+"a set of helpers for CXL interactions which occur via PCIe."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:71
+msgid "enumerate downstream ports of the upstream port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:72
+msgid "cxl_port whose ->uport_dev is the upstream of dports to be enumerated"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:73
+msgid ""
+"Returns a positive number of dports enumerated or a negative error code."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:392
+msgid "Setup HDM decoding for the endpoint"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:393
+msgid "Device state"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:394
+msgid "Mapped HDM decoder Capability"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:395
+msgid "Cached DVSEC range registers info"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:396
+msgid "Try to enable the endpoint's HDM Decoder Capability"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:591
+msgid "Read the CDAT data on this port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:592
+msgid "Port to read data from"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:593
+msgid "This call will sleep waiting for responses from the DOE mailbox."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:803
+msgid "Setup CXL RAS report on this dport"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:804
+msgid "the cxl_dport that needs to be initialized"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:994
+msgid "calculate the link latency for the PCIe link"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:1000
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:354
+#: drivers/cxl/core/regs.c:374 drivers/cxl/core/regs.c:392
+msgid "``struct pci_dev *pdev``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:995
+msgid "PCI device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:997
+msgid "calculated latency or 0 for no latency"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:457: drivers/cxl/core/pci.c:998
+msgid ""
+"CXL Memory Device SW Guide v1.0 2.11.4 Link latency calculation Link latency "
+"= LinkPropagationLatency + FlitLatency + RetimerLatency LinkProgationLatency "
+"is negligible, so 0 will be used RetimerLatency is assumed to be negligible "
+"and 0 will be used FlitLatency = FlitSize / LinkBandwidth FlitSize is "
+"defined by spec. CXL rev3.0 4.2.1. 68B flit is used up to 32GT/s. >32GT/s, "
+"256B flit size is used. The FlitLatency is converted to picoseconds."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:460: drivers/cxl/core/pmem.c:11
+msgid ""
+"The core CXL PMEM infrastructure supports persistent memory provisioning and "
+"serves as a bridge to the LIBNVDIMM subsystem. A CXL 'bridge' device is "
+"added at the root of a CXL device topology if platform firmware advertises "
+"at least one persistent memory capable CXL window. That root-level bridge "
+"corresponds to a LIBNVDIMM 'bus' device. Then for each cxl_memdev in the CXL "
+"device topology a bridge device is added to host a LIBNVDIMM dimm object. "
+"When these bridges are registered native LIBNVDIMM uapis are translated to "
+"CXL operations, for example, namespace label access commands."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:55
+msgid "find a bridge device relative to a port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:56
+msgid "any descendant port of an nvdimm-bridge associated root-cxl-port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:119
+msgid "add the root of a LIBNVDIMM topology"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:120
+msgid "platform firmware root device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:121
+msgid "CXL port at the root of a CXL topology"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:123
+msgid "bridge device that can host cxl_nvdimm objects"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:239
+msgid "add a bridge between a cxl_memdev and an nvdimm"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:245
+msgid "``struct cxl_port *parent_port``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:240
+msgid "parent port for the (to be added) **cxlmd** endpoint port"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:242
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1277
+msgid "``struct cxl_memdev *cxlmd``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:241
+msgid "cxl_memdev instance that will perform LIBNVDIMM operations"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:463: drivers/cxl/core/pmem.c:243
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:3148
+msgid "0 on success negative error code on failure."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:466: drivers/cxl/core/regs.c:14
+msgid ""
+"CXL device capabilities are enumerated by PCI DVSEC (Designated Vendor-"
+"specific) and / or descriptors provided by platform firmware. They can be "
+"defined as a set like the device and component registers mandated by CXL "
+"Section 8.1.12.2 Memory Device PCIe Capabilities and Extended Capabilities, "
+"or they can be individual capabilities appended to bridged and endpoint "
+"devices."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:466: drivers/cxl/core/regs.c:21
+msgid ""
+"Provide common infrastructure for enumerating and mapping these discrete "
+"capabilities."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:28
+msgid "Detect CXL Component register blocks"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:34
+#: drivers/cxl/core/regs.c:118
+msgid "``struct device *dev``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:29
+#: drivers/cxl/core/regs.c:113
+msgid "Host device of the **base** mapping"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:31
+#: drivers/cxl/core/regs.c:115
+msgid "``void __iomem *base``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:30
+msgid "Mapping containing the HDM Decoder Capability Header"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:32
+msgid "``struct cxl_component_reg_map *map``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:31
+#: drivers/cxl/core/regs.c:115
+msgid "Map object describing the register block information found"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:32
+msgid ""
+"See CXL 2.0 8.2.4 Component Register Layout and Definition See CXL 2.0 "
+"8.2.5.5 CXL Device Register Interface"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:35
+msgid "Probe for component register information and return it in map object."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:112
+msgid "Detect CXL Device register blocks"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:114
+msgid "Mapping of CXL 2.0 8.2.8 CXL Device Register Interface"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:116
+msgid "``struct cxl_device_reg_map *map``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:116
+msgid "Probe for device register information and return it in map object."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:348
+msgid "Locate a register block by type / index"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:349
+#: drivers/cxl/core/regs.c:369 drivers/cxl/core/regs.c:387
+msgid "The CXL PCI device to enumerate."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:351
+#: drivers/cxl/core/regs.c:371 drivers/cxl/core/regs.c:389
+msgid "``enum cxl_regloc_type type``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:350
+#: drivers/cxl/core/regs.c:370 drivers/cxl/core/regs.c:388
+msgid "Register Block Indicator id"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:352
+#: drivers/cxl/core/regs.c:372
+msgid "``struct cxl_register_map *map``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:351
+#: drivers/cxl/core/regs.c:371
+msgid "Enumeration output, clobbered on error"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:353
+msgid "``unsigned int index``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:352
+msgid ""
+"Index into which particular instance of a regblock wanted in the order found "
+"in register locator DVSEC."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:355
+#: drivers/cxl/core/regs.c:373
+msgid "0 if register block enumerated, negative error code otherwise"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:356
+msgid ""
+"A CXL DVSEC may point to one or more register blocks, search for them by "
+"**type** and **index**."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:368
+msgid "Locate register blocks by type"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:374
+msgid ""
+"A CXL DVSEC may point to one or more register blocks, search for them by "
+"**type**."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:386
+msgid "Count instances of a given regblock type."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:389
+msgid "Some regblocks may be repeated. Count how many instances."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:469: drivers/cxl/core/regs.c:392
+msgid ""
+"non-negative count of matching regblocks, negative error code otherwise."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:472: drivers/cxl/core/mbox.c:19
+msgid ""
+"Core implementation of the CXL 2.0 Type-3 Memory Device Mailbox. The "
+"implementation is used by the cxl_pci driver to initialize the device and "
+"implement the cxl_mem.h IOCTL UAPI. It also implements the backend of the "
+"cxl_pmem_ctl() transport for LIBNVDIMM."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:228
+msgid "Kernel internal interface to send a mailbox command"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:230
+msgid "initialized command to execute"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:232
+msgid "Any context."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:233
+msgid "%>=0      - Number of bytes returned in **out**."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:234
+msgid "``-E2BIG``   - Payload is too large for hardware."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:235
+msgid "``-EBUSY``   - Couldn't acquire exclusive mailbox access."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:236
+msgid "``-EFAULT``  - Hardware error occurred."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:237
+msgid "``-ENXIO``   - Command completed, but device reported an error."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:238
+msgid "``-EIO``     - Unexpected output size."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:240
+msgid ""
+"Mailbox commands may execute successfully yet the device itself reported an "
+"error. While this distinction can be useful for commands from userspace, the "
+"kernel will only be able to use results when both are successful."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:311
+msgid "Check contents of in_payload."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:317
+msgid "``u16 opcode``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:312
+msgid "The mailbox command opcode."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:314
+msgid "``void *payload_in``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:313
+msgid "Pointer to the input payload passed in from user space."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:315
+msgid "true      - payload_in passes check for **opcode**."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:316
+msgid "false     - payload_in contains invalid or unsupported values."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:318
+msgid ""
+"The driver may inspect payload contents before sending a mailbox command "
+"from user space to the device. The intent is to reject commands with input "
+"payloads that are known to be unsafe. This check is not intended to replace "
+"the users careful selection of mailbox command parameters and makes no "
+"guarantee that the user command will succeed, nor that it is appropriate."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:325
+msgid "The specific checks are determined by the opcode."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:478
+msgid "Check fields for CXL_MEM_SEND_COMMAND."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:479
+msgid "Sanitized and populated :c:type:`struct cxl_mbox_cmd <cxl_mbox_cmd>`."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:482
+msgid "``const struct cxl_send_command *send_cmd``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:481
+msgid ""
+":c:type:`struct cxl_send_command <cxl_send_command>` copied in from "
+"userspace."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:483
+msgid "``0``        - **out_cmd** is ready to send."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:484
+msgid "``-ENOTTY``  - Invalid command specified."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:485
+msgid "``-EINVAL``  - Reserved fields or invalid values were used."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:486
+msgid "``-ENOMEM``  - Input or output buffer wasn't sized properly."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:487
+msgid "``-EPERM``   - Attempted to use a protected command."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:488
+msgid "``-EBUSY``   - Kernel has claimed exclusive access to this opcode"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:490
+msgid ""
+"The result of this command is a fully validated command in **mbox_cmd** that "
+"is safe to send to the hardware."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:567
+msgid "Dispatch a mailbox command for userspace."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:568
+msgid "The mailbox context for the operation."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:569
+msgid "The validated mailbox command."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:571
+msgid "``u64 out_payload``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:570
+msgid "Pointer to userspace's output payload."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:572
+msgid "``s32 *size_out``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:571
+msgid ""
+"(Input) Max payload size to copy out. (Output) Payload size hardware "
+"generated."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:574
+msgid "``u32 *retval``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:573
+msgid "Hardware generated return code from the operation."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:575
+msgid "``0``        - Mailbox transaction succeeded. This implies the mailbox"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:576
+msgid ""
+"protocol completed successfully not that the operation itself was successful."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:578
+msgid "``-ENOMEM``  - Couldn't allocate a bounce buffer."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:579
+msgid "``-EFAULT``  - Something happened with copy_to/from_user."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:580
+msgid "``-EINTR``   - Mailbox acquisition interrupted."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:581
+msgid "``-EXXX``    - Transaction level failures."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:583
+msgid ""
+"Dispatches a mailbox command on behalf of a userspace request. The output "
+"payload is copied to userspace."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:586
+msgid "See cxl_send_cmd()."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:740
+msgid "Walk through the Command Effects Log."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:741
+#: drivers/cxl/core/mbox.c:829 drivers/cxl/core/mbox.c:1111
+#: drivers/cxl/core/mbox.c:1137 drivers/cxl/core/mbox.c:1173
+msgid "The driver data for the operation"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:743
+msgid "``size_t size``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:742
+msgid "Length of the Command Effects Log."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:744
+msgid "``u8 *cel``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:743
+msgid "CEL"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:744
+msgid ""
+"Iterate over each entry in the CEL and determine if the driver supports the "
+"command. If so, the command is enabled for the device and can be used later."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:828
+msgid "Enumerate commands for a device."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:830
+msgid "Returns 0 if enumerate completed successfully."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475: drivers/cxl/core/mbox.c:832
+msgid ""
+"CXL devices have optional support for certain commands. This function will "
+"determine the set of supported commands for the hardware and update the "
+"enabled_cmds bitmap in the **mds**."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1110
+msgid "Get Event Records from the device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1113
+msgid "``u32 status``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1112
+msgid "Event Status register value identifying which events are available."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1113
+msgid ""
+"Retrieve all event records available on the device, report them as trace "
+"events, and clear them."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1116
+msgid ""
+"See CXL rev 3.0 **8.2.9.2.2** Get Event Records See CXL rev 3.0 "
+"**8.2.9.2.3** Clear Event Records"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1136
+msgid "Get partition info"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1138
+msgid ""
+"Retrieve the current partition info for the device specified.  The active "
+"values are the current capacity in bytes.  If not 0, the 'next' values are "
+"the pending values, in bytes, which take affect on next cold reset."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1143
+msgid "See CXL **8.2.9.5.2.1** Get Partition Info"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1172
+msgid "Send the IDENTIFY command to the device."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1175
+msgid "0 if identify was executed successfully or media not ready."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1176
+msgid ""
+"This will dispatch the identify command to the device and on success "
+"populate structures to be exported to sysfs."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1271
+msgid "Send a sanitization command to the device."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1272
+msgid "The device for the operation"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1274
+msgid "``u16 cmd``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1273
+msgid "The specific sanitization command opcode"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1275
+msgid ""
+"0 if the command was executed successfully, regardless of whether or not the "
+"actual security operation is done in the background, such as for the "
+"Sanitize case. Error return values can be the result of the mailbox command, "
+"-EINVAL when security requirements are not met or invalid contexts, or -"
+"EBUSY if the sanitize operation is already in flight."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:475:
+#: drivers/cxl/core/mbox.c:1281
+msgid "See CXL 3.0 **8.2.9.8.5.1** Sanitize and **8.2.9.8.5.2** Secure Erase."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:478:
+#: drivers/cxl/core/features.c:13
+msgid ""
+"CXL Features: A CXL device that includes a mailbox supports commands that "
+"allows listing, getting, and setting of optionally defined features such as "
+"memory sparing or post package sparing. Vendors may define custom features "
+"for the device."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:395
+msgid "See :c:func:`devm_cxl_setup_features` for API details."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:398
+msgid "CXL Regions"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:485:
+#: drivers/cxl/core/region.c:18
+msgid ""
+"CXL Regions represent mapped memory capacity in system physical address "
+"space. Whereas the CXL Root Decoders identify the bounds of potential CXL "
+"Memory ranges, Regions represent the active mapped capacity by the HDM "
+"Decoder Capability structures throughout the Host Bridges, Switches, and "
+"Endpoints in the topology."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:485:
+#: drivers/cxl/core/region.c:24
+msgid ""
+"Region configuration has ordering constraints. UUID may be set at any time "
+"but is only visible for persistent regions. 1. Interleave granularity 2. "
+"Interleave size 3. Decoder targets"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:867
+msgid "assign or lookup a decoder for a region"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:868
+msgid "a port in the ancestry of the endpoint implied by **cxled**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:869
+msgid "endpoint decoder to be, or currently, mapped by **port**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:870
+msgid "region to establish, or validate, decode **port**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:871
+msgid ""
+"In the region creation path cxl_port_pick_region_decoder() is an allocator "
+"to find a free port. In the region assembly path, it is recalling the "
+"decoder that platform firmware picked for validation purposes."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:876
+msgid "The result is recorded in a 'struct cxl_region_ref' in **port**."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1055
+msgid "track a region's interest in a port by endpoint"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1056
+msgid "port to add a new region reference 'struct cxl_region_ref'"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1057
+msgid "region to attach to **port**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1058
+msgid "endpoint decoder used to create or further pin a region reference"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1060
+msgid "``int pos``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1059
+msgid "interleave position of **cxled** in **cxlr**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1060
+msgid ""
+"The attach event is an opportunity to validate CXL decode setup constraints "
+"and record metadata needed for programming HDM decoders, in particular "
+"decoder target lists."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1064
+msgid "The steps are:"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1066
+msgid ""
+"validate that there are no other regions with a higher HPA already "
+"associated with **port**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1068
+msgid "establish a region reference if one is not already present"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1070
+msgid ""
+"additionally allocate a decoder instance that will host **cxlr** on **port**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1073
+msgid "pin the region reference by the endpoint"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1074
+msgid ""
+"account for how many entries in **port**'s target list are needed to cover "
+"all of the added endpoints."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1822
+msgid "calculate an endpoint position in a region"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1823
+msgid "endpoint decoder member of given region"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1824
+msgid ""
+"The endpoint position is calculated by traversing the topology from the "
+"endpoint to the root decoder and iteratively applying this calculation:"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1828
+msgid "position = position * parent_ways + parent_pos;"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1830
+msgid ""
+"...where **position** is inferred from switch and root decoder target lists."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:1833
+msgid "position >= 0 on success -ENXIO on failure"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:2522
+msgid "Adds a region to a decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:2528
+msgid "``struct cxl_root_decoder *cxlrd``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:2523
+msgid "root decoder"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:2525
+msgid "``int id``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:2524
+msgid "memregion id to create, or memregion_free() on failure"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:2526
+msgid "``enum cxl_partition_mode mode``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:2525
+msgid "mode for the endpoint decoders of this region"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:2527
+msgid "``enum cxl_decoder_type type``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:2526
+msgid "select whether this is an expander or accelerator (type-2 or type-3)"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:2527
+msgid ""
+"This is the second step of region initialization. Regions exist within an "
+"address space which is mapped by a **cxlrd**."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:2531
+msgid ""
+"0 if the region was added to the **cxlrd**, else returns negative error "
+"code. The region will be named \"regionZ\" where Z is the unique region "
+"number."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:3145
+msgid "add a cxl_region-to-nd_region bridge"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:488:
+#: drivers/cxl/core/region.c:3146
+msgid "parent CXL region for this pmem region bridge device"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:406
+msgid "External Interfaces"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation.rst:409
+msgid "CXL IOCTL Interface"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:497:
+#: include/uapi/linux/cxl_mem.h:12
+msgid ""
+"Not all of the commands that the driver supports are available for use by "
+"userspace at all times.  Userspace can check the result of the QUERY command "
+"to determine the live set of commands.  Alternatively, it can issue the "
+"command and check for failure."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:102
+msgid "Command information returned from a query."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:104
+msgid "ID number for the command."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:105
+msgid "Flags that specify command behavior."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:118
+msgid "``size_in``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:119
+msgid "Expected input size, or ~0 if variable length."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:119
+msgid "``size_out``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:120
+msgid "Expected output size, or ~0 if variable length."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:105
+msgid "CXL_MEM_COMMAND_FLAG_USER_ENABLED"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:107
+msgid ""
+"The given command id is supported by the driver and is supported by a "
+"related opcode on the device."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:110
+msgid "CXL_MEM_COMMAND_FLAG_EXCLUSIVE"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:112
+msgid ""
+"Requests with the given command id will terminate with EBUSY as the kernel "
+"actively owns management of the given resource. For example, the label-"
+"storage-area can not be written while the kernel is actively managing that "
+"space."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:118
+msgid ""
+"Represents a single command that is supported by both the driver and the "
+"hardware. This is returned as part of an array from the query ioctl. The "
+"following would be a command that takes a variable length input and returns "
+"0 bytes of output."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:123
+msgid "**id** = 10"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:124
+msgid "**flags** = CXL_MEM_COMMAND_FLAG_ENABLED"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:125
+msgid "**size_in** = ~0"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:126
+msgid "**size_out** = 0"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:128
+msgid "See struct cxl_mem_query_commands."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:146
+msgid "Query supported commands."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:147
+msgid "``n_commands``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:148
+msgid ""
+"In/out parameter. When **n_commands** is > 0, the driver will return "
+"min(num_support_commands, n_commands). When **n_commands** is 0, driver will "
+"return the number of total supported commands."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:150 include/uapi/linux/cxl_mem.h:189
+msgid "``rsvd``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:151
+msgid "Reserved for future use."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:151
+msgid "``commands``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:152
+msgid ""
+"Output array of supported commands. This array must be allocated by "
+"userspace to be at least min(num_support_commands, **n_commands**)"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:153
+msgid ""
+"Allow userspace to query the available commands supported by both the "
+"driver, and the hardware. Commands that aren't supported by either the "
+"driver, or the hardware are not returned in the query."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:157
+msgid "**Examples**"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:158
+msgid "{ .n_commands = 0 } // Get number of supported commands"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:159
+msgid ""
+"{ .n_commands = 15, .commands = buf } // Return first 15 (or less) supported "
+"commands"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:182
+msgid "Send a command to a memory device."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:184
+msgid ""
+"The command to send to the memory device. This must be one of the commands "
+"returned by the query command."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:186
+msgid "Flags for the command (input)."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:186
+msgid "``raw``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:187
+msgid "Special fields for raw commands"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:187
+msgid "``raw.opcode``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:188
+msgid "Opcode passed to hardware when using the RAW command."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:188
+msgid "``raw.rsvd``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:189 include/uapi/linux/cxl_mem.h:190
+#: include/uapi/linux/cxl_mem.h:194 include/uapi/linux/cxl_mem.h:201
+msgid "Must be zero."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:190
+msgid "``retval``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:191
+msgid "Return value from the memory device (output)."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:191
+msgid "``in``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:192
+msgid "Parameters associated with input payload."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:192
+msgid "``in.size``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:193
+msgid "Size of the payload to provide to the device (input)."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:193
+msgid "``in.rsvd``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:194
+msgid "``in.payload``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:195
+msgid "Pointer to memory for payload input, payload is little endian."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:195
+msgid "``out``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:196
+msgid "Parameters associated with output payload."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:196
+msgid "``out.size``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:197
+msgid ""
+"Size of the payload received from the device (input/output). This field is "
+"filled in by userspace to let the driver know how much space was allocated "
+"for output. It is populated by the driver to let userspace know how large "
+"the output payload actually was."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:200
+msgid "``out.rsvd``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:201
+msgid "``out.payload``"
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:202
+msgid "Pointer to memory for payload output, payload is little endian."
+msgstr ""
+
+#: ../../../driver-api/cxl/theory-of-operation:500:
+#: include/uapi/linux/cxl_mem.h:202
+msgid ""
+"Mechanism for userspace to send a command to the hardware for processing. "
+"The driver will do basic validation on the command sizes. In some cases even "
+"the payload may be introspected. Userspace is required to allocate large "
+"enough buffers for size_out which can be variable length in certain "
+"situations."
+msgstr ""

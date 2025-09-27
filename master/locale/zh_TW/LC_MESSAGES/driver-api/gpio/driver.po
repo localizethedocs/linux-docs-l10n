@@ -1,0 +1,875 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../driver-api/gpio/driver.rst:3
+msgid "GPIO Driver Interface"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:5
+msgid "This document serves as a guide for writers of GPIO chip drivers."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:7
+msgid ""
+"Each GPIO controller driver needs to include the following header, which "
+"defines the structures used to define a GPIO driver::"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:14
+msgid "Internal Representation of GPIOs"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:16
+msgid ""
+"A GPIO chip handles one or more GPIO lines. To be considered a GPIO chip, "
+"the lines must conform to the definition: General Purpose Input/Output. If "
+"the line is not general purpose, it is not GPIO and should not be handled by "
+"a GPIO chip. The use case is the indicative: certain lines in a system may "
+"be called GPIO but serve a very particular purpose thus not meeting the "
+"criteria of a general purpose I/O. On the other hand a LED driver line may "
+"be used as a GPIO and should therefore still be handled by a GPIO chip "
+"driver."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:24
+msgid ""
+"Inside a GPIO driver, individual GPIO lines are identified by their hardware "
+"number, sometime also referred to as ``offset``, which is a unique number "
+"between 0 and n-1, n being the number of GPIOs managed by the chip."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:28
+msgid ""
+"The hardware GPIO number should be something intuitive to the hardware, for "
+"example if a system uses a memory-mapped set of I/O-registers where 32 GPIO "
+"lines are handled by one bit per line in a 32-bit register, it makes sense "
+"to use hardware offsets 0..31 for these, corresponding to bits 0..31 in the "
+"register."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:34
+msgid ""
+"This number is purely internal: the hardware number of a particular GPIO "
+"line is never made visible outside of the driver."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:37
+msgid ""
+"On top of this internal number, each GPIO line also needs to have a global "
+"number in the integer GPIO namespace so that it can be used with the legacy "
+"GPIO interface. Each chip must thus have a \"base\" number (which can be "
+"automatically assigned), and for each GPIO line the global number will be "
+"(base + hardware number). Although the integer representation is considered "
+"deprecated, it still has many users and thus needs to be maintained."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:44
+msgid ""
+"So for example one platform could use global numbers 32-159 for GPIOs, with "
+"a controller defining 128 GPIOs at a \"base\" of 32 ; while another platform "
+"uses global numbers 0..63 with one set of GPIO controllers, 64-79 with "
+"another type of GPIO controller, and on one particular board 80-95 with an "
+"FPGA. The legacy numbers need not be contiguous; either of those platforms "
+"could also use numbers 2000-2063 to identify GPIO lines in a bank of I2C "
+"GPIO expanders."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:53
+msgid "Controller Drivers: gpio_chip"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:55
+msgid ""
+"In the gpiolib framework each GPIO controller is packaged as a \"struct "
+"gpio_chip\" (see <linux/gpio/driver.h> for its complete definition) with "
+"members common to each controller of that type, these should be assigned by "
+"the driver code:"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:60
+msgid "methods to establish GPIO line direction"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:61
+msgid "methods used to access GPIO line values"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:62
+msgid "method to set electrical configuration for a given GPIO line"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:63
+msgid "method to return the IRQ number associated to a given GPIO line"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:64
+msgid "flag saying whether calls to its methods may sleep"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:65
+msgid "optional line names array to identify lines"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:66
+msgid "optional debugfs dump method (showing extra state information)"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:67
+msgid "optional base number (will be automatically assigned if omitted)"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:68
+msgid ""
+"optional label for diagnostics and GPIO chip mapping using platform data"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:70
+msgid ""
+"The code implementing a gpio_chip should support multiple instances of the "
+"controller, preferably using the driver model. That code will configure each "
+"gpio_chip and issue gpiochip_add_data() or devm_gpiochip_add_data(). "
+"Removing a GPIO controller should be rare; use gpiochip_remove() when it is "
+"unavoidable."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:75
+msgid ""
+"Often a gpio_chip is part of an instance-specific structure with states not "
+"exposed by the GPIO interfaces, such as addressing, power management, and "
+"more. Chips such as audio codecs will have complex non-GPIO states."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:79
+msgid ""
+"Any debugfs dump method should normally ignore lines which haven't been "
+"requested. They can use gpiochip_is_requested(), which returns either NULL "
+"or the label associated with that GPIO line when it was requested."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:83
+msgid ""
+"Realtime considerations: the GPIO driver should not use spinlock_t or any "
+"sleepable APIs (like PM runtime) in its gpio_chip implementation (.get/.set "
+"and direction control callbacks) if it is expected to call GPIO APIs from "
+"atomic context on realtime kernels (inside hard IRQ handlers and similar "
+"contexts). Normally this should not be required."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:91
+msgid "GPIO electrical configuration"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:93
+msgid ""
+"GPIO lines can be configured for several electrical modes of operation by "
+"using the .set_config() callback. Currently this API supports setting:"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:96
+msgid "Debouncing"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:97
+msgid "Single-ended modes (open drain/open source)"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:98
+msgid "Pull up and pull down resistor enablement"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:100
+msgid "These settings are described below."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:102
+msgid ""
+"The .set_config() callback uses the same enumerators and configuration "
+"semantics as the generic pin control drivers. This is not a coincidence: it "
+"is possible to assign the .set_config() to the function "
+"gpiochip_generic_config() which will result in pinctrl_gpio_set_config() "
+"being called and eventually ending up in the pin control back-end \"behind\" "
+"the GPIO controller, usually closer to the actual pins. This way the pin "
+"controller can manage the below listed GPIO configurations."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:110
+msgid ""
+"If a pin controller back-end is used, the GPIO controller or hardware "
+"description needs to provide \"GPIO ranges\" mapping the GPIO line offsets "
+"to pin numbers on the pin controller so they can properly cross-reference "
+"each other."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:116
+msgid "GPIO lines with debounce support"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:118
+msgid ""
+"Debouncing is a configuration set to a pin indicating that it is connected "
+"to a mechanical switch or button, or similar that may bounce. Bouncing means "
+"the line is pulled high/low quickly at very short intervals for mechanical "
+"reasons. This can result in the value being unstable or irqs firing "
+"repeatedly unless the line is debounced."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:124
+msgid ""
+"Debouncing in practice involves setting up a timer when something happens on "
+"the line, wait a little while and then sample the line again, so see if it "
+"still has the same value (low or high). This could also be repeated by a "
+"clever state machine, waiting for a line to become stable. In either case, "
+"it sets a certain number of milliseconds for debouncing, or just \"on/off\" "
+"if that time is not configurable."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:133
+msgid "GPIO lines with open drain/source support"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:135
+msgid ""
+"Open drain (CMOS) or open collector (TTL) means the line is not actively "
+"driven high: instead you provide the drain/collector as output, so when the "
+"transistor is not open, it will present a high-impedance (tristate) to the "
+"external rail::"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:148
+msgid ""
+"This configuration is normally used as a way to achieve one of two things:"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:150
+msgid ""
+"Level-shifting: to reach a logical level higher than that of the silicon "
+"where the output resides."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:153
+msgid ""
+"Inverse wire-OR on an I/O line, for example a GPIO line, making it possible "
+"for any driving stage on the line to drive it low even if any other output "
+"to the same line is simultaneously driving it high. A special case of this "
+"is driving the SCL and SDA lines of an I2C bus, which is by definition a "
+"wire-OR bus."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:159
+msgid ""
+"Both use cases require that the line be equipped with a pull-up resistor. "
+"This resistor will make the line tend to high level unless one of the "
+"transistors on the rail actively pulls it down."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:163
+msgid ""
+"The level on the line will go as high as the VDD on the pull-up resistor, "
+"which may be higher than the level supported by the transistor, achieving a "
+"level-shift to the higher VDD."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:167
+msgid ""
+"Integrated electronics often have an output driver stage in the form of a "
+"CMOS \"totem-pole\" with one N-MOS and one P-MOS transistor where one of "
+"them drives the line high and one of them drives the line low. This is "
+"called a push-pull output. The \"totem-pole\" looks like so::"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:184
+msgid ""
+"The desired output signal (e.g. coming directly from some GPIO output "
+"register) arrives at IN. The switches named \"OD\" and \"OS\" are normally "
+"closed, creating a push-pull circuit."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:188
+msgid ""
+"Consider the little \"switches\" named \"OD\" and \"OS\" that enable/disable "
+"the P-MOS or N-MOS transistor right after the split of the input. As you can "
+"see, either transistor will go totally numb if this switch is open. The "
+"totem-pole is then halved and give high impedance instead of actively "
+"driving the line high or low respectively. That is usually how software-"
+"controlled open drain/source works."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:195
+msgid ""
+"Some GPIO hardware come in open drain / open source configuration. Some are "
+"hard-wired lines that will only support open drain or open source no matter "
+"what: there is only one transistor there. Some are software-configurable: by "
+"flipping a bit in a register the output can be configured as open drain or "
+"open source, in practice by flicking open the switches labeled \"OD\" and "
+"\"OS\" in the drawing above."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:202
+msgid ""
+"By disabling the P-MOS transistor, the output can be driven between GND and "
+"high impedance (open drain), and by disabling the N-MOS transistor, the "
+"output can be driven between VDD and high impedance (open source). In the "
+"first case, a pull-up resistor is needed on the outgoing rail to complete "
+"the circuit, and in the second case, a pull-down resistor is needed on the "
+"rail."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:208
+msgid ""
+"Hardware that supports open drain or open source or both, can implement a "
+"special callback in the gpio_chip: .set_config() that takes a generic "
+"pinconf packed value telling whether to configure the line as open drain, "
+"open source or push-pull. This will happen in response to the "
+"GPIO_OPEN_DRAIN or GPIO_OPEN_SOURCE flag set in the machine file, or coming "
+"from other hardware descriptions."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:215
+msgid ""
+"If this state can not be configured in hardware, i.e. if the GPIO hardware "
+"does not support open drain/open source in hardware, the GPIO library will "
+"instead use a trick: when a line is set as output, if the line is flagged as "
+"open drain, and the IN output value is low, it will be driven low as usual. "
+"But if the IN output value is set to high, it will instead *NOT* be driven "
+"high, instead it will be switched to input, as input mode is an equivalent "
+"to high impedance, thus achieving an \"open drain emulation\" of sorts: "
+"electrically the behaviour will be identical, with the exception of possible "
+"hardware glitches when switching the mode of the line."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:225
+msgid ""
+"For open source configuration the same principle is used, just that instead "
+"of actively driving the line low, it is set to input."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:230
+msgid "GPIO lines with pull up/down resistor support"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:232
+msgid ""
+"A GPIO line can support pull-up/down using the .set_config() callback. This "
+"means that a pull up or pull-down resistor is available on the output of the "
+"GPIO line, and this resistor is software controlled."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:236
+msgid ""
+"In discrete designs, a pull-up or pull-down resistor is simply soldered on "
+"the circuit board. This is not something we deal with or model in software. "
+"The most you will think about these lines is that they will very likely be "
+"configured as open drain or open source (see the section above)."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:241
+msgid ""
+"The .set_config() callback can only turn pull up or down on and off, and "
+"will no have any semantic knowledge about the resistance used. It will only "
+"say switch a bit in a register enabling or disabling pull-up or pull-down."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:245
+msgid ""
+"If the GPIO line supports shunting in different resistance values for the "
+"pull-up or pull-down resistor, the GPIO chip callback .set_config() will not "
+"suffice. For these complex use cases, a combined GPIO chip and pin "
+"controller need to be implemented, as the pin config interface of a pin "
+"controller supports more versatile control over electrical properties and "
+"can handle different pull-up or pull-down resistance values."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:254
+msgid "GPIO drivers providing IRQs"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:256
+msgid ""
+"It is custom that GPIO drivers (GPIO chips) are also providing interrupts, "
+"most often cascaded off a parent interrupt controller, and in some special "
+"cases the GPIO logic is melded with a SoC's primary interrupt controller."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:260
+msgid ""
+"The IRQ portions of the GPIO block are implemented using an irq_chip, using "
+"the header <linux/irq.h>. So this combined driver is utilizing two sub- "
+"systems simultaneously: gpio and irq."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:264
+msgid ""
+"It is legal for any IRQ consumer to request an IRQ from any irqchip even if "
+"it is a combined GPIO+IRQ driver. The basic premise is that gpio_chip and "
+"irq_chip are orthogonal, and offering their services independent of each "
+"other."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:269
+msgid ""
+"gpiod_to_irq() is just a convenience function to figure out the IRQ for a "
+"certain GPIO line and should not be relied upon to have been called before "
+"the IRQ is used."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:273
+msgid ""
+"Always prepare the hardware and make it ready for action in respective "
+"callbacks from the GPIO and irq_chip APIs. Do not rely on gpiod_to_irq() "
+"having been called first."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:277
+msgid "We can divide GPIO irqchips in two broad categories:"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:279
+msgid ""
+"CASCADED INTERRUPT CHIPS: this means that the GPIO chip has one common "
+"interrupt output line, which is triggered by any enabled GPIO line on that "
+"chip. The interrupt output line will then be routed to an parent interrupt "
+"controller one level up, in the most simple case the systems primary "
+"interrupt controller. This is modeled by an irqchip that will inspect bits "
+"inside the GPIO controller to figure out which line fired it. The irqchip "
+"part of the driver needs to inspect registers to figure this out and it will "
+"likely also need to acknowledge that it is handling the interrupt by "
+"clearing some bit (sometime implicitly, by just reading a status register) "
+"and it will often need to set up the configuration such as edge sensitivity "
+"(rising or falling edge, or high/low level interrupt for example)."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:292
+msgid ""
+"HIERARCHICAL INTERRUPT CHIPS: this means that each GPIO line has a dedicated "
+"irq line to a parent interrupt controller one level up. There is no need to "
+"inquire the GPIO hardware to figure out which line has fired, but it may "
+"still be necessary to acknowledge the interrupt and set up configuration "
+"such as edge sensitivity."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:298
+msgid ""
+"Realtime considerations: a realtime compliant GPIO driver should not use "
+"spinlock_t or any sleepable APIs (like PM runtime) as part of its irqchip "
+"implementation."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:302
+msgid "spinlock_t should be replaced with raw_spinlock_t.[1]"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:303
+msgid ""
+"If sleepable APIs have to be used, these can be done from the ."
+"irq_bus_lock() and .irq_bus_unlock() callbacks, as these are the only "
+"slowpath callbacks on an irqchip. Create the callbacks if needed.[2]"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:309
+msgid "Cascaded GPIO irqchips"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:311
+msgid "Cascaded GPIO irqchips usually fall in one of three categories:"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:313
+msgid ""
+"CHAINED CASCADED GPIO IRQCHIPS: these are usually the type that is embedded "
+"on an SoC. This means that there is a fast IRQ flow handler for the GPIOs "
+"that gets called in a chain from the parent IRQ handler, most typically the "
+"system interrupt controller. This means that the GPIO irqchip handler will "
+"be called immediately from the parent irqchip, while holding the IRQs "
+"disabled. The GPIO irqchip will then end up calling something like this "
+"sequence in its interrupt handler::"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:326
+msgid ""
+"Chained GPIO irqchips typically can NOT set the .can_sleep flag on struct "
+"gpio_chip, as everything happens directly in the callbacks: no slow bus "
+"traffic like I2C can be used."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:330
+msgid ""
+"Realtime considerations: Note that chained IRQ handlers will not be forced "
+"threaded on -RT. As a result, spinlock_t or any sleepable APIs (like PM "
+"runtime) can't be used in a chained IRQ handler."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:334
+msgid ""
+"If required (and if it can't be converted to the nested threaded GPIO "
+"irqchip, see below) a chained IRQ handler can be converted to generic irq "
+"handler and this way it will become a threaded IRQ handler on -RT and a hard "
+"IRQ handler on non-RT (for example, see [3])."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:339
+msgid ""
+"The generic_handle_irq() is expected to be called with IRQ disabled, so the "
+"IRQ core will complain if it is called from an IRQ handler which is forced "
+"to a thread. The \"fake?\" raw lock can be used to work around this problem::"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:351
+msgid ""
+"GENERIC CHAINED GPIO IRQCHIPS: these are the same as \"CHAINED GPIO "
+"irqchips\", but chained IRQ handlers are not used. Instead GPIO IRQs "
+"dispatching is performed by generic IRQ handler which is configured using "
+"request_irq(). The GPIO irqchip will then end up calling something like this "
+"sequence in its interrupt handler::"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:361
+msgid ""
+"Realtime considerations: this kind of handlers will be forced threaded on -"
+"RT, and as result the IRQ core will complain that generic_handle_irq() is "
+"called with IRQ enabled and the same work-around as for \"CHAINED GPIO "
+"irqchips\" can be applied."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:366
+msgid ""
+"NESTED THREADED GPIO IRQCHIPS: these are off-chip GPIO expanders and any "
+"other GPIO irqchip residing on the other side of a sleeping bus such as I2C "
+"or SPI."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:370
+msgid ""
+"Of course such drivers that need slow bus traffic to read out IRQ status and "
+"similar, traffic which may in turn incur other IRQs to happen, cannot be "
+"handled in a quick IRQ handler with IRQs disabled. Instead they need to "
+"spawn a thread and then mask the parent IRQ line until the interrupt is "
+"handled by the driver. The hallmark of this driver is to call something like "
+"this in its interrupt handler::"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:381
+msgid ""
+"The hallmark of threaded GPIO irqchips is that they set the .can_sleep flag "
+"on struct gpio_chip to true, indicating that this chip may sleep when "
+"accessing the GPIOs."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:385
+msgid ""
+"These kinds of irqchips are inherently realtime tolerant as they are already "
+"set up to handle sleeping contexts."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:390
+msgid "Infrastructure helpers for GPIO irqchips"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:392
+msgid ""
+"To help out in handling the set-up and management of GPIO irqchips and the "
+"associated irqdomain and resource allocation callbacks. These are activated "
+"by selecting the Kconfig symbol GPIOLIB_IRQCHIP. If the symbol "
+"IRQ_DOMAIN_HIERARCHY is also selected, hierarchical helpers will also be "
+"provided. A big portion of overhead code will be managed by gpiolib, under "
+"the assumption that your interrupts are 1-to-1-mapped to the GPIO line index:"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:1
+msgid "GPIO line offset"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:1
+msgid "Hardware IRQ"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:1
+msgid "0"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:1
+msgid "1"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:1
+msgid "2"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:1
+msgid "..."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:1
+msgid "ngpio-1"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:410
+msgid ""
+"If some GPIO lines do not have corresponding IRQs, the bitmask valid_mask "
+"and the flag need_valid_mask in gpio_irq_chip can be used to mask off some "
+"lines as invalid for associating with IRQs."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:414
+msgid ""
+"The preferred way to set up the helpers is to fill in the struct "
+"gpio_irq_chip inside struct gpio_chip before adding the gpio_chip. If you do "
+"this, the additional irq_chip will be set up by gpiolib at the same time as "
+"setting up the rest of the GPIO functionality. The following is a typical "
+"example of a chained cascaded interrupt handler using the gpio_irq_chip. "
+"Note how the mask/unmask (or disable/enable) functions call into the core "
+"gpiolib code:"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:493
+msgid ""
+"The helper supports using threaded interrupts as well. Then you just request "
+"the interrupt separately and go with it:"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:569
+msgid ""
+"The helper supports using hierarchical interrupt controllers as well. In "
+"this case the typical set-up will look like this:"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:642
+msgid ""
+"As you can see pretty similar, but you do not supply a parent handler for "
+"the IRQ, instead a parent irqdomain, an fwnode for the hardware and a "
+"function .child_to_parent_hwirq() that has the purpose of looking up the "
+"parent hardware irq from a child (i.e. this gpio chip) hardware irq. As "
+"always it is good to look at examples in the kernel tree for advice on how "
+"to find the required pieces."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:649
+msgid ""
+"If there is a need to exclude certain GPIO lines from the IRQ domain handled "
+"by these helpers, we can set .irq.need_valid_mask of the gpiochip before "
+"devm_gpiochip_add_data() or gpiochip_add_data() is called. This allocates "
+"an .irq.valid_mask with as many bits set as there are GPIO lines in the "
+"chip, each bit representing line 0..n-1. Drivers can exclude GPIO lines by "
+"clearing bits from this mask. The mask can be filled in the "
+"init_valid_mask() callback that is part of the struct gpio_irq_chip."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:657
+msgid "To use the helpers please keep the following in mind:"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:659
+msgid ""
+"Make sure to assign all relevant members of the struct gpio_chip so that the "
+"irqchip can initialize. E.g. .dev and .can_sleep shall be set up properly."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:663
+msgid ""
+"Nominally set gpio_irq_chip.handler to handle_bad_irq. Then, if your irqchip "
+"is cascaded, set the handler to handle_level_irq() and/or handle_edge_irq() "
+"in the irqchip .set_type() callback depending on what your controller "
+"supports and what is requested by the consumer."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:670
+msgid "Locking IRQ usage"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:672
+msgid ""
+"Since GPIO and irq_chip are orthogonal, we can get conflicts between "
+"different use cases. For example a GPIO line used for IRQs should be an "
+"input line, it does not make sense to fire interrupts on an output GPIO."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:676
+msgid ""
+"If there is competition inside the subsystem which side is using the "
+"resource (a certain GPIO line and register for example) it needs to deny "
+"certain operations and keep track of usage inside of the gpiolib subsystem."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:680
+msgid ""
+"Input GPIOs can be used as IRQ signals. When this happens, a driver is "
+"requested to mark the GPIO as being used as an IRQ::"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:685
+msgid ""
+"This will prevent the use of non-irq related GPIO APIs until the GPIO IRQ "
+"lock is released::"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:690
+msgid ""
+"When implementing an irqchip inside a GPIO driver, these two functions "
+"should typically be called in the .startup() and .shutdown() callbacks from "
+"the irqchip."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:694
+msgid ""
+"When using the gpiolib irqchip helpers, these callbacks are automatically "
+"assigned."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:699
+msgid "Disabling and enabling IRQs"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:701
+msgid ""
+"In some (fringe) use cases, a driver may be using a GPIO line as input for "
+"IRQs, but occasionally switch that line over to drive output and then back "
+"to being an input with interrupts again. This happens on things like CEC "
+"(Consumer Electronics Control)."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:706
+msgid ""
+"When a GPIO is used as an IRQ signal, then gpiolib also needs to know if the "
+"IRQ is enabled or disabled. In order to inform gpiolib about this, the "
+"irqchip driver should call::"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:712
+msgid ""
+"This allows drivers to drive the GPIO as an output while the IRQ is "
+"disabled. When the IRQ is enabled again, a driver should call::"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:717
+msgid ""
+"When implementing an irqchip inside a GPIO driver, these two functions "
+"should typically be called in the .irq_disable() and .irq_enable() callbacks "
+"from the irqchip."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:721
+msgid ""
+"When IRQCHIP_IMMUTABLE is not advertised by the irqchip, these callbacks are "
+"automatically assigned. This behaviour is deprecated and on its way to be "
+"removed from the kernel."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:727
+msgid "Real-Time compliance for GPIO IRQ chips"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:729
+msgid ""
+"Any provider of irqchips needs to be carefully tailored to support Real-Time "
+"preemption. It is desirable that all irqchips in the GPIO subsystem keep "
+"this in mind and do the proper testing to assure they are real time-enabled."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:733
+msgid ""
+"So, pay attention on above realtime considerations in the documentation."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:735
+msgid ""
+"The following is a checklist to follow when preparing a driver for real-time "
+"compliance:"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:738
+msgid "ensure spinlock_t is not used as part irq_chip implementation"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:739
+msgid ""
+"ensure that sleepable APIs are not used as part irq_chip implementation If "
+"sleepable APIs have to be used, these can be done from the .irq_bus_lock() "
+"and .irq_bus_unlock() callbacks"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:742
+msgid ""
+"Chained GPIO irqchips: ensure spinlock_t or any sleepable APIs are not used "
+"from the chained IRQ handler"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:744
+msgid ""
+"Generic chained GPIO irqchips: take care about generic_handle_irq() calls "
+"and apply corresponding work-around"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:746
+msgid ""
+"Chained GPIO irqchips: get rid of the chained IRQ handler and use generic "
+"irq handler if possible"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:748
+msgid ""
+"regmap_mmio: it is possible to disable internal locking in regmap by "
+"setting .disable_locking and handling the locking in the GPIO driver"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:750
+msgid ""
+"Test your driver with the appropriate in-kernel real-time test cases for "
+"both level and edge IRQs"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:753
+msgid ""
+"[1] https://lore.kernel.org/r/1437496011-11486-1-git-send-email-"
+"bigeasy@linutronix.de/"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:754
+msgid ""
+"[2] https://lore.kernel.org/r/1443209283-20781-2-git-send-email-grygorii."
+"strashko@ti.com"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:755
+msgid ""
+"[3] https://lore.kernel.org/r/1443209283-20781-3-git-send-email-grygorii."
+"strashko@ti.com"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:759
+msgid "Requesting self-owned GPIO pins"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:761
+msgid ""
+"Sometimes it is useful to allow a GPIO chip driver to request its own GPIO "
+"descriptors through the gpiolib API. A GPIO driver can use the following "
+"functions to request and free descriptors::"
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:772
+msgid ""
+"Descriptors requested with gpiochip_request_own_desc() must be released with "
+"gpiochip_free_own_desc()."
+msgstr ""
+
+#: ../../../driver-api/gpio/driver.rst:775
+msgid ""
+"These functions must be used with care since they do not affect module use "
+"count. Do not use the functions to request gpio descriptors not owned by the "
+"calling driver."
+msgstr ""

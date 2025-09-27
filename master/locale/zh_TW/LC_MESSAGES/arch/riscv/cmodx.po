@@ -1,0 +1,239 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../arch/riscv/cmodx.rst:5
+msgid ""
+"Concurrent Modification and Execution of Instructions (CMODX) for RISC-V "
+"Linux"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:7
+msgid ""
+"CMODX is a programming technique where a program executes instructions that "
+"were modified by the program itself. Instruction storage and the instruction "
+"cache (icache) are not guaranteed to be synchronized on RISC-V hardware. "
+"Therefore, the program must enforce its own synchronization with the "
+"unprivileged fence.i instruction."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:14
+msgid "CMODX in the Kernel Space"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:17
+msgid "Dynamic ftrace"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:19
+msgid ""
+"Essentially, dynamic ftrace directs the control flow by inserting a function "
+"call at each patchable function entry, and patches it dynamically at runtime "
+"to enable or disable the redirection. In the case of RISC-V, 2 instructions, "
+"AUIPC + JALR, are required to compose a function call. However, it is "
+"impossible to patch 2 instructions and expect that a concurrent read-side "
+"executes them without a race condition. This series makes atmoic code "
+"patching possible in RISC-V ftrace. Kernel preemption makes things even "
+"worse as it allows the old state to persist across the patching process with "
+"stop_machine()."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:28
+msgid ""
+"In order to get rid of stop_machine() and run dynamic ftrace with full "
+"kernel preemption, we partially initialize each patchable function entry at "
+"boot-time, setting the first instruction to AUIPC, and the second to NOP. "
+"Now, atmoic patching is possible because the kernel only has to update one "
+"instruction. According to Ziccif, as long as an instruction is naturally "
+"aligned, the ISA guarantee an  atomic update."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:35
+msgid ""
+"By fixing down the first instruction, AUIPC, the range of the ftrace "
+"trampoline is limited to +-2K from the predetermined target, ftrace_caller, "
+"due to the lack of immediate encoding space in RISC-V. To address the issue, "
+"we introduce CALL_OPS, where an 8B naturally align metadata is added in "
+"front of each pacthable function. The metadata is resolved at the first "
+"trampoline, then the execution can be derect to another custom trampoline."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:43
+msgid "CMODX in the User Space"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:45
+msgid ""
+"Though fence.i is an unprivileged instruction, the default Linux ABI "
+"prohibits the use of fence.i in userspace applications. At any point the "
+"scheduler may migrate a task onto a new hart. If migration occurs after the "
+"userspace synchronized the icache and instruction storage with fence.i, the "
+"icache on the new hart will no longer be clean. This is due to the behavior "
+"of fence.i only affecting the hart that it is called on. Thus, the hart that "
+"the task has been migrated to may not have synchronized instruction storage "
+"and icache."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:53
+msgid ""
+"There are two ways to solve this problem: use the riscv_flush_icache() "
+"syscall, or use the ``PR_RISCV_SET_ICACHE_FLUSH_CTX`` prctl() and emit fence."
+"i in userspace. The syscall performs a one-off icache flushing operation. "
+"The prctl changes the Linux ABI to allow userspace to emit icache flushing "
+"operations."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:58
+msgid ""
+"As an aside, \"deferred\" icache flushes can sometimes be triggered in the "
+"kernel. At the time of writing, this only occurs during the "
+"riscv_flush_icache() syscall and when the kernel uses copy_to_user_page(). "
+"These deferred flushes happen only when the memory map being used by a hart "
+"changes. If the prctl() context caused an icache flush, this deferred icache "
+"flush will be skipped as it is redundant. Therefore, there will be no "
+"additional flush when using the riscv_flush_icache() syscall inside of the "
+"prctl() context."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:67
+msgid "prctl() Interface"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:69
+msgid ""
+"Call prctl() with ``PR_RISCV_SET_ICACHE_FLUSH_CTX`` as the first argument. "
+"The remaining arguments will be delegated to the riscv_set_icache_flush_ctx "
+"function detailed below."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:202
+msgid "Enable/disable icache flushing instructions in userspace."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:206
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:208
+msgid "``unsigned long ctx``"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:204
+msgid ""
+"Set the type of icache flushing instructions permitted/prohibited in "
+"userspace. Supported values described below."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:207
+msgid "``unsigned long scope``"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:216
+msgid ""
+"Set scope of where icache flushing instructions are allowed to be emitted. "
+"Supported values described below."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:219
+msgid "**Description**"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:206
+msgid "Supported values for ctx:"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:208
+msgid "``PR_RISCV_CTX_SW_FENCEI_ON``: Allow fence.i in user space."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:210
+msgid ""
+"``PR_RISCV_CTX_SW_FENCEI_OFF``: Disallow fence.i in user space. All threads "
+"in a process will be affected when ``scope == PR_RISCV_SCOPE_PER_PROCESS``. "
+"Therefore, caution must be taken; use this flag only when you can guarantee "
+"that no thread in the process will emit fence.i from this point onward."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:216
+msgid "Supported values for scope:"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:218
+msgid ""
+"``PR_RISCV_SCOPE_PER_PROCESS``: Ensure the icache of any thread in this "
+"process"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:219
+msgid "is coherent with instruction storage upon migration."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:222
+msgid ""
+"``PR_RISCV_SCOPE_PER_THREAD``: Ensure the icache of the current thread is"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:223
+msgid "coherent with instruction storage upon migration."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:226
+msgid ""
+"When ``scope == PR_RISCV_SCOPE_PER_PROCESS``, all threads in the process are "
+"permitted to emit icache flushing instructions. Whenever any thread in the "
+"process is migrated, the corresponding hart's icache will be guaranteed to "
+"be consistent with instruction storage. This does not enforce any guarantees "
+"outside of migration. If a thread modifies an instruction that another "
+"thread may attempt to execute, the other thread must still emit an icache "
+"flushing instruction before attempting to execute the potentially modified "
+"instruction. This must be performed by the user-space program."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:235
+msgid ""
+"In per-thread context (eg. ``scope == PR_RISCV_SCOPE_PER_THREAD``) only the "
+"thread calling this function is permitted to emit icache flushing "
+"instructions. When the thread is migrated, the corresponding hart's icache "
+"will be guaranteed to be consistent with instruction storage."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx:73: arch/riscv/mm/cacheflush.c:240
+msgid ""
+"On kernels configured without SMP, this function is a nop as migrations "
+"across harts will not occur."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:76
+msgid "Example usage:"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:78
+msgid ""
+"The following files are meant to be compiled and linked with each other. The "
+"modify_instruction() function replaces an add with 0 with an add with one, "
+"causing the instruction sequence in get_value() to change from returning a "
+"zero to returning a one."
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:83
+msgid "cmodx.c::"
+msgstr ""
+
+#: ../../../arch/riscv/cmodx.rst:107
+msgid "cmodx.S::"
+msgstr ""

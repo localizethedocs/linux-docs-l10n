@@ -1,0 +1,492 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../target/tcmu-design.rst:3
+msgid "TCM Userspace Design"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:27
+msgid "Design"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:29
+msgid ""
+"TCM is another name for LIO, an in-kernel iSCSI target (server). Existing "
+"TCM targets run in the kernel.  TCMU (TCM in Userspace) allows userspace "
+"programs to be written which act as iSCSI targets. This document describes "
+"the design."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:34
+msgid ""
+"The existing kernel provides modules for different SCSI transport "
+"protocols.  TCM also modularizes the data storage.  There are existing "
+"modules for file, block device, RAM or using another SCSI device as "
+"storage.  These are called \"backstores\" or \"storage engines\".  These "
+"built-in modules are implemented entirely as kernel code."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:41
+msgid "Background"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:43
+msgid ""
+"In addition to modularizing the transport protocol used for carrying SCSI "
+"commands (\"fabrics\"), the Linux kernel target, LIO, also modularizes the "
+"actual data storage as well. These are referred to as \"backstores\" or "
+"\"storage engines\". The target comes with backstores that allow a file, a "
+"block device, RAM, or another SCSI device to be used for the local storage "
+"needed for the exported SCSI LUN. Like the rest of LIO, these are "
+"implemented entirely as kernel code."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:51
+msgid ""
+"These backstores cover the most common use cases, but not all. One new use "
+"case that other non-kernel target solutions, such as tgt, are able to "
+"support is using Gluster's GLFS or Ceph's RBD as a backstore. The target "
+"then serves as a translator, allowing initiators to store data in these non-"
+"traditional networked storage systems, while still only using standard "
+"protocols themselves."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:58
+msgid ""
+"If the target is a userspace process, supporting these is easy. tgt, for "
+"example, needs only a small adapter module for each, because the modules "
+"just use the available userspace libraries for RBD and GLFS."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:62
+msgid ""
+"Adding support for these backstores in LIO is considerably more difficult, "
+"because LIO is entirely kernel code. Instead of undertaking the significant "
+"work to port the GLFS or RBD APIs and protocols to the kernel, another "
+"approach is to create a userspace pass-through backstore for LIO, \"TCMU\"."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:70
+msgid "Benefits"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:72
+msgid ""
+"In addition to allowing relatively easy support for RBD and GLFS, TCMU will "
+"also allow easier development of new backstores. TCMU combines with the LIO "
+"loopback fabric to become something similar to FUSE (Filesystem in "
+"Userspace), but at the SCSI layer instead of the filesystem layer. A SUSE, "
+"if you will."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:78
+msgid ""
+"The disadvantage is there are more distinct components to configure, and "
+"potentially to malfunction. This is unavoidable, but hopefully not fatal if "
+"we're careful to keep things as simple as possible."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:83
+msgid "Design constraints"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:85
+msgid "Good performance: high throughput, low latency"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:86
+msgid "Cleanly handle if userspace:"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:88
+msgid "never attaches"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:89
+msgid "hangs"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:90
+msgid "dies"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:91
+msgid "misbehaves"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:93
+msgid "Allow future flexibility in user & kernel implementations"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:94
+msgid "Be reasonably memory-efficient"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:95
+msgid "Simple to configure & run"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:96
+msgid "Simple to write a userspace backend"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:100
+msgid "Implementation overview"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:102
+msgid ""
+"The core of the TCMU interface is a memory region that is shared between "
+"kernel and userspace. Within this region is: a control area (mailbox); a "
+"lockless producer/consumer circular buffer for commands to be passed up, and "
+"status returned; and an in/out data buffer area."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:107
+msgid ""
+"TCMU uses the pre-existing UIO subsystem. UIO allows device driver "
+"development in userspace, and this is conceptually very close to the TCMU "
+"use case, except instead of a physical device, TCMU implements a memory-"
+"mapped layout designed for SCSI commands. Using UIO also benefits TCMU by "
+"handling device introspection (e.g. a way for userspace to determine how "
+"large the shared region is) and signaling mechanisms in both directions."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:115
+msgid ""
+"There are no embedded pointers in the memory region. Everything is expressed "
+"as an offset from the region's starting address. This allows the ring to "
+"still work if the user process dies and is restarted with the region mapped "
+"at a different virtual address."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:120
+msgid "See target_core_user.h for the struct definitions."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:123
+msgid "The Mailbox"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:125
+msgid ""
+"The mailbox is always at the start of the shared memory region, and contains "
+"a version, details about the starting offset and size of the command ring, "
+"and head and tail pointers to be used by the kernel and userspace "
+"(respectively) to put commands on the ring, and indicate when the commands "
+"are completed."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:131
+msgid "version - 1 (userspace should abort if otherwise)"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:133
+msgid "flags:"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:134
+msgid "TCMU_MAILBOX_FLAG_CAP_OOOC:"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:135
+msgid ""
+"indicates out-of-order completion is supported. See \"The Command Ring\" for "
+"details."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:138
+msgid "cmdr_off"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:139
+msgid ""
+"The offset of the start of the command ring from the start of the memory "
+"region, to account for the mailbox size."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:141
+msgid "cmdr_size"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:142
+msgid ""
+"The size of the command ring. This does *not* need to be a power of two."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:144
+msgid "cmd_head"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:145
+msgid ""
+"Modified by the kernel to indicate when a command has been placed on the "
+"ring."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:147
+msgid "cmd_tail"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:148
+msgid ""
+"Modified by userspace to indicate when it has completed processing of a "
+"command."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:152
+msgid "The Command Ring"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:154
+msgid ""
+"Commands are placed on the ring by the kernel incrementing mailbox.cmd_head "
+"by the size of the command, modulo cmdr_size, and then signaling userspace "
+"via uio_event_notify(). Once the command is completed, userspace updates "
+"mailbox.cmd_tail in the same way and signals the kernel via a 4-byte "
+"write(). When cmd_head equals cmd_tail, the ring is empty -- no commands are "
+"currently waiting to be processed by userspace."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:162
+msgid ""
+"TCMU commands are 8-byte aligned. They start with a common header containing "
+"\"len_op\", a 32-bit value that stores the length, as well as the opcode in "
+"the lowest unused bits. It also contains cmd_id and flags fields for setting "
+"by the kernel (kflags) and userspace (uflags)."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:168
+msgid "Currently only two opcodes are defined, TCMU_OP_CMD and TCMU_OP_PAD."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:170
+msgid ""
+"When the opcode is CMD, the entry in the command ring is a struct "
+"tcmu_cmd_entry. Userspace finds the SCSI CDB (Command Data Block) via "
+"tcmu_cmd_entry.req.cdb_off. This is an offset from the start of the overall "
+"shared memory region, not the entry. The data in/out buffers are accessible "
+"via the req.iov[] array. iov_cnt contains the number of entries in iov[] "
+"needed to describe either the Data-In or Data-Out buffers. For bidirectional "
+"commands, iov_cnt specifies how many iovec entries cover the Data-Out area, "
+"and iov_bidi_cnt specifies how many iovec entries immediately after that in "
+"iov[] cover the Data-In area. Just like other fields, iov.iov_base is an "
+"offset from the start of the region."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:182
+msgid ""
+"When completing a command, userspace sets rsp.scsi_status, and rsp."
+"sense_buffer if necessary. Userspace then increments mailbox.cmd_tail by "
+"entry.hdr.length (mod cmdr_size) and signals the kernel via the UIO method, "
+"a 4-byte write to the file descriptor."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:187
+msgid ""
+"If TCMU_MAILBOX_FLAG_CAP_OOOC is set for mailbox->flags, kernel is capable "
+"of handling out-of-order completions. In this case, userspace can handle "
+"command in different order other than original. Since kernel would still "
+"process the commands in the same order it appeared in the command ring, "
+"userspace need to update the cmd->id when completing the command(a.k.a steal "
+"the original command's entry)."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:194
+msgid ""
+"When the opcode is PAD, userspace only updates cmd_tail as above -- it's a "
+"no-op. (The kernel inserts PAD entries to ensure each CMD entry is "
+"contiguous within the command ring.)"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:198
+msgid ""
+"More opcodes may be added in the future. If userspace encounters an opcode "
+"it does not handle, it must set UNKNOWN_OP bit (bit 0) in hdr.uflags, update "
+"cmd_tail, and proceed with processing additional commands, if any."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:204
+msgid "The Data Area"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:206
+msgid ""
+"This is shared-memory space after the command ring. The organization of this "
+"area is not defined in the TCMU interface, and userspace should access only "
+"the parts referenced by pending iovs."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:212
+msgid "Device Discovery"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:214
+msgid ""
+"Other devices may be using UIO besides TCMU. Unrelated user processes may "
+"also be handling different sets of TCMU devices. TCMU userspace processes "
+"must find their devices by scanning sysfs class/uio/uio*/name. For TCMU "
+"devices, these names will be of the format::"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:222
+msgid ""
+"where \"tcm-user\" is common for all TCMU-backed UIO devices. <hba_num> and "
+"<device_name> allow userspace to find the device's path in the kernel "
+"target's configfs tree. Assuming the usual mount point, it is found at::"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:229
+msgid ""
+"This location contains attributes such as \"hw_block_size\", that userspace "
+"needs to know for correct operation."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:232
+msgid ""
+"<subtype> will be a userspace-process-unique string to identify the TCMU "
+"device as expecting to be backed by a certain handler, and <path> will be an "
+"additional handler-specific string for the user process to configure the "
+"device, if needed. The name cannot contain ':', due to LIO limitations."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:238
+msgid ""
+"For all devices so discovered, the user handler opens /dev/uioX and calls "
+"mmap()::"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:243
+msgid ""
+"where size must be equal to the value read from /sys/class/uio/uioX/maps/"
+"map0/size."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:248
+msgid "Device Events"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:250
+msgid ""
+"If a new device is added or removed, a notification will be broadcast over "
+"netlink, using a generic netlink family name of \"TCM-USER\" and a multicast "
+"group named \"config\". This will include the UIO name as described in the "
+"previous section, as well as the UIO minor number. This should allow "
+"userspace to identify both the UIO device and the LIO device, so that after "
+"determining the device is supported (based on subtype) it can take the "
+"appropriate action."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:260
+msgid "Other contingencies"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:262
+msgid "Userspace handler process never attaches:"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:264
+msgid ""
+"TCMU will post commands, and then abort them after a timeout period (30 "
+"seconds.)"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:267
+msgid "Userspace handler process is killed:"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:269
+msgid ""
+"It is still possible to restart and re-connect to TCMU devices. Command ring "
+"is preserved. However, after the timeout period, the kernel will abort "
+"pending tasks."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:273
+msgid "Userspace handler process hangs:"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:275
+msgid "The kernel will abort pending tasks after a timeout period."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:277
+msgid "Userspace handler process is malicious:"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:279
+msgid ""
+"The process can trivially break the handling of devices it controls, but "
+"should not be able to access kernel memory outside its shared memory areas."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:285
+msgid "Writing a user pass-through handler (with example code)"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:287
+msgid "A user process handing a TCMU device must support the following:"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:289
+msgid "Discovering and configuring TCMU uio devices"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:290
+msgid "Waiting for events on the device(s)"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:291
+msgid ""
+"Managing the command ring: Parsing operations and commands, performing work "
+"as needed, setting response fields (scsi_status and possibly sense_buffer), "
+"updating cmd_tail, and notifying the kernel that work has been finished"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:296
+msgid ""
+"First, consider instead writing a plugin for tcmu-runner. tcmu-runner "
+"implements all of this, and provides a higher-level API for plugin authors."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:300
+msgid ""
+"TCMU is designed so that multiple unrelated processes can manage TCMU "
+"devices separately. All handlers should make sure to only open their "
+"devices, based opon a known subtype string."
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:304
+msgid "Discovering and configuring TCMU UIO devices::"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:346
+msgid "Managing the command ring::"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:400
+msgid "A final note"
+msgstr ""
+
+#: ../../../target/tcmu-design.rst:402
+msgid ""
+"Please be careful to return codes as defined by the SCSI specifications. "
+"These are different than some values defined in the scsi/scsi.h include "
+"file. For example, CHECK CONDITION's status code is 2, not 1."
+msgstr ""

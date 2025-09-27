@@ -1,0 +1,1171 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../kernel-hacking/hacking.rst:5
+msgid "Unreliable Guide To Hacking The Linux Kernel"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:0
+msgid "Author"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:7
+msgid "Rusty Russell"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:10
+msgid "Introduction"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:12
+msgid ""
+"Welcome, gentle reader, to Rusty's Remarkably Unreliable Guide to Linux "
+"Kernel Hacking. This document describes the common routines and general "
+"requirements for kernel code: its goal is to serve as a primer for Linux "
+"kernel development for experienced C programmers. I avoid implementation "
+"details: that's what the code is for, and I ignore whole tracts of useful "
+"routines."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:19
+msgid ""
+"Before you read this, please understand that I never wanted to write this "
+"document, being grossly under-qualified, but I always wanted to read it, and "
+"this was the only way. I hope it will grow into a compendium of best "
+"practice, common starting points and random information."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:26
+msgid "The Players"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:28
+msgid "At any time each of the CPUs in a system can be:"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:30
+msgid "not associated with any process, serving a hardware interrupt;"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:32
+msgid "not associated with any process, serving a softirq or tasklet;"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:34
+msgid "running in kernel space, associated with a process (user context);"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:36
+msgid "running a process in user space."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:38
+msgid ""
+"There is an ordering between these. The bottom two can preempt each other, "
+"but above that is a strict hierarchy: each can only be preempted by the ones "
+"above it. For example, while a softirq is running on a CPU, no other softirq "
+"will preempt it, but a hardware interrupt can. However, any other CPUs in "
+"the system execute independently."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:44
+msgid ""
+"We'll see a number of ways that the user context can block interrupts, to "
+"become truly non-preemptable."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:48
+msgid "User Context"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:50
+msgid ""
+"User context is when you are coming in from a system call or other trap: "
+"like userspace, you can be preempted by more important tasks and by "
+"interrupts. You can sleep, by calling :c:func:`schedule()`."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:56
+msgid ""
+"You are always in user context on module load and unload, and on operations "
+"on the block device layer."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:59
+msgid ""
+"In user context, the ``current`` pointer (indicating the task we are "
+"currently executing) is valid, and :c:func:`in_interrupt()` (``include/linux/"
+"preempt.h``) is false."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:65
+msgid ""
+"Beware that if you have preemption or softirqs disabled (see below), :c:func:"
+"`in_interrupt()` will return a false positive."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:69
+msgid "Hardware Interrupts (Hard IRQs)"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:71
+msgid ""
+"Timer ticks, network cards and keyboard are examples of real hardware which "
+"produce interrupts at any time. The kernel runs interrupt handlers, which "
+"services the hardware. The kernel guarantees that this handler is never re-"
+"entered: if the same interrupt arrives, it is queued (or dropped). Because "
+"it disables interrupts, this handler has to be fast: frequently it simply "
+"acknowledges the interrupt, marks a 'software interrupt' for execution and "
+"exits."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:79
+msgid ""
+"You can tell you are in a hardware interrupt, because in_hardirq() returns "
+"true."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:84
+msgid ""
+"Beware that this will return a false positive if interrupts are disabled "
+"(see below)."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:88
+msgid "Software Interrupt Context: Softirqs and Tasklets"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:90
+msgid ""
+"Whenever a system call is about to return to userspace, or a hardware "
+"interrupt handler exits, any 'software interrupts' which are marked pending "
+"(usually by hardware interrupts) are run (``kernel/softirq.c``)."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:94
+msgid ""
+"Much of the real interrupt handling work is done here. Early in the "
+"transition to SMP, there were only 'bottom halves' (BHs), which didn't take "
+"advantage of multiple CPUs. Shortly after we switched from wind-up computers "
+"made of match-sticks and snot, we abandoned this limitation and switched to "
+"'softirqs'."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:100
+msgid ""
+"``include/linux/interrupt.h`` lists the different softirqs. A very important "
+"softirq is the timer softirq (``include/linux/timer.h``): you can register "
+"to have it call functions for you in a given length of time."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:105
+msgid ""
+"Softirqs are often a pain to deal with, since the same softirq will run "
+"simultaneously on more than one CPU. For this reason, tasklets (``include/"
+"linux/interrupt.h``) are more often used: they are dynamically-registrable "
+"(meaning you can have as many as you want), and they also guarantee that any "
+"tasklet will only run on one CPU at any time, although different tasklets "
+"can run simultaneously."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:114
+msgid "The name 'tasklet' is misleading: they have nothing to do with 'tasks'."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:117
+msgid ""
+"You can tell you are in a softirq (or tasklet) using the :c:func:"
+"`in_softirq()` macro (``include/linux/preempt.h``)."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:122
+msgid ""
+"Beware that this will return a false positive if a :ref:`bottom half lock "
+"<local_bh_disable>` is held."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:126
+msgid "Some Basic Rules"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:128
+msgid "No memory protection"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:129
+msgid ""
+"If you corrupt memory, whether in user context or interrupt context, the "
+"whole machine will crash. Are you sure you can't do what you want in "
+"userspace?"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:133
+msgid "No floating point or MMX"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:134
+msgid ""
+"The FPU context is not saved; even in user context the FPU state probably "
+"won't correspond with the current process: you would mess with some user "
+"process' FPU state. If you really want to do this, you would have to "
+"explicitly save/restore the full FPU state (and avoid context switches). It "
+"is generally a bad idea; use fixed point arithmetic first."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:141
+msgid "A rigid stack limit"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:142
+msgid ""
+"Depending on configuration options the kernel stack is about 3K to 6K for "
+"most 32-bit architectures: it's about 14K on most 64-bit archs, and often "
+"shared with interrupts so you can't use it all. Avoid deep recursion and "
+"huge local arrays on the stack (allocate them dynamically instead)."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:148
+msgid "The Linux kernel is portable"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:149
+msgid ""
+"Let's keep it that way. Your code should be 64-bit clean, and endian-"
+"independent. You should also minimize CPU specific stuff, e.g. inline "
+"assembly should be cleanly encapsulated and minimized to ease porting. "
+"Generally it should be restricted to the architecture-dependent part of the "
+"kernel tree."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:156
+msgid "ioctls: Not writing a new system call"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:158
+msgid "A system call generally looks like this::"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:166
+msgid ""
+"First, in most cases you don't want to create a new system call. You create "
+"a character device and implement an appropriate ioctl for it. This is much "
+"more flexible than system calls, doesn't have to be entered in every "
+"architecture's ``include/asm/unistd.h`` and ``arch/kernel/entry.S`` file, "
+"and is much more likely to be accepted by Linus."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:173
+msgid ""
+"If all your routine does is read or write some parameter, consider "
+"implementing a :c:func:`sysfs()` interface instead."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:176
+msgid ""
+"Inside the ioctl you're in user context to a process. When a error occurs "
+"you return a negated errno (see ``include/uapi/asm-generic/errno-base.h``, "
+"``include/uapi/asm-generic/errno.h`` and ``include/linux/errno.h``), "
+"otherwise you return 0."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:182
+msgid ""
+"After you slept you should check if a signal occurred: the Unix/Linux way of "
+"handling signals is to temporarily exit the system call with the ``-"
+"ERESTARTSYS`` error. The system call entry code will switch back to user "
+"context, process the signal handler and then your system call will be "
+"restarted (unless the user disabled that). So you should be prepared to "
+"process the restart, e.g. if you're in the middle of manipulating some data "
+"structure."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:196
+msgid ""
+"If you're doing longer computations: first think userspace. If you "
+"**really** want to do it in kernel you should regularly check if you need to "
+"give up the CPU (remember there is cooperative multitasking per CPU). Idiom::"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:204
+msgid ""
+"A short note on interface design: the UNIX system call motto is \"Provide "
+"mechanism not policy\"."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:208
+msgid "Recipes for Deadlock"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:210
+msgid "You cannot call any routines which may sleep, unless:"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:212
+msgid "You are in user context."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:214
+msgid "You do not own any spinlocks."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:216
+msgid ""
+"You have interrupts enabled (actually, Andi Kleen says that the scheduling "
+"code will enable them for you, but that's probably not what you wanted)."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:220
+msgid ""
+"Note that some functions may sleep implicitly: common ones are the user "
+"space access functions (\\*_user) and memory allocation functions without "
+"``GFP_ATOMIC``."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:224
+msgid ""
+"You should always compile your kernel ``CONFIG_DEBUG_ATOMIC_SLEEP`` on, and "
+"it will warn you if you break these rules. If you **do** break the rules, "
+"you will eventually lock up your box."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:228
+msgid "Really."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:231
+msgid "Common Routines"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:234
+msgid ":c:func:`printk()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:236
+msgid "Defined in ``include/linux/printk.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:238
+msgid ""
+":c:func:`printk()` feeds kernel messages to the console, dmesg, and the "
+"syslog daemon. It is useful for debugging and reporting errors, and can be "
+"used inside interrupt context, but use with caution: a machine which has its "
+"console flooded with printk messages is unusable. It uses a format string "
+"mostly compatible with ANSI C printf, and C string concatenation to give it "
+"a first \"priority\" argument::"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:248
+msgid ""
+"See ``include/linux/kern_levels.h``; for other ``KERN_`` values; these are "
+"interpreted by syslog as the level. Special case: for printing an IP address "
+"use::"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:256
+msgid ""
+":c:func:`printk()` internally uses a 1K buffer and does not catch overruns. "
+"Make sure that will be enough."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:261
+msgid ""
+"You will know when you are a real kernel hacker when you start typoing "
+"printf as printk in your user programs :)"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:266
+msgid ""
+"Another sidenote: the original Unix Version 6 sources had a comment on top "
+"of its printf function: \"Printf should not be used for chit-chat\". You "
+"should follow that advice."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:271
+msgid ""
+":c:func:`copy_to_user()` / :c:func:`copy_from_user()` / :c:func:"
+"`get_user()` / :c:func:`put_user()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:273
+msgid "Defined in ``include/linux/uaccess.h`` / ``asm/uaccess.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:275
+#: ../../../kernel-hacking/hacking.rst:497
+msgid "**[SLEEPS]**"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:277
+msgid ""
+":c:func:`put_user()` and :c:func:`get_user()` are used to get and put single "
+"values (such as an int, char, or long) from and to userspace. A pointer into "
+"userspace should never be simply dereferenced: data should be copied using "
+"these routines. Both return ``-EFAULT`` or 0."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:283
+msgid ""
+":c:func:`copy_to_user()` and :c:func:`copy_from_user()` are more general: "
+"they copy an arbitrary amount of data to and from userspace."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:289
+msgid ""
+"Unlike :c:func:`put_user()` and :c:func:`get_user()`, they return the amount "
+"of uncopied data (ie. 0 still means success)."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:292
+msgid ""
+"[Yes, this objectionable interface makes me cringe. The flamewar comes up "
+"every year or so. --RR.]"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:295
+msgid ""
+"The functions may sleep implicitly. This should never be called outside user "
+"context (it makes no sense), with interrupts disabled, or a spinlock held."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:300
+msgid ":c:func:`kmalloc()`/:c:func:`kfree()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:302
+msgid "Defined in ``include/linux/slab.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:304
+msgid "**[MAY SLEEP: SEE BELOW]**"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:306
+msgid ""
+"These routines are used to dynamically request pointer-aligned chunks of "
+"memory, like malloc and free do in userspace, but :c:func:`kmalloc()` takes "
+"an extra flag word. Important values:"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:310
+msgid "``GFP_KERNEL``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:311
+msgid ""
+"May sleep and swap to free memory. Only allowed in user context, but is the "
+"most reliable way to allocate memory."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:314
+msgid "``GFP_ATOMIC``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:315
+msgid ""
+"Don't sleep. Less reliable than ``GFP_KERNEL``, but may be called from "
+"interrupt context. You should **really** have a good out-of-memory error-"
+"handling strategy."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:319
+msgid "``GFP_DMA``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:320
+msgid ""
+"Allocate ISA DMA lower than 16MB. If you don't know what that is you don't "
+"need it. Very unreliable."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:323
+msgid ""
+"If you see a sleeping function called from invalid context warning message, "
+"then maybe you called a sleeping allocation function from interrupt context "
+"without ``GFP_ATOMIC``. You should really fix that. Run, don't walk."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:328
+msgid ""
+"If you are allocating at least ``PAGE_SIZE`` (``asm/page.h`` or ``asm/"
+"page_types.h``) bytes, consider using :c:func:`__get_free_pages()` "
+"(``include/linux/gfp.h``). It takes an order argument (0 for page sized, 1 "
+"for double page, 2 for four pages etc.) and the same memory priority flag "
+"word as above."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:334
+msgid ""
+"If you are allocating more than a page worth of bytes you can use :c:func:"
+"`vmalloc()`. It'll allocate virtual memory in the kernel map. This block is "
+"not contiguous in physical memory, but the MMU makes it look like it is for "
+"you (so it'll only look contiguous to the CPUs, not to external device "
+"drivers). If you really need large physically contiguous memory for some "
+"weird device, you have a problem: it is poorly supported in Linux because "
+"after some time memory fragmentation in a running kernel makes it hard. The "
+"best way is to allocate the block early in the boot process via the :c:func:"
+"`alloc_bootmem()` routine."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:345
+msgid ""
+"Before inventing your own cache of often-used objects consider using a slab "
+"cache in ``include/linux/slab.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:349
+msgid ":c:macro:`current`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:351
+msgid "Defined in ``include/asm/current.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:353
+msgid ""
+"This global variable (really a macro) contains a pointer to the current task "
+"structure, so is only valid in user context. For example, when a process "
+"makes a system call, this will point to the task structure of the calling "
+"process. It is **not NULL** in interrupt context."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:359
+msgid ":c:func:`mdelay()`/:c:func:`udelay()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:361
+msgid "Defined in ``include/asm/delay.h`` / ``include/linux/delay.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:363
+msgid ""
+"The :c:func:`udelay()` and :c:func:`ndelay()` functions can be used for "
+"small pauses. Do not use large values with them as you risk overflow - the "
+"helper function :c:func:`mdelay()` is useful here, or consider :c:func:"
+"`msleep()`."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:369
+msgid ""
+":c:func:`cpu_to_be32()`/:c:func:`be32_to_cpu()`/:c:func:`cpu_to_le32()`/:c:"
+"func:`le32_to_cpu()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:371
+msgid "Defined in ``include/asm/byteorder.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:373
+msgid ""
+"The :c:func:`cpu_to_be32()` family (where the \"32\" can be replaced by 64 "
+"or 16, and the \"be\" can be replaced by \"le\") are the general way to do "
+"endian conversions in the kernel: they return the converted value. All "
+"variations supply the reverse as well: :c:func:`be32_to_cpu()`, etc."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:379
+msgid ""
+"There are two major variations of these functions: the pointer variation, "
+"such as :c:func:`cpu_to_be32p()`, which take a pointer to the given type, "
+"and return the converted value. The other variation is the \"in-situ\" "
+"family, such as :c:func:`cpu_to_be32s()`, which convert value referred to by "
+"the pointer, and return void."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:386
+msgid ":c:func:`local_irq_save()`/:c:func:`local_irq_restore()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:388
+msgid "Defined in ``include/linux/irqflags.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:390
+msgid ""
+"These routines disable hard interrupts on the local CPU, and restore them. "
+"They are reentrant; saving the previous state in their one ``unsigned long "
+"flags`` argument. If you know that interrupts are enabled, you can simply "
+"use :c:func:`local_irq_disable()` and :c:func:`local_irq_enable()`."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:399
+msgid ":c:func:`local_bh_disable()`/:c:func:`local_bh_enable()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:401
+msgid "Defined in ``include/linux/bottom_half.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:404
+msgid ""
+"These routines disable soft interrupts on the local CPU, and restore them. "
+"They are reentrant; if soft interrupts were disabled before, they will still "
+"be disabled after this pair of functions has been called. They prevent "
+"softirqs and tasklets from running on the current CPU."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:410
+msgid ":c:func:`smp_processor_id()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:412
+msgid "Defined in ``include/linux/smp.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:414
+msgid ""
+":c:func:`get_cpu()` disables preemption (so you won't suddenly get moved to "
+"another CPU) and returns the current processor number, between 0 and "
+"``NR_CPUS``. Note that the CPU numbers are not necessarily continuous. You "
+"return it again with :c:func:`put_cpu()` when you are done."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:420
+msgid ""
+"If you know you cannot be preempted by another task (ie. you are in "
+"interrupt context, or have preemption disabled) you can use "
+"smp_processor_id()."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:425
+msgid "``__init``/``__exit``/``__initdata``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:427
+msgid "Defined in  ``include/linux/init.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:429
+msgid ""
+"After boot, the kernel frees up a special section; functions marked with "
+"``__init`` and data structures marked with ``__initdata`` are dropped after "
+"boot is complete: similarly modules discard this memory after "
+"initialization. ``__exit`` is used to declare a function which is only "
+"required on exit: the function will be dropped if this file is not compiled "
+"as a module. See the header file for use. Note that it makes no sense for a "
+"function marked with ``__init`` to be exported to modules with :c:func:"
+"`EXPORT_SYMBOL()` or :c:func:`EXPORT_SYMBOL_GPL()`- this will break."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:440
+msgid ":c:func:`__initcall()`/:c:func:`module_init()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:442
+msgid "Defined in  ``include/linux/init.h`` / ``include/linux/module.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:444
+msgid ""
+"Many parts of the kernel are well served as a module (dynamically-loadable "
+"parts of the kernel). Using the :c:func:`module_init()` and :c:func:"
+"`module_exit()` macros it is easy to write code without #ifdefs which can "
+"operate both as a module or built into the kernel."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:450
+msgid ""
+"The :c:func:`module_init()` macro defines which function is to be called at "
+"module insertion time (if the file is compiled as a module), or at boot "
+"time: if the file is not compiled as a module the :c:func:`module_init()` "
+"macro becomes equivalent to :c:func:`__initcall()`, which through linker "
+"magic ensures that the function is called on boot."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:457
+msgid ""
+"The function can return a negative error number to cause module loading to "
+"fail (unfortunately, this has no effect if the module is compiled into the "
+"kernel). This function is called in user context with interrupts enabled, so "
+"it can sleep."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:463
+msgid ":c:func:`module_exit()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:466
+msgid "Defined in  ``include/linux/module.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:468
+msgid ""
+"This macro defines the function to be called at module removal time (or "
+"never, in the case of the file compiled into the kernel). It will only be "
+"called if the module usage count has reached zero. This function can also "
+"sleep, but cannot fail: everything must be cleaned up by the time it returns."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:474
+msgid ""
+"Note that this macro is optional: if it is not present, your module will not "
+"be removable (except for 'rmmod -f')."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:478
+msgid ":c:func:`try_module_get()`/:c:func:`module_put()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:480
+msgid "Defined in ``include/linux/module.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:482
+msgid ""
+"These manipulate the module usage count, to protect against removal (a "
+"module also can't be removed if another module uses one of its exported "
+"symbols: see below). Before calling into module code, you should call :c:"
+"func:`try_module_get()` on that module: if it fails, then the module is "
+"being removed and you should act as if it wasn't there. Otherwise, you can "
+"safely enter the module, and call :c:func:`module_put()` when you're "
+"finished."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:490
+msgid ""
+"Most registerable structures have an owner field, such as in the :c:type:"
+"`struct file_operations <file_operations>` structure. Set this field to the "
+"macro ``THIS_MODULE``."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:495
+msgid "Wait Queues ``include/linux/wait.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:499
+msgid ""
+"A wait queue is used to wait for someone to wake you up when a certain "
+"condition is true. They must be used carefully to ensure there is no race "
+"condition. You declare a :c:type:`wait_queue_head_t`, and then processes "
+"which want to wait for that condition declare a :c:type:`wait_queue_entry_t` "
+"referring to themselves, and place that in the queue."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:506
+msgid "Declaring"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:508
+msgid ""
+"You declare a ``wait_queue_head_t`` using the :c:func:"
+"`DECLARE_WAIT_QUEUE_HEAD()` macro, or using the :c:func:"
+"`init_waitqueue_head()` routine in your initialization code."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:514
+msgid "Queuing"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:516
+msgid ""
+"Placing yourself in the waitqueue is fairly complex, because you must put "
+"yourself in the queue before checking the condition. There is a macro to do "
+"this: :c:func:`wait_event_interruptible()` (``include/linux/wait.h``) The "
+"first argument is the wait queue head, and the second is an expression which "
+"is evaluated; the macro returns 0 when this expression is true, or ``-"
+"ERESTARTSYS`` if a signal is received. The :c:func:`wait_event()` version "
+"ignores signals."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:525
+msgid "Waking Up Queued Tasks"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:527
+msgid ""
+"Call :c:func:`wake_up()` (``include/linux/wait.h``), which will wake up "
+"every process in the queue. The exception is if one has ``TASK_EXCLUSIVE`` "
+"set, in which case the remainder of the queue will not be woken. There are "
+"other variants of this basic function available in the same header."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:534
+msgid "Atomic Operations"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:536
+msgid ""
+"Certain operations are guaranteed atomic on all platforms. The first class "
+"of operations work on :c:type:`atomic_t` (``include/asm/atomic.h``); this "
+"contains a signed integer (at least 32 bits long), and you must use these "
+"functions to manipulate or read :c:type:`atomic_t` variables. :c:func:"
+"`atomic_read()` and :c:func:`atomic_set()` get and set the counter, :c:func:"
+"`atomic_add()`, :c:func:`atomic_sub()`, :c:func:`atomic_inc()`, :c:func:"
+"`atomic_dec()`, and :c:func:`atomic_dec_and_test()` (returns true if it was "
+"decremented to zero)."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:546
+msgid "Yes. It returns true (i.e. != 0) if the atomic variable is zero."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:548
+msgid ""
+"Note that these functions are slower than normal arithmetic, and so should "
+"not be used unnecessarily."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:551
+msgid ""
+"The second class of atomic operations is atomic bit operations on an "
+"``unsigned long``, defined in ``include/linux/bitops.h``. These operations "
+"generally take a pointer to the bit pattern, and a bit number: 0 is the "
+"least significant bit. :c:func:`set_bit()`, :c:func:`clear_bit()` and :c:"
+"func:`change_bit()` set, clear, and flip the given bit. :c:func:"
+"`test_and_set_bit()`, :c:func:`test_and_clear_bit()` and :c:func:"
+"`test_and_change_bit()` do the same thing, except return true if the bit was "
+"previously set; these are particularly useful for atomically setting flags."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:562
+msgid ""
+"It is possible to call these operations with bit indices greater than "
+"``BITS_PER_LONG``. The resulting behavior is strange on big-endian platforms "
+"though so it is a good idea not to do this."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:567
+msgid "Symbols"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:569
+msgid ""
+"Within the kernel proper, the normal linking rules apply (ie. unless a "
+"symbol is declared to be file scope with the ``static`` keyword, it can be "
+"used anywhere in the kernel). However, for modules, a special exported "
+"symbol table is kept which limits the entry points to the kernel proper. "
+"Modules can also export symbols."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:576
+msgid ":c:func:`EXPORT_SYMBOL()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:578
+#: ../../../kernel-hacking/hacking.rst:586
+#: ../../../kernel-hacking/hacking.rst:599
+#: ../../../kernel-hacking/hacking.rst:608
+msgid "Defined in ``include/linux/export.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:580
+msgid ""
+"This is the classic method of exporting a symbol: dynamically loaded modules "
+"will be able to use the symbol as normal."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:584
+msgid ":c:func:`EXPORT_SYMBOL_GPL()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:588
+msgid ""
+"Similar to :c:func:`EXPORT_SYMBOL()` except that the symbols exported by :c:"
+"func:`EXPORT_SYMBOL_GPL()` can only be seen by modules with a :c:func:"
+"`MODULE_LICENSE()` that specifies a GPLv2 compatible license. It implies "
+"that the function is considered an internal implementation issue, and not "
+"really an interface. Some maintainers and developers may however require "
+"EXPORT_SYMBOL_GPL() when adding any new APIs or functionality."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:597
+msgid ":c:func:`EXPORT_SYMBOL_NS()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:601
+msgid ""
+"This is the variant of `EXPORT_SYMBOL()` that allows specifying a symbol "
+"namespace. Symbol Namespaces are documented in Documentation/core-api/symbol-"
+"namespaces.rst"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:606
+msgid ":c:func:`EXPORT_SYMBOL_NS_GPL()`"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:610
+msgid ""
+"This is the variant of `EXPORT_SYMBOL_GPL()` that allows specifying a symbol "
+"namespace. Symbol Namespaces are documented in Documentation/core-api/symbol-"
+"namespaces.rst"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:615
+msgid "Routines and Conventions"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:618
+msgid "Double-linked lists ``include/linux/list.h``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:620
+msgid ""
+"There used to be three sets of linked-list routines in the kernel headers, "
+"but this one is the winner. If you don't have some particular pressing need "
+"for a single list, it's a good choice."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:624
+msgid "In particular, :c:func:`list_for_each_entry()` is useful."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:627
+msgid "Return Conventions"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:629
+msgid ""
+"For code called in user context, it's very common to defy C convention, and "
+"return 0 for success, and a negative error number (eg. ``-EFAULT``) for "
+"failure. This can be unintuitive at first, but it's fairly widespread in the "
+"kernel."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:634
+msgid ""
+"Using :c:func:`ERR_PTR()` (``include/linux/err.h``) to encode a negative "
+"error number into a pointer, and :c:func:`IS_ERR()` and :c:func:`PTR_ERR()` "
+"to get it back out again: avoids a separate pointer parameter for the error "
+"number. Icky, but in a good way."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:640
+msgid "Breaking Compilation"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:642
+msgid ""
+"Linus and the other developers sometimes change function or structure names "
+"in development kernels; this is not done just to keep everyone on their "
+"toes: it reflects a fundamental change (eg. can no longer be called with "
+"interrupts on, or does extra checks, or doesn't do checks which were caught "
+"before). Usually this is accompanied by a fairly complete note to the "
+"appropriate kernel development mailing list; search the archives. Simply "
+"doing a global replace on the file usually makes things **worse**."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:652
+msgid "Initializing structure members"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:654
+msgid ""
+"The preferred method of initializing structures is to use designated "
+"initialisers, as defined by ISO C99, eg::"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:665
+msgid ""
+"This makes it easy to grep for, and makes it clear which structure fields "
+"are set. You should do this because it looks cool."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:669
+msgid "GNU Extensions"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:671
+msgid ""
+"GNU Extensions are explicitly allowed in the Linux kernel. Note that some of "
+"the more complex ones are not very well supported, due to lack of general "
+"use, but the following are considered standard (see the GCC info page "
+"section \"C Extensions\" for more details - Yes, really the info page, the "
+"man page is only a short summary of the stuff in info)."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:677
+msgid "Inline functions"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:679
+msgid "Statement expressions (ie. the ({ and }) constructs)."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:681
+msgid "Declaring attributes of a function / variable / type (__attribute__)"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:684
+msgid "typeof"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:686
+msgid "Zero length arrays"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:688
+msgid "Macro varargs"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:690
+msgid "Arithmetic on void pointers"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:692
+msgid "Non-Constant initializers"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:694
+msgid "Assembler Instructions (not outside arch/ and include/asm/)"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:696
+msgid "Function names as strings (__func__)."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:698
+msgid "__builtin_constant_p()"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:700
+msgid ""
+"Be wary when using long long in the kernel, the code gcc generates for it is "
+"horrible and worse: division and multiplication does not work on i386 "
+"because the GCC runtime functions for it are missing from the kernel "
+"environment."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:706
+msgid "C++"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:708
+msgid ""
+"Using C++ in the kernel is usually a bad idea, because the kernel does not "
+"provide the necessary runtime environment and the include files are not "
+"tested for it. It is still possible, but not recommended. If you really want "
+"to do this, forget about exceptions at least."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:714
+msgid "#if"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:716
+msgid ""
+"It is generally considered cleaner to use macros in header files (or at the "
+"top of .c files) to abstract away functions rather than using \\`#if' pre-"
+"processor statements throughout the source code."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:721
+msgid "Putting Your Stuff in the Kernel"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:723
+msgid ""
+"In order to get your stuff into shape for official inclusion, or even to "
+"make a neat patch, there's administrative work to be done:"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:726
+msgid ""
+"Figure out who are the owners of the code you've been modifying. Look at the "
+"top of the source files, inside the ``MAINTAINERS`` file, and last of all in "
+"the ``CREDITS`` file. You should coordinate with these people to make sure "
+"you're not duplicating effort, or trying something that's already been "
+"rejected."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:732
+msgid ""
+"Make sure you put your name and email address at the top of any files you "
+"create or modify significantly. This is the first place people will look "
+"when they find a bug, or when **they** want to make a change."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:736
+msgid ""
+"Usually you want a configuration option for your kernel hack. Edit "
+"``Kconfig`` in the appropriate directory. The Config language is simple to "
+"use by cut and paste, and there's complete documentation in ``Documentation/"
+"kbuild/kconfig-language.rst``."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:741
+msgid ""
+"In your description of the option, make sure you address both the expert "
+"user and the user who knows nothing about your feature. Mention "
+"incompatibilities and issues here. **Definitely** end your description with "
+"“if in doubt, say N” (or, occasionally, \\`Y'); this is for people who have "
+"no idea what you are talking about."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:747
+msgid ""
+"Edit the ``Makefile``: the CONFIG variables are exported here so you can "
+"usually just add a \"obj-$(CONFIG_xxx) += xxx.o\" line. The syntax is "
+"documented in ``Documentation/kbuild/makefiles.rst``."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:751
+msgid ""
+"Put yourself in ``CREDITS`` if you consider what you've done noteworthy, "
+"usually beyond a single file (your name should be at the top of the source "
+"files anyway). ``MAINTAINERS`` means you want to be consulted when changes "
+"are made to a subsystem, and hear about bugs; it implies a more-than-passing "
+"commitment to some part of the code."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:757
+msgid ""
+"Finally, don't forget to read ``Documentation/process/submitting-patches."
+"rst``"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:761
+msgid "Kernel Cantrips"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:763
+msgid "Some favorites from browsing the source. Feel free to add to this list."
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:765
+msgid "``arch/x86/include/asm/delay.h``::"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:772
+msgid "``include/linux/fs.h``::"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:786
+msgid "``arch/x86/include/asm/uaccess_32.h:``::"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:794
+msgid "``arch/sparc/kernel/head.S:``::"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:813
+msgid "``arch/sparc/lib/checksum.S:``::"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:822
+msgid "Thanks"
+msgstr ""
+
+#: ../../../kernel-hacking/hacking.rst:824
+msgid ""
+"Thanks to Andi Kleen for the idea, answering my questions, fixing my "
+"mistakes, filling content, etc. Philipp Rumpf for more spelling and clarity "
+"fixes, and some excellent non-obvious points. Werner Almesberger for giving "
+"me a great summary of :c:func:`disable_irq()`, and Jes Sorensen and Andrea "
+"Arcangeli added caveats. Michael Elizabeth Chastain for checking and adding "
+"to the Configure section. Telsa Gwynne for teaching me DocBook."
+msgstr ""

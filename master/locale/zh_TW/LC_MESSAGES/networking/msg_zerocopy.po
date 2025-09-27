@@ -1,0 +1,362 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../networking/msg_zerocopy.rst:4
+msgid "MSG_ZEROCOPY"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:7
+msgid "Intro"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:9
+msgid ""
+"The MSG_ZEROCOPY flag enables copy avoidance for socket send calls. The "
+"feature is currently implemented for TCP, UDP and VSOCK (with virtio "
+"transport) sockets."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:15
+msgid "Opportunity and Caveats"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:17
+msgid ""
+"Copying large buffers between user process and kernel can be expensive. "
+"Linux supports various interfaces that eschew copying, such as sendfile and "
+"splice. The MSG_ZEROCOPY flag extends the underlying copy avoidance "
+"mechanism to common socket send calls."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:22
+msgid ""
+"Copy avoidance is not a free lunch. As implemented, with page pinning, it "
+"replaces per byte copy cost with page accounting and completion notification "
+"overhead. As a result, MSG_ZEROCOPY is generally only effective at writes "
+"over around 10 KB."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:27
+msgid ""
+"Page pinning also changes system call semantics. It temporarily shares the "
+"buffer between process and network stack. Unlike with copying, the process "
+"cannot immediately overwrite the buffer after system call return without "
+"possibly modifying the data in flight. Kernel integrity is not affected, but "
+"a buggy program can possibly corrupt its own data stream."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:34
+msgid ""
+"The kernel returns a notification when it is safe to modify data. Converting "
+"an existing application to MSG_ZEROCOPY is not always as trivial as just "
+"passing the flag, then."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:40
+msgid "More Info"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:42
+msgid ""
+"Much of this document was derived from a longer paper presented at netdev "
+"2.1. For more in-depth information see that paper and talk, the excellent "
+"reporting over at LWN.net or read the original code."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:46
+msgid "paper, slides, video"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:47
+msgid "https://netdevconf.org/2.1/session.html?debruijn"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:49
+msgid "LWN article"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:50
+msgid "https://lwn.net/Articles/726917/"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:52
+msgid "patchset"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:53
+msgid ""
+"[PATCH net-next v4 0/9] socket sendmsg MSG_ZEROCOPY https://lore.kernel.org/"
+"netdev/20170803202945.70750-1-willemdebruijn.kernel@gmail.com"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:58
+msgid "Interface"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:60
+msgid ""
+"Passing the MSG_ZEROCOPY flag is the most obvious step to enable copy "
+"avoidance, but not the only one."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:64
+msgid "Socket Setup"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:66
+msgid ""
+"The kernel is permissive when applications pass undefined flags to the send "
+"system call. By default it simply ignores these. To avoid enabling copy "
+"avoidance mode for legacy processes that accidentally already pass this "
+"flag, a process must first signal intent by setting a socket option:"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:77
+msgid "Transmission"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:79
+msgid ""
+"The change to send (or sendto, sendmsg, sendmmsg) itself is trivial. Pass "
+"the new flag."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:86
+msgid ""
+"A zerocopy failure will return -1 with errno ENOBUFS. This happens if the "
+"socket exceeds its optmem limit or the user exceeds their ulimit on locked "
+"pages."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:92
+msgid "Mixing copy avoidance and copying"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:94
+msgid ""
+"Many workloads have a mixture of large and small buffers. Because copy "
+"avoidance is more expensive than copying for small packets, the feature is "
+"implemented as a flag. It is safe to mix calls with the flag with those "
+"without."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:101
+msgid "Notifications"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:103
+msgid ""
+"The kernel has to notify the process when it is safe to reuse a previously "
+"passed buffer. It queues completion notifications on the socket error queue, "
+"akin to the transmit timestamping interface."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:107
+msgid ""
+"The notification itself is a simple scalar value. Each socket maintains an "
+"internal unsigned 32-bit counter. Each send call with MSG_ZEROCOPY that "
+"successfully sends data increments the counter. The counter is not "
+"incremented on failure or if called with length zero. The counter counts "
+"system call invocations, not bytes. It wraps after UINT_MAX calls."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:116
+msgid "Notification Reception"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:118
+msgid ""
+"The below snippet demonstrates the API. In the simplest case, each send "
+"syscall is followed by a poll and recvmsg on the error queue."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:121
+msgid ""
+"Reading from the error queue is always a non-blocking operation. The poll "
+"call is there to block until an error is outstanding. It will set POLLERR in "
+"its output flags. That flag does not have to be set in the events field. "
+"Errors are signaled unconditionally."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:139
+msgid ""
+"The example is for demonstration purpose only. In practice, it is more "
+"efficient to not wait for notifications, but read without blocking every "
+"couple of send calls."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:143
+msgid ""
+"Notifications can be processed out of order with other operations on the "
+"socket. A socket that has an error queued would normally block other "
+"operations until the error is read. Zerocopy notifications have a zero error "
+"code, however, to not block send and recv calls."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:150
+msgid "Notification Batching"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:152
+msgid ""
+"Multiple outstanding packets can be read at once using the recvmmsg call. "
+"This is often not needed. In each message the kernel returns not a single "
+"value, but a range. It coalesces consecutive notifications while one is "
+"outstanding for reception on the error queue."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:157
+msgid ""
+"When a new notification is about to be queued, it checks whether the new "
+"value extends the range of the notification at the tail of the queue. If so, "
+"it drops the new notification packet and instead increases the range upper "
+"value of the outstanding notification."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:162
+msgid ""
+"For protocols that acknowledge data in-order, like TCP, each notification "
+"can be squashed into the previous one, so that no more than one notification "
+"is outstanding at any one point."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:166
+msgid ""
+"Ordered delivery is the common case, but not guaranteed. Notifications may "
+"arrive out of order on retransmission and socket teardown."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:171
+msgid "Notification Parsing"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:173
+msgid ""
+"The below snippet demonstrates how to parse the control message: the "
+"read_notification() call in the previous snippet. A notification is encoded "
+"in the standard error format, sock_extended_err."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:177
+msgid ""
+"The level and type fields in the control data are protocol family specific, "
+"IP_RECVERR or IPV6_RECVERR (for TCP or UDP socket). For VSOCK socket, "
+"cmsg_level will be SOL_VSOCK and cmsg_type will be VSOCK_RECVERR."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:182
+msgid ""
+"Error origin is the new type SO_EE_ORIGIN_ZEROCOPY. ee_errno is zero, as "
+"explained before, to avoid blocking read and write system calls on the "
+"socket."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:186
+msgid ""
+"The 32-bit notification range is encoded as [ee_info, ee_data]. This range "
+"is inclusive. Other fields in the struct must be treated as undefined, bar "
+"for ee_code, as discussed below."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:209
+msgid "Deferred copies"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:211
+msgid ""
+"Passing flag MSG_ZEROCOPY is a hint to the kernel to apply copy avoidance, "
+"and a contract that the kernel will queue a completion notification. It is "
+"not a guarantee that the copy is elided."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:215
+msgid ""
+"Copy avoidance is not always feasible. Devices that do not support scatter-"
+"gather I/O cannot send packets made up of kernel generated protocol headers "
+"plus zerocopy user data. A packet may need to be converted to a private copy "
+"of data deep in the stack, say to compute a checksum."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:221
+msgid ""
+"In all these cases, the kernel returns a completion notification when it "
+"releases its hold on the shared pages. That notification may arrive before "
+"the (copied) data is fully transmitted. A zerocopy completion notification "
+"is not a transmit completion notification, therefore."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:226
+msgid ""
+"Deferred copies can be more expensive than a copy immediately in the system "
+"call, if the data is no longer warm in the cache. The process also incurs "
+"notification processing cost for no benefit. For this reason, the kernel "
+"signals if data was completed with a copy, by setting flag "
+"SO_EE_CODE_ZEROCOPY_COPIED in field ee_code on return. A process may use "
+"this signal to stop passing flag MSG_ZEROCOPY on subsequent requests on the "
+"same socket."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:236
+msgid "Implementation"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:239
+msgid "Loopback"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:241
+msgid ""
+"For TCP and UDP: Data sent to local sockets can be queued indefinitely if "
+"the receive process does not read its socket. Unbound notification latency "
+"is not acceptable. For this reason all packets generated with MSG_ZEROCOPY "
+"that are looped to a local socket will incur a deferred copy. This includes "
+"looping onto packet sockets (e.g., tcpdump) and tun devices."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:248
+msgid ""
+"For VSOCK: Data path sent to local sockets is the same as for non-local "
+"sockets."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:252
+msgid "Testing"
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:254
+msgid ""
+"More realistic example code can be found in the kernel source under tools/"
+"testing/selftests/net/msg_zerocopy.c."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:257
+msgid ""
+"Be cognizant of the loopback constraint. The test can be run between a pair "
+"of hosts. But if run between a local pair of processes, for instance when "
+"run with msg_zerocopy.sh between a veth pair across namespaces, the test "
+"will not show any improvement. For testing, the loopback restriction can be "
+"temporarily relaxed by making skb_orphan_frags_rx identical to "
+"skb_orphan_frags."
+msgstr ""
+
+#: ../../../networking/msg_zerocopy.rst:264
+msgid ""
+"For VSOCK type of socket example can be found in tools/testing/vsock/"
+"vsock_test_zerocopy.c."
+msgstr ""

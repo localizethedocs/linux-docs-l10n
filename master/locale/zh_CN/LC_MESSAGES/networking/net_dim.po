@@ -1,0 +1,1111 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../networking/net_dim.rst:3
+msgid "Net DIM - Generic Network Dynamic Interrupt Moderation"
+msgstr ""
+
+#: ../../../networking/net_dim.rst:0
+msgid "Author"
+msgstr ""
+
+#: ../../../networking/net_dim.rst:5
+msgid "Tal Gilboa <talgi@mellanox.com>"
+msgstr ""
+
+#: ../../../networking/net_dim.rst:7
+msgid "Contents"
+msgstr ""
+
+#: ../../../networking/net_dim.rst:10
+msgid "Assumptions"
+msgstr ""
+
+#: ../../../networking/net_dim.rst:12
+msgid ""
+"This document assumes the reader has basic knowledge in network drivers and "
+"in general interrupt moderation."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:17
+msgid "Introduction"
+msgstr ""
+
+#: ../../../networking/net_dim.rst:19
+msgid ""
+"Dynamic Interrupt Moderation (DIM) (in networking) refers to changing the "
+"interrupt moderation configuration of a channel in order to optimize packet "
+"processing. The mechanism includes an algorithm which decides if and how to "
+"change moderation parameters for a channel, usually by performing an "
+"analysis on runtime data sampled from the system. Net DIM is such a "
+"mechanism. In each iteration of the algorithm, it analyses a given sample of "
+"the data, compares it to the previous sample and if required, it can decide "
+"to change some of the interrupt moderation configuration fields. The data "
+"sample is composed of data bandwidth, the number of packets and the number "
+"of events. The time between samples is also measured. Net DIM compares the "
+"current and the previous data and returns an adjusted interrupt moderation "
+"configuration object. In some cases, the algorithm might decide not to "
+"change anything. The configuration fields are the minimum duration "
+"(microseconds) allowed between events and the maximum number of wanted "
+"packets per event. The Net DIM algorithm ascribes importance to increase "
+"bandwidth over reducing interrupt rate."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:37
+msgid "Net DIM Algorithm"
+msgstr ""
+
+#: ../../../networking/net_dim.rst:39
+msgid "Each iteration of the Net DIM algorithm follows these steps:"
+msgstr ""
+
+#: ../../../networking/net_dim.rst:41
+msgid "Calculates new data sample."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:42
+msgid "Compares it to previous sample."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:43
+msgid "Makes a decision - suggests interrupt moderation configuration fields."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:44
+msgid ""
+"Applies a schedule work function, which applies suggested configuration."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:46
+msgid ""
+"The first two steps are straightforward, both the new and the previous data "
+"are supplied by the driver registered to Net DIM. The previous data is the "
+"new data supplied to the previous iteration. The comparison step checks the "
+"difference between the new and previous data and decides on the result of "
+"the last step. A step would result as \"better\" if bandwidth increases and "
+"as \"worse\" if bandwidth reduces. If there is no change in bandwidth, the "
+"packet rate is compared in a similar fashion - increase == \"better\" and "
+"decrease == \"worse\". In case there is no change in the packet rate as "
+"well, the interrupt rate is compared. Here the algorithm tries to optimize "
+"for lower interrupt rate so an increase in the interrupt rate is considered "
+"\"worse\" and a decrease is considered \"better\". Step #2 has an "
+"optimization for avoiding false results: it only considers a difference "
+"between samples as valid if it is greater than a certain percentage. Also, "
+"since Net DIM does not measure anything by itself, it assumes the data "
+"provided by the driver is valid."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:61
+msgid ""
+"Step #3 decides on the suggested configuration based on the result from step "
+"#2 and the internal state of the algorithm. The states reflect the "
+"\"direction\" of the algorithm: is it going left (reducing moderation), "
+"right (increasing moderation) or standing still. Another optimization is "
+"that if a decision to stay still is made multiple times, the interval "
+"between iterations of the algorithm would increase in order to reduce "
+"calculation overhead. Also, after \"parking\" on one of the most left or "
+"most right decisions, the algorithm may decide to verify this decision by "
+"taking a step in the other direction. This is done in order to avoid getting "
+"stuck in a \"deep sleep\" scenario. Once a decision is made, an interrupt "
+"moderation configuration is selected from the predefined profiles."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:73
+msgid ""
+"The last step is to notify the registered driver that it should apply the "
+"suggested configuration. This is done by scheduling a work function, defined "
+"by the Net DIM API and provided by the registered driver."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:77
+msgid ""
+"As you can see, Net DIM itself does not actively interact with the system. "
+"It would have trouble making the correct decisions if the wrong data is "
+"supplied to it and it would be useless if the work function would not apply "
+"the suggested configuration. This does, however, allow the registered driver "
+"some room for manoeuvre as it may provide partial data or ignore the "
+"algorithm suggestion under some conditions."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:86
+msgid "Registering a Network Device to DIM"
+msgstr ""
+
+#: ../../../networking/net_dim.rst:88
+msgid ""
+"Net DIM API exposes the main function net_dim(). This function is the entry "
+"point to the Net DIM algorithm and has to be called every time the driver "
+"would like to check if it should change interrupt moderation parameters. The "
+"driver should provide two data structures: :c:type:`struct dim <dim>` and :c:"
+"type:`struct dim_sample <dim_sample>`. :c:type:`struct dim <dim>` describes "
+"the state of DIM for a specific object (RX queue, TX queue, other queues, "
+"etc.). This includes the current selected profile, previous data samples, "
+"the callback function provided by the driver and more. :c:type:`struct "
+"dim_sample <dim_sample>` describes a data sample, which will be compared to "
+"the data sample stored in :c:type:`struct dim <dim>` in order to decide on "
+"the algorithm's next step. The sample should include bytes, packets and "
+"interrupts, measured by the driver."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:103
+msgid ""
+"In order to use Net DIM from a networking driver, the driver needs to call "
+"the main net_dim() function. The recommended method is to call net_dim() on "
+"each interrupt. Since Net DIM has a built-in moderation and it might decide "
+"to skip iterations under certain conditions, there is no need to moderate "
+"the net_dim() calls as well. As mentioned above, the driver needs to provide "
+"an object of type :c:type:`struct dim <dim>` to the net_dim() function call. "
+"It is advised for each entity using Net DIM to hold a :c:type:`struct dim "
+"<dim>` as part of its data structure and use it as the main Net DIM API "
+"object. The :c:type:`struct dim_sample <dim_sample>` should hold the latest "
+"bytes, packets and interrupts count. No need to perform any calculations, "
+"just include the raw data."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:115
+msgid ""
+"The net_dim() call itself does not return anything. Instead Net DIM relies "
+"on the driver to provide a callback function, which is called when the "
+"algorithm decides to make a change in the interrupt moderation parameters. "
+"This callback will be scheduled and run in a separate thread in order not to "
+"add overhead to the data flow. After the work is done, Net DIM algorithm "
+"needs to be set to the proper state in order to move to the next iteration."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:124
+msgid "Example"
+msgstr ""
+
+#: ../../../networking/net_dim.rst:126
+msgid ""
+"The following code demonstrates how to register a driver to Net DIM. The "
+"actual usage is not complete but it should make the outline of the usage "
+"clear."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:174
+msgid "Tuning DIM"
+msgstr ""
+
+#: ../../../networking/net_dim.rst:176
+msgid ""
+"Net DIM serves a range of network devices and delivers excellent "
+"acceleration benefits. Yet, it has been observed that some preset "
+"configurations of DIM may not align seamlessly with the varying "
+"specifications of network devices, and this discrepancy has been identified "
+"as a factor to the suboptimal performance outcomes of DIM-enabled network "
+"devices, related to a mismatch in profiles."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:182
+msgid ""
+"To address this issue, Net DIM introduces a per-device control to modify and "
+"access a device's ``rx-profile`` and ``tx-profile`` parameters: Assume that "
+"the target network device is named ethx, and ethx only declares support for "
+"RX profile setting and supports modification of ``usec`` field and ``pkts`` "
+"field (See the data structure: :c:type:`struct dim_cq_moder <dim_cq_moder>`)."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:189
+msgid ""
+"You can use ethtool to modify the current RX DIM profile where all values "
+"are 64::"
+msgstr ""
+
+#: ../../../networking/net_dim.rst:194
+msgid ""
+"``n`` means do not modify this field, and ``_`` separates structure elements "
+"of the profile array."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:197
+msgid "Querying the current profiles using::"
+msgstr ""
+
+#: ../../../networking/net_dim.rst:209
+msgid ""
+"If the network device does not support specific fields of DIM profiles, the "
+"corresponding ``n/a`` will display. If the ``n/a`` field is being modified, "
+"error messages will be reported."
+msgstr ""
+
+#: ../../../networking/net_dim.rst:215
+msgid "Dynamic Interrupt Moderation (DIM) library API"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:43
+msgid ""
+"Structure for CQ moderation values. Used for communications between DIM and "
+"its consumer."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:47
+#: include/linux/dim.h:72 include/linux/dim.h:96 include/linux/dim.h:114
+#: include/linux/dim.h:132
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:57
+#: include/linux/dim.h:85 include/linux/dim.h:106 include/linux/dim.h:124
+#: include/linux/dim.h:149
+msgid "**Members**"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:46
+msgid "``usec``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:47
+msgid "CQ timer suggestion (by DIM)"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:47
+msgid "``pkts``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:48
+msgid "CQ packet counter suggestion (by DIM)"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:48
+msgid "``comps``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:49
+msgid "Completion counter"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:49
+msgid "``cq_period_mode``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:50
+msgid "CQ period count mode (from CQE/EQE)"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:50
+msgid "``rcu``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:51
+msgid "for asynchronous kfree_rcu"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:68
+msgid ""
+"Structure for irq moderation information. Used to collect irq moderation "
+"related information."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:71
+msgid "``profile_flags``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:72
+msgid "DIM_PROFILE_*"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:72
+msgid "``coal_flags``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:73
+msgid "DIM_COALESCE_* for Rx and Tx"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:73
+msgid "``dim_rx_mode``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:74
+msgid "Rx DIM period count mode: CQE or EQE"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:74
+msgid "``dim_tx_mode``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:75
+msgid "Tx DIM period count mode: CQE or EQE"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:75
+msgid "``rx_profile``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:76
+msgid "DIM profile list for Rx"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:76
+msgid "``tx_profile``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:77
+msgid "DIM profile list for Tx"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:77
+msgid "``rx_dim_work``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:78
+msgid "Rx DIM worker scheduled by net_dim()"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:78
+msgid "``tx_dim_work``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:79
+msgid "Tx DIM worker scheduled by net_dim()"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:92
+msgid ""
+"Structure for DIM sample data. Used for communications between DIM and its "
+"consumer."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:95
+msgid "``time``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:96
+msgid "Sample timestamp"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:96
+msgid "``pkt_ctr``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:97
+msgid "Number of packets"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:97
+msgid "``byte_ctr``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:98
+msgid "Number of bytes"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:98
+msgid "``event_ctr``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:99
+msgid "Number of events"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:99
+msgid "``comp_ctr``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:100
+msgid "Current completion counter"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:110
+msgid "Structure for DIM stats. Used for holding current measured rates."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:113
+msgid "``ppms``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:114
+msgid "Packets per msec"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:114
+msgid "``bpms``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:115
+msgid "Bytes per msec"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:115
+msgid "``epms``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:116
+msgid "Events per msec"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:116
+msgid "``cpms``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:117
+msgid "Completions per msec"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:117
+msgid "``cpe_ratio``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:118
+msgid "Ratio of completions to events"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:128
+msgid ""
+"Main structure for dynamic interrupt moderation (DIM). Used for holding all "
+"information about a specific DIM instance."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:131
+msgid "``state``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:132
+msgid "Algorithm state (see below)"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:132
+msgid "``prev_stats``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:133
+msgid "Measured rates from previous iteration (for comparison)"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:133
+msgid "``start_sample``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:134
+msgid "Sampled data at start of current iteration"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:134
+msgid "``measuring_sample``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:135
+msgid "A :c:type:`dim_sample` that is used to update the current events"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:135
+msgid "``work``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:136
+msgid "Work to perform on action required"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:136
+msgid "``priv``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:137
+msgid "A pointer to the struct that points to dim"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:137
+msgid "``profile_ix``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:138
+msgid "Current moderation profile"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:138
+msgid "``mode``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:139
+msgid "CQ period count mode"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:139
+msgid "``tune_state``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:140
+msgid "Algorithm tuning state (see below)"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:140
+msgid "``steps_right``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:141
+msgid "Number of steps taken towards higher moderation"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:141
+msgid "``steps_left``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:142
+msgid "Number of steps taken towards lower moderation"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:142
+msgid "``tired``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:143
+msgid "Parking depth counter"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:160
+msgid "Modes for CQ period count"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:164
+#: include/linux/dim.h:177 include/linux/dim.h:193 include/linux/dim.h:210
+#: include/linux/dim.h:225
+msgid "**Constants**"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:166
+msgid "``DIM_CQ_PERIOD_MODE_START_FROM_EQE``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:167
+msgid "Start counting from EQE"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:169
+msgid "``DIM_CQ_PERIOD_MODE_START_FROM_CQE``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:170
+msgid "Start counting from CQE (implies timer reset)"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:172
+msgid "``DIM_CQ_PERIOD_NUM_MODES``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:173
+msgid "Number of modes"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:173
+msgid "DIM algorithm states"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:179
+msgid "``DIM_START_MEASURE``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:180
+msgid "This is the first iteration (also after applying a new profile)"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:182
+msgid "``DIM_MEASURE_IN_PROGRESS``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:183
+msgid "Algorithm is already in progress - check if need to perform an action"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:186
+msgid "``DIM_APPLY_NEW_PROFILE``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:187
+msgid "DIM consumer is currently applying a profile - no need to measure"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:189
+#: include/linux/dim.h:207 include/linux/dim.h:221 include/linux/dim.h:237
+#: include/linux/dim.h:311 include/linux/dim.h:321 include/linux/dim.h:330
+#: include/linux/dim.h:339 include/linux/dim.h:350 include/linux/dim.h:424
+#: include/linux/dim.h:444
+msgid "**Description**"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:174
+msgid ""
+"These will determine if the algorithm is in a valid state to start an "
+"iteration."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:189
+msgid "DIM algorithm tune states"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:195
+msgid "``DIM_PARKING_ON_TOP``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:196
+msgid "Algorithm found a local top point - exit on significant difference"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:198
+msgid "``DIM_PARKING_TIRED``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:199
+msgid "Algorithm found a deep top point - don't exit if tired > 0"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:201
+msgid "``DIM_GOING_RIGHT``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:202
+msgid "Algorithm is currently trying higher moderation levels"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:204
+msgid "``DIM_GOING_LEFT``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:205
+msgid "Algorithm is currently trying lower moderation levels"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:190
+msgid "These will determine which action the algorithm should perform."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:206
+msgid "DIM algorithm statistics states"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:212
+msgid "``DIM_STATS_WORSE``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:213
+msgid "Current iteration shows worse performance than before"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:215
+msgid "``DIM_STATS_SAME``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:216
+msgid "Current iteration shows same performance than before"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:218
+msgid "``DIM_STATS_BETTER``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:219
+msgid "Current iteration shows better performance than before"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:207
+msgid "These will determine the verdict of current iteration."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:221
+msgid "DIM algorithm step results"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:227
+msgid "``DIM_STEPPED``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:228
+msgid "Performed a regular step"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:230
+msgid "``DIM_TOO_TIRED``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:231
+msgid "Same kind of step was done multiple times - should go to tired parking"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:234
+msgid "``DIM_ON_EDGE``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:235
+msgid "Stepped to the most left/right profile"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:222
+msgid "These describe the result of a step."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:237
+msgid "collect information to initialize irq moderation"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:241
+#: include/linux/dim.h:258 include/linux/dim.h:264 include/linux/dim.h:272
+#: include/linux/dim.h:278 include/linux/dim.h:288 include/linux/dim.h:298
+#: include/linux/dim.h:305 include/linux/dim.h:312 include/linux/dim.h:322
+#: include/linux/dim.h:331 include/linux/dim.h:340 include/linux/dim.h:349
+#: include/linux/dim.h:363 include/linux/dim.h:379 include/linux/dim.h:398
+#: include/linux/dim.h:405 include/linux/dim.h:411 include/linux/dim.h:418
+#: include/linux/dim.h:424 include/linux/dim.h:444
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:243
+#: include/linux/dim.h:260 include/linux/dim.h:266 include/linux/dim.h:280
+#: include/linux/dim.h:290 include/linux/dim.h:300 include/linux/dim.h:307
+msgid "``struct net_device *dev``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:238
+#: include/linux/dim.h:255 include/linux/dim.h:261 include/linux/dim.h:275
+#: include/linux/dim.h:285 include/linux/dim.h:295 include/linux/dim.h:302
+msgid "target network device"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:240
+msgid "``u8 profile_flags``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:239
+msgid "Rx or Tx profile modification capability"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:241
+msgid "``u8 coal_flags``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:240
+msgid "irq moderation params flags"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:242
+#: include/linux/dim.h:297
+msgid "``u8 rx_mode``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:241
+msgid "CQ period mode for Rx"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:243
+#: include/linux/dim.h:304
+msgid "``u8 tx_mode``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:242
+msgid "CQ period mode for Tx"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:244
+msgid "``void (*rx_dim_work)(struct work_struct *work)``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:243
+msgid "Rx worker called after dim decision"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:245
+msgid "``void (*tx_dim_work)(struct work_struct *work)``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:244
+msgid "Tx worker called after dim decision"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:246
+#: include/linux/dim.h:278 include/linux/dim.h:288
+msgid "**Return**"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:246
+msgid "0 on success or a negative error code."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:254
+msgid "free fields for irq moderation"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:260
+msgid "initialize DIM's cq mode and schedule worker"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:263
+#: include/linux/dim.h:274 include/linux/dim.h:277 include/linux/dim.h:287
+#: include/linux/dim.h:314 include/linux/dim.h:324 include/linux/dim.h:333
+#: include/linux/dim.h:342 include/linux/dim.h:426 include/linux/dim.h:446
+msgid "``struct dim *dim``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:262
+#: include/linux/dim.h:269 include/linux/dim.h:276 include/linux/dim.h:286
+#: include/linux/dim.h:309 include/linux/dim.h:319 include/linux/dim.h:328
+#: include/linux/dim.h:337
+msgid "DIM context"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:264
+msgid "``bool is_tx``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:263
+msgid "true indicates the tx direction, false indicates the rx direction"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:268
+msgid "synchronously cancel dim's worker"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:274
+msgid "get DIM rx results based on profile_ix"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:278
+#: include/linux/dim.h:288
+msgid "DIM irq moderation"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:284
+msgid "get DIM tx results based on profile_ix"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:294
+msgid "set DIM rx cq mode"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:296
+msgid "target rx cq mode"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:301
+msgid "set DIM tx cq mode"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:303
+msgid "target tx cq mode"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:308
+msgid "check if current state is a good place to stop (top location)"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:310
+msgid ""
+"Check if current profile is a good place to park at. This will result in "
+"reducing the DIM checks frequency as we assume we shouldn't probably change "
+"profiles, unless traffic pattern wasn't changed."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:318
+msgid "change profile altering direction"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:320
+msgid ""
+"Go left if we were going right and vice-versa. Do nothing if currently "
+"parking."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:327
+msgid "enter a parking state on a top location"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:329
+msgid "Enter parking state. Clear all movement history."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:336
+msgid "enter a tired parking state"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:338
+msgid ""
+"Enter parking state. Clear all movement history and cause DIM checks "
+"frequency to reduce."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:345
+msgid "calculate the difference between two samples"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:351
+msgid "``const struct dim_sample *start``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:346
+msgid "start sample"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:348
+msgid "``const struct dim_sample *end``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:347
+msgid "end sample"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:349
+msgid "``struct dim_stats *curr_stats``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:348
+msgid "delta between samples"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:349
+msgid ""
+"Calculate the delta between two samples (in data rates). Takes into "
+"consideration counter wrap-around. Returned boolean indicates whether "
+"curr_stats are reliable."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:359
+msgid "set a sample's fields with given values"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:365
+#: include/linux/dim.h:381
+msgid "``u16 event_ctr``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:360
+#: include/linux/dim.h:377
+msgid "number of events to set"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:362
+#: include/linux/dim.h:379
+msgid "``u64 packets``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:361
+#: include/linux/dim.h:378
+msgid "number of packets to set"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:363
+#: include/linux/dim.h:380
+msgid "``u64 bytes``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:362
+#: include/linux/dim.h:379
+msgid "number of bytes to set"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:364
+#: include/linux/dim.h:382
+msgid "``struct dim_sample *s``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:363
+#: include/linux/dim.h:381
+msgid "DIM sample"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:375
+msgid ""
+"set a sample's fields with given values including the completion parameter"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:381
+msgid "``u64 comps``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:380
+msgid "number of completions to set"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:394
+msgid "provide a CQ moderation object for the given RX profile"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:400
+#: include/linux/dim.h:407 include/linux/dim.h:413 include/linux/dim.h:420
+msgid "``u8 cq_period_mode``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:395
+#: include/linux/dim.h:402 include/linux/dim.h:408 include/linux/dim.h:415
+msgid "CQ period mode"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:397
+#: include/linux/dim.h:410
+msgid "``int ix``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:396
+#: include/linux/dim.h:409
+msgid "Profile index"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:401
+msgid "provide the default RX moderation"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:407
+msgid "provide a CQ moderation object for the given TX profile"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:414
+msgid "provide the default TX moderation"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:420
+msgid "main DIM algorithm entry point"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:421
+msgid "DIM instance information"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:423
+msgid "``const struct dim_sample *end_sample``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:422
+msgid "Current data measurement"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:423
+msgid ""
+"Called by the consumer. This is the main logic of the algorithm, where data "
+"is processed in order to decide on next required action."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:440
+msgid "Runs the adaptive moderation."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:441
+msgid "The moderation struct."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:443
+msgid "``u64 completions``"
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:442
+msgid "The number of completions collected in this round."
+msgstr ""
+
+#: ../../../networking/net_dim:217: include/linux/dim.h:443
+msgid ""
+"Each call to rdma_dim takes the latest amount of completions that have been "
+"collected and counts them as a new event. Once enough events have been "
+"collected the algorithm decides a new moderation level."
+msgstr ""

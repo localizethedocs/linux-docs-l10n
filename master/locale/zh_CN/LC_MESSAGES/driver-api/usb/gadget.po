@@ -1,0 +1,3337 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../driver-api/usb/gadget.rst:3
+msgid "USB Gadget API for Linux"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:0
+msgid "Author"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:5
+msgid "David Brownell"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:0
+msgid "Date"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:6
+msgid "20 August 2004"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:9
+msgid "Introduction"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:11
+msgid ""
+"This document presents a Linux-USB \"Gadget\" kernel mode API, for use "
+"within peripherals and other USB devices that embed Linux. It provides an "
+"overview of the API structure, and shows how that fits into a system "
+"development project. This is the first such API released on Linux to address "
+"a number of important problems, including:"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:17
+msgid ""
+"Supports USB 2.0, for high speed devices which can stream data at several "
+"dozen megabytes per second."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:20
+msgid ""
+"Handles devices with dozens of endpoints just as well as ones with just two "
+"fixed-function ones. Gadget drivers can be written so they're easy to port "
+"to new hardware."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:24
+msgid ""
+"Flexible enough to expose more complex USB device capabilities such as "
+"multiple configurations, multiple interfaces, composite devices, and "
+"alternate interface settings."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:28
+msgid ""
+"USB \"On-The-Go\" (OTG) support, in conjunction with updates to the Linux-"
+"USB host side."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:31
+msgid ""
+"Sharing data structures and API models with the Linux-USB host side API. "
+"This helps the OTG support, and looks forward to more-symmetric frameworks "
+"(where the same I/O model is used by both host and device side drivers)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:36
+msgid ""
+"Minimalist, so it's easier to support new device controller hardware. I/O "
+"processing doesn't imply large demands for memory or CPU resources."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:40
+msgid ""
+"Most Linux developers will not be able to use this API, since they have USB "
+"``host`` hardware in a PC, workstation, or server. Linux users with embedded "
+"systems are more likely to have USB peripheral hardware. To distinguish "
+"drivers running inside such hardware from the more familiar Linux \"USB "
+"device drivers\", which are host side proxies for the real USB devices, a "
+"different term is used: the drivers inside the peripherals are \"USB gadget "
+"drivers\". In USB protocol interactions, the device driver is the master (or "
+"\"client driver\") and the gadget driver is the slave (or \"function "
+"driver\")."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:50
+msgid ""
+"The gadget API resembles the host side Linux-USB API in that both use queues "
+"of request objects to package I/O buffers, and those requests may be "
+"submitted or canceled. They share common definitions for the standard USB "
+"*Chapter 9* messages, structures, and constants. Also, both APIs bind and "
+"unbind drivers to devices. The APIs differ in detail, since the host side's "
+"current URB framework exposes a number of implementation details and "
+"assumptions that are inappropriate for a gadget API. While the model for "
+"control transfers and configuration management is necessarily different (one "
+"side is a hardware-neutral master, the other is a hardware-aware slave), the "
+"endpoint I/0 API used here should also be usable for an overhead-reduced "
+"host side API."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:63
+msgid "Structure of Gadget Drivers"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:65
+msgid ""
+"A system running inside a USB peripheral normally has at least three layers "
+"inside the kernel to handle USB protocol processing, and may have additional "
+"layers in user space code. The ``gadget`` API is used by the middle layer to "
+"interact with the lowest level (which directly handles hardware)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:71
+msgid "In Linux, from the bottom up, these layers are:"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:73
+msgid "*USB Controller Driver*"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:74
+msgid ""
+"This is the lowest software level. It is the only layer that talks to "
+"hardware, through registers, fifos, dma, irqs, and the like. The ``<linux/"
+"usb/gadget.h>`` API abstracts the peripheral controller endpoint hardware. "
+"That hardware is exposed through endpoint objects, which accept streams of "
+"IN/OUT buffers, and through callbacks that interact with gadget drivers. "
+"Since normal USB devices only have one upstream port, they only have one of "
+"these drivers. The controller driver can support any number of different "
+"gadget drivers, but only one of them can be used at a time."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:84
+msgid ""
+"Examples of such controller hardware include the PCI-based NetChip 2280 USB "
+"2.0 high speed controller, the SA-11x0 or PXA-25x UDC (found within many "
+"PDAs), and a variety of other products."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:88
+msgid "*Gadget Driver*"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:89
+msgid ""
+"The lower boundary of this driver implements hardware-neutral USB functions, "
+"using calls to the controller driver. Because such hardware varies widely in "
+"capabilities and restrictions, and is used in embedded environments where "
+"space is at a premium, the gadget driver is often configured at compile time "
+"to work with endpoints supported by one particular controller. Gadget "
+"drivers may be portable to several different controllers, using conditional "
+"compilation. (Recent kernels substantially simplify the work involved in "
+"supporting new hardware, by *autoconfiguring* endpoints automatically for "
+"many bulk-oriented drivers.) Gadget driver responsibilities include:"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:101
+msgid ""
+"handling setup requests (ep0 protocol responses) possibly including class-"
+"specific functionality"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:104
+msgid "returning configuration and string descriptors"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:106
+msgid ""
+"(re)setting configurations and interface altsettings, including enabling and "
+"configuring endpoints"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:109
+msgid ""
+"handling life cycle events, such as managing bindings to hardware, USB "
+"suspend/resume, remote wakeup, and disconnection from the USB host."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:113
+msgid "managing IN and OUT transfers on all currently enabled endpoints"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:115
+msgid ""
+"Such drivers may be modules of proprietary code, although that approach is "
+"discouraged in the Linux community."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:118
+msgid "*Upper Level*"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:119
+msgid ""
+"Most gadget drivers have an upper boundary that connects to some Linux "
+"driver or framework in Linux. Through that boundary flows the data which the "
+"gadget driver produces and/or consumes through protocol transfers over USB. "
+"Examples include:"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:124
+msgid ""
+"user mode code, using generic (gadgetfs) or application specific files in ``/"
+"dev``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:127
+msgid ""
+"networking subsystem (for network gadgets, like the CDC Ethernet Model "
+"gadget driver)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:130
+msgid ""
+"data capture drivers, perhaps video4Linux or a scanner driver; or test and "
+"measurement hardware."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:133
+msgid "input subsystem (for HID gadgets)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:135
+msgid "sound subsystem (for audio gadgets)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:137
+msgid "file system (for PTP gadgets)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:139
+msgid "block i/o subsystem (for usb-storage gadgets)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:141
+msgid "... and more"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:143
+msgid "*Additional Layers*"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:144
+msgid ""
+"Other layers may exist. These could include kernel layers, such as network "
+"protocol stacks, as well as user mode applications building on standard "
+"POSIX system call APIs such as ``open()``, ``close()``, ``read()`` and "
+"``write()``. On newer systems, POSIX Async I/O calls may be an option. Such "
+"user mode code will not necessarily be subject to the GNU General Public "
+"License (GPL)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:151
+msgid ""
+"OTG-capable systems will also need to include a standard Linux-USB host side "
+"stack, with ``usbcore``, one or more *Host Controller Drivers* (HCDs), *USB "
+"Device Drivers* to support the OTG \"Targeted Peripheral List\", and so "
+"forth. There will also be an *OTG Controller Driver*, which is visible to "
+"gadget and device driver developers only indirectly. That helps the host and "
+"device side USB controllers implement the two new OTG protocols (HNP and "
+"SRP). Roles switch (host to peripheral, or vice versa) using HNP during USB "
+"suspend processing, and SRP can be viewed as a more battery-friendly kind of "
+"device wakeup protocol."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:161
+msgid ""
+"Over time, reusable utilities are evolving to help make some gadget driver "
+"tasks simpler. For example, building configuration descriptors from vectors "
+"of descriptors for the configurations interfaces and endpoints is now "
+"automated, and many drivers now use autoconfiguration to choose hardware "
+"endpoints and initialize their descriptors. A potential example of "
+"particular interest is code implementing standard USB-IF protocols for HID, "
+"networking, storage, or audio classes. Some developers are interested in KDB "
+"or KGDB hooks, to let target hardware be remotely debugged. Most such USB "
+"protocol code doesn't need to be hardware-specific, any more than network "
+"protocols like X11, HTTP, or NFS are. Such gadget-side interface drivers "
+"should eventually be combined, to implement composite devices."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:175
+msgid "Kernel Mode Gadget API"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:177
+msgid ""
+"Gadget drivers declare themselves through a struct :c:type:"
+"`usb_gadget_driver`, which is responsible for most parts of enumeration for "
+"a struct usb_gadget. The response to a set_configuration usually involves "
+"enabling one or more of the struct usb_ep objects exposed by the gadget, and "
+"submitting one or more struct usb_request buffers to transfer data. "
+"Understand those four data types, and their operations, and you will "
+"understand how this API works."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:187
+msgid ""
+"Other than the \"Chapter 9\" data types, most of the significant data types "
+"and functions are described here."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:190
+msgid ""
+"However, some relevant information is likely omitted from what you are "
+"reading. One example of such information is endpoint autoconfiguration. "
+"You'll have to read the header file, and use example source code (such as "
+"that for \"Gadget Zero\"), to fully understand the API."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:196
+msgid ""
+"The part of the API implementing some basic driver capabilities is specific "
+"to the version of the Linux kernel that's in use. The 2.6 and upper kernel "
+"versions include a *driver model* framework that has no analogue on earlier "
+"kernels; so those parts of the gadget API are not fully portable. (They are "
+"implemented on 2.4 kernels, but in a different way.) The driver model state "
+"is another part of this API that is ignored by the kerneldoc tools."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:204
+msgid ""
+"The core API does not expose every possible hardware feature, only the most "
+"widely available ones. There are significant hardware features, such as "
+"device-to-device DMA (without temporary storage in a memory buffer) that "
+"would be added using hardware-specific APIs."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:209
+msgid ""
+"This API allows drivers to use conditional compilation to handle endpoint "
+"capabilities of different hardware, but doesn't require that. Hardware tends "
+"to have arbitrary restrictions, relating to transfer types, addressing, "
+"packet sizes, buffering, and availability. As a rule, such differences only "
+"matter for \"endpoint zero\" logic that handles device configuration and "
+"management. The API supports limited run-time detection of capabilities, "
+"through naming conventions for endpoints. Many drivers will be able to at "
+"least partially autoconfigure themselves. In particular, driver init "
+"sections will often have endpoint autoconfiguration logic that scans the "
+"hardware's list of endpoints to find ones matching the driver requirements "
+"(relying on those conventions), to eliminate some of the most common reasons "
+"for conditional compilation."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:223
+msgid ""
+"Like the Linux-USB host side API, this API exposes the \"chunky\" nature of "
+"USB messages: I/O requests are in terms of one or more \"packets\", and "
+"packet boundaries are visible to drivers. Compared to RS-232 serial "
+"protocols, USB resembles synchronous protocols like HDLC (N bytes per frame, "
+"multipoint addressing, host as the primary station and devices as secondary "
+"stations) more than asynchronous ones (tty style: 8 data bits per frame, no "
+"parity, one stop bit). So for example the controller drivers won't buffer "
+"two single byte writes into a single two-byte USB IN packet, although gadget "
+"drivers may do so when they implement protocols where packet boundaries (and "
+"\"short packets\") are not significant."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:236
+msgid "Driver Life Cycle"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:238
+msgid ""
+"Gadget drivers make endpoint I/O requests to hardware without needing to "
+"know many details of the hardware, but driver setup/configuration code needs "
+"to handle some differences. Use the API like this:"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:242
+msgid ""
+"Register a driver for the particular device side usb controller hardware, "
+"such as the net2280 on PCI (USB 2.0), sa11x0 or pxa25x as found in Linux "
+"PDAs, and so on. At this point the device is logically in the USB ch9 "
+"initial state (``attached``), drawing no power and not usable (since it does "
+"not yet support enumeration). Any host should not see the device, since it's "
+"not activated the data line pullup used by the host to detect a device, even "
+"if VBUS power is available."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:250
+msgid ""
+"Register a gadget driver that implements some higher level device function. "
+"That will then bind() to a :c:type:`usb_gadget`, which activates the data "
+"line pullup sometime after detecting VBUS."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:254
+msgid ""
+"The hardware driver can now start enumerating. The steps it handles are to "
+"accept USB ``power`` and ``set_address`` requests. Other steps are handled "
+"by the gadget driver. If the gadget driver module is unloaded before the "
+"host starts to enumerate, steps before step 7 are skipped."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:259
+msgid ""
+"The gadget driver's ``setup()`` call returns usb descriptors, based both on "
+"what the bus interface hardware provides and on the functionality being "
+"implemented. That can involve alternate settings or configurations, unless "
+"the hardware prevents such operation. For OTG devices, each configuration "
+"descriptor includes an OTG descriptor."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:265
+msgid ""
+"The gadget driver handles the last step of enumeration, when the USB host "
+"issues a ``set_configuration`` call. It enables all endpoints used in that "
+"configuration, with all interfaces in their default settings. That involves "
+"using a list of the hardware's endpoints, enabling each endpoint according "
+"to its descriptor. It may also involve using ``usb_gadget_vbus_draw`` to let "
+"more power be drawn from VBUS, as allowed by that configuration. For OTG "
+"devices, setting a configuration may also involve reporting HNP capabilities "
+"through a user interface."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:275
+msgid ""
+"Do real work and perform data transfers, possibly involving changes to "
+"interface settings or switching to new configurations, until the device is "
+"disconnect()ed from the host. Queue any number of transfer requests to each "
+"endpoint. It may be suspended and resumed several times before being "
+"disconnected. On disconnect, the drivers go back to step 3 (above)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:282
+msgid ""
+"When the gadget driver module is being unloaded, the driver unbind() "
+"callback is issued. That lets the controller driver be unloaded."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:285
+msgid ""
+"Drivers will normally be arranged so that just loading the gadget driver "
+"module (or statically linking it into a Linux kernel) allows the peripheral "
+"device to be enumerated, but some drivers will defer enumeration until some "
+"higher level component (like a user mode daemon) enables it. Note that at "
+"this lowest level there are no policies about how ep0 configuration logic is "
+"implemented, except that it should obey USB specifications. Such issues are "
+"in the domain of gadget drivers, including knowing about implementation "
+"constraints imposed by some USB controllers or understanding that composite "
+"devices might happen to be built by integrating reusable components."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:296
+msgid ""
+"Note that the lifecycle above can be slightly different for OTG devices. "
+"Other than providing an additional OTG descriptor in each configuration, "
+"only the HNP-related differences are particularly visible to driver code. "
+"They involve reporting requirements during the ``SET_CONFIGURATION`` "
+"request, and the option to invoke HNP during some suspend callbacks. Also, "
+"SRP changes the semantics of ``usb_gadget_wakeup`` slightly."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:304
+msgid "USB 2.0 Chapter 9 Types and Constants"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:306
+msgid ""
+"Gadget drivers rely on common USB structures and constants defined in the :"
+"ref:`linux/usb/ch9.h <usb_chapter9>` header file, which is standard in Linux "
+"2.6+ kernels. These are the same types and constants used by host side "
+"drivers (and usbcore)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:312
+msgid "Core Objects and Methods"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:314
+msgid ""
+"These are declared in ``<linux/usb/gadget.h>``, and are used by gadget "
+"drivers to interact with USB peripheral controller drivers."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:34
+msgid "describes one i/o request"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:38
+#: include/linux/usb/gadget.h:163 include/linux/usb/gadget.h:201
+#: include/linux/usb/gadget.h:343 include/linux/usb/gadget.h:659
+#: include/linux/usb/gadget.h:813 include/linux/usb/gadget.h:826
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:63
+#: include/linux/usb/composite.h:83 include/linux/usb/composite.h:103
+#: include/linux/usb/composite.h:118 include/linux/usb/composite.h:266
+#: include/linux/usb/composite.h:355 include/linux/usb/composite.h:444
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:62
+#: include/linux/usb/gadget.h:174 include/linux/usb/gadget.h:221
+#: include/linux/usb/gadget.h:386 include/linux/usb/gadget.h:677
+#: include/linux/usb/gadget.h:820 include/linux/usb/gadget.h:833
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:75
+#: include/linux/usb/composite.h:95 include/linux/usb/composite.h:110
+#: include/linux/usb/composite.h:147 include/linux/usb/composite.h:281
+#: include/linux/usb/composite.h:371 include/linux/usb/composite.h:463
+msgid "**Members**"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:35
+msgid "``buf``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:36
+msgid ""
+"Buffer used for data.  Always provide this; some controllers only use PIO, "
+"or don't use DMA for some endpoints."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:43
+msgid "``length``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:44
+msgid "Length of that data"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:37
+msgid "``dma``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:38
+msgid ""
+"DMA address corresponding to 'buf'.  If you don't set this field, and the "
+"usb controller needs one, it is responsible for mapping and unmapping the "
+"buffer."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:40
+msgid "``sg``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:41
+msgid "a scatterlist for SG-capable controllers."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:41
+msgid "``num_sgs``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:42
+msgid "number of SG entries"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:42
+msgid "``num_mapped_sgs``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:43
+msgid "number of SG entries mapped to DMA (internal)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:44
+msgid "``stream_id``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:45
+msgid "The stream id, when USB3.0 bulk streams are being used"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:45
+msgid "``is_last``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:46
+msgid ""
+"Indicates if this is the last request of a stream_id before switching to a "
+"different stream (required for DWC3 controllers)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:47
+msgid "``no_interrupt``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:48
+msgid ""
+"If true, hints that no completion irq is needed. Helpful sometimes with deep "
+"request queues that are handled directly by DMA controllers."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:50
+msgid "``zero``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:51
+msgid ""
+"If true, when writing data, makes the last packet be \"short\" by adding a "
+"zero length packet as needed;"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:52
+msgid "``short_not_ok``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:53
+msgid ""
+"When reading data, makes short packets be treated as errors (queue stops "
+"advancing till cleanup)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:54
+msgid "``dma_mapped``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:55
+msgid "Indicates if request has been mapped to DMA (internal)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:55
+msgid "``sg_was_mapped``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:56
+msgid "Set if the scatterlist has been mapped before the request"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:56
+msgid "``complete``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:57
+msgid ""
+"Function called when request completes, so this request and its buffer may "
+"be re-used.  The function will always be called with interrupts disabled, "
+"and it must not sleep. Reads terminate with a short packet, or when the "
+"buffer fills, whichever comes first.  When writes terminate, some data bytes "
+"will usually still be in flight (often in a hardware fifo). Errors (for "
+"reads or writes) stop the queue from advancing until the completion function "
+"returns, so that any transfers invalidated by the error may first be "
+"dequeued."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:65
+msgid "``context``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:66
+msgid "For use by the completion callback"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:66
+msgid "``list``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:67
+msgid "For use by the gadget driver."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:67
+msgid "``frame_number``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:68
+msgid ""
+"Reports the interval number in (micro)frame in which the isochronous "
+"transfer was transmitted or received."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:69
+msgid "``status``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:70
+msgid ""
+"Reports completion code, zero or a negative errno. Normally, faults block "
+"the transfer queue from advancing until the completion callback returns. "
+"Code \"-ESHUTDOWN\" indicates completion caused by device disconnect, or "
+"when the driver disabled the endpoint."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:74
+msgid "``actual``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:75
+msgid ""
+"Reports bytes transferred to/from the buffer.  For reads (OUT transfers) "
+"this may be less than the requested length.  If the short_not_ok flag is "
+"set, short reads are treated as errors even when status otherwise indicates "
+"successful completion. Note that for writes (IN transfers) some data bytes "
+"may still reside in a device-side FIFO when the request is reported as "
+"complete."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:84
+#: include/linux/usb/gadget.h:215 include/linux/usb/gadget.h:398
+#: include/linux/usb/gadget.h:500 include/linux/usb/gadget.h:516
+#: include/linux/usb/gadget.h:595 include/linux/usb/gadget.h:685
+#: include/linux/usb/gadget.h:774 include/linux/usb/gadget.h:794
+#: include/linux/usb/gadget.h:815 include/linux/usb/gadget.h:828
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:24
+#: drivers/usb/gadget/usbstring.c:73 ../../../driver-api/usb/gadget:330:
+#: drivers/usb/gadget/config.c:27 drivers/usb/gadget/config.c:61
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:107
+#: include/linux/usb/composite.h:167 include/linux/usb/composite.h:282
+#: include/linux/usb/composite.h:377 include/linux/usb/composite.h:412
+#: include/linux/usb/composite.h:458 ../../../driver-api/usb/gadget:352:
+#: drivers/usb/gadget/composite.c:142 drivers/usb/gadget/composite.c:279
+#: drivers/usb/gadget/composite.c:302 drivers/usb/gadget/composite.c:382
+#: drivers/usb/gadget/composite.c:422 drivers/usb/gadget/composite.c:458
+#: drivers/usb/gadget/composite.c:493 drivers/usb/gadget/composite.c:1097
+#: drivers/usb/gadget/composite.c:1351 drivers/usb/gadget/composite.c:1379
+#: drivers/usb/gadget/composite.c:1463 drivers/usb/gadget/composite.c:1524
+#: drivers/usb/gadget/composite.c:2675 drivers/usb/gadget/composite.c:2710
+#: drivers/usb/gadget/composite.c:2723
+msgid "**Description**"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:81
+msgid ""
+"These are allocated/freed through the endpoint they're used with.  The "
+"hardware's driver can add extra per-request data to the memory it returns, "
+"which often avoids separate memory allocations (potential failures), later "
+"when the request is queued."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:86
+msgid ""
+"Request flags affect request handling, such as whether a zero length packet "
+"is written (the \"zero\" flag), whether a short read should be treated as an "
+"error (blocking request queue advance, the \"short_not_ok\" flag), or "
+"hinting that an interrupt is not required (the \"no_interrupt\" flag, for "
+"use with deep request queues)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:92
+msgid ""
+"Bulk endpoints can use any size buffers, and can also be used for interrupt "
+"transfers. interrupt-only endpoints can be much less functional."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:95
+#: include/linux/usb/gadget.h:720
+msgid "**NOTE**"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:96
+msgid ""
+"this is analogous to 'struct urb' on the host side, except that it's thinner "
+"and promotes more pre-allocation."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:159
+msgid "endpoint capabilities description"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:160
+msgid "``type_control``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:161
+msgid "Endpoint supports control type (reserved for ep0)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:161
+msgid "``type_iso``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:162
+msgid "Endpoint supports isochronous transfers."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:162
+msgid "``type_bulk``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:163
+msgid "Endpoint supports bulk transfers."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:163
+msgid "``type_int``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:164
+msgid "Endpoint supports interrupt transfers."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:164
+msgid "``dir_in``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:165
+msgid "Endpoint supports IN direction."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:165
+msgid "``dir_out``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:166
+msgid "Endpoint supports OUT direction."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:197
+msgid "device side representation of USB endpoint"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:214
+msgid "``driver_data``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:215
+msgid "for use by the gadget driver."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:198
+#: include/linux/usb/gadget.h:354 ../../../driver-api/usb/gadget:349:
+#: include/linux/usb/composite.h:63 include/linux/usb/composite.h:115
+#: include/linux/usb/composite.h:352
+msgid "``name``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:199
+msgid "identifier for the endpoint, such as \"ep-a\" or \"ep9in-bulk\""
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:199
+#: include/linux/usb/gadget.h:342
+msgid "``ops``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:200
+#: include/linux/usb/gadget.h:343
+msgid "Function pointers used to access hardware-specific operations."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:217
+msgid "``desc``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:218
+msgid ""
+"endpoint descriptor.  This pointer is set before the endpoint is enabled and "
+"remains valid until the endpoint is disabled."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:219
+msgid "``comp_desc``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:220
+msgid ""
+"In case of SuperSpeed support, this is the endpoint companion descriptor "
+"that is used to configure the endpoint"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:200
+#: include/linux/usb/gadget.h:345
+msgid "``ep_list``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:201
+msgid "the gadget's ep_list holds all of its endpoints"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:201
+msgid "``caps``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:202
+msgid "The structure describing types and directions supported by endpoint."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:203
+msgid "``claimed``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:204
+msgid "True if this endpoint is claimed by a function."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:202
+msgid "``enabled``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:203
+msgid "The current endpoint enabled/disabled state."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:212
+msgid "``mult``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:213
+msgid "multiplier, 'mult' value for SS Isoc EPs"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:213
+msgid "``maxburst``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:214
+msgid "the maximum number of bursts supported by this EP (for usb3)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:215
+msgid "``address``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:216
+msgid ""
+"used to identify the endpoint when finding descriptor that matches "
+"connection speed"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:204
+msgid "``maxpacket``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:205
+msgid ""
+"The maximum packet size used on this endpoint.  The initial value can "
+"sometimes be reduced (hardware allowing), according to the endpoint "
+"descriptor used to configure the endpoint."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:207
+msgid "``maxpacket_limit``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:208
+msgid ""
+"The maximum packet size value which can be handled by this endpoint. It's "
+"set once by UDC driver when endpoint is initialized, and should not be "
+"changed. Should not be confused with maxpacket."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:210
+msgid "``max_streams``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:211
+msgid ""
+"The maximum number of streams supported by this EP (0 - 16, actual number is "
+"2^n)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:221
+msgid ""
+"the bus controller driver lists all the general purpose endpoints in gadget-"
+">ep_list.  the control endpoint (gadget->ep0) is not in that list, and is "
+"accessed only in response to a driver setup() callback."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:339
+msgid "represents a usb device"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:340
+msgid "``work``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:341
+msgid "(internal use) Workqueue to be used for sysfs_notify()"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:341
+msgid "``udc``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:342
+msgid "struct usb_udc pointer for this gadget"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:343
+msgid "``ep0``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:344
+msgid ""
+"Endpoint zero, used when reading or writing responses to driver setup() "
+"requests"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:346
+msgid "List of other endpoints supported by the device."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:346
+msgid "``speed``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:347
+msgid "Speed of current connection to USB host."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:347
+#: include/linux/usb/gadget.h:657 ../../../driver-api/usb/gadget:349:
+#: include/linux/usb/composite.h:359
+msgid "``max_speed``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:348
+msgid ""
+"Maximal speed the UDC can handle.  UDC must support this and all slower "
+"speeds."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:349
+msgid "``ssp_rate``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:350
+msgid "Current connected SuperSpeed Plus signaling rate and lane count."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:350
+msgid "``max_ssp_rate``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:351
+msgid ""
+"Maximum SuperSpeed Plus signaling rate and lane count the UDC can handle. "
+"The UDC must support this and all slower speeds and lower number of lanes."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:353
+msgid "``state``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:354
+msgid "the state we are now (attached, suspended, configured, etc)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:355
+msgid ""
+"Identifies the controller hardware type.  Used in diagnostics and sometimes "
+"configuration."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:356
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:353
+msgid "``dev``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:357
+msgid "Driver model state for this abstract device."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:357
+msgid "``isoch_delay``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:358
+msgid "value from Set Isoch Delay request. Only valid on SS/SSP"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:358
+msgid "``out_epnum``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:359
+msgid "last used out ep number"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:359
+msgid "``in_epnum``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:360
+msgid "last used in ep number"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:360
+msgid "``mA``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:361
+msgid "last set mA value"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:361
+msgid "``otg_caps``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:362
+msgid "OTG capabilities of this gadget."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:362
+msgid "``sg_supported``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:363
+msgid "true if we can handle scatter-gather"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:363
+msgid "``is_otg``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:364
+msgid ""
+"True if the USB device port uses a Mini-AB jack, so that the gadget driver "
+"must provide a USB OTG descriptor."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:365
+msgid "``is_a_peripheral``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:366
+msgid ""
+"False unless is_otg, the \"A\" end of a USB cable is in the Mini-AB jack, "
+"and HNP has been used to switch roles so that the \"A\" device currently "
+"acts as A-Peripheral, not A-Host."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:372
+msgid "``b_hnp_enable``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:373
+msgid ""
+"OTG device feature flag, indicating that the A-Host enabled HNP support."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:368
+msgid "``a_hnp_support``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:369
+msgid ""
+"OTG device feature flag, indicating that the A-Host supports HNP at this "
+"port."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:370
+msgid "``a_alt_hnp_support``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:371
+msgid ""
+"OTG device feature flag, indicating that the A-Host only supports HNP on a "
+"different root port."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:374
+msgid "``hnp_polling_support``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:375
+msgid ""
+"OTG device feature flag, indicating if the OTG device in peripheral mode can "
+"support HNP polling."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:376
+msgid "``host_request_flag``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:377
+msgid ""
+"OTG device feature flag, indicating if A-Peripheral or B-Peripheral wants to "
+"take host role."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:378
+msgid "``quirk_ep_out_aligned_size``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:379
+msgid "epout requires buffer size to be aligned to MaxPacketSize."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:380
+msgid "``quirk_altset_not_supp``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:381
+msgid "UDC controller doesn't support alt settings."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:381
+msgid "``quirk_stall_not_supp``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:382
+msgid "UDC controller doesn't support stalling."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:382
+msgid "``quirk_zlp_not_supp``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:383
+msgid "UDC controller doesn't support ZLP."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:383
+msgid "``quirk_avoids_skb_reserve``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:384
+msgid ""
+"udc/platform wants to avoid skb_reserve() in u_ether.c to improve "
+"performance."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:385
+msgid "``is_selfpowered``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:386
+msgid "if the gadget is self-powered."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:386
+msgid "``deactivated``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:387
+msgid ""
+"True if gadget is deactivated - in deactivated state it cannot be connected."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:388
+msgid "``connected``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:389
+msgid "True if gadget is connected."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:389
+msgid "``lpm_capable``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:390
+msgid ""
+"If the gadget max_speed is FULL or HIGH, this flag indicates that it "
+"supports LPM as per the LPM ECN & errata."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:391
+msgid "``wakeup_capable``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:392
+msgid "True if gadget is capable of sending remote wakeup."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:392
+msgid "``wakeup_armed``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:393
+msgid "True if gadget is armed by the host for remote wakeup."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:393
+msgid "``irq``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:394
+msgid "the interrupt number for device controller."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:394
+msgid "``id_number``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:395
+msgid "a unique ID number for ensuring that gadget names are distinct"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:395
+msgid ""
+"Gadgets have a mostly-portable \"gadget driver\" implementing device "
+"functions, handling all usb configurations and interfaces.  Gadget drivers "
+"talk to hardware-specific code indirectly, through ops vectors. That "
+"insulates the gadget driver from hardware details, and packages the hardware "
+"endpoints through generic i/o queues.  The \"usb_gadget\" and \"usb_ep\" "
+"interfaces provide that insulation from the hardware."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:402
+msgid ""
+"Except for the driver data, all fields in this structure are read-only to "
+"the gadget driver.  That driver data is part of the \"driver model\" "
+"infrastructure in 2.6 (and later) kernels, and for earlier systems is "
+"grouped in a similar structure that's not known to the rest of the kernel."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:408
+msgid ""
+"Values of the three OTG device feature flags are updated before the setup() "
+"call corresponding to USB_REQ_SET_CONFIGURATION, and before driver suspend() "
+"calls.  They are valid only when is_otg, and when the device is acting as a "
+"B-Peripheral (so is_a_peripheral is false)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:496
+msgid "returns **len** aligned to ep's maxpacketsize."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:500
+#: include/linux/usb/gadget.h:514 include/linux/usb/gadget.h:530
+#: include/linux/usb/gadget.h:540 include/linux/usb/gadget.h:549
+#: include/linux/usb/gadget.h:558 include/linux/usb/gadget.h:568
+#: include/linux/usb/gadget.h:577 include/linux/usb/gadget.h:586
+#: include/linux/usb/gadget.h:596 include/linux/usb/gadget.h:772
+#: include/linux/usb/gadget.h:794 include/linux/usb/gadget.h:872
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:23
+#: drivers/usb/gadget/usbstring.c:74 ../../../driver-api/usb/gadget:330:
+#: drivers/usb/gadget/config.c:26 drivers/usb/gadget/config.c:61
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:412
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:137
+#: drivers/usb/gadget/composite.c:275 drivers/usb/gadget/composite.c:301
+#: drivers/usb/gadget/composite.c:383 drivers/usb/gadget/composite.c:423
+#: drivers/usb/gadget/composite.c:457 drivers/usb/gadget/composite.c:494
+#: drivers/usb/gadget/composite.c:1095 drivers/usb/gadget/composite.c:1351
+#: drivers/usb/gadget/composite.c:1378 drivers/usb/gadget/composite.c:1461
+#: drivers/usb/gadget/composite.c:1523 drivers/usb/gadget/composite.c:2674
+#: drivers/usb/gadget/composite.c:2711 drivers/usb/gadget/composite.c:2724
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:502
+#: include/linux/usb/gadget.h:514
+msgid "``struct usb_ep *ep``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:497
+#: include/linux/usb/gadget.h:513
+msgid "the endpoint whose maxpacketsize is used to align **len**"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:499
+#: include/linux/usb/gadget.h:515
+msgid "``size_t len``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:498
+#: include/linux/usb/gadget.h:514
+msgid "buffer size's length to align to **ep**'s maxpacketsize"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:499
+msgid "This helper is used to align buffer's size to an ep's maxpacketsize."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:510
+msgid ""
+"returns **len** aligned to ep's maxpacketsize if gadget requires "
+"quirk_ep_out_aligned_size, otherwise returns len."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:516
+#: include/linux/usb/gadget.h:532 include/linux/usb/gadget.h:542
+#: include/linux/usb/gadget.h:551 include/linux/usb/gadget.h:560
+#: include/linux/usb/gadget.h:570 include/linux/usb/gadget.h:579
+#: include/linux/usb/gadget.h:588 include/linux/usb/gadget.h:598
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:139
+#: drivers/usb/gadget/composite.c:277
+msgid "``struct usb_gadget *g``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:512
+#: include/linux/usb/gadget.h:528 include/linux/usb/gadget.h:537
+#: include/linux/usb/gadget.h:546 include/linux/usb/gadget.h:556
+msgid "controller to check for quirk"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:515
+msgid ""
+"This helper is used in case it's required for any reason to check and maybe "
+"align buffer's size to an ep's maxpacketsize."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:526
+msgid "return true iff the hardware supports altsettings"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:536
+msgid "return true iff the hardware supports stalling"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:545
+msgid "return true iff the hardware supports zlp"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:554
+msgid ""
+"return true iff the hardware would like to avoid skb_reserve to improve "
+"performance."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:564
+msgid "return true iff the hardware handles high speed"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:565
+msgid "controller that might support both high and full speeds"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:573
+msgid "return true if the hardware handles superspeed"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:574
+msgid "controller that might support superspeed"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:582
+msgid "return true if the hardware handles superspeed plus"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:584
+msgid "controller that might support superspeed plus"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:592
+msgid "return true iff the hardware is OTG-ready"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:593
+msgid "controller that might have a Mini-AB connector"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:594
+msgid ""
+"This is a runtime test, since kernels with a USB-OTG stack sometimes run on "
+"boards which only have a Mini-B (or Mini-A) connector."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:655
+msgid "driver for usb gadget devices"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:656
+msgid "``function``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:657
+msgid "String describing the gadget's function"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:658
+msgid "Highest speed the driver handles."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:668
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:138
+#: include/linux/usb/composite.h:362
+msgid "``bind``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:669
+msgid "the driver's bind callback"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:669
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:141
+#: include/linux/usb/composite.h:268 include/linux/usb/composite.h:366
+msgid "``unbind``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:670
+msgid ""
+"Invoked when the driver is unbound from a gadget, usually from rmmod (after "
+"a disconnect is reported). Called in a context that permits sleeping."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:658
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:153
+#: include/linux/usb/composite.h:270
+msgid "``setup``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:659
+msgid ""
+"Invoked for ep0 control requests that aren't handled by the hardware level "
+"driver. Most calls must be handled by the gadget driver, including "
+"descriptor and configuration management.  The 16 bit members of the setup "
+"data are in USB byte order. Called in_interrupt; this may not sleep.  Driver "
+"queues a response to ep0, or returns negative to stall."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:664
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:368
+msgid "``disconnect``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:665
+msgid ""
+"Invoked after all transfers have been stopped, when the host is "
+"disconnected.  May be called in_interrupt; this may not sleep.  Some devices "
+"can't detect disconnect, so this might not be called except as part of "
+"controller shutdown."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:672
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:155
+#: include/linux/usb/composite.h:369
+msgid "``suspend``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:673
+msgid "Invoked on USB suspend.  May be called in_interrupt."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:673
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:156
+#: include/linux/usb/composite.h:371
+msgid "``resume``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:674
+msgid "Invoked on USB resume.  May be called in_interrupt."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:674
+msgid "``reset``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:675
+msgid ""
+"Invoked on USB bus reset. It is mandatory for all gadget drivers and should "
+"be called in_interrupt."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:676
+msgid "``driver``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:677
+msgid "Driver model state for this driver."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:677
+msgid "``udc_name``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:678
+msgid ""
+"A name of UDC this driver should be bound to. If udc_name is NULL, this "
+"driver will be bound to any available UDC."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:679
+msgid "``match_existing_only``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:680
+msgid "If udc is not found, return an error and fail the driver registration"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:681
+msgid "``is_bound``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:682
+msgid "Allow a driver to be bound to only one gadget"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:682
+msgid ""
+"Devices are disabled till a gadget driver successfully bind()s, which means "
+"the driver will handle setup() requests needed to enumerate (and meet "
+"\"chapter 9\" requirements) then do some useful work."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:686
+msgid ""
+"If gadget->is_otg is true, the gadget driver must provide an OTG descriptor "
+"during enumeration, or else fail the bind() call.  In such cases, no USB "
+"traffic may flow until both bind() returns without having called "
+"usb_gadget_disconnect(), and the USB host stack has initialized."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:692
+msgid ""
+"Drivers use hardware-specific knowledge to configure the usb hardware. "
+"endpoint addressing is only one of several hardware characteristics that are "
+"in descriptors the ep0 implementation returns from setup() calls."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:696
+msgid ""
+"Except for ep0 implementation, most driver code shouldn't need change to run "
+"on top of different usb controllers.  It'll use endpoints set up by that ep0 "
+"implementation."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:700
+msgid ""
+"The usb controller driver handles a few standard usb requests.  Those "
+"include set_address, and feature flags for devices, interfaces, and "
+"endpoints (the get_status, set_feature, and clear_feature requests)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:704
+msgid ""
+"Accordingly, the driver's setup() callback must always implement all "
+"get_descriptor requests, returning at least a device descriptor and a "
+"configuration descriptor.  Drivers must make sure the endpoint descriptors "
+"match any hardware constraints. Some hardware also constrains other "
+"descriptors. (The pxa250 allows only configurations 1, 2, or 3)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:710
+msgid ""
+"The driver's setup() callback must also implement set_configuration, and "
+"should also implement set_interface, get_configuration, and get_interface.  "
+"Setting a configuration (or interface) is where endpoints should be "
+"activated or (config 0) shut down."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:715
+msgid ""
+"The gadget driver's setup() callback does not have to queue a response to "
+"ep0 within the setup() call, the driver can do it after setup() returns. The "
+"UDC driver must wait until such a response is queued before proceeding with "
+"the data/status stages of the control transfer."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:721
+msgid ""
+"Currently, a number of UDC drivers rely on USB_GADGET_DELAYED_STATUS being "
+"returned from the setup() callback, which is a bug. See the comment next to "
+"USB_GADGET_DELAYED_STATUS for details."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:725
+msgid ""
+"(Note that only the default control endpoint is supported.  Neither hosts "
+"nor devices generally support control traffic except to ep0.)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:728
+msgid ""
+"Most devices will ignore USB suspend/resume operations, and so will not "
+"provide those callbacks.  However, some may need to change modes when the "
+"host is not longer directing those activities.  For example, local controls "
+"(buttons, dials, etc) may need to be re-enabled since the (remote) host "
+"can't do that any longer; or an error state might be cleared, to make the "
+"device behave identically whether or not power is maintained."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:768
+msgid "register a gadget driver"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:774
+#: include/linux/usb/gadget.h:796
+msgid "``struct usb_gadget_driver *driver``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:769
+msgid "the driver being registered"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:771
+msgid "``struct module *owner``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:770
+msgid "the driver module"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:772
+msgid "``const char *mod_name``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:771
+msgid "the driver module's build name"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:773
+#: include/linux/usb/gadget.h:793 ../../../driver-api/usb/gadget:330:
+#: drivers/usb/gadget/config.c:60 ../../../driver-api/usb/gadget:352:
+#: drivers/usb/gadget/composite.c:301 drivers/usb/gadget/composite.c:457
+#: drivers/usb/gadget/composite.c:1096 drivers/usb/gadget/composite.c:1350
+#: drivers/usb/gadget/composite.c:1378 drivers/usb/gadget/composite.c:1523
+#: drivers/usb/gadget/composite.c:2673
+msgid "**Context**"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:772
+#: include/linux/usb/gadget.h:792
+msgid "can sleep"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:773
+msgid ""
+"Call this in your gadget driver's module initialization function, to tell "
+"the underlying UDC controller driver about your driver. The **bind\\(\\)** "
+"function will be called to bind it to a gadget before this registration call "
+"returns.  It's expected that the **bind\\(\\)** function will be in init "
+"sections."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:779
+msgid "Use the macro defined below instead of calling this directly."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:790
+msgid "unregister a gadget driver"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:791
+msgid "the driver being unregistered"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:793
+msgid ""
+"Call this in your gadget driver's module cleanup function, to tell the "
+"underlying usb controller that your driver is going away.  If the controller "
+"is connected to a USB host, it will first disconnect().  The driver is also "
+"requested to unbind() and clean up any device state, before this procedure "
+"finally returns.  It's expected that the unbind() functions will be in exit "
+"sections, so may not be linked in some kernels."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:809
+msgid "wraps a C string and its USB id"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:810
+msgid "``id``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:811
+msgid "the (nonzero) ID for this string"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:811
+msgid "``s``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:812
+msgid "the string, in UTF-8 encoding"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:812
+msgid ""
+"If you're using usb_gadget_get_string(), use this to wrap a string together "
+"with its ID."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:822
+msgid "a set of USB strings in a given language"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:823
+msgid "``language``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:824
+msgid "identifies the strings' language (0x0409 for en-us)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:824
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:116
+#: include/linux/usb/composite.h:264 include/linux/usb/composite.h:355
+msgid "``strings``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:825
+msgid "array of strings with their ids"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:825
+msgid ""
+"If you're using usb_gadget_get_string(), use this to wrap all the strings "
+"for a given language."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:868
+msgid "free descriptors returned by usb_copy_descriptors()"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:874
+msgid "``struct usb_descriptor_header **v``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:317: include/linux/usb/gadget.h:869
+msgid "vector of descriptors"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:321
+msgid "Optional Utilities"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:323
+msgid ""
+"The core API is sufficient for writing a USB Gadget Driver, but some "
+"optional utilities are provided to simplify common tasks. These utilities "
+"include endpoint autoconfiguration."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:19
+msgid "fill out a string descriptor"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:25
+msgid "``const struct usb_gadget_strings *table``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:20
+msgid "of c strings encoded using UTF-8"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:22
+msgid "``int id``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:21
+msgid "string id, from low byte of wValue in get string descriptor"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:23
+msgid "``u8 *buf``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:22
+msgid "at least 256 bytes, must be 16-bit aligned"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:23
+msgid ""
+"Finds the UTF-8 string matching the ID, and converts it into a string "
+"descriptor in utf16-le. Returns length of descriptor (always even) or "
+"negative errno"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:27
+msgid ""
+"If your driver needs stings in multiple languages, you'll probably \"switch "
+"(wIndex) { ... }\"  in your ep0 string descriptor logic, using this routine "
+"after choosing which set of UTF-8 strings to use. Note that US-ASCII is a "
+"strict subset of UTF-8; any string bytes with the eighth bit set will be "
+"multibyte UTF-8 characters, not ISO-8859/1 characters (which are also widely "
+"used in C strings)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:70
+msgid "validate usb language identifiers"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:76
+msgid "``u16 langid``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:71
+msgid "usb language identifier"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:327: drivers/usb/gadget/usbstring.c:72
+msgid "Returns true for valid language identifier, otherwise false."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:330: drivers/usb/gadget/config.c:22
+msgid "fill buffer with descriptors"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:330: drivers/usb/gadget/config.c:28
+msgid "``void *buf``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:330: drivers/usb/gadget/config.c:23
+msgid "Buffer to be filled"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:330: drivers/usb/gadget/config.c:25
+msgid "``unsigned buflen``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:330: drivers/usb/gadget/config.c:24
+msgid "Size of buf"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:330: drivers/usb/gadget/config.c:26
+msgid "``const struct usb_descriptor_header **src``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:330: drivers/usb/gadget/config.c:25
+msgid "Array of descriptor pointers, terminated by null pointer."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:330: drivers/usb/gadget/config.c:26
+msgid ""
+"Copies descriptors into the buffer, returning the length or a negative error "
+"code if they can't all be copied.  Useful when assembling descriptors for an "
+"associated set of interfaces used as part of configuring a composite device; "
+"or in other cases where sets of descriptors need to be marshaled."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:330: drivers/usb/gadget/config.c:57
+msgid "copy a vector of USB descriptors"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:330: drivers/usb/gadget/config.c:63
+msgid "``struct usb_descriptor_header **src``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:330: drivers/usb/gadget/config.c:58
+msgid "null-terminated vector to copy"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:330: drivers/usb/gadget/config.c:59
+msgid "initialization code, which may sleep"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:330: drivers/usb/gadget/config.c:60
+msgid ""
+"This makes a copy of a vector of USB descriptors.  Its primary use is to "
+"support usb_function objects which can have multiple copies, each needing "
+"different descriptors.  Functions may have static tables of descriptors, "
+"which are used as templates and customized with identifiers (for interfaces, "
+"strings, endpoints, and more) as needed by a given function instance."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:334
+msgid "Composite Device Framework"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:336
+msgid ""
+"The core API is sufficient for writing drivers for composite USB devices "
+"(with more than one function in a given configuration), and also multi-"
+"configuration devices (also more than one function, but not necessarily "
+"sharing a given configuration). There is however an optional framework which "
+"makes it easier to reuse and combine functions."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:342
+msgid ""
+"Devices using this framework provide a struct usb_composite_driver, which in "
+"turn provides one or more struct usb_configuration instances. Each such "
+"configuration includes at least one struct :c:type:`usb_function`, which "
+"packages a user visible role such as \"network link\" or \"mass storage "
+"device\". Management functions may also exist, such as \"Device Firmware "
+"Upgrade\"."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:59
+msgid "describes one \"Extended Property\""
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:60
+msgid "``entry``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:61
+msgid "used to keep a list of extended properties"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:61
+msgid "``type``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:62
+msgid "Extended Property type"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:62
+msgid "``name_len``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:63
+msgid "Extended Property unicode name length, including terminating '\\0'"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:64
+msgid "Extended Property name"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:64
+msgid "``data_len``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:65
+msgid "Length of Extended Property blob (for unicode store double len)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:65
+msgid "``data``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:66
+msgid "Extended Property blob"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:66
+msgid "``item``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:67
+msgid "Represents this Extended Property in configfs"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:79
+msgid "describes OS descriptors associated with one interface"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:80
+msgid "``ext_compat_id``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:81
+msgid "16 bytes of \"Compatible ID\" and \"Subcompatible ID\""
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:81
+msgid "``ext_prop``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:82
+msgid "Extended Properties list"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:82
+msgid "``ext_prop_len``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:83
+msgid "Total length of Extended Properties blobs"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:83
+msgid "``ext_prop_count``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:84
+msgid "Number of Extended Properties"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:84
+msgid "``opts_mutex``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:85
+msgid "Optional mutex protecting config data of a usb_function_instance"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:85
+msgid "``group``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:86
+msgid "Represents OS descriptors associated with an interface in configfs"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:86
+msgid "``owner``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:87
+msgid "Module associated with this OS descriptor"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:99
+msgid ""
+"describes OS descriptors associated with one interface of a usb_function"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:101
+msgid "``if_id``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:102
+msgid "Interface id"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:102
+msgid "``os_desc``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:103
+msgid ""
+"\"Extended Compatibility ID\" and \"Extended Properties\" of the interface"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:104
+msgid ""
+"Each interface can have at most one \"Extended Compatibility ID\" and a "
+"number of \"Extended Properties\"."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:114
+msgid "describes one function of a configuration"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:116
+msgid "For diagnostics, identifies the function."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:117
+msgid ""
+"tables of strings, keyed by identifiers assigned during bind() and by "
+"language IDs provided in control requests"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:118
+msgid "``fs_descriptors``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:119
+msgid ""
+"Table of full (or low) speed descriptors, using interface and string "
+"identifiers assigned during **bind\\(\\)**.  If this pointer is null, the "
+"function will not be available at full speed (or at low speed)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:121
+msgid "``hs_descriptors``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:122
+msgid ""
+"Table of high speed descriptors, using interface and string identifiers "
+"assigned during **bind\\(\\)**.  If this pointer is null, the function will "
+"not be available at high speed."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:124
+msgid "``ss_descriptors``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:125
+msgid ""
+"Table of super speed descriptors, using interface and string identifiers "
+"assigned during **bind\\(\\)**. If this pointer is null after initiation, "
+"the function will not be available at super speed."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:128
+msgid "``ssp_descriptors``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:129
+msgid ""
+"Table of super speed plus descriptors, using interface and string "
+"identifiers assigned during **bind\\(\\)**. If this pointer is null after "
+"initiation, the function will not be available at super speed plus."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:132
+#: include/linux/usb/composite.h:444
+msgid "``config``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:133
+msgid ""
+"assigned when **usb_add_function\\(\\)** is called; this is the "
+"configuration with which this function is associated."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:134
+msgid "``os_desc_table``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:135
+msgid ""
+"Table of (interface id, os descriptors) pairs. The function can expose more "
+"than one interface. If an interface is a member of an IAD, only the first "
+"interface of IAD has its entry in the table."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:137
+msgid "``os_desc_n``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:138
+msgid "Number of entries in os_desc_table"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:139
+msgid ""
+"Before the gadget can register, all of its functions bind() to the available "
+"resources including string and interface identifiers used in interface or "
+"class descriptors; endpoints; I/O buffers; and so on."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:142
+msgid ""
+"Reverses **bind**; called as a side effect of unregistering the driver which "
+"added this function."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:143
+msgid "``free_func``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:144
+msgid "free the struct usb_function."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:144
+msgid "``mod``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:145
+msgid "(internal) points to the module that created this structure."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:145
+msgid "``set_alt``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:146
+msgid ""
+"(REQUIRED) Reconfigures altsettings; function drivers may initialize usb_ep."
+"driver data at this time (when it is used). Note that setting an interface "
+"to its current altsetting resets interface state, and that all interfaces "
+"have a disabled state."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:149
+msgid "``get_alt``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:150
+msgid ""
+"Returns the active altsetting.  If this is not provided, then only "
+"altsetting zero is supported."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:151
+msgid "``disable``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:152
+msgid ""
+"(REQUIRED) Indicates the function should be disabled.  Reasons include host "
+"resetting or reconfiguring the gadget, and disconnection."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:154
+msgid "Used for interface-specific control requests."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:154
+msgid "``req_match``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:155
+msgid "Tests if a given class request can be handled by this function."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:156
+msgid "Notifies functions when the host stops sending USB traffic."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:157
+msgid "Notifies functions when the host restarts USB traffic."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:157
+msgid "``get_status``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:158
+msgid ""
+"Returns function status as a reply to GetStatus() request when the recipient "
+"is Interface."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:159
+msgid "``func_suspend``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:160
+msgid "callback to be called when SetFeature(FUNCTION_SUSPEND) is reseived"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:161
+msgid "``func_suspended``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:162
+msgid "Indicates whether the function is in function suspend state."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:162
+msgid "``func_wakeup_armed``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:163
+msgid ""
+"Indicates whether the function is armed by the host for wakeup signaling."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:164
+msgid ""
+"A single USB function uses one or more interfaces, and should in most cases "
+"support operation at both full and high speeds.  Each function is associated "
+"by **usb_add_function\\(\\)** with a one configuration; that function causes "
+"**bind\\(\\)** to be called so resources can be allocated as part of setting "
+"up a gadget driver.  Those resources include endpoints, which should be "
+"allocated using **usb_ep_autoconfig\\(\\)**."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:171
+msgid ""
+"To support dual speed operation, a function driver provides descriptors for "
+"both high and full speed operation.  Except in rare cases that don't involve "
+"bulk endpoints, each speed needs different endpoint descriptors."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:175
+msgid ""
+"Function drivers choose their own strategies for managing instance data. The "
+"simplest strategy just declares it \"static', which means the function can "
+"only be activated once.  If the function needs to be exposed in more than "
+"one configuration at a given speed, it needs to support multiple "
+"usb_function structures (one for each configuration)."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:181
+msgid ""
+"A more complex strategy might encapsulate a **usb_function** structure "
+"inside a driver-specific instance structure to allows multiple activations.  "
+"An example of multiple activations might be a CDC ACM function that supports "
+"two or more distinct instances within the same configuration, providing "
+"several independent logical data links to a USB host."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:262
+msgid "represents one gadget configuration"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:263
+msgid "``label``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:264
+msgid "For diagnostics, describes the configuration."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:265
+msgid ""
+"Tables of strings, keyed by identifiers assigned during **bind\\(\\)** and "
+"by language IDs provided in control requests."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:266
+msgid "``descriptors``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:267
+msgid ""
+"Table of descriptors preceding all function descriptors. Examples include "
+"OTG and vendor-specific descriptors."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:269
+msgid ""
+"Reverses **bind**; called as a side effect of unregistering the driver which "
+"added this configuration."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:271
+msgid ""
+"Used to delegate control requests that aren't handled by standard device "
+"infrastructure or directed at a specific interface."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:272
+msgid "``bConfigurationValue``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:273
+#: include/linux/usb/composite.h:274 include/linux/usb/composite.h:275
+msgid "Copied into configuration descriptor."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:273
+msgid "``iConfiguration``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:274
+msgid "``bmAttributes``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:275
+msgid "``MaxPower``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:276
+msgid ""
+"Power consumption in mA. Used to compute bMaxPower in the configuration "
+"descriptor after considering the bus speed."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:277
+msgid "``cdev``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:278
+msgid ""
+"assigned by **usb_add_config\\(\\)** before calling **bind\\(\\)**; this is "
+"the device associated with this configuration."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:279
+msgid ""
+"Configurations are building blocks for gadget drivers structured around "
+"function drivers.  Simple USB gadgets require only one function and one "
+"configuration, and handle dual-speed hardware by always providing the same "
+"functionality.  Slightly more complex gadgets may have more than one single-"
+"function configuration at a given speed; or have configurations that only "
+"work at one speed."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:286
+msgid ""
+"Composite devices are, by definition, ones with configurations which include "
+"more than one function."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:289
+msgid ""
+"The lifecycle of a usb_configuration includes allocation, initialization of "
+"the fields described above, and calling **usb_add_config\\(\\)** to set up "
+"internal data and bind it to a specific device.  The configuration's "
+"**bind\\(\\)** method is then used to initialize all the functions and then "
+"call **usb_add_function\\(\\)** for them."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:295
+msgid ""
+"Those functions would normally be independent of each other, but that's not "
+"mandatory.  CDC WMC devices are an example where functions often depend on "
+"other functions, with some functions subsidiary to others. Such "
+"interdependency may be managed in any way, so long as all of the descriptors "
+"complete by the time the composite driver returns from its bind() routine."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:351
+msgid "groups configurations into a gadget"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:353
+msgid "For diagnostics, identifies the driver."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:354
+msgid ""
+"Template descriptor for the device, including default device identifiers."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:356
+msgid ""
+"tables of strings, keyed by identifiers assigned during **bind** and "
+"language IDs provided in control requests. Note: The first entries are "
+"predefined. The first entry that may be used is USB_GADGET_FIRST_AVAIL_IDX"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:360
+msgid "Highest speed the driver supports."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:360
+msgid "``needs_serial``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:361
+msgid ""
+"set to 1 if the gadget needs userspace to provide a serial number.  If one "
+"is not provided, warning will be printed."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:363
+msgid ""
+"(REQUIRED) Used to allocate resources that are shared across the whole "
+"device, such as string IDs, and add its configurations using "
+"**usb_add_config\\(\\)**. This may fail by returning a negative errno value; "
+"it should return zero on successful initialization."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:367
+msgid ""
+"Reverses **bind**; called as a side effect of unregistering this driver."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:369
+msgid "optional driver disconnect method"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:370
+msgid ""
+"Notifies when the host stops sending USB traffic, after function "
+"notifications"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:372
+msgid ""
+"Notifies configuration when the host restarts USB traffic, before function "
+"notifications"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:373
+msgid "``gadget_driver``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:374
+msgid "Gadget driver controlling this driver"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:374
+msgid ""
+"Devices default to reporting self powered operation.  Devices which rely on "
+"bus powered operation should report this in their **bind** method."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:377
+msgid ""
+"Before returning from **bind**, various fields in the template descriptor "
+"may be overridden.  These include the idVendor/idProduct/bcdDevice values "
+"normally to bind the appropriate host side driver, and the three strings "
+"(iManufacturer, iProduct, iSerialNumber) normally used to provide user "
+"meaningful device identifiers.  (The strings will not be defined unless they "
+"are defined in **dev** and **strings**.)  The correct ep0 maxpacket size is "
+"also reported, as defined by the underlying controller driver."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:410
+msgid "``module_usb_composite_driver (__usb_composite_driver)``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:408
+msgid "Helper macro for registering a USB gadget composite driver"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:414
+msgid "``__usb_composite_driver``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:410
+msgid "usb_composite_driver struct"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:411
+msgid ""
+"Helper macro for USB gadget composite drivers which do not do anything "
+"special in module init/exit. This eliminates a lot of boilerplate. Each "
+"module may only use this macro once, and calling it replaces module_init() "
+"and module_exit()"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:440
+msgid "represents one composite usb gadget"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:441
+msgid "``gadget``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:442
+msgid "read-only, abstracts the gadget's usb peripheral controller"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:442
+msgid "``req``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:443
+msgid "used for control responses; buffer is pre-allocated"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:443
+msgid "``os_desc_req``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:444
+msgid "used for OS descriptors responses; buffer is pre-allocated"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:445
+msgid "the currently active configuration"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:445
+msgid "``qw_sign``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:446
+msgid "qwSignature part of the OS string"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:446
+msgid "``b_vendor_code``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:447
+msgid "bMS_VendorCode part of the OS string"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:452
+msgid "``os_desc_config``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:453
+msgid "the configuration to be used with OS descriptors"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:447
+msgid "``use_os_string``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:448
+#: include/linux/usb/composite.h:452
+msgid "false by default, interested gadgets set it"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:448
+msgid "``bcd_webusb_version``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:449
+msgid "0x0100 by default, WebUSB specification version"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:449
+msgid "``b_webusb_vendor_code``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:450
+msgid "0x0 by default, vendor code for WebUSB"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:450
+msgid "``landing_page``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:451
+msgid "empty by default, landing page to announce in WebUSB"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:451
+msgid "``use_webusb``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:453
+msgid "``setup_pending``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:454
+msgid "true when setup request is queued but not completed"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:454
+msgid "``os_desc_pending``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:455
+msgid "true when os_desc request is queued but not completed"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:349: include/linux/usb/composite.h:455
+msgid ""
+"One of these devices is allocated and initialized before the associated "
+"device driver's bind() is called."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:133
+#: drivers/usb/gadget/composite.c:271
+msgid "configures the given endpoint according to gadget speed."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:135
+#: drivers/usb/gadget/composite.c:273
+msgid "pointer to the gadget"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:137
+#: drivers/usb/gadget/composite.c:275
+msgid "``struct usb_function *f``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:136
+#: drivers/usb/gadget/composite.c:274
+msgid "usb function"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:138
+#: drivers/usb/gadget/composite.c:276
+msgid "``struct usb_ep *_ep``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:137
+#: drivers/usb/gadget/composite.c:275
+msgid "the endpoint to configure"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:139
+msgid "``u8 alt``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:138
+msgid "alternate setting number"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:140
+#: drivers/usb/gadget/composite.c:277
+msgid "**Return**"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:140
+#: drivers/usb/gadget/composite.c:277
+msgid "error code, 0 on success"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:141
+#: drivers/usb/gadget/composite.c:278
+msgid ""
+"This function chooses the right descriptors for a given endpoint according "
+"to gadget speed and saves it in the endpoint desc field. If the endpoint "
+"already has a descriptor assigned to it - overwrites it with currently "
+"corresponding descriptor. The endpoint maxpacket field is updated according "
+"to the chosen descriptor."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:148
+#: drivers/usb/gadget/composite.c:285
+msgid "**Note**"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:148
+#: drivers/usb/gadget/composite.c:285
+msgid ""
+"the supplied function should hold all the descriptors for supported speeds"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:297
+msgid "add a function to a configuration"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:303
+#: drivers/usb/gadget/composite.c:459 drivers/usb/gadget/composite.c:1094
+msgid "``struct usb_configuration *config``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:298
+msgid "the configuration"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:300
+#: drivers/usb/gadget/composite.c:385 drivers/usb/gadget/composite.c:425
+#: drivers/usb/gadget/composite.c:456
+msgid "``struct usb_function *function``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:299
+msgid "the function being added"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:300
+#: drivers/usb/gadget/composite.c:456 drivers/usb/gadget/composite.c:1095
+#: drivers/usb/gadget/composite.c:1349 drivers/usb/gadget/composite.c:1377
+#: drivers/usb/gadget/composite.c:1522 drivers/usb/gadget/composite.c:2673
+msgid "single threaded during gadget setup"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:301
+msgid ""
+"After initialization, each configuration must have one or more functions "
+"added to it.  Adding a function involves calling its **bind\\(\\)** method "
+"to allocate resources such as interface and string identifiers and endpoints."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:306
+msgid ""
+"This function returns the value of the function's bind(), which is zero for "
+"success else a negative errno value."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:379
+msgid "prevent function and gadget enumeration"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:380
+msgid "the function that isn't yet ready to respond"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:381
+msgid ""
+"Blocks response of the gadget driver to host enumeration by preventing the "
+"data line pullup from being activated.  This is normally called during "
+"**bind\\(\\)** processing to change from the initial \"ready to respond\" "
+"state, or when a required resource becomes available."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:387
+msgid ""
+"For example, drivers that serve as a passthrough to a userspace daemon can "
+"block enumeration unless that daemon (such as an OBEX, MTP, or print server) "
+"is ready to handle host requests."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:391
+msgid ""
+"Not all systems support software control of their USB peripheral data "
+"pullups."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:394
+#: drivers/usb/gadget/composite.c:425 drivers/usb/gadget/composite.c:500
+msgid "Returns zero on success, else negative errno."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:419
+msgid "allow function and gadget enumeration"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:420
+msgid "function on which usb_function_activate() was called"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:421
+msgid ""
+"Reverses effect of usb_function_deactivate().  If no more functions are "
+"delaying their activation, the gadget driver will respond to host "
+"enumeration procedures."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:453
+msgid "allocate an unused interface ID"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:454
+msgid "configuration associated with the interface"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:455
+msgid "function handling the interface"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:457
+msgid ""
+"usb_interface_id() is called from usb_function.bind() callbacks to allocate "
+"new interface IDs.  The function driver will then store that ID in "
+"interface, association, CDC union, and other descriptors.  It will also "
+"handle any control requests targeted at that interface, particularly "
+"changing its altsetting via set_alt().  There may also be class-specific or "
+"vendor-specific requests to handle."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:464
+msgid ""
+"All interface identifier should be allocated using this routine, to ensure "
+"that for example different functions don't wrongly assign different meanings "
+"to the same identifier.  Note that since interface identifiers are "
+"configuration-specific, functions used in more than one configuration (or "
+"more than once in a given configuration) need multiple versions of the "
+"relevant descriptors."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:471
+msgid ""
+"Returns the interface ID which was allocated; or -ENODEV if no more "
+"interface IDs can be allocated."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:490
+msgid "sends function wake notification to the host."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:496
+msgid "``struct usb_function *func``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:491
+msgid "function that sends the remote wakeup notification."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:492
+msgid ""
+"Applicable to devices operating at enhanced superspeed when usb functions "
+"are put in function suspend state and armed for function remote wakeup. On "
+"completion, function wake notification is sent. If the device is in low "
+"power state it tries to bring the device to active state before sending the "
+"wake notification. Since it is a synchronous call, caller must take care of "
+"not calling it in interrupt context. For devices operating at lower speeds  "
+"returns negative errno."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1091
+msgid "add a configuration to a device."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1097
+#: drivers/usb/gadget/composite.c:1353 drivers/usb/gadget/composite.c:1380
+#: drivers/usb/gadget/composite.c:1463 drivers/usb/gadget/composite.c:2726
+msgid "``struct usb_composite_dev *cdev``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1092
+msgid "wraps the USB gadget"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1093
+msgid "the configuration, with bConfigurationValue assigned"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1095
+msgid "``int (*bind)(struct usb_configuration *)``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1094
+msgid "the configuration's bind function"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1096
+msgid ""
+"One of the main tasks of a composite **bind\\(\\)** routine is to add each "
+"of the configurations it supports, using this routine."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1099
+msgid ""
+"This function returns the value of the configuration's **bind\\(\\)**, which "
+"is zero for success else a negative errno value.  Binding configurations "
+"assigns global resources including string IDs, and per-configuration "
+"resources such as interface IDs and endpoints."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1347
+msgid "allocate an unused string ID"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1348
+#: drivers/usb/gadget/composite.c:1375 drivers/usb/gadget/composite.c:1520
+msgid "the device whose string descriptor IDs are being allocated"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1350
+msgid ""
+"**usb_string_id\\(\\)** is called from bind() callbacks to allocate string "
+"IDs.  Drivers for functions, configurations, or gadgets will then store that "
+"ID in the appropriate descriptors and string table."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1354
+msgid ""
+"All string identifier should be allocated using this, "
+"**usb_string_ids_tab\\(\\)** or **usb_string_ids_n\\(\\)** routine, to "
+"ensure that for example different functions don't wrongly assign different "
+"meanings to the same identifier."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1374
+#: drivers/usb/gadget/composite.c:1519
+msgid "allocate unused string IDs in batch"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1377
+msgid "``struct usb_string *str``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1376
+msgid "an array of usb_string objects to assign numbers to"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1378
+msgid ""
+"**usb_string_ids\\(\\)** is called from bind() callbacks to allocate string "
+"IDs.  Drivers for functions, configurations, or gadgets will then copy IDs "
+"from the string table to the appropriate descriptors and string table for "
+"other languages."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1383
+#: drivers/usb/gadget/composite.c:1531
+msgid ""
+"All string identifier should be allocated using this, "
+"**usb_string_id\\(\\)** or **usb_string_ids_n\\(\\)** routine, to ensure "
+"that for example different functions don't wrongly assign different meanings "
+"to the same identifier."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1457
+msgid "attach gadget strings to a cdev and assign ids"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1458
+msgid ""
+"the device whose string descriptor IDs are being allocated and attached."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1461
+msgid "``struct usb_gadget_strings **sp``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1460
+msgid "an array of usb_gadget_strings to attach."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1462
+msgid "``unsigned n_strings``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1461
+msgid "number of entries in each usb_strings array (sp[]->strings)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1462
+msgid ""
+"This function will create a deep copy of usb_gadget_strings and usb_string "
+"and attach it to the cdev. The actual string (usb_string.s) will not be "
+"copied but only a referenced will be made. The struct usb_gadget_strings "
+"array may contain multiple languages and should be NULL terminated. The -"
+">language pointer of each struct usb_gadget_strings has to contain the same "
+"amount of entries. For instance: sp[0] is en-US, sp[1] is es-ES. It is "
+"expected that the first usb_string entry of es-ES contains the translation "
+"of the first usb_string entry of en-US. Therefore both entries become the "
+"same id assign."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1525
+msgid "``struct usb_composite_dev *c``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1522
+msgid "``unsigned n``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1521
+msgid "number of string IDs to allocate"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1523
+msgid ""
+"Returns the first requested ID.  This ID and next **n**-1 IDs are now valid "
+"IDs.  At least provided that **n** is non-zero because if it is, returns "
+"last requested ID which is now very useful information."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:1527
+msgid ""
+"**usb_string_ids_n\\(\\)** is called from bind() callbacks to allocate "
+"string IDs.  Drivers for functions, configurations, or gadgets will then "
+"store that ID in the appropriate descriptors and string table."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:2670
+msgid "register a composite driver"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:2676
+#: drivers/usb/gadget/composite.c:2713
+msgid "``struct usb_composite_driver *driver``"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:2671
+msgid "the driver to register"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:2674
+msgid ""
+"This function is used to register drivers using the composite driver "
+"framework.  The return value is zero, or a negative errno value. Those "
+"values normally come from the driver's **bind** method, which does all the "
+"work of setting up the driver to match the hardware."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:2679
+msgid ""
+"On successful return, the gadget is ready to respond to requests from the "
+"host, unless one of its components invokes usb_gadget_disconnect() while it "
+"was binding.  That would usually be done in order to wait for some userspace "
+"participation."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:2707
+msgid "unregister a composite driver"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:2708
+msgid "the driver to unregister"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:2709
+msgid ""
+"This function is used to unregister drivers using the composite driver "
+"framework."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:2720
+msgid "Continue with the control transfer"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:2721
+msgid "the composite device who's control transfer was kept waiting"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget:352: drivers/usb/gadget/composite.c:2722
+msgid ""
+"This function must be called by the USB function driver to continue with the "
+"control transfer's data/status stage in case it had requested to delay the "
+"data/status stages. A USB function's setup handler (e.g. set_alt()) can "
+"request the composite framework to delay the setup request's data/status "
+"stages by returning USB_GADGET_DELAYED_STATUS."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:356
+msgid "Composite Device Functions"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:358
+msgid ""
+"At this writing, a few of the current gadget drivers have been converted to "
+"this framework. Near-term plans include converting all of them, except for "
+"``gadgetfs``."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:363
+msgid "Peripheral Controller Drivers"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:365
+msgid ""
+"The first hardware supporting this API was the NetChip 2280 controller, "
+"which supports USB 2.0 high speed and is based on PCI. This is the "
+"``net2280`` driver module. The driver supports Linux kernel versions 2.4 and "
+"2.6; contact NetChip Technologies for development boards and product "
+"information."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:371
+msgid ""
+"Other hardware working in the ``gadget`` framework includes: Intel's PXA 25x "
+"and IXP42x series processors (``pxa2xx_udc``), Toshiba TC86c001 \"Goku-"
+"S\" (``goku_udc``), Renesas SH7705/7727 (``sh_udc``), MediaQ 11xx "
+"(``mq11xx_udc``), Hynix HMS30C7202 (``h7202_udc``), National 9303/4 "
+"(``n9604_udc``), Texas Instruments OMAP (``omap_udc``), Sharp LH7A40x "
+"(``lh7a40x_udc``), and more. Most of those are full speed controllers."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:378
+msgid ""
+"At this writing, there are people at work on drivers in this framework for "
+"several other USB device controllers, with plans to make many of them be "
+"widely available."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:382
+msgid ""
+"A partial USB simulator, the ``dummy_hcd`` driver, is available. It can act "
+"like a net2280, a pxa25x, or an sa11x0 in terms of available endpoints and "
+"device speeds; and it simulates control, bulk, and to some extent interrupt "
+"transfers. That lets you develop some parts of a gadget driver on a normal "
+"PC, without any special hardware, and perhaps with the assistance of tools "
+"such as GDB running with User Mode Linux. At least one person has expressed "
+"interest in adapting that approach, hooking it up to a simulator for a "
+"microcontroller. Such simulators can help debug subsystems where the runtime "
+"hardware is unfriendly to software development, or is not yet available."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:393
+msgid ""
+"Support for other controllers is expected to be developed and contributed "
+"over time, as this driver framework evolves."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:397
+msgid "Gadget Drivers"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:399
+msgid ""
+"In addition to *Gadget Zero* (used primarily for testing and development "
+"with drivers for usb controller hardware), other gadget drivers exist."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:402
+msgid ""
+"There's an ``ethernet`` gadget driver, which implements one of the most "
+"useful *Communications Device Class* (CDC) models. One of the standards for "
+"cable modem interoperability even specifies the use of this ethernet model "
+"as one of two mandatory options. Gadgets using this code look to a USB host "
+"as if they're an Ethernet adapter. It provides access to a network where the "
+"gadget's CPU is one host, which could easily be bridging, routing, or "
+"firewalling access to other networks. Since some hardware can't fully "
+"implement the CDC Ethernet requirements, this driver also implements a "
+"\"good parts only\" subset of CDC Ethernet. (That subset doesn't advertise "
+"itself as CDC Ethernet, to avoid creating problems.)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:414
+msgid ""
+"Support for Microsoft's ``RNDIS`` protocol has been contributed by "
+"Pengutronix and Auerswald GmbH. This is like CDC Ethernet, but it runs on "
+"more slightly USB hardware (but less than the CDC subset). However, its main "
+"claim to fame is being able to connect directly to recent versions of "
+"Windows, using drivers that Microsoft bundles and supports, making it much "
+"simpler to network with Windows."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:421
+msgid ""
+"There is also support for user mode gadget drivers, using ``gadgetfs``. This "
+"provides a *User Mode API* that presents each endpoint as a single file "
+"descriptor. I/O is done using normal ``read()`` and ``read()`` calls. "
+"Familiar tools like GDB and pthreads can be used to develop and debug user "
+"mode drivers, so that once a robust controller driver is available many "
+"applications for it won't require new kernel mode software. Linux 2.6 *Async "
+"I/O (AIO)* support is available, so that user mode software can stream data "
+"with only slightly more overhead than a kernel driver."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:430
+msgid ""
+"There's a USB Mass Storage class driver, which provides a different solution "
+"for interoperability with systems such as MS-Windows and MacOS. That *Mass "
+"Storage* driver uses a file or block device as backing store for a drive, "
+"like the ``loop`` driver. The USB host uses the BBB, CB, or CBI versions of "
+"the mass storage class specification, using transparent SCSI commands to "
+"access the data from the backing store."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:437
+msgid ""
+"There's a \"serial line\" driver, useful for TTY style operation over USB. "
+"The latest version of that driver supports CDC ACM style operation, like a "
+"USB modem, and so on most hardware it can interoperate easily with MS-"
+"Windows. One interesting use of that driver is in boot firmware (like a "
+"BIOS), which can sometimes use that model with very small systems without "
+"real serial lines."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:444
+msgid ""
+"Support for other kinds of gadget is expected to be developed and "
+"contributed over time, as this driver framework evolves."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:448
+msgid "USB On-The-GO (OTG)"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:450
+msgid ""
+"USB OTG support on Linux 2.6 was initially developed by Texas Instruments "
+"for `OMAP <http://www.omap.com>`__ 16xx and 17xx series processors. Other "
+"OTG systems should work in similar ways, but the hardware level details "
+"could be very different."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:455
+msgid ""
+"Systems need specialized hardware support to implement OTG, notably "
+"including a special *Mini-AB* jack and associated transceiver to support "
+"*Dual-Role* operation: they can act either as a host, using the standard "
+"Linux-USB host side driver stack, or as a peripheral, using this ``gadget`` "
+"framework. To do that, the system software relies on small additions to "
+"those programming interfaces, and on a new internal component (here called "
+"an \"OTG Controller\") affecting which driver stack connects to the OTG "
+"port. In each role, the system can re-use the existing pool of hardware-"
+"neutral drivers, layered on top of the controller driver interfaces (:c:type:"
+"`usb_bus` or :c:type:`usb_gadget`). Such drivers need at most minor changes, "
+"and most of the calls added to support OTG can also benefit non-OTG products."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:468
+msgid ""
+"Gadget drivers test the ``is_otg`` flag, and use it to determine whether or "
+"not to include an OTG descriptor in each of their configurations."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:472
+msgid ""
+"Gadget drivers may need changes to support the two new OTG protocols, "
+"exposed in new gadget attributes such as ``b_hnp_enable`` flag. HNP support "
+"should be reported through a user interface (two LEDs could suffice), and is "
+"triggered in some cases when the host suspends the peripheral. SRP support "
+"can be user-initiated just like remote wakeup, probably by pressing the same "
+"button."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:479
+msgid ""
+"On the host side, USB device drivers need to be taught to trigger HNP at "
+"appropriate moments, using ``usb_suspend_device()``. That also conserves "
+"battery power, which is useful even for non-OTG configurations."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:484
+msgid ""
+"Also on the host side, a driver must support the OTG \"Targeted Peripheral "
+"List\". That's just a whitelist, used to reject peripherals not supported "
+"with a given Linux OTG host. *This whitelist is product-specific; each "
+"product must modify* ``otg_whitelist.h`` *to match its interoperability "
+"specification.*"
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:490
+msgid ""
+"Non-OTG Linux hosts, like PCs and workstations, normally have some solution "
+"for adding drivers, so that peripherals that aren't recognized can "
+"eventually be supported. That approach is unreasonable for consumer products "
+"that may never have their firmware upgraded, and where it's usually "
+"unrealistic to expect traditional PC/workstation/server kinds of support "
+"model to work. For example, it's often impractical to change device firmware "
+"once the product has been distributed, so driver bugs can't normally be "
+"fixed if they're found after shipment."
+msgstr ""
+
+#: ../../../driver-api/usb/gadget.rst:500
+msgid ""
+"Additional changes are needed below those hardware-neutral :c:type:`usb_bus` "
+"and :c:type:`usb_gadget` driver interfaces; those aren't discussed here in "
+"any detail. Those affect the hardware-specific code for each USB Host or "
+"Peripheral controller, and how the HCD initializes (since OTG can be active "
+"only on a single port). They also involve what may be called an *OTG "
+"Controller Driver*, managing the OTG transceiver and the OTG state machine "
+"logic as well as much of the root hub behavior for the OTG port. The OTG "
+"controller driver needs to activate and deactivate USB controllers depending "
+"on the relevant device role. Some related changes were needed inside "
+"usbcore, so that it can identify OTG-capable devices and respond "
+"appropriately to HNP or SRP protocols."
+msgstr ""

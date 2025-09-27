@@ -1,0 +1,1871 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../filesystems/netfs_library.rst:5
+msgid "Network Filesystem Services Library"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:37
+msgid "Overview"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:39
+msgid ""
+"The network filesystem services library, netfslib, is a set of functions "
+"designed to aid a network filesystem in implementing VM/VFS API operations.  "
+"It takes over the normal buffered read, readahead, write and writeback and "
+"also handles unbuffered and direct I/O."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:44
+msgid ""
+"The library provides support for (re-)negotiation of I/O sizes and retrying "
+"failed I/O as well as local caching and will, in the future, provide content "
+"encryption."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:48
+msgid ""
+"It insulates the filesystem from VM interface changes as much as possible "
+"and handles VM features such as large multipage folios.  The filesystem "
+"basically just has to provide a way to perform read and write RPC calls."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:52
+msgid ""
+"The way I/O is organised inside netfslib consists of a number of objects:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:54
+msgid ""
+"A *request*.  A request is used to track the progress of the I/O overall and "
+"to hold on to resources.  The collection of results is done at the request "
+"level.  The I/O within a request is divided into a number of parallel "
+"streams of subrequests."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:59
+msgid ""
+"A *stream*.  A non-overlapping series of subrequests.  The subrequests "
+"within a stream do not have to be contiguous."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:62
+msgid ""
+"A *subrequest*.  This is the basic unit of I/O.  It represents a single RPC "
+"call or a single cache I/O operation.  The library passes these to the "
+"filesystem and the cache to perform."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:67
+msgid "Requests and Streams"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:69
+msgid ""
+"When actually performing I/O (as opposed to just copying into the "
+"pagecache), netfslib will create one or more requests to track the progress "
+"of the I/O and to hold resources."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:73
+msgid ""
+"A read operation will have a single stream and the subrequests within that "
+"stream may be of mixed origins, for instance mixing RPC subrequests and "
+"cache subrequests."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:77
+msgid ""
+"On the other hand, a write operation may have multiple streams, where each "
+"stream targets a different destination.  For instance, there may be one "
+"stream writing to the local cache and one to the server.  Currently, only "
+"two streams are allowed, but this could be increased if parallel writes to "
+"multiple servers is desired."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:83
+msgid ""
+"The subrequests within a write stream do not need to match alignment or size "
+"with the subrequests in another write stream and netfslib performs the "
+"tiling of subrequests in each stream over the source buffer independently.  "
+"Further, each stream may contain holes that don't correspond to holes in the "
+"other stream."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:89
+msgid ""
+"In addition, the subrequests do not need to correspond to the boundaries of "
+"the folios or vectors in the source/destination buffer.  The library handles "
+"the collection of results and the wrangling of folio flags and references."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:94
+msgid "Subrequests"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:96
+msgid ""
+"Subrequests are at the heart of the interaction between netfslib and the "
+"filesystem using it.  Each subrequest is expected to correspond to a single "
+"read or write RPC or cache operation.  The library will stitch together the "
+"results from a set of subrequests to provide a higher level operation."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:101
+msgid ""
+"Netfslib has two interactions with the filesystem or the cache when setting "
+"up a subrequest.  First, there's an optional preparatory step that allows "
+"the filesystem to negotiate the limits on the subrequest, both in terms of "
+"maximum number of bytes and maximum number of vectors (e.g. for RDMA).  This "
+"may involve negotiating with the server (e.g. cifs needing to acquire "
+"credits)."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:107
+msgid ""
+"And, secondly, there's the issuing step in which the subrequest is handed "
+"off to the filesystem to perform."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:110
+msgid ""
+"Note that these two steps are done slightly differently between read and "
+"write:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:112
+msgid ""
+"For reads, the VM/VFS tells us how much is being requested up front, so the "
+"library can preset maximum values that the cache and then the filesystem can "
+"then reduce.  The cache also gets consulted first on whether it wants to do "
+"a read before the filesystem is consulted."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:117
+msgid ""
+"For writeback, it is unknown how much there will be to write until the "
+"pagecache is walked, so no limit is set by the library."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:120
+msgid ""
+"Once a subrequest is completed, the filesystem or cache informs the library "
+"of the completion and then collection is invoked.  Depending on whether the "
+"request is synchronous or asynchronous, the collection of results will be "
+"done in either the application thread or in a work queue."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:126
+msgid "Result Collection and Retry"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:128
+msgid ""
+"As subrequests complete, the results are collected and collated by the "
+"library and folio unlocking is performed progressively (if appropriate).  "
+"Once the request is complete, async completion will be invoked (again, if "
+"appropriate). It is possible for the filesystem to provide interim progress "
+"reports to the library to cause folio unlocking to happen earlier if "
+"possible."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:134
+msgid ""
+"If any subrequests fail, netfslib can retry them.  It will wait until all "
+"subrequests are completed, offer the filesystem the opportunity to fiddle "
+"with the resources/state held by the request and poke at the subrequests "
+"before re-preparing and re-issuing the subrequests."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:139
+msgid ""
+"This allows the tiling of contiguous sets of failed subrequest within a "
+"stream to be changed, adding more subrequests or ditching excess as "
+"necessary (for instance, if the network sizes change or the server decides "
+"it wants smaller chunks)."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:144
+msgid ""
+"Further, if one or more contiguous cache-read subrequests fail, the library "
+"will pass them to the filesystem to perform instead, renegotiating and "
+"retiling them as necessary to fit with the filesystem's parameters rather "
+"than those of the cache."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:150
+msgid "Local Caching"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:152
+msgid ""
+"One of the services netfslib provides, via ``fscache``, is the option to "
+"cache on local disk a copy of the data obtained from/written to a network "
+"filesystem. The library will manage the storing, retrieval and some "
+"invalidation of data automatically on behalf of the filesystem if a cookie "
+"is attached to the ``netfs_inode``."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:158
+msgid ""
+"Note that local caching used to use the PG_private_2 (aliased as PG_fscache) "
+"to keep track of a page that was being written to the cache, but this is now "
+"deprecated as PG_private_2 will be removed."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:162
+msgid ""
+"Instead, folios that are read from the server for which there was no data in "
+"the cache will be marked as dirty and will have ``folio->private`` set to a "
+"special value (``NETFS_FOLIO_COPY_TO_CACHE``) and left to writeback to "
+"write. If the folio is modified before that happened, the special value will "
+"be cleared and the write will become normally dirty."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:168
+msgid ""
+"When writeback occurs, folios that are so marked will only be written to the "
+"cache and not to the server.  Writeback handles mixed cache-only writes and "
+"server-and-cache writes by using two streams, sending one to the cache and "
+"one to the server.  The server stream will have gaps in it corresponding to "
+"those folios."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:175
+msgid "Content Encryption (fscrypt)"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:177
+msgid ""
+"Though it does not do so yet, at some point netfslib will acquire the "
+"ability to do client-side content encryption on behalf of the network "
+"filesystem (Ceph, for example).  fscrypt can be used for this if appropriate "
+"(it may not be - cifs, for example)."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:182
+msgid ""
+"The data will be stored encrypted in the local cache using the same manner "
+"of encryption as the data written to the server and the library will impose "
+"bounce buffering and RMW cycles as necessary."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:188
+msgid "Per-Inode Context"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:190
+msgid ""
+"The network filesystem helper library needs a place to store a bit of state "
+"for its use on each netfs inode it is helping to manage.  To this end, a "
+"context structure is defined::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:203
+msgid ""
+"A network filesystem that wants to use netfslib must place one of these in "
+"its inode wrapper struct instead of the VFS ``struct inode``.  This can be "
+"done in a way similar to the following::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:212
+msgid ""
+"This allows netfslib to find its state by using ``container_of()`` from the "
+"inode pointer, thereby allowing the netfslib helper functions to be pointed "
+"to directly by the VFS/VM operation tables."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:216
+msgid ""
+"The structure contains the following fields that are of interest to the "
+"filesystem:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:219
+#: ../../../filesystems/netfs_library.rst:521
+msgid "``inode``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:221
+msgid "The VFS inode structure."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:223
+msgid "``ops``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:225
+msgid "The set of operations provided by the network filesystem to netfslib."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:227
+msgid "``cache``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:229
+msgid ""
+"Local caching cookie, or NULL if no caching is enabled.  This field does not "
+"exist if fscache is disabled."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:232
+msgid "``remote_i_size``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:234
+msgid ""
+"The size of the file on the server.  This differs from inode->i_size if "
+"local modifications have been made but not yet written back."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:237
+#: ../../../filesystems/netfs_library.rst:559
+#: ../../../filesystems/netfs_library.rst:682
+msgid "``flags``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:239
+msgid "A set of flags, some of which the filesystem might be interested in:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:241
+msgid "``NETFS_ICTX_MODIFIED_ATTR``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:243
+msgid ""
+"Set if netfslib modifies mtime/ctime.  The filesystem is free to ignore this "
+"or clear it."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:246
+msgid "``NETFS_ICTX_UNBUFFERED``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:248
+msgid ""
+"Do unbuffered I/O upon the file.  Like direct I/O but without the alignment "
+"limitations.  RMW will be performed if necessary.  The pagecache will not be "
+"used unless mmap() is also used."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:252
+msgid "``NETFS_ICTX_WRITETHROUGH``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:254
+msgid ""
+"Do writethrough caching upon the file.  I/O will be set up and dispatched as "
+"buffered writes are made to the page cache.  mmap() does the normal "
+"writeback thing."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:258
+msgid "``NETFS_ICTX_SINGLE_NO_UPLOAD``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:260
+msgid ""
+"Set if the file has a monolithic content that must be read entirely in a "
+"single go and must not be written back to the server, though it can be "
+"cached (e.g. AFS directories)."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:265
+msgid "Inode Context Helper Functions"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:267
+msgid ""
+"To help deal with the per-inode context, a number helper functions are "
+"provided.  Firstly, a function to perform basic initialisation on a context "
+"and set the operations table pointer::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:274
+msgid ""
+"then a function to cast from the VFS inode structure to the netfs context::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:278
+msgid ""
+"and finally, a function to get the cache cookie pointer from the context "
+"attached to an inode (or NULL if fscache is disabled)::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:284
+msgid "Inode Locking"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:286
+msgid ""
+"A number of functions are provided to manage the locking of i_rwsem for I/O "
+"and to effectively extend it to provide more separate classes of exclusion::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:296
+msgid "The exclusion breaks down into four separate classes:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:298
+msgid "Buffered reads and writes."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:300
+msgid ""
+"Buffered reads can run concurrently each other and with buffered writes, but "
+"buffered writes cannot run concurrently with each other."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:303
+msgid "Direct reads and writes."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:305
+msgid ""
+"Direct (and unbuffered) reads and writes can run concurrently since they do "
+"not share local buffering (i.e. the pagecache) and, in a network filesystem, "
+"are expected to have exclusion managed on the server (though this may not be "
+"the case for, say, Ceph)."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:310
+msgid "Other major inode modifying operations (e.g. truncate, fallocate)."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:312
+msgid "These should just access i_rwsem directly."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:314
+msgid "mmap()."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:316
+msgid ""
+"mmap'd accesses might operate concurrently with any of the other classes. "
+"They might form the buffer for an intra-file loopback DIO read/write.  They "
+"might be permitted on unbuffered files."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:321
+msgid "Inode Writeback"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:323
+msgid ""
+"Netfslib will pin resources on an inode for future writeback (such as "
+"pinning use of an fscache cookie) when an inode is dirtied.  However, this "
+"pinning needs careful management.  To manage the pinning, the following "
+"sequence occurs:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:328
+msgid ""
+"An inode state flag ``I_PINNING_NETFS_WB`` is set by netfslib when the "
+"pinning begins (when a folio is dirtied, for example) if the cache is active "
+"to stop the cache structures from being discarded and the cache space from "
+"being culled.  This also prevents re-getting of cache resources if the flag "
+"is already set."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:334
+msgid ""
+"This flag then cleared inside the inode lock during inode writeback in the "
+"VM - and the fact that it was set is transferred to ``->unpinned_netfs_wb`` "
+"in ``struct writeback_control``."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:338
+msgid ""
+"If ``->unpinned_netfs_wb`` is now set, the write_inode procedure is forced."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:340
+msgid ""
+"The filesystem's ``->write_inode()`` function is invoked to do the cleanup."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:342
+msgid "The filesystem invokes netfs to do its cleanup."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:344
+msgid ""
+"To do the cleanup, netfslib provides a function to do the resource "
+"unpinning::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:348
+msgid ""
+"If the filesystem doesn't need to do anything else, this may be set as a its "
+"``.write_inode`` method."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:351
+msgid ""
+"Further, if an inode is deleted, the filesystem's write_inode method may not "
+"get called, so::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:356
+msgid ""
+"must be called from ``->evict_inode()`` *before* ``clear_inode()`` is called."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:360
+msgid "High-Level VFS API"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:362
+msgid ""
+"Netfslib provides a number of sets of API calls for the filesystem to "
+"delegate VFS operations to.  Netfslib, in turn, will call out to the "
+"filesystem and the cache to negotiate I/O sizes, issue RPCs and provide "
+"places for it to intervene at various times."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:368
+msgid "Unlocked Read/Write Iter"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:370
+msgid ""
+"The first API set is for the delegation of operations to netfslib when the "
+"filesystem is called through the standard VFS read/write_iter methods::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:379
+msgid ""
+"They can be assigned directly to ``.read_iter`` and ``.write_iter``.  They "
+"perform the inode locking themselves and the first two will switch between "
+"buffered I/O and DIO as appropriate."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:384
+msgid "Pre-Locked Read/Write Iter"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:386
+msgid ""
+"The second API set is for the delegation of operations to netfslib when the "
+"filesystem is called through the standard VFS methods, but needs to do some "
+"other stuff before or after calling netfslib whilst still inside locked "
+"section (e.g. Ceph negotiating caps).  The unbuffered read function is::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:393
+msgid ""
+"This must not be assigned directly to ``.read_iter`` and the filesystem is "
+"responsible for performing the inode locking before calling it.  In the case "
+"of buffered read, the filesystem should use ``filemap_read()``."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:397
+msgid "There are three functions for writes::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:406
+msgid ""
+"These must not be assigned directly to ``.write_iter`` and the filesystem is "
+"responsible for performing the inode locking before calling them."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:409
+msgid ""
+"The first two functions are for buffered writes; the first just adds some "
+"standard write checks and jumps to the second, but if the filesystem wants "
+"to do the checks itself, it can use the second directly.  The third function "
+"is for unbuffered or DIO writes."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:414
+msgid ""
+"On all three write functions, there is a writeback group pointer (which "
+"should be NULL if the filesystem doesn't use this).  Writeback groups are "
+"set on folios when they're modified.  If a folio to-be-modified is already "
+"marked with a different group, it is flushed first.  The writeback API "
+"allows writing back of a specific group."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:421
+msgid "Memory-Mapped I/O API"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:423
+msgid "An API for support of mmap()'d I/O is provided::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:427
+msgid ""
+"This allows the filesystem to delegate ``.page_mkwrite`` to netfslib.  The "
+"filesystem should not take the inode lock before calling it, but, as with "
+"the locked write functions above, this does take a writeback group pointer.  "
+"If the page to be made writable is in a different group, it will be flushed "
+"first."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:433
+msgid "Monolithic Files API"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:435
+msgid ""
+"There is also a special API set for files for which the content must be read "
+"in a single RPC (and not written back) and is maintained as a monolithic "
+"blob (e.g. an AFS directory), though it can be stored and updated in the "
+"local cache::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:445
+msgid ""
+"The first function reads from a file into the given buffer, reading from the "
+"cache in preference if the data is cached there; the second function allows "
+"the inode to be marked dirty, causing a later writeback; and the third "
+"function can be called from the writeback code to write the data to the "
+"cache, if there is one."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:451
+msgid ""
+"The inode should be marked ``NETFS_ICTX_SINGLE_NO_UPLOAD`` if this API is to "
+"be used.  The writeback function requires the buffer to be of ITER_FOLIOQ "
+"type."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:455
+msgid "High-Level VM API"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:457
+msgid ""
+"Netfslib also provides a number of sets of API calls for the filesystem to "
+"delegate VM operations to.  Again, netfslib, in turn, will call out to the "
+"filesystem and the cache to negotiate I/O sizes, issue RPCs and provide "
+"places for it to intervene at various times::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:470
+msgid ""
+"These are ``address_space_operations`` methods and can be set directly in "
+"the operations table."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:474
+msgid "Deprecated PG_private_2 API"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:476
+msgid ""
+"There is also a deprecated function for filesystems that still use the ``-"
+">write_begin`` method::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:483
+msgid "It uses the deprecated PG_private_2 flag and so should not be used."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:487
+msgid "I/O Request API"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:489
+msgid ""
+"The I/O request API comprises a number of structures and a number of "
+"functions that the filesystem may need to use."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:493
+msgid "Request Structure"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:495
+msgid ""
+"The request structure manages the request as a whole, holding some resources "
+"and state on behalf of the filesystem and tracking the collection of "
+"results::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:514
+msgid ""
+"Many of the fields are for internal use, but the fields shown here are of "
+"interest to the filesystem:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:517
+msgid "``origin``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:519
+msgid ""
+"The origin of the request (readahead, read_folio, DIO read, writeback, ...)."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:522
+msgid "``mapping``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:524
+msgid ""
+"The inode and the address space of the file being read from.  The mapping "
+"may or may not point to inode->i_data."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:527
+msgid "``group``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:529
+msgid ""
+"The writeback group this request is dealing with or NULL.  This holds a ref "
+"on the group."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:532
+msgid "``io_streams``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:534
+msgid ""
+"The parallel streams of subrequests available to the request.  Currently two "
+"are available, but this may be made extensible in future.  ``NR_IO_STREAMS`` "
+"indicates the size of the array."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:538
+msgid "``netfs_priv``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:539
+msgid "``netfs_priv2``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:541
+msgid ""
+"The network filesystem's private data.  The value for this can be passed in "
+"to the helper functions or set during the request."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:544
+#: ../../../filesystems/netfs_library.rst:669
+msgid "``start``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:545
+#: ../../../filesystems/netfs_library.rst:670
+msgid "``len``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:547
+msgid ""
+"The file position of the start of the read request and the length.  These "
+"may be altered by the ->expand_readahead() op."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:550
+msgid "``i_size``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:552
+msgid "The size of the file at the start of the request."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:554
+msgid "``debug_id``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:556
+msgid ""
+"A number allocated to this operation that can be displayed in trace lines "
+"for reference."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:561
+msgid ""
+"Flags for managing and controlling the operation of the request.  Some of "
+"these may be of interest to the filesystem:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:564
+msgid "``NETFS_RREQ_RETRYING``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:566
+msgid "Netfslib sets this when generating retries."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:568
+msgid "``NETFS_RREQ_PAUSE``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:570
+msgid ""
+"The filesystem can set this to request to pause the library's subrequest "
+"issuing loop - but care needs to be taken as netfslib may also set it."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:573
+msgid "``NETFS_RREQ_NONBLOCK``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:574
+msgid "``NETFS_RREQ_BLOCKED``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:576
+msgid ""
+"Netfslib sets the first to indicate that non-blocking mode was set by the "
+"caller and the filesystem can set the second to indicate that it would have "
+"had to block."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:580
+msgid "``NETFS_RREQ_USE_PGPRIV2``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:582
+msgid ""
+"The filesystem can set this if it wants to use PG_private_2 to track whether "
+"a folio is being written to the cache.  This is deprecated as PG_private_2 "
+"is going to go away."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:586
+msgid ""
+"If the filesystem wants more private data than is afforded by this "
+"structure, then it should wrap it and provide its own allocator."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:590
+msgid "Stream Structure"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:592
+msgid ""
+"A request is comprised of one or more parallel streams and each stream may "
+"be aimed at a different target."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:595
+msgid ""
+"For read requests, only stream 0 is used.  This can contain a mixture of "
+"subrequests aimed at different sources.  For write requests, stream 0 is "
+"used for the server and stream 1 is used for the cache.  For buffered "
+"writeback, stream 0 is not enabled unless a normal dirty folio is "
+"encountered, at which point ->begin_writeback() will be invoked and the "
+"filesystem can mark the stream available."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:602
+msgid "The stream struct looks like::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:613
+msgid "A number of members are available for access/use by the filesystem:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:615
+#: ../../../filesystems/netfs_library.rst:721
+msgid "``stream_nr``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:617
+msgid "The number of the stream within the request."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:619
+msgid "``avail``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:621
+msgid ""
+"True if the stream is available for use.  The filesystem should set this on "
+"stream zero if in ->begin_writeback()."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:624
+msgid "``sreq_max_len``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:625
+msgid "``sreq_max_segs``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:627
+msgid ""
+"These are set by the filesystem or the cache in ->prepare_read() or -"
+">prepare_write() for each subrequest to indicate the maximum number of bytes "
+"and, optionally, the maximum number of segments (if not 0) that that "
+"subrequest can support."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:632
+msgid "``submit_extendable_to``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:634
+msgid ""
+"The size that a subrequest can be rounded up to beyond the EOF, given the "
+"available buffer.  This allows the cache to work out if it can do a DIO read "
+"or write that straddles the EOF marker."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:639
+msgid "Subrequest Structure"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:641
+msgid ""
+"Individual units of I/O are managed by the subrequest structure.  These "
+"represent slices of the overall request and run independently::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:657
+msgid ""
+"Each subrequest is expected to access a single source, though the library "
+"will handle falling back from one source type to another.  The members are:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:660
+msgid "``rreq``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:662
+msgid "A pointer to the read request."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:664
+msgid "``io_iter``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:666
+msgid ""
+"An I/O iterator representing a slice of the buffer to be read into or "
+"written from."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:672
+msgid ""
+"The file position of the start of this slice of the read request and the "
+"length."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:675
+msgid "``transferred``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:677
+msgid ""
+"The amount of data transferred so far for this subrequest.  This should be "
+"added to with the length of the transfer made by this issuance of the "
+"subrequest.  If this is less than ``len`` then the subrequest may be "
+"reissued to continue."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:684
+msgid ""
+"Flags for managing the subrequest.  There are a number of interest to the "
+"filesystem or cache:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:687
+msgid "``NETFS_SREQ_MADE_PROGRESS``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:689
+msgid ""
+"Set by the filesystem to indicates that at least one byte of data was read "
+"or written."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:692
+msgid "``NETFS_SREQ_HIT_EOF``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:694
+msgid ""
+"The filesystem should set this if a read hit the EOF on the file (in which "
+"case ``transferred`` should stop at the EOF).  Netfslib may expand the "
+"subrequest out to the size of the folio containing the EOF on the off chance "
+"that a third party change happened or a DIO read may have asked for more "
+"than is available.  The library will clear any excess pagecache."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:700
+msgid "``NETFS_SREQ_CLEAR_TAIL``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:702
+msgid ""
+"The filesystem can set this to indicate that the remainder of the slice, "
+"from transferred to len, should be cleared.  Do not set if HIT_EOF is set."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:705
+msgid "``NETFS_SREQ_NEED_RETRY``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:707
+msgid "The filesystem can set this to tell netfslib to retry the subrequest."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:709
+msgid "``NETFS_SREQ_BOUNDARY``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:711
+msgid ""
+"This can be set by the filesystem on a subrequest to indicate that it ends "
+"at a boundary with the filesystem structure (e.g. at the end of a Ceph "
+"object).  It tells netfslib not to retile subrequests across it."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:715
+msgid "``error``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:717
+msgid ""
+"This is for the filesystem to store result of the subrequest.  It should be "
+"set to 0 if successful and a negative error code otherwise."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:720
+msgid "``debug_index``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:723
+msgid ""
+"A number allocated to this slice that can be displayed in trace lines for "
+"reference and the number of the request stream that it belongs to."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:726
+msgid ""
+"If necessary, the filesystem can get and put extra refs on the subrequest it "
+"is given::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:734
+msgid ""
+"using netfs trace codes to indicate the reason.  Care must be taken, "
+"however, as once control of the subrequest is returned to netfslib, the same "
+"subrequest can be reissued/retried."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:739
+msgid "Filesystem Methods"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:741
+msgid ""
+"The filesystem sets a table of operations in ``netfs_inode`` for netfslib to "
+"use::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:764
+msgid ""
+"The table starts with a pair of optional pointers to memory pools from which "
+"requests and subrequests can be allocated.  If these are not given, netfslib "
+"has default pools that it will use instead.  If the filesystem wraps the "
+"netfs structs in its own larger structs, then it will need to use its own "
+"pools. Netfslib will allocate directly from the pools."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:770
+#: ../../../filesystems/netfs_library.rst:974
+msgid "The methods defined in the table are:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:772
+msgid "``init_request()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:773
+msgid "``free_request()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:774
+msgid "``free_subrequest()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:776
+msgid ""
+"[Optional] A filesystem may implement these to initialise or clean up any "
+"resources that it attaches to the request or subrequest."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:779
+#: ../../../filesystems/netfs_library.rst:980
+msgid "``expand_readahead()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:781
+msgid ""
+"[Optional] This is called to allow the filesystem to expand the size of a "
+"readahead request.  The filesystem gets to expand the request in both "
+"directions, though it must retain the initial region as that may represent "
+"an allocation already made.  If local caching is enabled, it gets to expand "
+"the request first."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:787
+msgid ""
+"Expansion is communicated by changing ->start and ->len in the request "
+"structure.  Note that if any change is made, ->len must be increased by at "
+"least as much as ->start is reduced."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:791
+#: ../../../filesystems/netfs_library.rst:986
+msgid "``prepare_read()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:793
+msgid ""
+"[Optional] This is called to allow the filesystem to limit the size of a "
+"subrequest.  It may also limit the number of individual regions in iterator, "
+"such as required by RDMA.  This information should be set on stream zero in::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:800
+msgid ""
+"The filesystem can use this, for example, to chop up a request that has to "
+"be split across multiple servers or to put multiple reads in flight."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:803
+msgid "Zero should be returned on success and an error code otherwise."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:805
+msgid "``issue_read()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:807
+msgid ""
+"[Required] Netfslib calls this to dispatch a subrequest to the server for "
+"reading.  In the subrequest, ->start, ->len and ->transferred indicate what "
+"data should be read from the server and ->io_iter indicates the buffer to be "
+"used."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:812
+msgid ""
+"There is no return value; the ``netfs_read_subreq_terminated()`` function "
+"should be called to indicate that the subrequest completed either way. -"
+">error, ->transferred and ->flags should be updated before completing.  The "
+"termination can be done asynchronously."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:817
+msgid ""
+"Note: the filesystem must not deal with setting folios uptodate, unlocking "
+"them or dropping their refs - the library deals with this as it may have to "
+"stitch together the results of multiple subrequests that variously overlap "
+"the set of folios."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:822
+msgid "``done()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:824
+msgid ""
+"[Optional] This is called after the folios in a read request have all been "
+"unlocked (and marked uptodate if applicable)."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:827
+msgid "``update_i_size()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:829
+msgid ""
+"[Optional] This is invoked by netfslib at various points during the write "
+"paths to ask the filesystem to update its idea of the file size.  If not "
+"given, netfslib will set i_size and i_blocks and update the local cache "
+"cookie."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:834
+msgid "``post_modify()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:836
+msgid ""
+"[Optional] This is called after netfslib writes to the pagecache or when it "
+"allows an mmap'd page to be marked as writable."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:839
+msgid "``begin_writeback()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:841
+msgid ""
+"[Optional] Netfslib calls this when processing a writeback request if it "
+"finds a dirty page that isn't simply marked NETFS_FOLIO_COPY_TO_CACHE, "
+"indicating it must be written to the server.  This allows the filesystem to "
+"only set up writeback resources when it knows it's going to have to perform "
+"a write."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:847
+msgid "``prepare_write()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:849
+msgid ""
+"[Optional] This is called to allow the filesystem to limit the size of a "
+"subrequest.  It may also limit the number of individual regions in iterator, "
+"such as required by RDMA.  This information should be set on stream to which "
+"the subrequest belongs::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:857
+#: ../../../filesystems/netfs_library.rst:1028
+msgid ""
+"The filesystem can use this, for example, to chop up a request that has to "
+"be split across multiple servers or to put multiple writes in flight."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:860
+msgid ""
+"This is not permitted to return an error.  Instead, in the event of failure, "
+"``netfs_prepare_write_failed()`` must be called."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:863
+#: ../../../filesystems/netfs_library.rst:1034
+msgid "``issue_write()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:865
+msgid ""
+"[Required] This is used to dispatch a subrequest to the server for writing. "
+"In the subrequest, ->start, ->len and ->transferred indicate what data "
+"should be written to the server and ->io_iter indicates the buffer to be "
+"used."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:870
+#: ../../../filesystems/netfs_library.rst:1041
+msgid ""
+"There is no return value; the ``netfs_write_subreq_terminated()`` function "
+"should be called to indicate that the subrequest completed either way. -"
+">error, ->transferred and ->flags should be updated before completing.  The "
+"termination can be done asynchronously."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:875
+msgid ""
+"Note: the filesystem must not deal with removing the dirty or writeback "
+"marks on folios involved in the operation and should not take refs or pins "
+"on them, but should leave retention to netfslib."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:879
+msgid "``retry_request()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:881
+msgid ""
+"[Optional] Netfslib calls this at the beginning of a retry cycle.  This "
+"allows the filesystem to examine the state of the request, the subrequests "
+"in the indicated stream and of its own data and make adjustments or "
+"renegotiate resources."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:886
+msgid "``invalidate_cache()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:888
+msgid ""
+"[Optional] This is called by netfslib to invalidate data stored in the local "
+"cache in the event that writing to the local cache fails, providing updated "
+"coherency data that netfs can't provide."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:893
+msgid "Terminating a subrequest"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:895
+msgid ""
+"When a subrequest completes, there are a number of functions that the cache "
+"or subrequest can call to inform netfslib of the status change.  One "
+"function is provided to terminate a write subrequest at the preparation "
+"stage and acts synchronously:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:900
+msgid ""
+"``void netfs_prepare_write_failed(struct netfs_io_subrequest *subreq);``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:902
+msgid ""
+"Indicate that the ->prepare_write() call failed.  The ``error`` field should "
+"have been updated."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:905
+msgid ""
+"Note that ->prepare_read() can return an error as a read can simply be "
+"aborted. Dealing with writeback failure is trickier."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:908
+msgid ""
+"The other functions are used for subrequests that got as far as being issued:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:910
+msgid ""
+"``void netfs_read_subreq_terminated(struct netfs_io_subrequest *subreq);``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:912
+msgid ""
+"Tell netfslib that a read subrequest has terminated.  The ``error``, "
+"``flags`` and ``transferred`` fields should have been updated."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:915
+msgid ""
+"``void netfs_write_subrequest_terminated(void *_op, ssize_t "
+"transferred_or_error);``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:917
+msgid ""
+"Tell netfslib that a write subrequest has terminated.  Either the amount of "
+"data processed or the negative error code can be passed in.  This is can be "
+"used as a kiocb completion function."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:921
+msgid ""
+"``void netfs_read_subreq_progress(struct netfs_io_subrequest *subreq);``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:923
+msgid ""
+"This is provided to optionally update netfslib on the incremental progress "
+"of a read, allowing some folios to be unlocked early and does not actually "
+"terminate the subrequest.  The ``transferred`` field should have been "
+"updated."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:929
+msgid "Local Cache API"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:931
+msgid ""
+"Netfslib provides a separate API for a local cache to implement, though it "
+"provides some somewhat similar routines to the filesystem request API."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:934
+msgid ""
+"Firstly, the netfs_io_request object contains a place for the cache to hang "
+"its state::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:945
+msgid ""
+"This contains an operations table pointer and two private pointers plus the "
+"debug ID of the fscache cookie for tracing purposes and an invalidation "
+"counter that is cranked by calls to ``fscache_invalidate()`` allowing cache "
+"subrequests to be invalidated after completion."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:950
+msgid "The cache operation table looks like the following::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:968
+msgid "With a termination handler function pointer::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:976
+msgid "``end_operation()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:978
+msgid ""
+"[Required] Called to clean up the resources at the end of the read request."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:982
+msgid ""
+"[Optional] Called at the beginning of a readahead operation to allow the "
+"cache to expand a request in either direction.  This allows the cache to "
+"size the request appropriately for the cache granularity."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:988
+msgid ""
+"[Required] Called to configure the next slice of a request.  ->start and -"
+">len in the subrequest indicate where and how big the next slice can be; the "
+"cache gets to reduce the length to match its granularity requirements."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:992
+msgid ""
+"The function is passed pointers to the start and length in its parameters, "
+"plus the size of the file for reference, and adjusts the start and length "
+"appropriately.  It should return one of:"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:996
+msgid "``NETFS_FILL_WITH_ZEROES``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:997
+msgid "``NETFS_DOWNLOAD_FROM_SERVER``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:998
+msgid "``NETFS_READ_FROM_CACHE``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:999
+msgid "``NETFS_INVALID_READ``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:1001
+msgid ""
+"to indicate whether the slice should just be cleared or whether it should be "
+"downloaded from the server or read from the cache - or whether slicing "
+"should be given up at the current point."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:1005
+msgid "``read()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:1007
+msgid ""
+"[Required] Called to read from the cache.  The start file offset is given "
+"along with an iterator to read to, which gives the length also.  It can be "
+"given a hint requesting that it seek forward from that start position for "
+"data."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:1012
+msgid ""
+"Also provided is a pointer to a termination handler function and private "
+"data to pass to that function.  The termination function should be called "
+"with the number of bytes transferred or an error code, plus a flag "
+"indicating whether the termination is definitely happening in the caller's "
+"context."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:1018
+msgid "``prepare_write_subreq()``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:1020
+msgid ""
+"[Required] This is called to allow the cache to limit the size of a "
+"subrequest.  It may also limit the number of individual regions in iterator, "
+"such as required by DIO/DMA.  This information should be set on stream to "
+"which the subrequest belongs::"
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:1031
+msgid ""
+"This is not permitted to return an error.  In the event of failure, "
+"``netfs_prepare_write_failed()`` must be called."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:1036
+msgid ""
+"[Required] This is used to dispatch a subrequest to the cache for writing. "
+"In the subrequest, ->start, ->len and ->transferred indicate what data "
+"should be written to the cache and ->io_iter indicates the buffer to be used."
+msgstr ""
+
+#: ../../../filesystems/netfs_library.rst:1048
+msgid "API Function Reference"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:28
+msgid "Start an fscache write on a folio. [DEPRECATED]"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:32
+#: include/linux/netfs.h:471 include/linux/netfs.h:483
+#: include/linux/netfs.h:512 include/linux/netfs.h:529
+#: include/linux/netfs.h:544 ../../../filesystems/netfs_library:1051:
+#: fs/netfs/buffered_read.c:329 fs/netfs/buffered_read.c:486
+#: fs/netfs/buffered_read.c:596 fs/netfs/buffered_read.c:768
+#: fs/netfs/buffered_read.c:808
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:34
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:485
+msgid "``struct folio *folio``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:29
+msgid "The folio."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:31
+#: include/linux/netfs.h:470 include/linux/netfs.h:484
+#: include/linux/netfs.h:513 include/linux/netfs.h:528
+#: include/linux/netfs.h:543 ../../../filesystems/netfs_library:1051:
+#: fs/netfs/buffered_read.c:328 fs/netfs/buffered_read.c:486
+#: fs/netfs/buffered_read.c:601 fs/netfs/buffered_read.c:768
+#: fs/netfs/buffered_read.c:808
+msgid "**Description**"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:30
+msgid ""
+"Call this function before writing a folio to a local cache.  Starting a "
+"second write before the first one finishes is not allowed."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:33
+msgid "Note that this should no longer be used."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:467
+msgid "Get the netfs inode context from the inode"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:473
+#: include/linux/netfs.h:546
+msgid "``struct inode *inode``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:468
+msgid "The inode to query"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:469
+msgid ""
+"Get the netfs lib inode context from the network filesystem's inode.  The "
+"context struct is expected to directly follow on from the VFS inode struct."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:479
+msgid "Initialise a netfslib inode context"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:485
+#: include/linux/netfs.h:514 include/linux/netfs.h:531
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:598
+msgid "``struct netfs_inode *ctx``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:480
+msgid "The netfs inode to initialise"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:482
+msgid "``const struct netfs_request_ops *ops``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:481
+msgid "The netfs's operations list"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:483
+msgid "``bool use_zero_point``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:482
+msgid "True to use the zero_point read optimisation"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:483
+msgid ""
+"Initialise the netfs library context struct.  This is expected to follow on "
+"directly from the VFS inode struct."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:508
+msgid "Note that a file got resized"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:509
+msgid "The netfs inode being resized"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:511
+msgid "``loff_t new_i_size``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:510
+msgid "The new file size"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:512
+msgid "``bool changed_on_server``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:511
+msgid "The change was applied to the server"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:512
+msgid ""
+"Inform the netfs lib that a file got resized so that it can adjust its state."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:525
+msgid "Get the cache cookie from the inode"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:526
+msgid "The netfs inode to query"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:527
+msgid ""
+"Get the caching cookie (if enabled) from the network filesystem's inode."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:540
+msgid "Wait for outstanding I/O to complete"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:541
+msgid "The netfs inode to wait on"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1050: include/linux/netfs.h:542
+msgid ""
+"Wait for outstanding I/O requests of any type to complete.  This is intended "
+"to be called from inode eviction routines.  This makes sure that any "
+"resources held by those requests are cleaned up before we let the inode get "
+"cleaned up."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:325
+msgid "Helper to manage a read request"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:331
+msgid "``struct readahead_control *ractl``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:326
+msgid "The description of the readahead request"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:327
+msgid ""
+"Fulfil a readahead request by drawing data from the cache if possible, or "
+"the netfs if not.  Space beyond the EOF is zero-filled.  Multiple I/O "
+"requests from different sources will get munged together.  If necessary, the "
+"readahead window can be expanded in either direction to a more convenient "
+"alighment for RPC efficiency or to make storage in the cache feasible."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:333
+#: fs/netfs/buffered_read.c:489 fs/netfs/buffered_read.c:615
+msgid ""
+"The calling netfs must initialise a netfs context contiguous to the vfs "
+"inode before calling this."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:336
+#: fs/netfs/buffered_read.c:492 fs/netfs/buffered_read.c:618
+msgid "This is usable whether or not caching is enabled."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:482
+msgid "Helper to manage a read_folio request"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:488
+#: fs/netfs/buffered_read.c:595
+msgid "``struct file *file``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:483
+#: fs/netfs/buffered_read.c:594
+msgid "The file to read from"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:484
+msgid "The folio to read"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:485
+msgid ""
+"Fulfil a read_folio request by drawing data from the cache if possible, or "
+"the netfs if not.  Space beyond the EOF is zero-filled. Multiple I/O "
+"requests from different sources will get munged together."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:592
+msgid "Helper to prepare for writing [DEPRECATED]"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:593
+msgid "The netfs context"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:596
+msgid "``struct address_space *mapping``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:595
+msgid "The mapping to read from"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:597
+msgid "``loff_t pos``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:596
+msgid "File position at which the write will begin"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:598
+msgid "``unsigned int len``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:597
+msgid "The length of the write (may extend beyond the end of the folio chosen)"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:599
+msgid "``struct folio **_folio``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:598
+msgid "Where to put the resultant folio"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:600
+msgid "``void **_fsdata``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:599
+msgid "Place for the netfs to store a cookie"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:600
+msgid ""
+"Pre-read data for a write-begin request by drawing data from the cache if "
+"possible, or the netfs if not.  Space beyond the EOF is zero-filled. "
+"Multiple I/O requests from different sources will get munged together."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:604
+msgid ""
+"The calling netfs must provide a table of operations, only one of which, "
+"issue_read, is mandatory."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:607
+msgid ""
+"The check_write_begin() operation can be provided to check for and flush "
+"conflicting writes once the folio is grabbed and locked.  It is passed a "
+"pointer to the fsdata cookie that gets returned to the VM to be passed to "
+"write_end.  It is permitted to sleep.  It should return 0 if the request "
+"should go ahead or it may return an error.  It may also unlock and put the "
+"folio, provided it sets ``*foliop`` to NULL, in which case a return of 0 "
+"will cause the folio to be re-got and the process to be retried."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:620
+msgid ""
+"Note that this should be considered deprecated and netfs_perform_write() "
+"used instead."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:764
+msgid "Filesystem buffered I/O read routine"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:770
+#: fs/netfs/buffered_read.c:810
+msgid "``struct kiocb *iocb``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:765
+#: fs/netfs/buffered_read.c:805
+msgid "kernel I/O control block"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:767
+#: fs/netfs/buffered_read.c:807
+msgid "``struct iov_iter *iter``"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:766
+#: fs/netfs/buffered_read.c:806
+msgid "destination for the data read"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:767
+#: fs/netfs/buffered_read.c:807
+msgid ""
+"This is the ->read_iter() routine for all filesystems that can use the page "
+"cache directly."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:770
+#: fs/netfs/buffered_read.c:810
+msgid ""
+"The IOCB_NOWAIT flag in iocb->ki_flags indicates that -EAGAIN shall be "
+"returned when no data can be read without waiting for I/O requests to "
+"complete; it doesn't prevent readahead."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:774
+#: fs/netfs/buffered_read.c:814
+msgid ""
+"The IOCB_NOIO flag in iocb->ki_flags indicates that no new I/O requests "
+"shall be made for the read or for readahead.  When no data can be read, -"
+"EAGAIN shall be returned.  When readahead would be triggered, a partial, "
+"possibly empty read shall be returned."
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:779
+#: fs/netfs/buffered_read.c:819
+msgid "**Return**"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:780
+#: fs/netfs/buffered_read.c:820
+msgid "number of bytes copied, even for partial reads"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:781
+#: fs/netfs/buffered_read.c:821
+msgid "negative error code (or 0 if IOCB_NOIO) if nothing was read"
+msgstr ""
+
+#: ../../../filesystems/netfs_library:1051: fs/netfs/buffered_read.c:804
+msgid "Generic filesystem read routine"
+msgstr ""

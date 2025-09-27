@@ -1,0 +1,230 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../filesystems/multigrain-ts.rst:5
+msgid "Multigrain Timestamps"
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:8
+msgid "Introduction"
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:9
+msgid ""
+"Historically, the kernel has always used coarse time values to stamp inodes. "
+"This value is updated every jiffy, so any change that happens within that "
+"jiffy will end up with the same timestamp."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:13
+msgid ""
+"When the kernel goes to stamp an inode (due to a read or write), it first "
+"gets the current time and then compares it to the existing timestamp(s) to "
+"see whether anything will change. If nothing changed, then it can avoid "
+"updating the inode's metadata."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:18
+msgid ""
+"Coarse timestamps are therefore good from a performance standpoint, since "
+"they reduce the need for metadata updates, but bad from the standpoint of "
+"determining whether anything has changed, since a lot of things can happen "
+"in a jiffy."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:23
+msgid ""
+"They are particularly troublesome with NFSv3, where unchanging timestamps "
+"can make it difficult to tell whether to invalidate caches. NFSv4 provides a "
+"dedicated change attribute that should always show a visible change, but not "
+"all filesystems implement this properly, causing the NFS server to "
+"substitute the ctime in many cases."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:29
+msgid ""
+"Multigrain timestamps aim to remedy this by selectively using fine-grained "
+"timestamps when a file has had its timestamps queried recently, and the "
+"current coarse-grained time does not cause a change."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:34
+msgid "Inode Timestamps"
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:35
+msgid ""
+"There are currently 3 timestamps in the inode that are updated to the "
+"current wallclock time on different activity:"
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:38
+msgid "ctime:"
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:39
+msgid ""
+"The inode change time. This is stamped with the current time whenever the "
+"inode's metadata is changed. Note that this value is not settable from "
+"userland."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:43
+msgid "mtime:"
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:44
+msgid ""
+"The inode modification time. This is stamped with the current time any time "
+"a file's contents change."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:47
+msgid "atime:"
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:48
+msgid ""
+"The inode access time. This is stamped whenever an inode's contents are "
+"read. Widely considered to be a terrible mistake. Usually avoided with "
+"options like noatime or relatime."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:52
+msgid ""
+"Updating the mtime always implies a change to the ctime, but updating the "
+"atime due to a read request does not."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:55
+msgid ""
+"Multigrain timestamps are only tracked for the ctime and the mtime. atimes "
+"are not affected and always use the coarse-grained value (subject to the "
+"floor)."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:59
+msgid "Inode Timestamp Ordering"
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:61
+msgid ""
+"In addition to just providing info about changes to individual files, file "
+"timestamps also serve an important purpose in applications like \"make\". "
+"These programs measure timestamps in order to determine whether source files "
+"might be newer than cached objects."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:66
+msgid ""
+"Userland applications like make can only determine ordering based on "
+"operational boundaries. For a syscall those are the syscall entry and exit "
+"points. For io_uring or nfsd operations, that's the request submission and "
+"response. In the case of concurrent operations, userland can make no "
+"determination about the order in which things will occur."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:72
+msgid ""
+"For instance, if a single thread modifies one file, and then another file in "
+"sequence, the second file must show an equal or later mtime than the first. "
+"The same is true if two threads are issuing similar operations that do not "
+"overlap in time."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:77
+msgid ""
+"If however, two threads have racing syscalls that overlap in time, then "
+"there is no such guarantee, and the second file may appear to have been "
+"modified before, after or at the same time as the first, regardless of which "
+"one was submitted first."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:82
+msgid ""
+"Note that the above assumes that the system doesn't experience a backward "
+"jump of the realtime clock. If that occurs at an inopportune time, then "
+"timestamps can appear to go backward, even on a properly functioning system."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:87
+msgid "Multigrain Timestamp Implementation"
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:88
+msgid ""
+"Multigrain timestamps are aimed at ensuring that changes to a single file "
+"are always recognizable, without violating the ordering guarantees when "
+"multiple different files are modified. This affects the mtime and the ctime, "
+"but the atime will always use coarse-grained timestamps."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:93
+msgid ""
+"It uses an unused bit in the i_ctime_nsec field to indicate whether the "
+"mtime or ctime has been queried. If either or both have, then the kernel "
+"takes special care to ensure the next timestamp update will display a "
+"visible change. This ensures tight cache coherency for use-cases like NFS, "
+"without sacrificing the benefits of reduced metadata updates when files "
+"aren't being watched."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:100
+msgid "The Ctime Floor Value"
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:101
+msgid ""
+"It's not sufficient to simply use fine or coarse-grained timestamps based on "
+"whether the mtime or ctime has been queried. A file could get a fine grained "
+"timestamp, and then a second file modified later could get a coarse-grained "
+"one that appears earlier than the first, which would break the kernel's "
+"timestamp ordering guarantees."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:107
+msgid ""
+"To mitigate this problem, maintain a global floor value that ensures that "
+"this can't happen. The two files in the above example may appear to have "
+"been modified at the same time in such a case, but they will never show the "
+"reverse order. To avoid problems with realtime clock jumps, the floor is "
+"managed as a monotonic ktime_t, and the values are converted to realtime "
+"clock values as needed."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:115
+msgid "Implementation Notes"
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:116
+msgid ""
+"Multigrain timestamps are intended for use by local filesystems that get "
+"ctime values from the local clock. This is in contrast to network "
+"filesystems and the like that just mirror timestamp values from a server."
+msgstr ""
+
+#: ../../../filesystems/multigrain-ts.rst:120
+msgid ""
+"For most filesystems, it's sufficient to just set the FS_MGTIME flag in the "
+"fstype->fs_flags in order to opt-in, providing the ctime is only ever set "
+"via inode_set_ctime_current(). If the filesystem has a ->getattr routine "
+"that doesn't call generic_fillattr, then it should call fill_mg_cmtime() to "
+"fill those values. For setattr, it should use setattr_copy() to update the "
+"timestamps, or otherwise mimic its behavior."
+msgstr ""

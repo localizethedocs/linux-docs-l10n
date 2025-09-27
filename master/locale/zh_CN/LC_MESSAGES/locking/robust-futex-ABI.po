@@ -1,0 +1,322 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../locking/robust-futex-ABI.rst:3
+msgid "The robust futex ABI"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:0
+msgid "Author"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:5
+msgid "Started by Paul Jackson <pj@sgi.com>"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:8
+msgid ""
+"Robust_futexes provide a mechanism that is used in addition to normal "
+"futexes, for kernel assist of cleanup of held locks on task exit."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:11
+msgid ""
+"The interesting data as to what futexes a thread is holding is kept on a "
+"linked list in user space, where it can be updated efficiently as locks are "
+"taken and dropped, without kernel intervention.  The only additional kernel "
+"intervention required for robust_futexes above and beyond what is required "
+"for futexes is:"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:17
+msgid ""
+"a one time call, per thread, to tell the kernel where its list of held "
+"robust_futexes begins, and"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:19
+msgid ""
+"internal kernel code at exit, to handle any listed locks held by the exiting "
+"thread."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:22
+msgid ""
+"The existing normal futexes already provide a \"Fast Userspace Locking\" "
+"mechanism, which handles uncontested locking without needing a system call, "
+"and handles contested locking by maintaining a list of waiting threads in "
+"the kernel.  Options on the sys_futex(2) system call support waiting on a "
+"particular futex, and waking up the next waiter on a particular futex."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:29
+msgid ""
+"For robust_futexes to work, the user code (typically in a library such as "
+"glibc linked with the application) has to manage and place the necessary "
+"list elements exactly as the kernel expects them.  If it fails to do so, "
+"then improperly listed locks will not be cleaned up on exit, probably "
+"causing deadlock or other such failure of the other threads waiting on the "
+"same locks."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:36
+msgid ""
+"A thread that anticipates possibly using robust_futexes should first issue "
+"the system call::"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:42
+msgid ""
+"The pointer 'head' points to a structure in the threads address space "
+"consisting of three words.  Each word is 32 bits on 32 bit arch's, or 64 "
+"bits on 64 bit arch's, and local byte order.  Each thread should have its "
+"own thread private 'head'."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:47
+msgid ""
+"If a thread is running in 32 bit compatibility mode on a 64 native arch "
+"kernel, then it can actually have two such structures - one using 32 bit "
+"words for 32 bit compatibility mode, and one using 64 bit words for 64 bit "
+"native mode.  The kernel, if it is a 64 bit kernel supporting 32 bit "
+"compatibility mode, will attempt to process both lists on each task exit, if "
+"the corresponding sys_set_robust_list() call has been made to setup that "
+"list."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:55
+msgid ""
+"The first word in the memory structure at 'head' contains a pointer to a "
+"single linked list of 'lock entries', one per lock, as described below.  If "
+"the list is empty, the pointer will point to itself, 'head'.  The last 'lock "
+"entry' points back to the 'head'."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:60
+msgid ""
+"The second word, called 'offset', specifies the offset from the address of "
+"the associated 'lock entry', plus or minus, of what will be called the 'lock "
+"word', from that 'lock entry'.  The 'lock word' is always a 32 bit word, "
+"unlike the other words above.  The 'lock word' holds 2 flag bits in the "
+"upper 2 bits, and the thread id (TID) of the thread holding the lock in the "
+"bottom 30 bits.  See further below for a description of the flag bits."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:68
+msgid ""
+"The third word, called 'list_op_pending', contains transient copy of the "
+"address of the 'lock entry', during list insertion and removal, and is "
+"needed to correctly resolve races should a thread exit while in the middle "
+"of a locking or unlocking operation."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:73
+msgid ""
+"Each 'lock entry' on the single linked list starting at 'head' consists of "
+"just a single word, pointing to the next 'lock entry', or back to 'head' if "
+"there are no more entries.  In addition, nearby to each 'lock entry', at an "
+"offset from the 'lock entry' specified by the 'offset' word, is one 'lock "
+"word'."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:79
+msgid ""
+"The 'lock word' is always 32 bits, and is intended to be the same 32 bit "
+"lock variable used by the futex mechanism, in conjunction with "
+"robust_futexes.  The kernel will only be able to wakeup the next thread "
+"waiting for a lock on a threads exit if that next thread used the futex "
+"mechanism to register the address of that 'lock word' with the kernel."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:85
+msgid ""
+"For each futex lock currently held by a thread, if it wants this "
+"robust_futex support for exit cleanup of that lock, it should have one 'lock "
+"entry' on this list, with its associated 'lock word' at the specified "
+"'offset'.  Should a thread die while holding any such locks, the kernel will "
+"walk this list, mark any such locks with a bit indicating their holder died, "
+"and wakeup the next thread waiting for that lock using the futex mechanism."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:93
+msgid ""
+"When a thread has invoked the above system call to indicate it anticipates "
+"using robust_futexes, the kernel stores the passed in 'head' pointer for "
+"that task.  The task may retrieve that value later on by using the system "
+"call::"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:102
+msgid ""
+"It is anticipated that threads will use robust_futexes embedded in larger, "
+"user level locking structures, one per lock.  The kernel robust_futex "
+"mechanism doesn't care what else is in that structure, so long as the "
+"'offset' to the 'lock word' is the same for all robust_futexes used by that "
+"thread.  The thread should link those locks it currently holds using the "
+"'lock entry' pointers.  It may also have other links between the locks, such "
+"as the reverse side of a double linked list, but that doesn't matter to the "
+"kernel."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:111
+msgid ""
+"By keeping its locks linked this way, on a list starting with a 'head' "
+"pointer known to the kernel, the kernel can provide to a thread the "
+"essential service available for robust_futexes, which is to help clean up "
+"locks held at the time of (a perhaps unexpectedly) exit."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:116
+msgid ""
+"Actual locking and unlocking, during normal operations, is handled entirely "
+"by user level code in the contending threads, and by the existing futex "
+"mechanism to wait for, and wakeup, locks.  The kernels only essential "
+"involvement in robust_futexes is to remember where the list 'head' is, and "
+"to walk the list on thread exit, handling locks still held by the departing "
+"thread, as described below."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:123
+msgid ""
+"There may exist thousands of futex lock structures in a threads shared "
+"memory, on various data structures, at a given point in time. Only those "
+"lock structures for locks currently held by that thread should be on that "
+"thread's robust_futex linked lock list a given time."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:128
+msgid ""
+"A given futex lock structure in a user shared memory region may be held at "
+"different times by any of the threads with access to that region. The thread "
+"currently holding such a lock, if any, is marked with the threads TID in the "
+"lower 30 bits of the 'lock word'."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:133
+msgid ""
+"When adding or removing a lock from its list of held locks, in order for the "
+"kernel to correctly handle lock cleanup regardless of when the task exits "
+"(perhaps it gets an unexpected signal 9 in the middle of manipulating this "
+"list), the user code must observe the following protocol on 'lock entry' "
+"insertion and removal:"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:139
+msgid "On insertion:"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:141
+msgid ""
+"set the 'list_op_pending' word to the address of the 'lock entry' to be "
+"inserted,"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:143
+msgid "acquire the futex lock,"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:144
+msgid ""
+"add the lock entry, with its thread id (TID) in the bottom 30 bits of the "
+"'lock word', to the linked list starting at 'head', and"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:146
+msgid "clear the 'list_op_pending' word."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:148
+msgid "On removal:"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:150
+msgid ""
+"set the 'list_op_pending' word to the address of the 'lock entry' to be "
+"removed,"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:152
+msgid "remove the lock entry for this lock from the 'head' list,"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:153
+msgid "release the futex lock, and"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:154
+msgid "clear the 'lock_op_pending' word."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:156
+msgid ""
+"On exit, the kernel will consider the address stored in 'list_op_pending' "
+"and the address of each 'lock word' found by walking the list starting at "
+"'head'.  For each such address, if the bottom 30 bits of the 'lock word' at "
+"offset 'offset' from that address equals the exiting threads TID, then the "
+"kernel will do two things:"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:162
+msgid ""
+"if bit 31 (0x80000000) is set in that word, then attempt a futex wakeup on "
+"that address, which will waken the next thread that has used to the futex "
+"mechanism to wait on that address, and"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:165
+msgid "atomically set  bit 30 (0x40000000) in the 'lock word'."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:167
+msgid ""
+"In the above, bit 31 was set by futex waiters on that lock to indicate they "
+"were waiting, and bit 30 is set by the kernel to indicate that the lock "
+"owner died holding the lock."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:171
+msgid ""
+"The kernel exit code will silently stop scanning the list further if at any "
+"point:"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:174
+msgid ""
+"the 'head' pointer or an subsequent linked list pointer is not a valid "
+"address of a user space word"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:176
+msgid ""
+"the calculated location of the 'lock word' (address plus 'offset') is not "
+"the valid address of a 32 bit user space word"
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:179
+msgid ""
+"if the list contains more than 1 million (subject to future kernel "
+"configuration changes) elements."
+msgstr ""
+
+#: ../../../locking/robust-futex-ABI.rst:182
+msgid ""
+"When the kernel sees a list entry whose 'lock word' doesn't have the current "
+"threads TID in the lower 30 bits, it does nothing with that entry, and goes "
+"on to the next entry."
+msgstr ""

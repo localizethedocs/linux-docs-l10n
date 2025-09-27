@@ -1,0 +1,3626 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../core-api/genericirq.rst:5
+msgid "Linux generic IRQ handling"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:0
+msgid "Copyright"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:7
+msgid "|copy| 2005-2010: Thomas Gleixner"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:8
+msgid "|copy| 2005-2006:  Ingo Molnar"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:11
+msgid "Introduction"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:13
+msgid ""
+"The generic interrupt handling layer is designed to provide a complete "
+"abstraction of interrupt handling for device drivers. It is able to handle "
+"all the different types of interrupt controller hardware. Device drivers use "
+"generic API functions to request, enable, disable and free interrupts. The "
+"drivers do not have to know anything about interrupt hardware details, so "
+"they can be used on different platforms without code changes."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:21
+msgid ""
+"This documentation is provided to developers who want to implement an "
+"interrupt subsystem based for their architecture, with the help of the "
+"generic IRQ handling layer."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:26
+msgid "Rationale"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:28
+msgid ""
+"The original implementation of interrupt handling in Linux uses the "
+"__do_IRQ() super-handler, which is able to deal with every type of interrupt "
+"logic."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:32
+msgid ""
+"Originally, Russell King identified different types of handlers to build a "
+"quite universal set for the ARM interrupt handler implementation in Linux "
+"2.5/2.6. He distinguished between:"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:36
+msgid "Level type"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:38
+msgid "Edge type"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:40
+msgid "Simple type"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:42
+msgid "During the implementation we identified another type:"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:44
+msgid "Fast EOI type"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:46
+msgid ""
+"In the SMP world of the __do_IRQ() super-handler another type was identified:"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:49
+msgid "Per CPU type"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:51
+msgid ""
+"This split implementation of high-level IRQ handlers allows us to optimize "
+"the flow of the interrupt handling for each specific interrupt type. This "
+"reduces complexity in that particular code path and allows the optimized "
+"handling of a given type."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:56
+msgid ""
+"The original general IRQ implementation used hw_interrupt_type structures "
+"and their ``->ack``, ``->end`` [etc.] callbacks to differentiate the flow "
+"control in the super-handler. This leads to a mix of flow logic and low-"
+"level hardware logic, and it also leads to unnecessary code duplication: for "
+"example in i386, there is an ``ioapic_level_irq`` and an ``ioapic_edge_irq`` "
+"IRQ-type which share many of the low-level details but have different flow "
+"handling."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:64
+msgid ""
+"A more natural abstraction is the clean separation of the 'irq flow' and the "
+"'chip details'."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:67
+msgid ""
+"Analysing a couple of architecture's IRQ subsystem implementations reveals "
+"that most of them can use a generic set of 'irq flow' methods and only need "
+"to add the chip-level specific code. The separation is also valuable for "
+"(sub)architectures which need specific quirks in the IRQ flow itself but not "
+"in the chip details - and thus provides a more transparent IRQ subsystem "
+"design."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:74
+msgid ""
+"Each interrupt descriptor is assigned its own high-level flow handler, which "
+"is normally one of the generic implementations. (This high-level flow "
+"handler implementation also makes it simple to provide demultiplexing "
+"handlers which can be found in embedded platforms on various architectures.)"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:80
+msgid ""
+"The separation makes the generic interrupt handling layer more flexible and "
+"extensible. For example, an (sub)architecture can use a generic IRQ-flow "
+"implementation for 'level type' interrupts and add a (sub)architecture "
+"specific 'edge type' implementation."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:85
+msgid ""
+"To make the transition to the new model easier and prevent the breakage of "
+"existing implementations, the __do_IRQ() super-handler is still available. "
+"This leads to a kind of duality for the time being. Over time the new model "
+"should be used in more and more architectures, as it enables smaller and "
+"cleaner IRQ subsystems. It's deprecated for three years now and about to be "
+"removed."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:93
+msgid "Known Bugs And Assumptions"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:95
+msgid "None (knock on wood)."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:98
+msgid "Abstraction layers"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:100
+msgid "There are three main levels of abstraction in the interrupt code:"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:102
+msgid "High-level driver API"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:104 ../../../core-api/genericirq.rst:155
+msgid "High-level IRQ flow handlers"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:106 ../../../core-api/genericirq.rst:345
+msgid "Chip-level hardware encapsulation"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:109
+msgid "Interrupt control flow"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:111
+msgid ""
+"Each interrupt is described by an interrupt descriptor structure irq_desc. "
+"The interrupt is referenced by an 'unsigned int' numeric value which selects "
+"the corresponding interrupt description structure in the descriptor "
+"structures array. The descriptor structure contains status information and "
+"pointers to the interrupt flow method and the interrupt chip structure which "
+"are assigned to this interrupt."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:118
+msgid ""
+"Whenever an interrupt triggers, the low-level architecture code calls into "
+"the generic interrupt code by calling desc->handle_irq(). This high-level "
+"IRQ handling function only uses desc->irq_data.chip primitives referenced by "
+"the assigned chip descriptor structure."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:124
+msgid "High-level Driver API"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:126
+msgid "The high-level Driver API consists of following functions:"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:128
+msgid "request_irq()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:130
+msgid "request_threaded_irq()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:132
+msgid "free_irq()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:134
+msgid "disable_irq()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:136
+msgid "enable_irq()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:138
+msgid "disable_irq_nosync() (SMP only)"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:140
+msgid "synchronize_irq() (SMP only)"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:142
+msgid "irq_set_irq_type()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:144
+msgid "irq_set_irq_wake()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:146
+msgid "irq_set_handler_data()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:148
+msgid "irq_set_chip()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:150
+msgid "irq_set_chip_data()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:152
+msgid "See the autogenerated function documentation for details."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:157
+msgid "The generic layer provides a set of pre-defined irq-flow methods:"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:159
+msgid "handle_level_irq()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:161
+msgid "handle_edge_irq()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:163
+msgid "handle_fasteoi_irq()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:165
+msgid "handle_simple_irq()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:167
+msgid "handle_percpu_irq()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:169
+msgid "handle_edge_eoi_irq()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:171
+msgid "handle_bad_irq()"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:173
+msgid ""
+"The interrupt flow handlers (either pre-defined or architecture specific) "
+"are assigned to specific interrupts by the architecture either during bootup "
+"or during device initialization."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:178
+msgid "Default flow implementations"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:181
+msgid "Helper functions"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:183
+msgid ""
+"The helper functions call the chip primitives and are used by the default "
+"flow implementations. The following helper functions are implemented "
+"(simplified excerpt)::"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:220
+msgid "Default flow handler implementations"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:223
+msgid "Default Level IRQ flow handler"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:225
+msgid ""
+"handle_level_irq provides a generic implementation for level-triggered "
+"interrupts."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:228 ../../../core-api/genericirq.rst:241
+#: ../../../core-api/genericirq.rst:253 ../../../core-api/genericirq.rst:281
+#: ../../../core-api/genericirq.rst:295
+msgid "The following control flow is implemented (simplified excerpt)::"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:236
+msgid "Default Fast EOI IRQ flow handler"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:238
+msgid ""
+"handle_fasteoi_irq provides a generic implementation for interrupts, which "
+"only need an EOI at the end of the handler."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:248
+msgid "Default Edge IRQ flow handler"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:250
+msgid ""
+"handle_edge_irq provides a generic implementation for edge-triggered "
+"interrupts."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:272
+msgid "Default simple IRQ flow handler"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:274
+msgid ""
+"handle_simple_irq provides a generic implementation for simple interrupts."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:279
+msgid "The simple flow handler does not call any handler/chip primitives."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:287
+msgid "Default per CPU flow handler"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:289
+msgid ""
+"handle_percpu_irq provides a generic implementation for per CPU interrupts."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:292
+msgid ""
+"Per CPU interrupts are only available on SMP and the handler provides a "
+"simplified version without locking."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:305
+msgid "EOI Edge IRQ flow handler"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:307
+msgid ""
+"handle_edge_eoi_irq provides an abnomination of the edge handler which is "
+"solely used to tame a badly wreckaged irq controller on powerpc/cell."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:312
+msgid "Bad IRQ flow handler"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:314
+msgid ""
+"handle_bad_irq is used for spurious interrupts which have no real handler "
+"assigned.."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:318
+msgid "Quirks and optimizations"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:320
+msgid ""
+"The generic functions are intended for 'clean' architectures and chips, "
+"which have no platform-specific IRQ handling quirks. If an architecture "
+"needs to implement quirks on the 'flow' level then it can do so by "
+"overriding the high-level irq-flow handler."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:326
+msgid "Delayed interrupt disable"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:328
+msgid ""
+"This per interrupt selectable feature, which was introduced by Russell King "
+"in the ARM interrupt implementation, does not mask an interrupt at the "
+"hardware level when disable_irq() is called. The interrupt is kept enabled "
+"and is masked in the flow handler when an interrupt event happens. This "
+"prevents losing edge interrupts on hardware which does not store an edge "
+"interrupt event while the interrupt is disabled at the hardware level. When "
+"an interrupt arrives while the IRQ_DISABLED flag is set, then the interrupt "
+"is masked at the hardware level and the IRQ_PENDING bit is set. When the "
+"interrupt is re-enabled by enable_irq() the pending bit is checked and if it "
+"is set, the interrupt is resent either via hardware or by a software resend "
+"mechanism. (It's necessary to enable CONFIG_HARDIRQS_SW_RESEND when you want "
+"to use the delayed interrupt disable feature and your hardware is not "
+"capable of retriggering an interrupt.) The delayed interrupt disable is not "
+"configurable."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:347
+msgid ""
+"The chip-level hardware descriptor structure :c:type:`irq_chip` contains all "
+"the direct chip relevant functions, which can be utilized by the irq flow "
+"implementations."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:351 ../../../core-api/genericirq:493:
+#: include/linux/irq.h:451
+msgid "``irq_ack``"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:353
+msgid "``irq_mask_ack`` - Optional, recommended for performance"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:355 ../../../core-api/genericirq:493:
+#: include/linux/irq.h:452
+msgid "``irq_mask``"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:357 ../../../core-api/genericirq:493:
+#: include/linux/irq.h:454
+msgid "``irq_unmask``"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:359
+msgid "``irq_eoi`` - Optional, required for EOI flow handlers"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:361
+msgid "``irq_retrigger`` - Optional"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:363
+msgid "``irq_set_type`` - Optional"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:365
+msgid "``irq_set_wake`` - Optional"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:367
+msgid ""
+"These primitives are strictly intended to mean what they say: ack means ACK, "
+"masking means masking of an IRQ line, etc. It is up to the flow handler(s) "
+"to use these basic units of low-level functionality."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:372
+msgid "__do_IRQ entry point"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:374
+msgid ""
+"The original implementation __do_IRQ() was an alternative entry point for "
+"all types of interrupts. It no longer exists."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:377
+msgid ""
+"This handler turned out to be not suitable for all interrupt hardware and "
+"was therefore reimplemented with split functionality for edge/level/simple/"
+"percpu interrupts. This is not only a functional optimization. It also "
+"shortens code paths for interrupts."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:383
+msgid "Locking on SMP"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:385
+msgid ""
+"The locking of chip registers is up to the architecture that defines the "
+"chip primitives. The per-irq structure is protected via desc->lock, by the "
+"generic layer."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:390
+msgid "Generic interrupt chip"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:392
+msgid ""
+"To avoid copies of identical implementations of IRQ chips the core provides "
+"a configurable generic interrupt chip implementation. Developers should "
+"check carefully whether the generic chip fits their needs before "
+"implementing the same functionality slightly differently themselves."
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:22
+msgid "NOOP function"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:26
+#: kernel/irq/generic-chip.c:35 kernel/irq/generic-chip.c:54
+#: kernel/irq/generic-chip.c:73 kernel/irq/generic-chip.c:92
+#: kernel/irq/generic-chip.c:111 kernel/irq/generic-chip.c:140
+#: kernel/irq/generic-chip.c:179 kernel/irq/generic-chip.c:231
+#: kernel/irq/generic-chip.c:275 kernel/irq/generic-chip.c:357
+#: kernel/irq/generic-chip.c:379 kernel/irq/generic-chip.c:424
+#: kernel/irq/generic-chip.c:523 kernel/irq/generic-chip.c:572
+#: kernel/irq/generic-chip.c:596 ../../../core-api/genericirq:496:
+#: include/linux/interrupt.h:160 include/linux/interrupt.h:329
+#: include/linux/interrupt.h:342 ../../../core-api/genericirq:505:
+#: kernel/irq/manage.c:79 kernel/irq/manage.c:123 kernel/irq/manage.c:158
+#: kernel/irq/manage.c:168 kernel/irq/manage.c:183 kernel/irq/manage.c:388
+#: kernel/irq/manage.c:458 kernel/irq/manage.c:471 kernel/irq/manage.c:526
+#: kernel/irq/manage.c:625 kernel/irq/manage.c:674 kernel/irq/manage.c:691
+#: kernel/irq/manage.c:713 kernel/irq/manage.c:738 kernel/irq/manage.c:785
+#: kernel/irq/manage.c:807 kernel/irq/manage.c:834 kernel/irq/manage.c:1278
+#: kernel/irq/manage.c:1945 kernel/irq/manage.c:2031 kernel/irq/manage.c:2162
+#: kernel/irq/manage.c:2202 kernel/irq/manage.c:2321 kernel/irq/manage.c:2385
+#: kernel/irq/manage.c:2423 kernel/irq/manage.c:2450 kernel/irq/manage.c:2511
+#: kernel/irq/manage.c:2584 kernel/irq/manage.c:2615 kernel/irq/manage.c:2659
+#: kernel/irq/manage.c:2682 kernel/irq/manage.c:2719 kernel/irq/manage.c:2736
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:41 kernel/irq/chip.c:61
+#: kernel/irq/chip.c:74 kernel/irq/chip.c:122 kernel/irq/chip.c:568
+#: kernel/irq/chip.c:604 kernel/irq/chip.c:633 kernel/irq/chip.c:681
+#: kernel/irq/chip.c:732 kernel/irq/chip.c:781 kernel/irq/chip.c:814
+#: kernel/irq/chip.c:1154 kernel/irq/chip.c:1192 kernel/irq/chip.c:1223
+#: kernel/irq/chip.c:1245 kernel/irq/chip.c:1267 kernel/irq/chip.c:1282
+#: kernel/irq/chip.c:1297 kernel/irq/chip.c:1308 kernel/irq/chip.c:1319
+#: kernel/irq/chip.c:1330 kernel/irq/chip.c:1341 kernel/irq/chip.c:1352
+#: kernel/irq/chip.c:1371 kernel/irq/chip.c:1389 kernel/irq/chip.c:1406
+#: kernel/irq/chip.c:1420 kernel/irq/chip.c:1441 kernel/irq/chip.c:1457
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:149
+#: kernel/irq/irqdesc.c:158 kernel/irq/irqdesc.c:685 kernel/irq/irqdesc.c:700
+#: kernel/irq/irqdesc.c:724 kernel/irq/irqdesc.c:765 kernel/irq/irqdesc.c:785
+#: kernel/irq/irqdesc.c:803 kernel/irq/irqdesc.c:851 kernel/irq/irqdesc.c:937
+#: kernel/irq/irqdesc.c:1002 ../../../core-api/genericirq:518:
+#: kernel/irq/handle.c:32 kernel/irq/handle.c:232
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:91 kernel/irq/chip.c:110
+#: kernel/irq/chip.c:378 kernel/irq/chip.c:866 kernel/irq/chip.c:891
+#: kernel/irq/chip.c:937 kernel/irq/chip.c:1098 kernel/irq/chip.c:1124
+#: kernel/irq/chip.c:1470 kernel/irq/chip.c:1503 kernel/irq/chip.c:1521
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:28
+#: kernel/irq/generic-chip.c:37 kernel/irq/generic-chip.c:56
+#: kernel/irq/generic-chip.c:75 kernel/irq/generic-chip.c:94
+#: kernel/irq/generic-chip.c:113 kernel/irq/generic-chip.c:142
+#: kernel/irq/generic-chip.c:181 kernel/irq/generic-chip.c:574
+msgid "``struct irq_data *d``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:23
+#: kernel/irq/generic-chip.c:32 kernel/irq/generic-chip.c:51
+#: kernel/irq/generic-chip.c:70 kernel/irq/generic-chip.c:89
+#: kernel/irq/generic-chip.c:108 kernel/irq/generic-chip.c:137
+#: kernel/irq/generic-chip.c:176
+msgid "irq_data"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:31
+msgid "Mask chip via disable register"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:34
+#: kernel/irq/generic-chip.c:53 kernel/irq/generic-chip.c:72
+#: kernel/irq/generic-chip.c:91 kernel/irq/generic-chip.c:139
+#: kernel/irq/generic-chip.c:179 kernel/irq/generic-chip.c:234
+#: kernel/irq/generic-chip.c:526 kernel/irq/generic-chip.c:572
+#: kernel/irq/generic-chip.c:598 ../../../core-api/genericirq:493:
+#: include/linux/irq.h:1012 include/linux/irq.h:1050
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:165
+#: include/linux/interrupt.h:329 include/linux/interrupt.h:343
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:78
+#: kernel/irq/manage.c:122 kernel/irq/manage.c:167 kernel/irq/manage.c:182
+#: kernel/irq/manage.c:388 kernel/irq/manage.c:458 kernel/irq/manage.c:471
+#: kernel/irq/manage.c:528 kernel/irq/manage.c:626 kernel/irq/manage.c:673
+#: kernel/irq/manage.c:690 kernel/irq/manage.c:712 kernel/irq/manage.c:737
+#: kernel/irq/manage.c:784 kernel/irq/manage.c:806 kernel/irq/manage.c:834
+#: kernel/irq/manage.c:1945 kernel/irq/manage.c:2039 kernel/irq/manage.c:2166
+#: kernel/irq/manage.c:2206 kernel/irq/manage.c:2320 kernel/irq/manage.c:2385
+#: kernel/irq/manage.c:2423 kernel/irq/manage.c:2453 kernel/irq/manage.c:2513
+#: kernel/irq/manage.c:2583 kernel/irq/manage.c:2614 kernel/irq/manage.c:2660
+#: kernel/irq/manage.c:2683 ../../../core-api/genericirq:507:
+#: kernel/irq/chip.c:74 kernel/irq/chip.c:122 kernel/irq/chip.c:567
+#: kernel/irq/chip.c:603 kernel/irq/chip.c:632 kernel/irq/chip.c:680
+#: kernel/irq/chip.c:731 kernel/irq/chip.c:780 kernel/irq/chip.c:813
+#: kernel/irq/chip.c:1155 kernel/irq/chip.c:1193 kernel/irq/chip.c:1225
+#: kernel/irq/chip.c:1247 kernel/irq/chip.c:1353 kernel/irq/chip.c:1371
+#: kernel/irq/chip.c:1388 kernel/irq/chip.c:1420
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:686
+#: kernel/irq/irqdesc.c:702 kernel/irq/irqdesc.c:727 kernel/irq/irqdesc.c:768
+#: kernel/irq/irqdesc.c:809 kernel/irq/irqdesc.c:850 kernel/irq/irqdesc.c:937
+#: kernel/irq/irqdesc.c:1001 ../../../core-api/genericirq:518:
+#: kernel/irq/handle.c:31 ../../../core-api/genericirq:520: kernel/irq/chip.c:3
+#: kernel/irq/chip.c:92 kernel/irq/chip.c:110 kernel/irq/chip.c:377
+#: kernel/irq/chip.c:865 kernel/irq/chip.c:890 kernel/irq/chip.c:937
+#: kernel/irq/chip.c:1470 kernel/irq/chip.c:1502 kernel/irq/chip.c:1520
+msgid "**Description**"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:33
+#: kernel/irq/generic-chip.c:90
+msgid ""
+"Chip has separate enable/disable registers instead of a single mask register."
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:50
+msgid "Mask chip via setting bit in mask register"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:52
+#: kernel/irq/generic-chip.c:71
+msgid ""
+"Chip has a single mask register. Values of this register are cached and "
+"protected by gc->lock"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:69
+msgid "Mask chip via clearing bit in mask register"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:88
+msgid "Unmask chip via enable register"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:107
+msgid "Ack pending interrupt via setting bit"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:136
+msgid "Mask and ack pending interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:138
+msgid ""
+"This generic implementation of the irq_mask_ack method is for chips with "
+"separate enable/disable registers instead of a single mask register and "
+"where a pending interrupt is acknowledged by setting a bit."
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:143
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:840
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:606
+#: kernel/irq/chip.c:637
+msgid "**Note**"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:144
+msgid ""
+"This is the only permutation currently used.  Similar generic functions "
+"should be added here if other permutations are required."
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:175
+msgid "Set/clr wake bit for an interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:178
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:833
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1419
+msgid "``unsigned int on``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:177
+msgid "Indicates whether the wake bit should be set or cleared"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:178
+msgid ""
+"For chips where the wake from suspend functionality is not configured in a "
+"separate register and the wakeup active state is just stored in a bitmask."
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:227
+msgid "Allocate a generic chip and initialize it"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:233
+#: kernel/irq/generic-chip.c:380 ../../../core-api/genericirq:496:
+#: include/linux/interrupt.h:163 ../../../core-api/genericirq:505:
+#: kernel/irq/manage.c:2164 kernel/irq/manage.c:2204 kernel/irq/manage.c:2511
+msgid "``const char *name``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:228
+#: kernel/irq/generic-chip.c:379
+msgid "Name of the irq chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:230
+#: kernel/irq/generic-chip.c:379
+msgid "``int num_ct``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:229
+#: kernel/irq/generic-chip.c:378
+msgid "Number of irq_chip_type instances associated with this"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:231
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:93
+msgid "``unsigned int irq_base``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:230
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1036
+msgid "Interrupt base nr for this chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:232
+msgid "``void __iomem *reg_base``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:231
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1027
+msgid "Register base address (virtual)"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:233
+#: kernel/irq/generic-chip.c:381
+msgid "``irq_flow_handler_t handler``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:232
+msgid "Default flow handler associated with this chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:233
+msgid ""
+"Returns an initialized irq_chip_generic structure. The chip defaults to the "
+"primary (index 0) irq_chip_type and **handler**"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:271
+#: kernel/irq/generic-chip.c:375
+msgid "Allocate generic chips for an irq domain"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:277
+#: kernel/irq/generic-chip.c:359 kernel/irq/generic-chip.c:381
+#: kernel/irq/generic-chip.c:426
+msgid "``struct irq_domain *d``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:272
+#: kernel/irq/generic-chip.c:376
+msgid "irq domain for which to allocate chips"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:274
+msgid "``const struct irq_domain_chip_generic_info *info``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:273
+msgid "Generic chip information"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:275
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:93
+#: kernel/irq/manage.c:723 kernel/irq/manage.c:2169 kernel/irq/manage.c:2718
+#: kernel/irq/manage.c:2736 ../../../core-api/genericirq:516:
+#: kernel/irq/irqdesc.c:157 kernel/irq/irqdesc.c:684 kernel/irq/irqdesc.c:700
+#: kernel/irq/irqdesc.c:725 kernel/irq/irqdesc.c:766
+msgid "**Return**"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:275
+msgid "0 on success, negative error code on failure"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:353
+msgid "Remove generic chips from an irq domain"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:354
+msgid "irq domain for which generic chips are to be removed"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:378
+msgid "``int irqs_per_chip``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:377
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1118
+msgid "Number of interrupts each chip handles (max 32)"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:380
+msgid "Default flow handler associated with these chips"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:382
+#: kernel/irq/generic-chip.c:524 kernel/irq/generic-chip.c:596
+msgid "``unsigned int clr``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:381
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1121
+msgid "IRQ_* bits to clear in the mapping function"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:383
+#: kernel/irq/generic-chip.c:525 kernel/irq/generic-chip.c:597
+msgid "``unsigned int set``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:382
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1122
+msgid "IRQ_* bits to set in the mapping function"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:384
+msgid "``enum irq_gc_flags gcflags``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:383
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1123
+msgid "Generic chip specific setup flags"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:420
+msgid "Get a pointer to the generic chip of a hw_irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:421
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1045
+msgid "irq domain pointer"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:423
+msgid "``unsigned int hw_irq``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:422
+msgid "Hardware interrupt number"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:519
+msgid "Setup a range of interrupts with a generic chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:525
+#: kernel/irq/generic-chip.c:598
+msgid "``struct irq_chip_generic *gc``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:520
+#: kernel/irq/generic-chip.c:593
+msgid "Generic irq chip holding all data"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:522
+#: kernel/irq/generic-chip.c:595
+msgid "``u32 msk``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:521
+#: kernel/irq/generic-chip.c:594
+msgid "Bitmask holding the irqs to initialize relative to gc->irq_base"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:523
+msgid "``enum irq_gc_flags flags``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:522
+msgid "Flags for initialization"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:523
+#: kernel/irq/generic-chip.c:595
+msgid "IRQ_* bits to clear"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:524
+#: kernel/irq/generic-chip.c:596
+msgid "IRQ_* bits to set"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:525
+msgid ""
+"Set up max. 32 interrupts starting from gc->irq_base. Note, this initializes "
+"all interrupts to the primary irq_chip_type and its associated handler."
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:568
+msgid "Switch to alternative chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:569
+msgid "irq_data for this interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:571
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:60
+#: kernel/irq/chip.c:1370
+msgid "``unsigned int type``"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:570
+msgid "Flow type to be initialized"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:571
+msgid "Only to be called from chip->irq_set_type() callbacks."
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:592
+msgid "Remove a chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:484: kernel/irq/generic-chip.c:597
+msgid "Remove up to 32 interrupts starting from gc->irq_base."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:402
+msgid "Structures"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:404
+msgid ""
+"This chapter contains the autogenerated documentation of the structures "
+"which are used in the generic IRQ layer."
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:131
+msgid "per irq data shared by all irqchips"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:135
+#: include/linux/irq.h:168 include/linux/irq.h:448 include/linux/irq.h:988
+#: include/linux/irq.h:1006 include/linux/irq.h:1028 include/linux/irq.h:1118
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:111
+#: include/linux/interrupt.h:261 include/linux/interrupt.h:283
+#: include/linux/interrupt.h:306
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:155
+#: include/linux/irq.h:183 include/linux/irq.h:491 include/linux/irq.h:999
+#: include/linux/irq.h:1017 include/linux/irq.h:1051 include/linux/irq.h:1132
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:129
+#: include/linux/interrupt.h:271 include/linux/interrupt.h:294
+#: include/linux/interrupt.h:313
+msgid "**Members**"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:132
+msgid "``state_use_accessors``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:133
+msgid ""
+"status information for irq chip functions. Use accessor functions to deal "
+"with it"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:134
+msgid "``node``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:135
+msgid "node index useful for balancing"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:135
+msgid "``handler_data``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:136
+msgid "per-IRQ data for the irq_chip methods"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:142
+msgid "``msi_desc``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:143
+msgid "MSI descriptor"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:136
+msgid "``affinity``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:137
+msgid ""
+"IRQ affinity on SMP. If this is an IPI related irq, then this is the mask of "
+"the CPUs to which an IPI can be sent."
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:139
+msgid "``effective_affinity``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:140
+msgid ""
+"The effective IRQ affinity on SMP as some irq chips do not allow multi CPU "
+"destinations. A subset of **affinity**."
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:143
+msgid "``ipi_offset``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:144
+msgid "Offset of first IPI target cpu in **affinity**. Optional."
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:164
+msgid "per irq chip data passed down to chip functions"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:165
+#: include/linux/irq.h:987 ../../../core-api/genericirq:496:
+#: include/linux/interrupt.h:303
+msgid "``mask``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:166
+msgid "precomputed bitmask for accessing the chip registers"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:166
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:113
+#: include/linux/interrupt.h:258
+msgid "``irq``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:167
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:114
+msgid "interrupt number"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:167
+msgid "``hwirq``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:168
+msgid "hardware interrupt number, local to the interrupt domain"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:168
+msgid "``common``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:169
+msgid "point to data shared by all irqchips"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:169
+#: include/linux/irq.h:1003
+msgid "``chip``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:170
+msgid "low level interrupt hardware access"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:170
+#: include/linux/irq.h:1044
+msgid "``domain``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:171
+msgid ""
+"Interrupt translation domain; responsible for mapping between hwirq number "
+"and linux irq number."
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:172
+msgid "``parent_data``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:173
+msgid "pointer to parent struct irq_data to support hierarchy irq_domain"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:174
+msgid "``chip_data``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:175
+msgid ""
+"platform-specific per-chip private data for the chip methods, to allow "
+"shared chip implementations"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:444
+msgid "hardware interrupt chip descriptor"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:446
+#: include/linux/irq.h:1115 ../../../core-api/genericirq:496:
+#: include/linux/interrupt.h:109
+msgid "``name``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:447
+msgid "name for /proc/interrupts"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:447
+msgid "``irq_startup``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:448
+msgid "start up the interrupt (defaults to ->enable if NULL)"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:448
+msgid "``irq_shutdown``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:449
+msgid "shut down the interrupt (defaults to ->disable if NULL)"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:449
+msgid "``irq_enable``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:450
+msgid "enable the interrupt (defaults to chip->unmask if NULL)"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:450
+msgid "``irq_disable``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:451
+msgid "disable the interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:452
+msgid "start of a new interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:453
+msgid "mask an interrupt source"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:453
+msgid "``irq_mask_ack``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:454
+msgid "ack and mask an interrupt source"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:455
+msgid "unmask an interrupt source"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:455
+msgid "``irq_eoi``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:456
+msgid "end of interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:456
+msgid "``irq_set_affinity``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:457
+msgid ""
+"Set the CPU affinity on SMP machines. If the force argument is true, it "
+"tells the driver to unconditionally apply the affinity setting. Sanity "
+"checks against the supplied affinity mask are not required. This is used for "
+"CPU hotplug where the target CPU is not yet set in the cpu_online_mask."
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:462
+msgid "``irq_retrigger``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:463
+msgid "resend an IRQ to the CPU"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:463
+msgid "``irq_set_type``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:464
+msgid "set the flow type (IRQ_TYPE_LEVEL/etc.) of an IRQ"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:464
+msgid "``irq_set_wake``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:465
+msgid "enable/disable power-management wake-on of an IRQ"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:465
+msgid "``irq_bus_lock``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:466
+msgid "function to lock access to slow bus (i2c) chips"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:466
+msgid "``irq_bus_sync_unlock``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:467
+msgid "function to sync and unlock slow bus (i2c) chips"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:467
+msgid "``irq_cpu_online``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:468
+msgid "configure an interrupt source for a secondary CPU"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:468
+msgid "``irq_cpu_offline``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:469
+msgid "un-configure an interrupt source for a secondary CPU"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:469
+msgid "``irq_suspend``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:470
+msgid ""
+"function called from core code on suspend once per chip, when one or more "
+"interrupts are installed"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:471
+msgid "``irq_resume``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:472
+msgid ""
+"function called from core code on resume once per chip, when one ore more "
+"interrupts are installed"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:473
+msgid "``irq_pm_shutdown``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:474
+msgid "function called from core code on shutdown once per chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:474
+msgid "``irq_calc_mask``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:475
+msgid "Optional function to set irq_data.mask for special cases"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:475
+msgid "``irq_print_chip``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:476
+msgid "optional to print special chip info in show_interrupts"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:476
+msgid "``irq_request_resources``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:477
+msgid ""
+"optional to request resources before calling any other callback related to "
+"this irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:478
+msgid "``irq_release_resources``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:479
+msgid "optional to release resources acquired with irq_request_resources"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:480
+msgid "``irq_compose_msi_msg``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:481
+msgid "optional to compose message content for MSI"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:481
+msgid "``irq_write_msi_msg``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:482
+msgid "optional to write message content for MSI"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:482
+msgid "``irq_get_irqchip_state``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:483
+msgid "return the internal state of an interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:483
+msgid "``irq_set_irqchip_state``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:484
+msgid "set the internal state of a interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:484
+msgid "``irq_set_vcpu_affinity``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:485
+msgid "optional to target a vCPU in a virtual machine"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:485
+msgid "``ipi_send_single``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:486
+msgid "send a single IPI to destination cpus"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:486
+msgid "``ipi_send_mask``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:487
+msgid "send an IPI to destination cpus in cpumask"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:487
+msgid "``irq_nmi_setup``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:488
+msgid "function called from core code before enabling an NMI"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:488
+msgid "``irq_nmi_teardown``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:489
+msgid "function called from core code after disabling an NMI"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:489
+msgid "``irq_force_complete_move``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:490
+msgid "optional function to force complete pending irq move"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:490
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:114
+msgid "``flags``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:491
+msgid "chip specific flags"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:984
+msgid "register offsets for struct irq_gci"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:985
+msgid "``enable``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:986
+msgid "Enable register offset to reg_base"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:986
+msgid "``disable``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:987
+msgid "Disable register offset to reg_base"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:988
+msgid "Mask register offset to reg_base"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:988
+msgid "``ack``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:989
+msgid "Ack register offset to reg_base"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:989
+msgid "``eoi``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:990
+msgid "Eoi register offset to reg_base"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:990
+#: include/linux/irq.h:1006
+msgid "``type``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:991
+msgid "Type configuration register offset to reg_base"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1002
+msgid "Generic interrupt chip instance for a flow type"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1004
+msgid "The real interrupt chip which provides the callbacks"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1004
+msgid "``regs``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1005
+msgid "Register offsets for this chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1005
+#: include/linux/irq.h:1116 ../../../core-api/genericirq:496:
+#: include/linux/interrupt.h:108
+msgid "``handler``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1006
+msgid "Flow handler associated with this chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1007
+msgid "Chip can handle these flow types"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1007
+msgid "``mask_cache_priv``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1008
+msgid "Cached mask register private to the chip type"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1008
+#: include/linux/irq.h:1037
+msgid "``mask_cache``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1009
+msgid "Pointer to cached mask register"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1009
+msgid ""
+"A irq_generic_chip can have several instances of irq_chip_type when it "
+"requires different functions and register offsets for different flow types."
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1024
+msgid "Generic irq chip data structure"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1025
+msgid "``lock``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1026
+msgid "Lock to protect register and cache data access"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1026
+msgid "``reg_base``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1027
+msgid "``reg_readl``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1028
+msgid "Alternate I/O accessor (defaults to readl if NULL)"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1028
+msgid "``reg_writel``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1029
+msgid "Alternate I/O accessor (defaults to writel if NULL)"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1029
+msgid "``suspend``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1030
+msgid ""
+"Function called from core code on suspend once per chip; can be useful "
+"instead of irq_chip::suspend to handle chip details even when no interrupts "
+"are in use"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1032
+msgid "``resume``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1033
+msgid ""
+"Function called from core code on resume once per chip; can be useful "
+"instead of irq_chip::suspend to handle chip details even when no interrupts "
+"are in use"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1035
+msgid "``irq_base``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1036
+msgid "``irq_cnt``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1037
+msgid "Number of interrupts handled by this chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1038
+msgid "Cached mask register shared between all chip types"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1038
+msgid "``wake_enabled``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1039
+msgid "Interrupt can wakeup from suspend"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1039
+msgid "``wake_active``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1040
+msgid "Interrupt is marked as an wakeup from suspend source"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1040
+#: include/linux/irq.h:1118
+msgid "``num_ct``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1041
+msgid "Number of available irq_chip_type instances (usually 1)"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1041
+msgid "``private``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1042
+msgid "Private data for non generic chip callbacks"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1042
+msgid "``installed``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1043
+msgid "bitfield to denote installed interrupts"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1043
+msgid "``unused``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1044
+msgid "bitfield to denote unused interrupts"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1045
+msgid "``list``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1046
+msgid "List head for keeping track of instances"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1046
+msgid "``chip_types``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1047
+msgid "Array of interrupt irq_chip_types"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1047
+msgid ""
+"Note, that irq_chip_generic can have multiple irq_chip_type implementations "
+"which can be associated to a particular irq line of an irq_chip_generic "
+"instance. That allows to share and protect state in an irq_chip_generic "
+"instance when we need to implement different flow mechanisms (level/edge) "
+"for it."
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1076
+msgid "Initialization flags for generic irq chips"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1080
+msgid "**Constants**"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1082
+msgid "``IRQ_GC_INIT_MASK_CACHE``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1083
+msgid "Initialize the mask_cache by reading mask reg"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1085
+msgid "``IRQ_GC_INIT_NESTED_LOCK``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1086
+msgid ""
+"Set the lock class of the irqs to nested for irq chips which need to call "
+"irq_set_wake() on the parent irq. Usually GPIO implementations"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1090
+msgid "``IRQ_GC_MASK_CACHE_PER_TYPE``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1091
+msgid "Mask cache is chip type private"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1093
+msgid "``IRQ_GC_NO_MASK``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1094
+msgid "Do not calculate irq_data->mask"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1096
+msgid "``IRQ_GC_BE_IO``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1097
+msgid "Use big-endian register accesses (default: LE)"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1114
+msgid "Generic chip information structure"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1116
+msgid "Name of the generic interrupt chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1117
+msgid "Interrupt handler used by the generic interrupt chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1117
+msgid "``irqs_per_chip``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1119
+msgid "Number of irq_chip_type instances associated with each chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1120
+msgid "``irq_flags_to_clear``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1121
+msgid "``irq_flags_to_set``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1122
+msgid "``gc_flags``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1123
+msgid "``init``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1124
+msgid ""
+"Function called on each chip when they are created. Allow to do some "
+"additional chip initialisation."
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1125
+msgid "``exit``"
+msgstr ""
+
+#: ../../../core-api/genericirq:493: include/linux/irq.h:1126
+msgid ""
+"Function called on each chip when they are destroyed. Allow to do some chip "
+"cleanup operation."
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:107
+msgid "per interrupt action descriptor"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:109
+msgid "interrupt handler function"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:110
+msgid "``dev_id``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:111
+#: include/linux/interrupt.h:112
+msgid "cookie to identify the device"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:111
+msgid "``percpu_dev_id``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:112
+msgid "``next``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:113
+msgid "pointer to the next irqaction for shared interrupts"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:115
+msgid "``thread_fn``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:116
+msgid "interrupt handler function for threaded interrupts"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:116
+msgid "``thread``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:117
+msgid "thread pointer for threaded interrupts"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:117
+msgid "``secondary``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:118
+msgid "pointer to secondary irqaction (force threading)"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:115
+msgid "flags (see IRQF_* above)"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:118
+msgid "``thread_flags``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:119
+msgid "flags related to **thread**"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:119
+msgid "``thread_mask``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:120
+msgid "bitmask for keeping track of **thread** activity"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:110
+msgid "name of the device"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:120
+msgid "``dir``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:121
+msgid "pointer to the proc/irq/NN/name entry"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:156
+msgid "Add a handler for an interrupt line"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:162
+#: include/linux/interrupt.h:331 include/linux/interrupt.h:344
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:81
+#: kernel/irq/manage.c:125 kernel/irq/manage.c:160 kernel/irq/manage.c:170
+#: kernel/irq/manage.c:390 kernel/irq/manage.c:460 kernel/irq/manage.c:473
+#: kernel/irq/manage.c:528 kernel/irq/manage.c:627 kernel/irq/manage.c:676
+#: kernel/irq/manage.c:693 kernel/irq/manage.c:715 kernel/irq/manage.c:740
+#: kernel/irq/manage.c:787 kernel/irq/manage.c:809 kernel/irq/manage.c:836
+#: kernel/irq/manage.c:1280 kernel/irq/manage.c:1947 kernel/irq/manage.c:2033
+#: kernel/irq/manage.c:2164 kernel/irq/manage.c:2204 kernel/irq/manage.c:2323
+#: kernel/irq/manage.c:2387 kernel/irq/manage.c:2425 kernel/irq/manage.c:2452
+#: kernel/irq/manage.c:2513 kernel/irq/manage.c:2586 kernel/irq/manage.c:2617
+#: kernel/irq/manage.c:2661 kernel/irq/manage.c:2684 kernel/irq/manage.c:2721
+#: kernel/irq/manage.c:2738 ../../../core-api/genericirq:507:
+#: kernel/irq/chip.c:43 kernel/irq/chip.c:63 kernel/irq/chip.c:76
+#: kernel/irq/chip.c:124 kernel/irq/chip.c:570
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:687
+#: kernel/irq/irqdesc.c:702 kernel/irq/irqdesc.c:939 kernel/irq/irqdesc.c:1004
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:112
+msgid "``unsigned int irq``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:157
+msgid "The interrupt line to allocate"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:159
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2030
+#: kernel/irq/manage.c:2161 kernel/irq/manage.c:2201 kernel/irq/manage.c:2449
+#: kernel/irq/manage.c:2510
+msgid "``irq_handler_t handler``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:158
+msgid ""
+"Function to be called when the IRQ occurs. Primary handler for threaded "
+"interrupts If NULL, the default primary handler is installed"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:162
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2163
+#: kernel/irq/manage.c:2450
+msgid "``unsigned long flags``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:161
+msgid "Handling flags"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:162
+msgid "Name of the device generating this interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:164
+msgid "``void *dev``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:163
+msgid "A cookie passed to the handler function"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:164
+msgid ""
+"This call allocates an interrupt and establishes a handler; see the "
+"documentation for request_threaded_irq() for details."
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:257
+msgid "context for notification of IRQ affinity changes"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:259
+msgid "Interrupt to which notification applies"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:259
+msgid "``kref``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:260
+msgid "Reference count, for internal use"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:260
+msgid "``work``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:261
+msgid "Work item, for internal use"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:261
+msgid "``notify``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:262
+msgid ""
+"Function to be called on change.  This will be called in process context."
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:263
+msgid "``release``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:264
+msgid ""
+"Function to be called on release.  This will be called in process context.  "
+"Once registered, the structure must only be freed when this function is "
+"called or later."
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:279
+msgid "Description for automatic irq affinity assignments"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:280
+msgid "``pre_vectors``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:281
+msgid ""
+"Don't apply affinity to **pre_vectors** at beginning of the MSI(-X) vector "
+"space"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:282
+msgid "``post_vectors``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:283
+msgid ""
+"Don't apply affinity to **post_vectors** at end of the MSI(-X) vector space"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:284
+msgid "``nr_sets``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:285
+msgid "The number of interrupt sets for which affinity spreading is required"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:286
+msgid "``set_size``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:287
+msgid "Array holding the size of each interrupt set"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:287
+msgid "``calc_sets``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:288
+msgid "Callback for calculating the number and size of interrupt sets"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:289
+msgid "``priv``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:290
+msgid ""
+"Private data for usage by **calc_sets**, usually a pointer to driver/device "
+"specific data."
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:302
+msgid "Interrupt affinity descriptor"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:304
+msgid "cpumask to hold the affinity assignment"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:304
+msgid "``is_managed``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:305
+msgid "1 if the interrupt is managed internally"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:325
+msgid "Update the affinity hint"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:326
+#: include/linux/interrupt.h:340
+msgid "Interrupt to update"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:328
+#: include/linux/interrupt.h:342
+msgid "``const struct cpumask *m``"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:327
+#: include/linux/interrupt.h:341
+msgid "cpumask pointer (NULL to clear the hint)"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:328
+msgid ""
+"Updates the affinity hint, but does not change the affinity of the interrupt."
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:338
+msgid ""
+"Update the affinity hint and apply the provided cpumask to the interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:496: include/linux/interrupt.h:342
+msgid ""
+"Updates the affinity hint and if **m** is not NULL it applies it as the "
+"affinity of that interrupt."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:414
+msgid "Public Functions Provided"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:416
+msgid ""
+"This chapter contains the autogenerated documentation of the kernel API "
+"functions which are exported."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:75
+msgid "wait for pending hard IRQ handlers (on other CPUs)"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:76
+#: kernel/irq/manage.c:120
+msgid "interrupt number to wait for"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:77
+msgid ""
+"This function waits for any pending hard IRQ handlers for this interrupt to "
+"complete before returning. If you use this function while holding a resource "
+"the IRQ handler may need you will deadlock. It does not take associated "
+"threaded handlers into account."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:82
+msgid ""
+"Do not use this for shutdown scenarios where you must be sure that all parts "
+"(hardirq and threaded handler) have completed."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:86
+#: kernel/irq/manage.c:721
+msgid "This function may be called - with care - from IRQ context."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:88
+msgid ""
+"It does not check whether there is an interrupt in flight at the hardware "
+"level, but not serviced yet, as this might deadlock when called with "
+"interrupts disabled and the target CPU of the interrupt is the current CPU."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:86
+#: kernel/irq/manage.c:721
+msgid "false if a threaded handler is active."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:119
+msgid "wait for pending IRQ handlers (on other CPUs)"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:121
+#: kernel/irq/manage.c:691
+msgid ""
+"This function waits for any pending IRQ handlers for this interrupt to "
+"complete before returning. If you use this function while holding a resource "
+"the IRQ handler may need you will deadlock."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:125
+#: kernel/irq/manage.c:695
+msgid ""
+"Can only be called from preemptible code as it might sleep when an interrupt "
+"thread is associated to **irq**."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:128
+msgid ""
+"It optionally makes sure (when the irq chip supports that method) that the "
+"interrupt is not pending in any CPU and waiting for service."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:154
+msgid "Check if the affinity of a given irq can be set"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:155
+#: kernel/irq/manage.c:165
+msgid "Interrupt to check"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:164
+msgid "Check if affinity of a irq can be set from user space"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:166
+msgid ""
+"Like irq_can_set_affinity() above, but additionally checks for the "
+"AFFINITY_MANAGED flag."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:179
+msgid "Notify irq threads to adjust affinity"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:185
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:606
+#: kernel/irq/chip.c:635 kernel/irq/chip.c:683 kernel/irq/chip.c:734
+#: kernel/irq/chip.c:783 kernel/irq/chip.c:816 kernel/irq/chip.c:1156
+#: kernel/irq/chip.c:1194 ../../../core-api/genericirq:518:
+#: kernel/irq/handle.c:34 ../../../core-api/genericirq:520:
+#: kernel/irq/chip.c:380 kernel/irq/chip.c:868 kernel/irq/chip.c:893
+#: kernel/irq/chip.c:939
+msgid "``struct irq_desc *desc``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:180
+msgid "irq descriptor which has affinity changed"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:181
+msgid ""
+"Just set IRQTF_AFFINITY and delegate the affinity setting to the interrupt "
+"thread itself. We can not call set_cpus_allowed_ptr() here as we hold desc-"
+">lock and this code can be called from hard interrupt context."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:384
+msgid "Update affinity management for an interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:385
+msgid "The interrupt number to update"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:387
+msgid "``struct irq_affinity_desc *affinity``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:386
+msgid "Pointer to the affinity descriptor"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:387
+msgid ""
+"This interface can be used to configure the affinity management of "
+"interrupts which have been allocated already."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:390
+msgid ""
+"There are certain limitations on when it may be used - attempts to use it "
+"for when the kernel is configured for generic IRQ reservation mode (in "
+"config GENERIC_IRQ_RESERVATION_MODE) will fail, as it may conflict with "
+"managed/non-managed interrupt accounting. In addition, attempts to use it on "
+"an interrupt which is already started or which has already been configured "
+"as managed will also fail, as these mean invalid init state or double init."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:454
+msgid "Set the irq affinity of a given irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:455
+#: kernel/irq/manage.c:468
+msgid "Interrupt to set affinity"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:457
+#: kernel/irq/manage.c:470
+msgid "``const struct cpumask *cpumask``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:456
+#: kernel/irq/manage.c:469
+msgid "cpumask"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:457
+msgid "Fails if cpumask does not contain an online CPU"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:467
+msgid "Force the irq affinity of a given irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:470
+msgid ""
+"Same as irq_set_affinity, but without checking the mask against online cpus."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:473
+msgid ""
+"Solely for low level cpu hotplug code, where we need to make per cpu "
+"interrupts affine before the cpu becomes online."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:522
+msgid "control notification of IRQ affinity changes"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:523
+msgid "Interrupt for which to enable/disable notification"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:525
+msgid "``struct irq_affinity_notify *notify``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:524
+msgid ""
+"Context for notification, or ``NULL`` to disable notification.  Function "
+"pointers must be initialised; the other fields will be initialised by this "
+"function."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:527
+msgid ""
+"Must be called in process context.  Notification may only be enabled after "
+"the IRQ is allocated and must be disabled before the IRQ is freed using "
+"free_irq()."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:621
+msgid "Set vcpu affinity for the interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:622
+msgid "interrupt number to set affinity"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:624
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1405
+msgid "``void *vcpu_info``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:623
+msgid ""
+"vCPU specific data or pointer to a percpu array of vCPU specific data for "
+"percpu_devid interrupts"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:625
+msgid ""
+"This function uses the vCPU specific data to set the vCPU affinity for an "
+"irq. The vCPU specific data is passed from outside, such as KVM. One example "
+"code path is as below: KVM -> IOMMU -> irq_set_vcpu_affinity()."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:670
+msgid "disable an irq without waiting"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:671
+#: kernel/irq/manage.c:688 kernel/irq/manage.c:710 kernel/irq/manage.c:735
+msgid "Interrupt to disable"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:672
+msgid ""
+"Disable the selected interrupt line.  Disables and Enables are nested. "
+"Unlike disable_irq(), this function does not ensure existing instances of "
+"the IRQ handler have completed before returning."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:677
+msgid "This function may be called from IRQ context."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:687
+msgid "disable an irq and wait for completion"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:689
+#: kernel/irq/manage.c:711
+msgid "Disable the selected interrupt line.  Enables and Disables are nested."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:709
+msgid "disables an irq and waits for hardirq completion"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:713
+msgid ""
+"This function waits for any pending hard IRQ handlers for this interrupt to "
+"complete before returning. If you use this function while holding a resource "
+"the hard IRQ handler may need you will deadlock."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:717
+msgid ""
+"When used to optimistically disable an interrupt from atomic context the "
+"return value must be checked."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:734
+msgid "disable an nmi without waiting"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:736
+msgid "Disable the selected interrupt line. Disables and enables are nested."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:738
+msgid ""
+"The interrupt to disable must have been requested through request_nmi. "
+"Unlike disable_nmi(), this function does not ensure existing instances of "
+"the IRQ handler have completed before returning."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:781
+msgid "enable handling of an irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:782
+#: kernel/irq/manage.c:804
+msgid "Interrupt to enable"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:783
+msgid ""
+"Undoes the effect of one call to disable_irq().  If this matches the last "
+"disable, processing of interrupts on this IRQ line is re-enabled."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:786
+msgid ""
+"This function may be called from IRQ context only when desc->irq_data.chip-"
+">bus_lock and desc->chip->bus_sync_unlock are NULL !"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:803
+msgid "enable handling of an nmi"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:805
+msgid ""
+"The interrupt to enable must have been requested through request_nmi. Undoes "
+"the effect of one call to disable_nmi(). If this matches the last disable, "
+"processing of interrupts on this IRQ line is re-enabled."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:830
+msgid "control irq power management wakeup"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:831
+msgid "interrupt to control"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:832
+msgid "enable/disable power management wakeup"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:833
+msgid ""
+"Enable/disable power management wakeup mode, which is disabled by default.  "
+"Enables and disables must match, just as they match for non-wakeup mode "
+"support."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:837
+msgid ""
+"Wakeup mode lets this IRQ wake the system from sleep states like \"suspend "
+"to RAM\"."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:841
+msgid ""
+"irq enable/disable state is completely orthogonal to the enable/disable "
+"state of irq wake. An irq can be disabled with disable_irq() and still wake "
+"the system as long as the irq has wake enabled. If this does not hold, then "
+"the underlying irq chip and the related driver need to be investigated."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:1274
+msgid "wake the irq thread for the action identified by dev_id"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:1275
+msgid "Interrupt line"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:1277
+#: kernel/irq/manage.c:1944 kernel/irq/manage.c:2038 kernel/irq/manage.c:2165
+#: kernel/irq/manage.c:2205
+msgid "``void *dev_id``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:1276
+msgid "Device identity for which the thread should be woken"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:1941
+msgid "free an interrupt allocated with request_irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:1942
+#: kernel/irq/manage.c:2382
+msgid "Interrupt line to free"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:1943
+#: kernel/irq/manage.c:2383
+msgid "Device identity to free"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:1944
+msgid ""
+"Remove an interrupt handler. The handler is removed and if the interrupt "
+"line is no longer in use by any driver it is disabled.  On a shared IRQ the "
+"caller must ensure the interrupt is disabled on the card it drives before "
+"calling this function. The function does not return until any executing "
+"interrupts for this IRQ have completed."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:1950
+#: kernel/irq/manage.c:2389
+msgid "This function must not be called from interrupt context."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:1952
+msgid "Returns the devname argument passed to request_irq."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2027
+#: kernel/irq/manage.c:2158
+msgid "allocate an interrupt line"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2028
+#: kernel/irq/manage.c:2159 kernel/irq/manage.c:2199 kernel/irq/manage.c:2447
+#: kernel/irq/manage.c:2508
+msgid "Interrupt line to allocate"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2029
+msgid ""
+"Function to be called when the IRQ occurs. Primary handler for threaded "
+"interrupts. If handler is NULL and thread_fn != NULL the default primary "
+"handler is installed."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2034
+msgid "``irq_handler_t thread_fn``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2033
+msgid ""
+"Function called from the irq handler thread If NULL, no irq thread is created"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2036
+#: kernel/irq/manage.c:2203
+msgid "``unsigned long irqflags``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2035
+#: kernel/irq/manage.c:2162 kernel/irq/manage.c:2202
+msgid "Interrupt type flags"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2037
+#: kernel/irq/manage.c:2451
+msgid "``const char *devname``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2036
+#: kernel/irq/manage.c:2163 kernel/irq/manage.c:2203 kernel/irq/manage.c:2450
+#: kernel/irq/manage.c:2510
+msgid "An ascii name for the claiming device"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2037
+#: kernel/irq/manage.c:2164 kernel/irq/manage.c:2204
+msgid "A cookie passed back to the handler function"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2038
+msgid ""
+"This call allocates interrupt resources and enables the interrupt line and "
+"IRQ handling. From the point this call is made your handler function may be "
+"invoked. Since your handler function must clear any interrupt the board "
+"raises, you must take care both to initialise your hardware and to set up "
+"the interrupt handler in the right order."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2044
+msgid ""
+"If you want to set up a threaded irq handler for your device then you need "
+"to supply **handler** and **thread_fn**. **handler** is still called in hard "
+"interrupt context and has to check whether the interrupt originates from the "
+"device. If yes it needs to disable the interrupt on the device and return "
+"IRQ_WAKE_THREAD which will wake up the handler thread and run **thread_fn**. "
+"This split handler design is necessary to support shared interrupts."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2052
+#: kernel/irq/manage.c:2214
+msgid ""
+"**dev_id** must be globally unique. Normally the address of the device data "
+"structure is used as the cookie. Since the handler receives this value it "
+"makes sense to use it."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2056
+msgid ""
+"If your interrupt is shared you must pass a non NULL dev_id as this is "
+"required when freeing the interrupt."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2059
+msgid "Flags:"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2061
+msgid ""
+"IRQF_SHARED             Interrupt is shared IRQF_TRIGGER_*          Specify "
+"active edge(s) or level IRQF_ONESHOT            Run thread_fn with interrupt "
+"line masked"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2160
+#: kernel/irq/manage.c:2200
+msgid ""
+"Function to be called when the IRQ occurs. Threaded handler for threaded "
+"interrupts."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2165
+msgid ""
+"This call allocates interrupt resources and enables the interrupt line and "
+"IRQ handling. It selects either a hardirq or threaded handling method "
+"depending on the context."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2170
+msgid ""
+"On failure, it returns a negative value. On success, it returns either "
+"IRQC_IS_HARDIRQ or IRQC_IS_NESTED."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2198
+msgid "allocate an interrupt line for NMI delivery"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2205
+msgid ""
+"This call allocates interrupt resources and enables the interrupt line and "
+"IRQ handling. It sets up the IRQ line to be handled as an NMI."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2208
+msgid ""
+"An interrupt line delivering NMIs cannot be shared and IRQ handling cannot "
+"be threaded."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2211
+msgid ""
+"Interrupt lines requested for NMI delivering must produce per cpu interrupts "
+"and have auto enabling setting disabled."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2218
+msgid ""
+"If the interrupt line cannot be used to deliver NMIs, function will fail and "
+"return a negative value."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2317
+msgid "Check whether the per cpu irq is enabled"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2318
+msgid "Linux irq number to check for"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2319
+msgid ""
+"Must be called from a non migratable context. Returns the enable state of a "
+"per cpu interrupt on the current cpu."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2381
+msgid "free an interrupt allocated with request_percpu_irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2384
+#: kernel/irq/manage.c:2452 kernel/irq/manage.c:2512
+msgid "``void __percpu *dev_id``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2384
+msgid ""
+"Remove a percpu interrupt handler. The handler is removed, but the interrupt "
+"line is not disabled. This must be done on each CPU before calling this "
+"function. The function does not return until any executing interrupts for "
+"this IRQ have completed."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2419
+msgid "setup a per-cpu interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2420
+msgid "Interrupt line to setup"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2422
+msgid "``struct irqaction *act``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2421
+msgid "irqaction for the interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2422
+msgid "Used to statically setup per-cpu interrupts in the early boot process."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2446
+msgid "allocate a percpu interrupt line"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2448
+#: kernel/irq/manage.c:2509
+msgid "Function to be called when the IRQ occurs."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2449
+msgid "Interrupt type flags (IRQF_TIMER only)"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2451
+#: kernel/irq/manage.c:2511
+msgid "A percpu cookie passed back to the handler function"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2452
+msgid ""
+"This call allocates interrupt resources and enables the interrupt on the "
+"local CPU. If the interrupt is supposed to be enabled on other CPUs, it has "
+"to be done on each CPU using enable_percpu_irq()."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2456
+#: kernel/irq/manage.c:2516
+msgid ""
+"**dev_id** must be globally unique. It is a per-cpu variable, and the "
+"handler gets called with the interrupted CPU's instance of that variable."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2507
+msgid "allocate a percpu interrupt line for NMI delivery"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2512
+msgid ""
+"This call allocates interrupt resources for a per CPU NMI. Per CPU NMIs have "
+"to be setup on each CPU by calling prepare_percpu_nmi() before being enabled "
+"on the same CPU by using enable_percpu_nmi()."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2520
+msgid ""
+"Interrupt lines requested for NMI delivering should have auto enabling "
+"setting disabled."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2523
+#: kernel/irq/manage.c:2588
+msgid ""
+"If the interrupt line cannot be used to deliver NMIs, function will fail "
+"returning a negative value."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2580
+msgid "performs CPU local setup for NMI delivery"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2581
+msgid "Interrupt line to prepare for NMI delivery"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2582
+msgid ""
+"This call prepares an interrupt line to deliver NMI on the current CPU, "
+"before that interrupt line gets enabled with enable_percpu_nmi()."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2585
+msgid ""
+"As a CPU local operation, this should be called from non-preemptible context."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2611
+msgid "undoes NMI setup of IRQ line"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2612
+msgid "Interrupt line from which CPU local NMI configuration should be removed"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2613
+msgid "This call undoes the setup done by prepare_percpu_nmi()."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2615
+msgid ""
+"IRQ line should not be enabled for the current CPU. As a CPU local "
+"operation, this should be called from non-preemptible context."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2655
+msgid "returns the irqchip state of a interrupt."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2656
+#: kernel/irq/manage.c:2679
+msgid "Interrupt line that is forwarded to a VM"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2658
+#: kernel/irq/manage.c:2681 ../../../core-api/genericirq:507:
+#: kernel/irq/chip.c:1223 kernel/irq/chip.c:1245
+msgid "``enum irqchip_irq_state which``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2657
+msgid "One of IRQCHIP_STATE_* the caller wants to know about"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2659
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1246
+msgid "``bool *state``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2658
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1245
+msgid "a pointer to a boolean where the state is to be stored"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2659
+msgid ""
+"This call snapshots the internal irqchip state of an interrupt, returning "
+"into **state** the bit corresponding to stage **which**"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2662
+msgid ""
+"This function should be called with preemption disabled if the interrupt "
+"controller has per-cpu registers."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2678
+msgid "set the state of a forwarded interrupt."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2680
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1222
+msgid "State to be restored (one of IRQCHIP_STATE_*)"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2682
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1224
+msgid "``bool val``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2681
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1223
+msgid "Value corresponding to **which**"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2682
+msgid ""
+"This call sets the internal irqchip state of an interrupt, depending on the "
+"value of **which**."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2685
+msgid ""
+"This function should be called with migration disabled if the interrupt "
+"controller has per-cpu registers."
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2715
+msgid "Check whether an interrupt is requested"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2716
+#: kernel/irq/manage.c:2733
+msgid "The linux irq number"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2718
+msgid "A snapshot of the current state"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2732
+msgid "Check whether bits in the irq descriptor status are set"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2735
+msgid "``unsigned int bitmask``"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2734
+msgid "The bitmask to evaluate"
+msgstr ""
+
+#: ../../../core-api/genericirq:505: kernel/irq/manage.c:2736
+msgid "True if one of the bits in **bitmask** is set"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:37
+msgid "set the irq chip for an irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:38 kernel/irq/chip.c:58
+msgid "irq number"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:40
+msgid "``const struct irq_chip *chip``"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:39
+msgid "pointer to irq chip description structure"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:57
+msgid "set the irq trigger type for an irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:59
+#: kernel/irq/chip.c:1369
+msgid "IRQ_TYPE_{LEVEL,EDGE}_* value - see include/linux/irq.h"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:70
+msgid "set irq handler data for an irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:71 kernel/irq/chip.c:119
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:107
+msgid "Interrupt number"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:73 kernel/irq/chip.c:121
+msgid "``void *data``"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:72
+#: kernel/irq/chip.c:1221 kernel/irq/chip.c:1243 kernel/irq/chip.c:1265
+#: kernel/irq/chip.c:1280 kernel/irq/chip.c:1294 kernel/irq/chip.c:1305
+#: kernel/irq/chip.c:1316 kernel/irq/chip.c:1327 kernel/irq/chip.c:1338
+#: kernel/irq/chip.c:1349 kernel/irq/chip.c:1368 kernel/irq/chip.c:1386
+#: kernel/irq/chip.c:1403 kernel/irq/chip.c:1417 kernel/irq/chip.c:1438
+#: kernel/irq/chip.c:1454 ../../../core-api/genericirq:520:
+#: kernel/irq/chip.c:1467 kernel/irq/chip.c:1500 kernel/irq/chip.c:1518
+msgid "Pointer to interrupt specific data"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:73
+msgid "Set the hardware irq controller data for an irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:118
+msgid "set irq chip data for an irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:120
+msgid "Pointer to chip specific data"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:121
+msgid "Set the hardware irq chip data for an irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:564
+msgid "Handle a nested irq from a irq thread"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:565
+msgid "the interrupt number"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:566
+msgid ""
+"Handle interrupts which are nested into a threaded interrupt handler. The "
+"handler function is called inside the calling threads context."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:600
+#: kernel/irq/chip.c:629
+msgid "Simple and software-decoded IRQs."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:601
+#: kernel/irq/chip.c:630 kernel/irq/chip.c:678 kernel/irq/chip.c:729
+#: kernel/irq/chip.c:778 kernel/irq/chip.c:811 kernel/irq/chip.c:1153
+#: kernel/irq/chip.c:1191 ../../../core-api/genericirq:520:
+#: kernel/irq/chip.c:863 kernel/irq/chip.c:888 kernel/irq/chip.c:935
+msgid "the interrupt description structure for this irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:602
+msgid ""
+"Simple interrupts are either sent from a demultiplexing interrupt handler or "
+"come from hardware, where no interrupt hardware control is necessary."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:607
+msgid ""
+"The caller is expected to handle the ack, clear, mask and unmask issues if "
+"necessary."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:631
+msgid ""
+"Untracked interrupts are sent from a demultiplexing interrupt handler when "
+"the demultiplexer does not know which device it its multiplexed irq domain "
+"generated the interrupt. IRQ's handled through here are not subjected to "
+"stats tracking, randomness, or spurious interrupt detection."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:638
+msgid ""
+"Like handle_simple_irq, the caller is expected to handle the ack, clear, "
+"mask and unmask issues if necessary."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:677
+msgid "Level type irq handler"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:679
+msgid ""
+"Level type interrupts are active as long as the hardware line has the active "
+"level. This may require to mask the interrupt and unmask it after the "
+"associated handler has acknowledged the device, so the interrupt line is "
+"back to inactive."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:728
+msgid "irq handler for transparent controllers"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:730
+#: kernel/irq/chip.c:782
+msgid ""
+"Only a single callback will be issued to the chip: an ->eoi() call when the "
+"interrupt has been serviced. This enables support for modern forms of "
+"interrupt handlers, which handle the flow details in hardware, transparently."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:777
+msgid "irq handler for NMI interrupt lines"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:779
+msgid ""
+"A simple NMI-safe handler, considering the restrictions from request_nmi."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:810
+msgid "edge type IRQ handler"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:812
+msgid ""
+"Interrupt occurs on the falling and/or rising edge of a hardware signal. The "
+"occurrence is latched into the irq controller hardware and must be acked in "
+"order to be reenabled. After the ack another interrupt can happen on the "
+"same source even before the first one is handled by the associated event "
+"handler. If this happens it might be necessary to disable (mask) the "
+"interrupt depending on the controller hardware. This requires to reenable "
+"the interrupt inside of the loop which handles the interrupts which have "
+"arrived while the handler was running. If all pending interrupts are "
+"handled, the loop is left."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1150
+msgid "irq handler for edge hierarchy stacked on transparent controllers"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1154
+msgid ""
+"Like handle_fasteoi_irq(), but for use with hierarchy where the irq_chip "
+"also needs to have its ->irq_ack() function called."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1188
+msgid "irq handler for level hierarchy stacked on transparent controllers"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1192
+msgid ""
+"Like handle_fasteoi_irq(), but for use with hierarchy where the irq_chip "
+"also needs to have its ->irq_mask_ack() function called."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1219
+msgid "set the state of a parent interrupt."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1225
+#: kernel/irq/chip.c:1247 kernel/irq/chip.c:1269 kernel/irq/chip.c:1284
+#: kernel/irq/chip.c:1299 kernel/irq/chip.c:1310 kernel/irq/chip.c:1321
+#: kernel/irq/chip.c:1332 kernel/irq/chip.c:1343 kernel/irq/chip.c:1354
+#: kernel/irq/chip.c:1373 kernel/irq/chip.c:1391 kernel/irq/chip.c:1408
+#: kernel/irq/chip.c:1422 kernel/irq/chip.c:1443 kernel/irq/chip.c:1459
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1472
+#: kernel/irq/chip.c:1505 kernel/irq/chip.c:1523
+msgid "``struct irq_data *data``"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1224
+#: kernel/irq/chip.c:1246
+msgid "Conditional success, if the underlying irqchip does not implement it."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1241
+msgid "get the state of a parent interrupt."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1244
+msgid "one of IRQCHIP_STATE_* the caller wants to know"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1263
+msgid "Enable the parent interrupt (defaults to unmask if NULL)"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1278
+msgid "Disable the parent interrupt (defaults to mask if NULL)"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1293
+msgid "Acknowledge the parent interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1304
+msgid "Mask the parent interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1315
+msgid "Mask and acknowledge the parent interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1326
+msgid "Unmask the parent interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1337
+msgid "Invoke EOI on the parent interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1348
+msgid "Set affinity on the parent interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1351
+msgid "``const struct cpumask *dest``"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1350
+msgid "The affinity mask to set"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1352
+msgid "``bool force``"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1351
+msgid "Flag to enforce setting (disable online checks)"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1352
+#: kernel/irq/chip.c:1370 kernel/irq/chip.c:1419
+msgid "Conditional, as the underlying parent chip might not implement it."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1367
+msgid "Set IRQ type on the parent interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1385
+msgid "Retrigger an interrupt in hardware"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1387
+msgid ""
+"Iterate through the domain hierarchy of the interrupt and check whether a hw "
+"retrigger function exists. If yes, invoke it."
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1402
+msgid "Set vcpu affinity on the parent interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1404
+msgid "The vcpu affinity information"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1416
+msgid "Set/reset wake-up on the parent interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1418
+msgid "Whether to set or reset the wake-up capability of this irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1437
+msgid "Request resources on the parent interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:507: kernel/irq/chip.c:1453
+msgid "Release resources on the parent interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:425
+msgid "Internal Functions Provided"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:427
+msgid ""
+"This chapter contains the autogenerated documentation of the internal "
+"functions."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:145
+msgid "Number of interrupts supported by the system."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:151
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1100
+#: kernel/irq/chip.c:1126
+msgid "``void``"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:1
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1
+msgid "no arguments"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:154
+msgid "Set the number of interrupts supported by the system."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:160
+msgid "``unsigned int nr``"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:155
+msgid "New number of interrupts."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:157
+msgid "**nr**."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:681
+msgid "Invoke the handler for a particular irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:682
+#: kernel/irq/irqdesc.c:698
+msgid "The irq number to handle"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:684
+#: kernel/irq/irqdesc.c:725 kernel/irq/irqdesc.c:766
+msgid "0 on success, or -EINVAL if conversion has failed"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:685
+#: kernel/irq/irqdesc.c:726
+msgid ""
+"This function must be called from an IRQ context with irq regs initialized."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:696
+msgid "Invoke the handler for a particular irq from any context."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:700
+msgid "0 on success, a negative value on error."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:701
+msgid ""
+"This function can be called from any context (IRQ or process context). It "
+"will report an error if not invoked from IRQ context and the irq has been "
+"marked to enforce IRQ-context only."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:720
+msgid "Invoke the handler for a HW irq belonging to a domain."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:726
+#: kernel/irq/irqdesc.c:767
+msgid "``struct irq_domain *domain``"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:722
+#: kernel/irq/irqdesc.c:763
+msgid "The domain where to perform the lookup"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:724
+#: kernel/irq/irqdesc.c:765
+msgid "``unsigned int hwirq``"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:723
+#: kernel/irq/irqdesc.c:764
+msgid "The HW irq number to convert to a logical one"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:761
+msgid "Invoke the handler for a HW nmi belonging to a domain."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:767
+msgid ""
+"This function must be called from an NMI context with irq regs initialized."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:781
+msgid "free irq descriptors"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:787
+#: kernel/irq/irqdesc.c:802
+msgid "``unsigned int from``"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:782
+msgid "Start of descriptor range"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:784
+#: kernel/irq/irqdesc.c:803
+msgid "``unsigned int cnt``"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:783
+msgid "Number of consecutive irqs to free"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:799
+msgid "allocate and initialize a range of irq descriptors"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:805
+msgid "``int irq``"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:800
+msgid "Allocate for specific irq number if irq >= 0"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:801
+msgid "Start the search from this irq number"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:802
+msgid "Number of consecutive irqs to allocate."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:804
+msgid "``int node``"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:803
+msgid "Preferred node on which the irq descriptor should be allocated"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:805
+msgid "``struct module *owner``"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:804
+msgid "Owning module (can be NULL)"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:806
+msgid "``const struct irq_affinity_desc *affinity``"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:805
+msgid ""
+"Optional pointer to an affinity mask array of size **cnt** which hints where "
+"the irq descriptors should be allocated and which default affinities to use"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:808
+msgid "Returns the first irq number or error code"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:847
+msgid "get next allocated irq number"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:853
+msgid "``unsigned int offset``"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:848
+msgid "where to start the search"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:849
+msgid "Returns next irq number after offset or nr_irqs if none is found."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:933
+msgid "Get the statistics for an interrupt on a cpu"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:934
+#: kernel/irq/irqdesc.c:999
+msgid "The interrupt number"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:936
+msgid "``int cpu``"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:935
+msgid "The cpu number"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:936
+msgid ""
+"Returns the sum of interrupt counts on **cpu** since boot for **irq**. The "
+"caller must ensure that the interrupt is not removed concurrently."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:998
+msgid "Get the statistics for an interrupt from thread context"
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:1000
+msgid "Returns the sum of interrupt counts on all cpus since boot for **irq**."
+msgstr ""
+
+#: ../../../core-api/genericirq:516: kernel/irq/irqdesc.c:1002
+msgid ""
+"It uses rcu to protect the access since a concurrent removal of an interrupt "
+"descriptor is observing an rcu grace period before delayed_free_desc()/"
+"irq_kobj_release()."
+msgstr ""
+
+#: ../../../core-api/genericirq:518: kernel/irq/handle.c:28
+msgid "handle spurious and unhandled irqs"
+msgstr ""
+
+#: ../../../core-api/genericirq:518: kernel/irq/handle.c:29
+msgid "description of the interrupt"
+msgstr ""
+
+#: ../../../core-api/genericirq:518: kernel/irq/handle.c:30
+msgid "Handles spurious and unhandled IRQ's. It also prints a debugmessage."
+msgstr ""
+
+#: ../../../core-api/genericirq:518: kernel/irq/handle.c:228
+msgid ""
+"root irq handler for architectures which do no entry accounting themselves"
+msgstr ""
+
+#: ../../../core-api/genericirq:518: kernel/irq/handle.c:234
+msgid "``struct pt_regs *regs``"
+msgstr ""
+
+#: ../../../core-api/genericirq:518: kernel/irq/handle.c:230
+msgid "Register file coming from the low-level handling code"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:87
+msgid "set MSI descriptor data for an irq at offset"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:88
+msgid "Interrupt number base"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:90
+msgid "``unsigned int irq_offset``"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:89
+msgid "Interrupt number offset"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:91 kernel/irq/chip.c:109
+msgid "``struct msi_desc *entry``"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:90 kernel/irq/chip.c:108
+msgid "Pointer to MSI descriptor data"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:91
+msgid "Set the MSI descriptor entry for an irq at offset"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:106
+msgid "set MSI descriptor data for an irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:109
+msgid "Set the MSI descriptor entry for an irq"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:374
+msgid "Mark interrupt disabled"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:375
+msgid "irq descriptor which should be disabled"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:376
+msgid ""
+"If the chip does not implement the irq_disable callback, we use a lazy "
+"disable approach. That means we mark the interrupt disabled, but leave the "
+"hardware unmasked. That's an optimization because we avoid the hardware "
+"access for the common case where no interrupt happens after we marked it "
+"disabled. If an interrupt happens, then the interrupt flow handler masks the "
+"line at the hardware level and marks it pending."
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:385
+msgid ""
+"If the interrupt chip does not implement the irq_disable callback, a driver "
+"can disable the lazy approach for a particular irq line by calling "
+"'irq_set_status_flags(irq, IRQ_DISABLE_UNLAZY)'. This can be used for "
+"devices which cannot disable the interrupt at the device level under certain "
+"circumstances and have to use disable_irq[_nosync] instead."
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:862
+msgid "Per CPU local irq handler"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:864
+msgid "Per CPU interrupts on SMP machines without locking requirements"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:887
+msgid "Per CPU local irq handler with per cpu dev ids"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:889
+msgid ""
+"Per CPU interrupts on SMP machines without locking requirements. Same as "
+"handle_percpu_irq() above but with the following extras:"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:892
+msgid ""
+"action->percpu_dev_id is a pointer to percpu variables which contain the "
+"real device id for the cpu on which this handler is called"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:933
+msgid "Per CPU local NMI handler with per cpu dev ids"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:936
+msgid ""
+"Similar to handle_fasteoi_nmi, but handling the dev_id cookie as a percpu "
+"pointer."
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1094
+msgid "Invoke all irq_cpu_online functions."
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1095
+msgid "Iterate through all irqs and invoke the chip.irq_cpu_online() for each."
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1120
+msgid "Invoke all irq_cpu_offline functions."
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1121
+msgid ""
+"Iterate through all irqs and invoke the chip.irq_cpu_offline() for each."
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1466
+msgid "Compose msi message for a irq chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1469
+msgid "``struct msi_msg *msg``"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1468
+msgid "Pointer to the MSI message"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1469
+msgid ""
+"For hierarchical domains we find the first chip in the hierarchy which "
+"implements the irq_compose_msi_msg callback. For non hierarchical we use the "
+"top level chip."
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1499
+msgid "Enable power for an IRQ chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1501
+msgid ""
+"Enable the power to the IRQ chip referenced by the interrupt data structure."
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1517
+msgid "Disable power for an IRQ chip"
+msgstr ""
+
+#: ../../../core-api/genericirq:520: kernel/irq/chip.c:1519
+msgid ""
+"Disable the power to the IRQ chip referenced by the interrupt data "
+"structure, belongs. Note that power will only be disabled, once this "
+"function has been called for all IRQs that have called irq_chip_pm_get()."
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:438
+msgid "Credits"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:440
+msgid "The following people have contributed to this document:"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:442
+msgid "Thomas Gleixner tglx@linutronix.de"
+msgstr ""
+
+#: ../../../core-api/genericirq.rst:444
+msgid "Ingo Molnar mingo@elte.hu"
+msgstr ""
