@@ -1,0 +1,896 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel 6\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:54+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../power/energy-model.rst:5
+msgid "Energy Model of devices"
+msgstr ""
+
+#: ../../../power/energy-model.rst:8
+msgid "1. Overview"
+msgstr ""
+
+#: ../../../power/energy-model.rst:10
+msgid ""
+"The Energy Model (EM) framework serves as an interface between drivers "
+"knowing the power consumed by devices at various performance levels, and the "
+"kernel subsystems willing to use that information to make energy-aware "
+"decisions."
+msgstr ""
+
+#: ../../../power/energy-model.rst:14
+msgid ""
+"The source of the information about the power consumed by devices can vary "
+"greatly from one platform to another. These power costs can be estimated "
+"using devicetree data in some cases. In others, the firmware will know "
+"better. Alternatively, userspace might be best positioned. And so on. In "
+"order to avoid each and every client subsystem to re-implement support for "
+"each and every possible source of information on its own, the EM framework "
+"intervenes as an abstraction layer which standardizes the format of power "
+"cost tables in the kernel, hence enabling to avoid redundant work."
+msgstr ""
+
+#: ../../../power/energy-model.rst:23
+msgid ""
+"The power values might be expressed in micro-Watts or in an 'abstract "
+"scale'. Multiple subsystems might use the EM and it is up to the system "
+"integrator to check that the requirements for the power value scale types "
+"are met. An example can be found in the Energy-Aware Scheduler documentation "
+"Documentation/scheduler/sched-energy.rst. For some subsystems like thermal "
+"or powercap power values expressed in an 'abstract scale' might cause "
+"issues. These subsystems are more interested in estimation of power used in "
+"the past, thus the real micro-Watts might be needed. An example of these "
+"requirements can be found in the Intelligent Power Allocation in "
+"Documentation/driver-api/thermal/power_allocator.rst. Kernel subsystems "
+"might implement automatic detection to check whether EM registered devices "
+"have inconsistent scale (based on EM internal flag). Important thing to keep "
+"in mind is that when the power values are expressed in an 'abstract scale' "
+"deriving real energy in micro-Joules would not be possible."
+msgstr ""
+
+#: ../../../power/energy-model.rst:38
+msgid ""
+"The figure below depicts an example of drivers (Arm-specific here, but the "
+"approach is applicable to any architecture) providing power costs to the EM "
+"framework, and interested clients reading the data from it::"
+msgstr ""
+
+#: ../../../power/energy-model.rst:67
+msgid ""
+"In case of CPU devices the EM framework manages power cost tables per "
+"'performance domain' in the system. A performance domain is a group of CPUs "
+"whose performance is scaled together. Performance domains generally have a 1-"
+"to-1 mapping with CPUFreq policies. All CPUs in a performance domain are "
+"required to have the same micro-architecture. CPUs in different performance "
+"domains can have different micro-architectures."
+msgstr ""
+
+#: ../../../power/energy-model.rst:74
+msgid ""
+"To better reflect power variation due to static power (leakage) the EM "
+"supports runtime modifications of the power values. The mechanism relies on "
+"RCU to free the modifiable EM perf_state table memory. Its user, the task "
+"scheduler, also uses RCU to access this memory. The EM framework provides "
+"API for allocating/freeing the new memory for the modifiable EM table. The "
+"old memory is freed automatically using RCU callback mechanism when there "
+"are no owners anymore for the given EM runtime table instance. This is "
+"tracked using kref mechanism. The device driver which provided the new EM at "
+"runtime, should call EM API to free it safely when it's no longer needed. "
+"The EM framework will handle the clean-up when it's possible."
+msgstr ""
+
+#: ../../../power/energy-model.rst:85
+msgid ""
+"The kernel code which want to modify the EM values is protected from "
+"concurrent access using a mutex. Therefore, the device driver code must run "
+"in sleeping context when it tries to modify the EM."
+msgstr ""
+
+#: ../../../power/energy-model.rst:89
+msgid ""
+"With the runtime modifiable EM we switch from a 'single and during the "
+"entire runtime static EM' (system property) design to a 'single EM which can "
+"be changed during runtime according e.g. to the workload' (system and "
+"workload property) design."
+msgstr ""
+
+#: ../../../power/energy-model.rst:94
+msgid ""
+"It is possible also to modify the CPU performance values for each EM's "
+"performance state. Thus, the full power and performance profile (which is an "
+"exponential curve) can be changed according e.g. to the workload or system "
+"property."
+msgstr ""
+
+#: ../../../power/energy-model.rst:101
+msgid "2. Core APIs"
+msgstr ""
+
+#: ../../../power/energy-model.rst:104
+msgid "2.1 Config options"
+msgstr ""
+
+#: ../../../power/energy-model.rst:106
+msgid "CONFIG_ENERGY_MODEL must be enabled to use the EM framework."
+msgstr ""
+
+#: ../../../power/energy-model.rst:110
+msgid "2.2 Registration of performance domains"
+msgstr ""
+
+#: ../../../power/energy-model.rst:113
+msgid "Registration of 'advanced' EM"
+msgstr ""
+
+#: ../../../power/energy-model.rst:115
+msgid ""
+"The 'advanced' EM gets its name due to the fact that the driver is allowed "
+"to provide more precised power model. It's not limited to some implemented "
+"math formula in the framework (like it is in 'simple' EM case). It can "
+"better reflect the real power measurements performed for each performance "
+"state. Thus, this registration method should be preferred in case "
+"considering EM static power (leakage) is important."
+msgstr ""
+
+#: ../../../power/energy-model.rst:122
+msgid ""
+"Drivers are expected to register performance domains into the EM framework "
+"by calling the following API::"
+msgstr ""
+
+#: ../../../power/energy-model.rst:128
+msgid ""
+"Drivers must provide a callback function returning <frequency, power> tuples "
+"for each performance state. The callback function provided by the driver is "
+"free to fetch data from any relevant location (DT, firmware, ...), and by "
+"any mean deemed necessary. Only for CPU devices, drivers must specify the "
+"CPUs of the performance domains using cpumask. For other devices than CPUs "
+"the last argument must be set to NULL. The last argument 'microwatts' is "
+"important to set with correct value. Kernel subsystems which use EM might "
+"rely on this flag to check if all EM devices use the same scale. If there "
+"are different scales, these subsystems might decide to return warning/error, "
+"stop working or panic. See Section 3. for an example of driver implementing "
+"this callback, or Section 2.4 for further documentation on this API"
+msgstr ""
+
+#: ../../../power/energy-model.rst:142
+msgid "Registration of EM using DT"
+msgstr ""
+
+#: ../../../power/energy-model.rst:144
+msgid ""
+"The  EM can also be registered using OPP framework and information in DT "
+"\"operating-points-v2\". Each OPP entry in DT can be extended with a "
+"property \"opp-microwatt\" containing micro-Watts power value. This OPP DT "
+"property allows a platform to register EM power values which are reflecting "
+"total power (static + dynamic). These power values might be coming directly "
+"from experiments and measurements."
+msgstr ""
+
+#: ../../../power/energy-model.rst:152
+msgid "Registration of 'artificial' EM"
+msgstr ""
+
+#: ../../../power/energy-model.rst:154
+msgid ""
+"There is an option to provide a custom callback for drivers missing detailed "
+"knowledge about power value for each performance state. The callback ."
+"get_cost() is optional and provides the 'cost' values used by the EAS. This "
+"is useful for platforms that only provide information on relative efficiency "
+"between CPU types, where one could use the information to create an abstract "
+"power model. But even an abstract power model can sometimes be hard to fit "
+"in, given the input power value size restrictions. The .get_cost() allows to "
+"provide the 'cost' values which reflect the efficiency of the CPUs. This "
+"would allow to provide EAS information which has different relation than "
+"what would be forced by the EM internal formulas calculating 'cost' values. "
+"To register an EM for such platform, the driver must set the flag "
+"'microwatts' to 0, provide .get_power() callback and provide .get_cost() "
+"callback. The EM framework would handle such platform properly during "
+"registration. A flag EM_PERF_DOMAIN_ARTIFICIAL is set for such platform. "
+"Special care should be taken by other frameworks which are using EM to test "
+"and treat this flag properly."
+msgstr ""
+
+#: ../../../power/energy-model.rst:172
+msgid "Registration of 'simple' EM"
+msgstr ""
+
+#: ../../../power/energy-model.rst:174
+msgid ""
+"The 'simple' EM is registered using the framework helper function "
+"cpufreq_register_em_with_opp(). It implements a power model which is tight "
+"to math formula::"
+msgstr ""
+
+#: ../../../power/energy-model.rst:180
+msgid ""
+"The EM which is registered using this method might not reflect correctly the "
+"physics of a real device, e.g. when static power (leakage) is important."
+msgstr ""
+
+#: ../../../power/energy-model.rst:185
+msgid "2.3 Accessing performance domains"
+msgstr ""
+
+#: ../../../power/energy-model.rst:187
+msgid ""
+"There are two API functions which provide the access to the energy model: "
+"em_cpu_get() which takes CPU id as an argument and em_pd_get() with device "
+"pointer as an argument. It depends on the subsystem which interface it is "
+"going to use, but in case of CPU devices both functions return the same "
+"performance domain."
+msgstr ""
+
+#: ../../../power/energy-model.rst:193
+msgid ""
+"Subsystems interested in the energy model of a CPU can retrieve it using the "
+"em_cpu_get() API. The energy model tables are allocated once upon creation "
+"of the performance domains, and kept in memory untouched."
+msgstr ""
+
+#: ../../../power/energy-model.rst:197
+msgid ""
+"The energy consumed by a performance domain can be estimated using the "
+"em_cpu_energy() API. The estimation is performed assuming that the schedutil "
+"CPUfreq governor is in use in case of CPU device. Currently this calculation "
+"is not provided for other type of devices."
+msgstr ""
+
+#: ../../../power/energy-model.rst:202
+msgid ""
+"More details about the above APIs can be found in ``<linux/energy_model.h>`` "
+"or in Section 2.5"
+msgstr ""
+
+#: ../../../power/energy-model.rst:207
+msgid "2.4 Runtime modifications"
+msgstr ""
+
+#: ../../../power/energy-model.rst:209
+msgid ""
+"Drivers willing to update the EM at runtime should use the following "
+"dedicated function to allocate a new instance of the modified EM. The API is "
+"listed below::"
+msgstr ""
+
+#: ../../../power/energy-model.rst:215
+msgid ""
+"This allows to allocate a structure which contains the new EM table with "
+"also RCU and kref needed by the EM framework. The 'struct em_perf_table' "
+"contains array 'struct em_perf_state state[]' which is a list of performance "
+"states in ascending order. That list must be populated by the device driver "
+"which wants to update the EM. The list of frequencies can be taken from "
+"existing EM (created during boot). The content in the 'struct em_perf_state' "
+"must be populated by the driver as well."
+msgstr ""
+
+#: ../../../power/energy-model.rst:223
+msgid "This is the API which does the EM update, using RCU pointers swap::"
+msgstr ""
+
+#: ../../../power/energy-model.rst:228
+msgid ""
+"Drivers must provide a pointer to the allocated and initialized new EM "
+"'struct em_perf_table'. That new EM will be safely used inside the EM "
+"framework and will be visible to other sub-systems in the kernel (thermal, "
+"powercap). The main design goal for this API is to be fast and avoid extra "
+"calculations or memory allocations at runtime. When pre-computed EMs are "
+"available in the device driver, then it should be possible to simply reuse "
+"them with low performance overhead."
+msgstr ""
+
+#: ../../../power/energy-model.rst:236
+msgid ""
+"In order to free the EM, provided earlier by the driver (e.g. when the "
+"module is unloaded), there is a need to call the API::"
+msgstr ""
+
+#: ../../../power/energy-model.rst:241
+msgid ""
+"It will allow the EM framework to safely remove the memory, when there is no "
+"other sub-system using it, e.g. EAS."
+msgstr ""
+
+#: ../../../power/energy-model.rst:244
+msgid ""
+"To use the power values in other sub-systems (like thermal, powercap) there "
+"is a need to call API which protects the reader and provide consistency of "
+"the EM table data::"
+msgstr ""
+
+#: ../../../power/energy-model.rst:250
+msgid ""
+"It returns the 'struct em_perf_state' pointer which is an array of "
+"performance states in ascending order. This function must be called in the "
+"RCU read lock section (after the rcu_read_lock()). When the EM table is not "
+"needed anymore there is a need to call rcu_real_unlock(). In this way the EM "
+"safely uses the RCU read section and protects the users. It also allows the "
+"EM framework to manage the memory and free it. More details how to use it "
+"can be found in Section 3.2 in the example driver."
+msgstr ""
+
+#: ../../../power/energy-model.rst:259
+msgid ""
+"There is dedicated API for device drivers to calculate em_perf_state::cost "
+"values::"
+msgstr ""
+
+#: ../../../power/energy-model.rst:265
+msgid ""
+"These 'cost' values from EM are used in EAS. The new EM table should be "
+"passed together with the number of entries and device pointer. When the "
+"computation of the cost values is done properly the return value from the "
+"function is 0. The function takes care for right setting of inefficiency for "
+"each performance state as well. It updates em_perf_state::flags accordingly. "
+"Then such prepared new EM can be passed to the em_dev_update_perf_domain() "
+"function, which will allow to use it."
+msgstr ""
+
+#: ../../../power/energy-model.rst:273
+msgid ""
+"More details about the above APIs can be found in ``<linux/energy_model.h>`` "
+"or in Section 3.2 with an example code showing simple implementation of the "
+"updating mechanism in a device driver."
+msgstr ""
+
+#: ../../../power/energy-model.rst:279
+msgid "2.5 Description details of this API"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:15
+msgid "Performance state of a performance domain"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:19
+#: include/linux/energy_model.h:47 include/linux/energy_model.h:59
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:29
+#: include/linux/energy_model.h:55 include/linux/energy_model.h:70
+msgid "**Members**"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:16
+msgid "``performance``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:17
+msgid "CPU performance (capacity) at a given frequency"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:17
+msgid "``frequency``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:18
+msgid "The frequency in KHz, for consistency with CPUFreq"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:18
+msgid "``power``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:19
+msgid ""
+"The power consumed at this level (by 1 CPU or by a registered device). It "
+"can be a total power: static and dynamic."
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:20
+msgid "``cost``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:21
+msgid ""
+"The cost coefficient associated with this level, used during energy "
+"calculation. Equal to: power * max_frequency / frequency"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:22
+#: include/linux/energy_model.h:60
+msgid "``flags``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:23
+msgid "see \"em_perf_state flags\" description below."
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:43
+msgid "Performance states table"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:44
+msgid "``rcu``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:45
+msgid "RCU used for safe access and destruction"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:45
+msgid "``kref``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:46
+msgid "Reference counter to track the users"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:46
+msgid "``state``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:47
+#: include/linux/energy_model.h:190
+msgid "List of performance states, in ascending order"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:55
+msgid "Performance domain"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:56
+msgid "``em_table``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:57
+msgid "Pointer to the runtime modifiable em_perf_table"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:57
+msgid "``nr_perf_states``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:58
+msgid "Number of performance states"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:58
+msgid "``min_perf_state``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:59
+msgid "Minimum allowed Performance State index"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:59
+msgid "``max_perf_state``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:60
+msgid "Maximum allowed Performance State index"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:61
+msgid "See \"em_perf_domain flags\""
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:61
+msgid "``cpus``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:62
+msgid ""
+"Cpumask covering the CPUs of the domain. It's here for performance reasons "
+"to avoid potential cache misses during energy calculations in the scheduler "
+"and simplifies allocating/freeing that memory region."
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:68
+#: include/linux/energy_model.h:194 include/linux/energy_model.h:232
+#: include/linux/energy_model.h:331 ../../../power/energy-model:283:
+#: kernel/power/energy_model.c:295 kernel/power/energy_model.c:498
+#: kernel/power/energy_model.c:514 kernel/power/energy_model.c:540
+#: kernel/power/energy_model.c:573 kernel/power/energy_model.c:671
+#: kernel/power/energy_model.c:851 kernel/power/energy_model.c:902
+msgid "**Description**"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:65
+msgid ""
+"In case of CPU device, a \"performance domain\" represents a group of CPUs "
+"whose performance is scaled together. All CPUs of a performance domain must "
+"have the same micro-architecture. Performance domains often have a 1-to-1 "
+"mapping with CPUFreq policies. In case of other devices the **cpus** field "
+"is unused."
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:189
+msgid "Get an efficient performance state from the EM"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:193
+#: include/linux/energy_model.h:228 include/linux/energy_model.h:319
+#: include/linux/energy_model.h:331 ../../../power/energy-model:283:
+#: kernel/power/energy_model.c:295 kernel/power/energy_model.c:499
+#: kernel/power/energy_model.c:515 kernel/power/energy_model.c:534
+#: kernel/power/energy_model.c:570 kernel/power/energy_model.c:672
+#: kernel/power/energy_model.c:851 kernel/power/energy_model.c:900
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:195
+msgid "``struct em_perf_state *table``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:192
+#: include/linux/energy_model.h:230 include/linux/energy_model.h:321
+#: include/linux/energy_model.h:333 ../../../power/energy-model:283:
+#: kernel/power/energy_model.c:902
+msgid "``struct em_perf_domain *pd``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:191
+#: include/linux/energy_model.h:317 include/linux/energy_model.h:329
+msgid "performance domain for which this must be done"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:193
+#: include/linux/energy_model.h:228
+msgid "``unsigned long max_util``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:192
+msgid "Max utilization to map with the EM"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:193
+msgid ""
+"It is called from the scheduler code quite frequently and as a consequence "
+"doesn't implement any check."
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:196
+#: include/linux/energy_model.h:235 include/linux/energy_model.h:319
+#: include/linux/energy_model.h:334
+msgid "**Return**"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:197
+msgid ""
+"An efficient performance state id, high enough to meet **max_util** "
+"requirement."
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:224
+msgid "Estimates the energy consumed by the CPUs of a performance domain"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:226
+msgid "performance domain for which energy has to be estimated"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:227
+msgid "highest utilization among CPUs of the domain"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:229
+msgid "``unsigned long sum_util``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:228
+msgid "sum of the utilization of all CPUs in the domain"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:230
+msgid "``unsigned long allowed_cpu_cap``"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:229
+msgid ""
+"maximum allowed CPU capacity for the **pd**, which might reflect reduced "
+"frequency (due to thermal)"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:231
+msgid ""
+"This function must be used only for CPU devices. There is no validation, i."
+"e. if the EM is a CPU type and has cpumask allocated. It is called from the "
+"scheduler code quite frequently and that is why there is not checks."
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:236
+msgid ""
+"the sum of the energy consumed by the CPUs of the domain assuming a capacity "
+"state satisfying the max utilization of the domain."
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:315
+msgid "Get the number of performance states of a perf. domain"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:319
+msgid "the number of performance states in the performance domain table"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:327
+msgid "Get the performance states table of perf. domain"
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:330
+msgid ""
+"To use this function the rcu_read_lock() should be hold. After the usage of "
+"the performance states table is finished, the rcu_read_unlock() should be "
+"called."
+msgstr ""
+
+#: ../../../power/energy-model:280: include/linux/energy_model.h:335
+msgid "the pointer to performance states table of the performance domain"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:291
+msgid "Update runtime EM table for a device"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:297
+#: kernel/power/energy_model.c:501 kernel/power/energy_model.c:536
+#: kernel/power/energy_model.c:572 kernel/power/energy_model.c:674
+#: kernel/power/energy_model.c:853
+msgid "``struct device *dev``"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:292
+msgid "Device for which the EM is to be updated"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:294
+msgid "``struct em_perf_table *new_table``"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:293
+msgid "The new EM table that is going to be used from now"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:294
+msgid ""
+"Update EM runtime modifiable table for the **dev** using the provided "
+"**table**."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:296
+msgid ""
+"This function uses a mutex to serialize writers, so it must not be called "
+"from a non-sleeping context."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:299
+msgid "Return 0 on success or an error code on failure."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:495
+msgid "Return the performance domain for a device"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:496
+msgid "Device to find the performance domain for"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:497
+msgid ""
+"Returns the performance domain to which **dev** belongs, or NULL if it "
+"doesn't exist."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:511
+msgid "Return the performance domain for a CPU"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:517
+msgid "``int cpu``"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:512
+msgid "CPU to find the performance domain for"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:513
+msgid ""
+"Returns the performance domain to which **cpu** belongs, or NULL if it "
+"doesn't exist."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:530
+msgid "Register the Energy Model (EM) for a device"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:531
+msgid "Device for which the EM is to register"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:533
+#: kernel/power/energy_model.c:569
+msgid "``unsigned int nr_states``"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:532
+msgid "Number of performance states to register"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:534
+#: kernel/power/energy_model.c:570
+msgid "``const struct em_data_callback *cb``"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:533
+msgid "Callback functions providing the data of the Energy Model"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:535
+#: kernel/power/energy_model.c:571
+msgid "``const cpumask_t *cpus``"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:534
+msgid ""
+"Pointer to cpumask_t, which in case of a CPU device is obligatory. It can be "
+"taken from i.e. 'policy->cpus'. For other type of devices this should be set "
+"to NULL."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:538
+#: kernel/power/energy_model.c:572
+msgid "``bool microwatts``"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:537
+msgid ""
+"Flag indicating that the power values are in micro-Watts or in some other "
+"scale. It must be set properly."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:539
+msgid ""
+"Create Energy Model tables for a performance domain using the callbacks "
+"defined in cb."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:542
+msgid ""
+"The **microwatts** is important to set with correct value. Some kernel sub-"
+"systems might rely on this flag and check if all devices in the EM are using "
+"the same scale."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:546
+msgid ""
+"If multiple clients register the same performance domain, all but the first "
+"registration will be ignored."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:549
+msgid "Return 0 on success"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:566
+msgid "Register a perf domain for a device"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:567
+msgid "Device to register the PD for"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:568
+msgid "Number of performance states in the new PD"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:569
+msgid "Callback functions for populating the energy model"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:570
+msgid "CPUs to include in the new PD (mandatory if **dev** is a CPU device)"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:571
+msgid "Whether or not the power values in the EM will be in uW"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:572
+msgid ""
+"Like em_dev_register_perf_domain(), but does not trigger a CPU capacity "
+"update after registering the PD, even if **dev** is a CPU device."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:668
+msgid "Unregister Energy Model (EM) for a device"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:669
+msgid "Device for which the EM is registered"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:670
+msgid "Unregister the EM for the specified **dev** (but not a CPU device)."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:847
+msgid ""
+"Update Energy Model after the new voltage information is present in the OPPs."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:849
+msgid "Device for which the Energy Model has to be updated."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:850
+msgid ""
+"This function allows to update easily the EM with new values available in "
+"the OPP framework and DT. It can be used after the chip has been properly "
+"verified by device drivers and the voltages adjusted for the 'chip binning'."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:896
+msgid "Update Energy Model with performance limits information."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:898
+msgid "Performance Domain with EM that has to be updated."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:900
+msgid "``unsigned long freq_min_khz``"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:899
+msgid "New minimum allowed frequency for this device."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:901
+msgid "``unsigned long freq_max_khz``"
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:900
+msgid "New maximum allowed frequency for this device."
+msgstr ""
+
+#: ../../../power/energy-model:283: kernel/power/energy_model.c:901
+msgid ""
+"This function allows to update the EM with information about available "
+"performance levels. It takes the minimum and maximum frequency in kHz and "
+"does internal translation to performance levels. Returns 0 on success or -"
+"EINVAL when failed."
+msgstr ""
+
+#: ../../../power/energy-model.rst:288
+msgid "3. Examples"
+msgstr ""
+
+#: ../../../power/energy-model.rst:291
+msgid "3.1 Example driver with EM registration"
+msgstr ""
+
+#: ../../../power/energy-model.rst:293
+msgid ""
+"The CPUFreq framework supports dedicated callback for registering the EM for "
+"a given CPU(s) 'policy' object: cpufreq_driver::register_em(). That callback "
+"has to be implemented properly for a given driver, because the framework "
+"would call it at the right time during setup. This section provides a simple "
+"example of a CPUFreq driver registering a performance domain in the Energy "
+"Model framework using the (fake) 'foo' protocol. The driver implements an "
+"est_power() function to be provided to the EM framework::"
+msgstr ""
+
+#: ../../../power/energy-model.rst:348
+msgid "3.2 Example driver with EM modification"
+msgstr ""
+
+#: ../../../power/energy-model.rst:350
+msgid ""
+"This section provides a simple example of a thermal driver modifying the EM. "
+"The driver implements a foo_thermal_em_update() function. The driver is "
+"woken up periodically to check the temperature and modify the EM data::"
+msgstr ""

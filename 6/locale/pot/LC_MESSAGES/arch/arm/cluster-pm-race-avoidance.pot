@@ -1,0 +1,801 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel 6\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:54+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:3
+msgid "Cluster-wide Power-up/power-down race avoidance algorithm"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:5
+msgid ""
+"This file documents the algorithm which is used to coordinate CPU and "
+"cluster setup and teardown operations and to manage hardware coherency "
+"controls safely."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:9
+msgid ""
+"The section \"Rationale\" explains what the algorithm is for and why it is "
+"needed.  \"Basic model\" explains general concepts using a simplified view "
+"of the system.  The other sections explain the actual details of the "
+"algorithm in use."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:16
+msgid "Rationale"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:18
+msgid ""
+"In a system containing multiple CPUs, it is desirable to have the ability to "
+"turn off individual CPUs when the system is idle, reducing power consumption "
+"and thermal dissipation."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:22
+msgid ""
+"In a system containing multiple clusters of CPUs, it is also desirable to "
+"have the ability to turn off entire clusters."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:25
+msgid ""
+"Turning entire clusters off and on is a risky business, because it involves "
+"performing potentially destructive operations affecting a group of "
+"independently running CPUs, while the OS continues to run.  This means that "
+"we need some coordination in order to ensure that critical cluster-level "
+"operations are only performed when it is truly safe to do so."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:32
+msgid ""
+"Simple locking may not be sufficient to solve this problem, because "
+"mechanisms like Linux spinlocks may rely on coherency mechanisms which are "
+"not immediately enabled when a cluster powers up.  Since enabling or "
+"disabling those mechanisms may itself be a non-atomic operation (such as "
+"writing some hardware registers and invalidating large caches), other "
+"methods of coordination are required in order to guarantee safe power-down "
+"and power-up at the cluster level."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:40
+msgid ""
+"The mechanism presented in this document describes a coherent memory based "
+"protocol for performing the needed coordination.  It aims to be as "
+"lightweight as possible, while providing the required safety properties."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:46
+msgid "Basic model"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:48
+msgid "Each cluster and CPU is assigned a state, as follows:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:50
+msgid "DOWN"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:51
+msgid "COMING_UP"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:52
+msgid "UP"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:53
+msgid "GOING_DOWN"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:66
+msgid "DOWN:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:67
+msgid ""
+"The CPU or cluster is not coherent, and is either powered off or suspended, "
+"or is ready to be powered off or suspended."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:70
+msgid "COMING_UP:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:71
+msgid ""
+"The CPU or cluster has committed to moving to the UP state. It may be part "
+"way through the process of initialisation and enabling coherency."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:75
+msgid "UP:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:76
+msgid ""
+"The CPU or cluster is active and coherent at the hardware level.  A CPU in "
+"this state is not necessarily being used actively by the kernel."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:80
+msgid "GOING_DOWN:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:81
+msgid ""
+"The CPU or cluster has committed to moving to the DOWN state.  It may be "
+"part way through the process of teardown and coherency exit."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:86
+msgid ""
+"Each CPU has one of these states assigned to it at any point in time. The "
+"CPU states are described in the \"CPU state\" section, below."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:89
+msgid ""
+"Each cluster is also assigned a state, but it is necessary to split the "
+"state value into two parts (the \"cluster\" state and \"inbound\" state) and "
+"to introduce additional states in order to avoid races between different "
+"CPUs in the cluster simultaneously modifying the state.  The cluster- level "
+"states are described in the \"Cluster state\" section."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:95
+msgid ""
+"To help distinguish the CPU states from cluster states in this discussion, "
+"the state names are given a `CPU_` prefix for the CPU states, and a "
+"`CLUSTER_` or `INBOUND_` prefix for the cluster states."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:101
+msgid "CPU state"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:103
+msgid ""
+"In this algorithm, each individual core in a multi-core processor is "
+"referred to as a \"CPU\".  CPUs are assumed to be single-threaded: "
+"therefore, a CPU can only be doing one thing at a single point in time."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:107
+msgid "This means that CPUs fit the basic model closely."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:109
+msgid "The algorithm defines the following states for each CPU in the system:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:111
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:206
+msgid "CPU_DOWN"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:112
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:148
+msgid "CPU_COMING_UP"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:113
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:166
+msgid "CPU_UP"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:114
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:193
+msgid "CPU_GOING_DOWN"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:131
+msgid ""
+"The definitions of the four states correspond closely to the states of the "
+"basic model."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:134
+msgid "Transitions between states occur as follows."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:136
+msgid ""
+"A trigger event (spontaneous) means that the CPU can transition to the next "
+"state as a result of making local progress only, with no requirement for any "
+"external event to happen."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:141
+msgid "CPU_DOWN:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:142
+msgid ""
+"A CPU reaches the CPU_DOWN state when it is ready for power-down.  On "
+"reaching this state, the CPU will typically power itself down or suspend "
+"itself, via a WFI instruction or a firmware call."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:147
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:165
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:192
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:205
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:303
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:326
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:344
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:361
+msgid "Next state:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:149
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:167
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:194
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:207
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:305
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:328
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:346
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:363
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:388
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:394
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:428
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:436
+msgid "Conditions:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:150
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:195
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:306
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:347
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:364
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:395
+msgid "none"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:152
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:169
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:196
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:209
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:308
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:330
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:348
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:365
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:390
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:397
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:432
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:439
+msgid "Trigger events:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:153
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:309
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:398
+msgid ""
+"an explicit hardware power-up operation, resulting from a policy decision on "
+"another CPU;"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:156
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:312
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:402
+msgid "a hardware event, such as an interrupt."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:159
+msgid "CPU_COMING_UP:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:160
+msgid ""
+"A CPU cannot start participating in hardware coherency until the cluster is "
+"set up and coherent.  If the cluster is not ready, then the CPU will wait in "
+"the CPU_COMING_UP state until the cluster has been set up."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:168
+msgid "The CPU's parent cluster must be in CLUSTER_UP."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:170
+msgid "Transition of the parent cluster to CLUSTER_UP."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:172
+msgid ""
+"Refer to the \"Cluster state\" section for a description of the CLUSTER_UP "
+"state."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:176
+msgid "CPU_UP:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:177
+msgid ""
+"When a CPU reaches the CPU_UP state, it is safe for the CPU to start "
+"participating in local coherency."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:180
+msgid "This is done by jumping to the kernel's CPU resume code."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:182
+msgid ""
+"Note that the definition of this state is slightly different from the basic "
+"model definition: CPU_UP does not mean that the CPU is coherent yet, but it "
+"does mean that it is safe to resume the kernel.  The kernel handles the rest "
+"of the resume procedure, so the remaining steps are not visible as part of "
+"the race avoidance algorithm."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:189
+msgid ""
+"The CPU remains in this state until an explicit policy decision is made to "
+"shut down or suspend the CPU."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:197
+msgid "explicit policy decision"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:200
+msgid "CPU_GOING_DOWN:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:201
+msgid ""
+"While in this state, the CPU exits coherency, including any operations "
+"required to achieve this (such as cleaning data caches)."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:208
+msgid "local CPU teardown complete"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:210
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:331
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:349
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:391
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:433
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:440
+msgid "(spontaneous)"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:214
+msgid "Cluster state"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:216
+msgid ""
+"A cluster is a group of connected CPUs with some common resources. Because a "
+"cluster contains multiple CPUs, it can be doing multiple things at the same "
+"time.  This has some implications.  In particular, a CPU can start up while "
+"another CPU is tearing the cluster down."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:221
+msgid ""
+"In this discussion, the \"outbound side\" is the view of the cluster state "
+"as seen by a CPU tearing the cluster down.  The \"inbound side\" is the view "
+"of the cluster state as seen by a CPU setting the CPU up."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:225
+msgid ""
+"In order to enable safe coordination in such situations, it is important "
+"that a CPU which is setting up the cluster can advertise its state "
+"independently of the CPU which is tearing down the cluster.  For this "
+"reason, the cluster state is split into two parts:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:230
+msgid ""
+"\"cluster\" state: The global state of the cluster; or the state on the "
+"outbound side:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:233
+msgid "CLUSTER_DOWN"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:234
+msgid "CLUSTER_UP"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:235
+msgid "CLUSTER_GOING_DOWN"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:237
+msgid "\"inbound\" state: The state of the cluster on the inbound side."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:239
+msgid "INBOUND_NOT_COMING_UP"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:240
+msgid "INBOUND_COMING_UP"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:243
+msgid ""
+"The different pairings of these states results in six possible states for "
+"the cluster as a whole::"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:263
+msgid ""
+"Transitions -----> can only be made by the outbound CPU, and only involve "
+"changes to the \"cluster\" state."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:266
+msgid ""
+"Transitions ===##> can only be made by the inbound CPU, and only involve "
+"changes to the \"inbound\" state, except where there is no further "
+"transition possible on the outbound side (i.e., the outbound CPU has put the "
+"cluster into the CLUSTER_DOWN state)."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:271
+msgid ""
+"The race avoidance algorithm does not provide a way to determine which exact "
+"CPUs within the cluster play these roles.  This must be decided in advance "
+"by some other means.  Refer to the section \"Last man and first man "
+"selection\" for more explanation."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:277
+msgid ""
+"CLUSTER_DOWN/INBOUND_NOT_COMING_UP is the only state where the cluster can "
+"actually be powered down."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:280
+msgid ""
+"The parallelism of the inbound and outbound CPUs is observed by the "
+"existence of two different paths from CLUSTER_GOING_DOWN/ "
+"INBOUND_NOT_COMING_UP (corresponding to GOING_DOWN in the basic model) to "
+"CLUSTER_DOWN/INBOUND_COMING_UP (corresponding to COMING_UP in the basic "
+"model).  The second path avoids cluster teardown completely."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:287
+msgid ""
+"CLUSTER_UP/INBOUND_COMING_UP is equivalent to UP in the basic model.  The "
+"final transition to CLUSTER_UP/INBOUND_NOT_COMING_UP is trivial and merely "
+"resets the state machine ready for the next cycle."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:292
+msgid "Details of the allowable transitions follow."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:294
+msgid "The next state in each case is notated"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:296
+msgid "<cluster state>/<inbound state> (<transitioner>)"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:298
+msgid ""
+"where the <transitioner> is the side on which the transition can occur; "
+"either the inbound or the outbound side."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:302
+msgid "CLUSTER_DOWN/INBOUND_NOT_COMING_UP:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:304
+msgid "CLUSTER_DOWN/INBOUND_COMING_UP (inbound)"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:315
+msgid "CLUSTER_DOWN/INBOUND_COMING_UP:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:317
+msgid ""
+"In this state, an inbound CPU sets up the cluster, including enabling of "
+"hardware coherency at the cluster level and any other operations (such as "
+"cache invalidation) which are required in order to achieve this."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:322
+msgid ""
+"The purpose of this state is to do sufficient cluster-level setup to enable "
+"other CPUs in the cluster to enter coherency safely."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:327
+msgid "CLUSTER_UP/INBOUND_COMING_UP (inbound)"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:329
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:429
+msgid "cluster-level setup and hardware coherency complete"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:334
+msgid "CLUSTER_UP/INBOUND_COMING_UP:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:336
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:354
+msgid ""
+"Cluster-level setup is complete and hardware coherency is enabled for the "
+"cluster.  Other CPUs in the cluster can safely enter coherency."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:340
+msgid ""
+"This is a transient state, leading immediately to CLUSTER_UP/"
+"INBOUND_NOT_COMING_UP.  All other CPUs on the cluster should consider treat "
+"these two states as equivalent."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:345
+msgid "CLUSTER_UP/INBOUND_NOT_COMING_UP (inbound)"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:352
+msgid "CLUSTER_UP/INBOUND_NOT_COMING_UP:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:358
+msgid ""
+"The cluster will remain in this state until a policy decision is made to "
+"power the cluster down."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:362
+msgid "CLUSTER_GOING_DOWN/INBOUND_NOT_COMING_UP (outbound)"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:366
+msgid "policy decision to power down the cluster"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:369
+msgid "CLUSTER_GOING_DOWN/INBOUND_NOT_COMING_UP:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:371
+msgid ""
+"An outbound CPU is tearing the cluster down.  The selected CPU must wait in "
+"this state until all CPUs in the cluster are in the CPU_DOWN state."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:375
+msgid ""
+"When all CPUs are in the CPU_DOWN state, the cluster can be torn down, for "
+"example by cleaning data caches and exiting cluster-level coherency."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:379
+msgid ""
+"To avoid wasteful unnecessary teardown operations, the outbound should check "
+"the inbound cluster state for asynchronous transitions to "
+"INBOUND_COMING_UP.  Alternatively, individual CPUs can be checked for entry "
+"into CPU_COMING_UP or CPU_UP."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:385
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:425
+msgid "Next states:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:387
+msgid "CLUSTER_DOWN/INBOUND_NOT_COMING_UP (outbound)"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:389
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:437
+msgid "cluster torn down and ready to power off"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:393
+msgid "CLUSTER_GOING_DOWN/INBOUND_COMING_UP (inbound)"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:405
+msgid "CLUSTER_GOING_DOWN/INBOUND_COMING_UP:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:407
+msgid ""
+"The cluster is (or was) being torn down, but another CPU has come online in "
+"the meantime and is trying to set up the cluster again."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:411
+msgid "If the outbound CPU observes this state, it has two choices:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:413
+msgid "back out of teardown, restoring the cluster to the CLUSTER_UP state;"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:416
+msgid ""
+"finish tearing the cluster down and put the cluster in the CLUSTER_DOWN "
+"state; the inbound CPU will set up the cluster again from there."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:420
+msgid ""
+"Choice (a) permits the removal of some latency by avoiding unnecessary "
+"teardown and setup operations in situations where the cluster is not really "
+"going to be powered down."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:427
+msgid "CLUSTER_UP/INBOUND_COMING_UP (outbound)"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:435
+msgid "CLUSTER_DOWN/INBOUND_COMING_UP (outbound)"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:444
+msgid "Last man and First man selection"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:446
+msgid ""
+"The CPU which performs cluster tear-down operations on the outbound side is "
+"commonly referred to as the \"last man\"."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:449
+msgid ""
+"The CPU which performs cluster setup on the inbound side is commonly "
+"referred to as the \"first man\"."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:452
+msgid ""
+"The race avoidance algorithm documented above does not provide a mechanism "
+"to choose which CPUs should play these roles."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:456
+msgid "Last man:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:458
+msgid ""
+"When shutting down the cluster, all the CPUs involved are initially "
+"executing Linux and hence coherent.  Therefore, ordinary spinlocks can be "
+"used to select a last man safely, before the CPUs become non-coherent."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:464
+msgid "First man:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:466
+msgid ""
+"Because CPUs may power up asynchronously in response to external wake-up "
+"events, a dynamic mechanism is needed to make sure that only one CPU "
+"attempts to play the first man role and do the cluster-level initialisation: "
+"any other CPUs must wait for this to complete before proceeding."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:472
+msgid ""
+"Cluster-level initialisation may involve actions such as configuring "
+"coherency controls in the bus fabric."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:475
+msgid ""
+"The current implementation in mcpm_head.S uses a separate mutual exclusion "
+"mechanism to do this arbitration.  This mechanism is documented in detail in "
+"vlocks.txt."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:481
+msgid "Features and Limitations"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:483
+msgid "Implementation:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:485
+msgid ""
+"The current ARM-based implementation is split between arch/arm/common/"
+"mcpm_head.S (low-level inbound CPU operations) and arch/arm/common/"
+"mcpm_entry.c (everything else):"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:489
+msgid ""
+"__mcpm_cpu_going_down() signals the transition of a CPU to the "
+"CPU_GOING_DOWN state."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:492
+msgid ""
+"__mcpm_cpu_down() signals the transition of a CPU to the CPU_DOWN state."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:495
+msgid ""
+"A CPU transitions to CPU_COMING_UP and then to CPU_UP via the low-level "
+"power-up code in mcpm_head.S.  This could involve CPU-specific setup code, "
+"but in the current implementation it does not."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:500
+msgid ""
+"__mcpm_outbound_enter_critical() and __mcpm_outbound_leave_critical() handle "
+"transitions from CLUSTER_UP to CLUSTER_GOING_DOWN and from there to "
+"CLUSTER_DOWN or back to CLUSTER_UP (in the case of an aborted cluster power-"
+"down)."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:505
+msgid ""
+"These functions are more complex than the __mcpm_cpu_*() functions due to "
+"the extra inter-CPU coordination which is needed for safe transitions at the "
+"cluster level."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:509
+msgid ""
+"A cluster transitions from CLUSTER_DOWN back to CLUSTER_UP via the low-level "
+"power-up code in mcpm_head.S.  This typically involves platform-specific "
+"setup code, provided by the platform-specific power_up_setup function "
+"registered via mcpm_sync_init."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:515
+msgid "Deep topologies:"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:517
+msgid ""
+"As currently described and implemented, the algorithm does not support CPU "
+"topologies involving more than two levels (i.e., clusters of clusters are "
+"not supported).  The algorithm could be extended by replicating the cluster-"
+"level states for the additional topological levels, and modifying the "
+"transition rules for the intermediate (non-outermost) cluster levels."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:526
+msgid "Colophon"
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:528
+msgid ""
+"Originally created and documented by Dave Martin for Linaro Limited, in "
+"collaboration with Nicolas Pitre and Achin Gupta."
+msgstr ""
+
+#: ../../../arch/arm/cluster-pm-race-avoidance.rst:531
+msgid ""
+"Copyright (C) 2012-2013  Linaro Limited Distributed under the terms of "
+"Version 2 of the GNU General Public License, as defined in linux/COPYING."
+msgstr ""
