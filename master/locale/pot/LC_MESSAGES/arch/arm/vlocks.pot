@@ -1,0 +1,234 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../arch/arm/vlocks.rst:3
+msgid "vlocks for Bare-Metal Mutual Exclusion"
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:5
+msgid ""
+"Voting Locks, or \"vlocks\" provide a simple low-level mutual exclusion "
+"mechanism, with reasonable but minimal requirements on the memory system."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:9
+msgid ""
+"These are intended to be used to coordinate critical activity among CPUs "
+"which are otherwise non-coherent, in situations where the hardware provides "
+"no other mechanism to support this and ordinary spinlocks cannot be used."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:15
+msgid ""
+"vlocks make use of the atomicity provided by the memory system for writes to "
+"a single memory location.  To arbitrate, every CPU \"votes for itself\", by "
+"storing a unique number to a common memory location.  The final value seen "
+"in that memory location when all the votes have been cast identifies the "
+"winner."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:21
+msgid ""
+"In order to make sure that the election produces an unambiguous result in "
+"finite time, a CPU will only enter the election in the first place if no "
+"winner has been chosen and the election does not appear to have started yet."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:28
+msgid "Algorithm"
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:30
+msgid ""
+"The easiest way to explain the vlocks algorithm is with some pseudo-code::"
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:68
+msgid ""
+"The currently_voting[] array provides a way for the CPUs to determine "
+"whether an election is in progress, and plays a role analogous to the "
+"\"entering\" array in Lamport's bakery algorithm [1]."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:72
+msgid ""
+"However, once the election has started, the underlying memory system "
+"atomicity is used to pick the winner.  This avoids the need for a static "
+"priority rule to act as a tie-breaker, or any counters which could overflow."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:77
+msgid ""
+"As long as the last_vote variable is globally visible to all CPUs, it will "
+"contain only one value that won't change once every CPU has cleared its "
+"currently_voting flag."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:83
+msgid "Features and limitations"
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:85
+msgid ""
+"vlocks are not intended to be fair.  In the contended case, it is the _last_ "
+"CPU which attempts to get the lock which will be most likely to win."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:89
+msgid ""
+"vlocks are therefore best suited to situations where it is necessary to pick "
+"a unique winner, but it does not matter which CPU actually wins."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:93
+msgid ""
+"Like other similar mechanisms, vlocks will not scale well to a large number "
+"of CPUs."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:96
+msgid ""
+"vlocks can be cascaded in a voting hierarchy to permit better scaling if "
+"necessary, as in the following hypothetical example for 4096 CPUs::"
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:120
+msgid "ARM implementation"
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:122
+msgid ""
+"The current ARM implementation [2] contains some optimisations beyond the "
+"basic algorithm:"
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:125
+msgid ""
+"By packing the members of the currently_voting array close together, we can "
+"read the whole array in one transaction (providing the number of CPUs "
+"potentially contending the lock is small enough).  This reduces the number "
+"of round-trips required to external memory."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:130
+msgid ""
+"In the ARM implementation, this means that we can use a single load and "
+"comparison::"
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:136
+msgid "...in place of code equivalent to::"
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:147
+msgid ""
+"This cuts down on the fast-path latency, as well as potentially reducing bus "
+"contention in contended cases."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:150
+msgid ""
+"The optimisation relies on the fact that the ARM memory system guarantees "
+"coherency between overlapping memory accesses of different sizes, similarly "
+"to many other architectures.  Note that we do not care which element of "
+"currently_voting appears in which bits of Rt, so there is no need to worry "
+"about endianness in this optimisation."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:157
+msgid ""
+"If there are too many CPUs to read the currently_voting array in one "
+"transaction then multiple transactions are still required.  The "
+"implementation uses a simple loop of word-sized loads for this case.  The "
+"number of transactions is still fewer than would be required if bytes were "
+"loaded individually."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:164
+msgid ""
+"In principle, we could aggregate further by using LDRD or LDM, but to keep "
+"the code simple this was not attempted in the initial implementation."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:169
+msgid ""
+"vlocks are currently only used to coordinate between CPUs which are unable "
+"to enable their caches yet.  This means that the implementation removes many "
+"of the barriers which would be required when executing the algorithm in "
+"cached memory."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:174
+msgid ""
+"packing of the currently_voting array does not work with cached memory "
+"unless all CPUs contending the lock are cache-coherent, due to cache "
+"writebacks from one CPU clobbering values written by other CPUs.  (Though if "
+"all the CPUs are cache-coherent, you should be probably be using proper "
+"spinlocks instead anyway)."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:181
+msgid ""
+"The \"no votes yet\" value used for the last_vote variable is 0 (not -1 as "
+"in the pseudocode).  This allows statically-allocated vlocks to be "
+"implicitly initialised to an unlocked state simply by putting them in .bss."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:186
+msgid ""
+"An offset is added to each CPU's ID for the purpose of setting this "
+"variable, so that no CPU uses the value 0 for its ID."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:191
+msgid "Colophon"
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:193
+msgid ""
+"Originally created and documented by Dave Martin for Linaro Limited, for use "
+"in ARM-based big.LITTLE platforms, with review and input gratefully received "
+"from Nicolas Pitre and Achin Gupta.  Thanks to Nicolas for grabbing most of "
+"this text out of the relevant mail thread and writing up the pseudocode."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:199
+msgid ""
+"Copyright (C) 2012-2013  Linaro Limited Distributed under the terms of "
+"Version 2 of the GNU General Public License, as defined in linux/COPYING."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:205
+msgid "References"
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:207
+msgid "[1] Lamport, L. \"A New Solution of Dijkstra's Concurrent Programming"
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:208
+msgid "Problem\", Communications of the ACM 17, 8 (August 1974), 453-455."
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:210
+msgid "https://en.wikipedia.org/wiki/Lamport%27s_bakery_algorithm"
+msgstr ""
+
+#: ../../../arch/arm/vlocks.rst:212
+msgid "[2] linux/arch/arm/common/vlock.S, www.kernel.org."
+msgstr ""

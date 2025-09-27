@@ -1,0 +1,994 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../arch/arm64/sve.rst:3
+msgid "Scalable Vector Extension support for AArch64 Linux"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:5
+msgid "Author: Dave Martin <Dave.Martin@arm.com>"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:7
+msgid "Date:   4 August 2017"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:9
+msgid ""
+"This document outlines briefly the interface provided to userspace by Linux "
+"in order to support use of the ARM Scalable Vector Extension (SVE), "
+"including interactions with Streaming SVE mode added by the Scalable Matrix "
+"Extension (SME)."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:14
+msgid ""
+"This is an outline of the most important features and issues only and not "
+"intended to be exhaustive."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:17
+msgid ""
+"This document does not aim to describe the SVE architecture or programmer's "
+"model.  To aid understanding, a minimal description of relevant programmer's "
+"model features for SVE is included in Appendix A."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:23
+msgid "1.  General"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:25
+msgid ""
+"SVE registers Z0..Z31, P0..P15 and FFR and the current vector length VL, are "
+"tracked per-thread."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:28
+msgid ""
+"In streaming mode FFR is not accessible unless HWCAP2_SME_FA64 is present in "
+"the system, when it is not supported and these interfaces are used to access "
+"streaming mode FFR is read and written as zero."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:32
+msgid ""
+"The presence of SVE is reported to userspace via HWCAP_SVE in the aux vector "
+"AT_HWCAP entry.  Presence of this flag implies the presence of the SVE "
+"instructions and registers, and the Linux-specific system interfaces "
+"described in this document.  SVE is reported in /proc/cpuinfo as \"sve\"."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:37
+msgid ""
+"Support for the execution of SVE instructions in userspace can also be "
+"detected by reading the CPU ID register ID_AA64PFR0_EL1 using an MRS "
+"instruction, and checking that the value of the SVE field is nonzero. [3]"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:41
+msgid ""
+"It does not guarantee the presence of the system interfaces described in the "
+"following sections: software that needs to verify that those interfaces are "
+"present must check for HWCAP_SVE instead."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:45
+msgid ""
+"On hardware that supports the SVE2 extensions, HWCAP2_SVE2 will also be "
+"reported in the AT_HWCAP2 aux vector entry.  In addition to this, optional "
+"extensions to SVE2 may be reported by the presence of:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:49
+msgid ""
+"HWCAP2_SVE2 HWCAP2_SVEAES HWCAP2_SVEPMULL HWCAP2_SVEBITPERM HWCAP2_SVESHA3 "
+"HWCAP2_SVESM4 HWCAP2_SVE2P1"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:57
+msgid "This list may be extended over time as the SVE architecture evolves."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:59
+msgid ""
+"These extensions are also reported via the CPU ID register ID_AA64ZFR0_EL1, "
+"which userspace can read using an MRS instruction.  See elf_hwcaps.txt and "
+"cpu-feature-registers.txt for details."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:63
+msgid ""
+"On hardware that supports the SME extensions, HWCAP2_SME will also be "
+"reported in the AT_HWCAP2 aux vector entry.  Among other things SME adds "
+"streaming mode which provides a subset of the SVE feature set using a "
+"separate SME vector length and the same Z/V registers.  See sme.rst for more "
+"details."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:69
+msgid ""
+"Debuggers should restrict themselves to interacting with the target via the "
+"NT_ARM_SVE regset.  The recommended way of detecting support for this regset "
+"is to connect to a target process first and then attempt a "
+"ptrace(PTRACE_GETREGSET, pid, NT_ARM_SVE, &iov).  Note that when SME is "
+"present and streaming SVE mode is in use the FPSIMD subset of registers will "
+"be read via NT_ARM_SVE and NT_ARM_SVE writes will exit streaming mode in the "
+"target."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:77
+msgid ""
+"Whenever SVE scalable register values (Zn, Pn, FFR) are exchanged in memory "
+"between userspace and the kernel, the register value is encoded in memory in "
+"an endianness-invariant layout, with bits [(8 * i + 7) : (8 * i)] encoded at "
+"byte offset i from the start of the memory representation.  This affects for "
+"example the signal frame (struct sve_context) and ptrace interface (struct "
+"user_sve_header) and associated data."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:84
+msgid ""
+"Beware that on big-endian systems this results in a different byte order "
+"than for the FPSIMD V-registers, which are stored as single host-endian 128-"
+"bit values, with bits [(127 - 8 * i) : (120 - 8 * i)] of the register "
+"encoded at byte offset i.  (struct fpsimd_context, struct user_fpsimd_state)."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:91
+msgid "2.  Vector length terminology"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:93
+msgid ""
+"The size of an SVE vector (Z) register is referred to as the \"vector "
+"length\"."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:95
+msgid ""
+"To avoid confusion about the units used to express vector length, the kernel "
+"adopts the following conventions:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:98
+msgid "Vector length (VL) = size of a Z-register in bytes"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:100
+msgid "Vector quadwords (VQ) = size of a Z-register in units of 128 bits"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:102
+msgid "(So, VL = 16 * VQ.)"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:104
+msgid ""
+"The VQ convention is used where the underlying granularity is important, "
+"such as in data structure definitions.  In most other situations, the VL "
+"convention is used.  This is consistent with the meaning of the \"VL\" "
+"pseudo-register in the SVE instruction set architecture."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:111
+msgid "3.  System call behaviour"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:113
+msgid ""
+"On syscall, V0..V31 are preserved (as without SVE).  Thus, bits [127:0] of "
+"Z0..Z31 are preserved.  All other bits of Z0..Z31, and all of P0..P15 and "
+"FFR become zero on return from a syscall."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:117
+msgid ""
+"The SVE registers are not used to pass arguments to or receive results from "
+"any syscall."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:120
+msgid ""
+"All other SVE state of a thread, including the currently configured vector "
+"length, the state of the PR_SVE_VL_INHERIT flag, and the deferred vector "
+"length (if any), is preserved across all syscalls, subject to the specific "
+"exceptions for execve() described in section 6."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:125
+msgid ""
+"In particular, on return from a fork() or clone(), the parent and new child "
+"process or thread share identical SVE configuration, matching that of the "
+"parent before the call."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:131
+msgid "4.  Signal handling"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:133
+msgid ""
+"A new signal frame record sve_context encodes the SVE registers on signal "
+"delivery. [1]"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:136
+msgid ""
+"This record is supplementary to fpsimd_context.  The FPSR and FPCR registers "
+"are only present in fpsimd_context.  For convenience, the content of V0..V31 "
+"is duplicated between sve_context and fpsimd_context."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:140
+msgid ""
+"The record contains a flag field which includes a flag SVE_SIG_FLAG_SM which "
+"if set indicates that the thread is in streaming mode and the vector length "
+"and register data (if present) describe the streaming SVE data and vector "
+"length."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:145
+msgid ""
+"The signal frame record for SVE always contains basic metadata, in "
+"particular the thread's vector length (in sve_context.vl)."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:148
+msgid ""
+"The SVE registers may or may not be included in the record, depending on "
+"whether the registers are live for the thread.  The registers are present if "
+"and only if: sve_context.head.size >= "
+"SVE_SIG_CONTEXT_SIZE(sve_vq_from_vl(sve_context.vl))."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:153
+msgid ""
+"If the registers are present, the remainder of the record has a vl-dependent "
+"size and layout.  Macros SVE_SIG_* are defined [1] to facilitate access to "
+"the members."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:157
+msgid ""
+"Each scalable register (Zn, Pn, FFR) is stored in an endianness-invariant "
+"layout, with bits [(8 * i + 7) : (8 * i)] stored at byte offset i from the "
+"start of the register's representation in memory."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:161
+msgid ""
+"If the SVE context is too big to fit in sigcontext.__reserved[], then extra "
+"space is allocated on the stack, an extra_context record is written in "
+"__reserved[] referencing this space.  sve_context is then written in the "
+"extra space.  Refer to [1] for further details about this mechanism."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:168
+msgid "5.  Signal return"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:170
+msgid "When returning from a signal handler:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:172
+msgid ""
+"If there is no sve_context record in the signal frame, or if the record is "
+"present but contains no register data as described in the previous section, "
+"then the SVE registers/bits become non-live and take unspecified values."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:176
+msgid ""
+"If sve_context is present in the signal frame and contains full register "
+"data, the SVE registers become live and are populated with the specified "
+"data.  However, for backward compatibility reasons, bits [127:0] of Z0..Z31 "
+"are always restored from the corresponding members of fpsimd_context.vregs[] "
+"and not from sve_context.  The remaining bits are restored from sve_context."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:182
+msgid ""
+"Inclusion of fpsimd_context in the signal frame remains mandatory, "
+"irrespective of whether sve_context is present or not."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:185
+msgid ""
+"The vector length cannot be changed via signal return.  If sve_context.vl in "
+"the signal frame does not match the current vector length, the signal return "
+"attempt is treated as illegal, resulting in a forced SIGSEGV."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:189
+msgid ""
+"It is permitted to enter or leave streaming mode by setting or clearing the "
+"SVE_SIG_FLAG_SM flag but applications should take care to ensure that when "
+"doing so sve_context.vl and any register data are appropriate for the vector "
+"length in the new mode."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:196
+msgid "6.  prctl extensions"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:198
+msgid ""
+"Some new prctl() calls are added to allow programs to manage the SVE vector "
+"length:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:201
+msgid "prctl(PR_SVE_SET_VL, unsigned long arg)"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:203
+msgid ""
+"Sets the vector length of the calling thread and related flags, where arg == "
+"vl | flags.  Other threads of the calling process are unaffected."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:206
+msgid "vl is the desired vector length, where sve_vl_valid(vl) must be true."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:208
+msgid "flags:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:210 ../../../arch/arm64/sve.rst:271
+msgid "PR_SVE_VL_INHERIT"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:212
+msgid ""
+"Inherit the current vector length across execve().  Otherwise, the vector "
+"length is reset to the system default at execve().  (See Section 9.)"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:216
+msgid "PR_SVE_SET_VL_ONEXEC"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:218
+msgid ""
+"Defer the requested vector length change until the next execve() performed "
+"by this thread."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:221
+msgid ""
+"The effect is equivalent to implicit execution of the following call "
+"immediately after the next execve() (if any) by the thread:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:224
+msgid "prctl(PR_SVE_SET_VL, arg & ~PR_SVE_SET_VL_ONEXEC)"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:226
+msgid ""
+"This allows launching of a new program with a different vector length, while "
+"avoiding runtime side effects in the caller."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:230
+msgid ""
+"Without PR_SVE_SET_VL_ONEXEC, the requested change takes effect immediately."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:234
+msgid "Return value: a nonnegative on success, or a negative value on error:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:235
+msgid "EINVAL: SVE not supported, invalid vector length requested, or"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:236
+msgid "invalid flags."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:239
+msgid "On success:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:241
+msgid ""
+"Either the calling thread's vector length or the deferred vector length to "
+"be applied at the next execve() by the thread (dependent on whether "
+"PR_SVE_SET_VL_ONEXEC is present in arg), is set to the largest value "
+"supported by the system that is less than or equal to vl.  If vl == "
+"SVE_VL_MAX, the value set will be the largest value supported by the system."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:248
+msgid ""
+"Any previously outstanding deferred vector length change in the calling "
+"thread is cancelled."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:251
+msgid ""
+"The returned value describes the resulting configuration, encoded as for "
+"PR_SVE_GET_VL.  The vector length reported in this value is the new current "
+"vector length for this thread if PR_SVE_SET_VL_ONEXEC was not present in "
+"arg; otherwise, the reported vector length is the deferred vector length "
+"that will be applied at the next execve() by the calling thread."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:258
+msgid ""
+"Changing the vector length causes all of P0..P15, FFR and all bits of Z0.."
+"Z31 except for Z0 bits [127:0] .. Z31 bits [127:0] to become unspecified.  "
+"Calling PR_SVE_SET_VL with vl equal to the thread's current vector length, "
+"or calling PR_SVE_SET_VL with the PR_SVE_SET_VL_ONEXEC flag, does not "
+"constitute a change to the vector length for this purpose."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:265
+msgid "prctl(PR_SVE_GET_VL)"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:267
+msgid "Gets the vector length of the calling thread."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:269
+msgid "The following flag may be OR-ed into the result:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:273
+msgid "Vector length will be inherited across execve()."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:275
+msgid ""
+"There is no way to determine whether there is an outstanding deferred vector "
+"length change (which would only normally be the case between a fork() or "
+"vfork() and the corresponding execve() in typical use)."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:279
+msgid ""
+"To extract the vector length from the result, bitwise and it with "
+"PR_SVE_VL_LEN_MASK."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:282
+msgid ""
+"Return value: a nonnegative value on success, or a negative value on error:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:283
+msgid "EINVAL: SVE not supported."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:287
+msgid "7.  ptrace extensions"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:289
+msgid ""
+"New regsets NT_ARM_SVE and NT_ARM_SSVE are defined for use with "
+"PTRACE_GETREGSET and PTRACE_SETREGSET. NT_ARM_SSVE describes the streaming "
+"mode SVE registers and NT_ARM_SVE describes the non-streaming mode SVE "
+"registers."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:294
+msgid ""
+"In this description a register set is referred to as being \"live\" when the "
+"target is in the appropriate streaming or non-streaming mode and is using "
+"data beyond the subset shared with the FPSIMD Vn registers."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:298
+msgid "Refer to [2] for definitions."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:300
+msgid "The regset data starts with struct user_sve_header, containing:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:302
+msgid "size"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:304
+msgid ""
+"Size of the complete regset, in bytes. This depends on vl and possibly on "
+"other things in the future."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:307
+msgid ""
+"If a call to PTRACE_GETREGSET requests less data than the value of size, the "
+"caller can allocate a larger buffer and retry in order to read the complete "
+"regset."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:311
+msgid "max_size"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:313
+msgid ""
+"Maximum size in bytes that the regset can grow to for the target thread.  "
+"The regset won't grow bigger than this even if the target thread changes its "
+"vector length etc."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:317
+msgid "vl"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:319
+msgid "Target thread's current vector length, in bytes."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:321
+msgid "max_vl"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:323
+msgid "Maximum possible vector length for the target thread."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:325
+msgid "flags"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:327
+msgid "at most one of"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:329
+msgid "SVE_PT_REGS_FPSIMD"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:331
+msgid ""
+"SVE registers are not live (GETREGSET) or are to be made non-live "
+"(SETREGSET)."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:334
+msgid ""
+"The payload is of type struct user_fpsimd_state, with the same meaning as "
+"for NT_PRFPREG, starting at offset SVE_PT_FPSIMD_OFFSET from the start of "
+"user_sve_header."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:338
+msgid ""
+"Extra data might be appended in the future: the size of the payload should "
+"be obtained using SVE_PT_FPSIMD_SIZE(vq, flags)."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:341
+msgid "vq should be obtained using sve_vq_from_vl(vl)."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:343
+msgid "or"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:345
+msgid "SVE_PT_REGS_SVE"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:347
+msgid "SVE registers are live (GETREGSET) or are to be made live (SETREGSET)."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:350
+msgid ""
+"The payload contains the SVE register data, starting at offset "
+"SVE_PT_SVE_OFFSET from the start of user_sve_header, and with size "
+"SVE_PT_SVE_SIZE(vq, flags);"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:354
+msgid ""
+"... OR-ed with zero or more of the following flags, which have the same "
+"meaning and behaviour as the corresponding PR_SET_VL_* flags:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:357
+msgid "SVE_PT_VL_INHERIT"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:359
+msgid "SVE_PT_VL_ONEXEC (SETREGSET only)."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:361
+msgid ""
+"If neither FPSIMD nor SVE flags are provided then no register payload is "
+"available, this is only possible when SME is implemented."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:365
+msgid ""
+"The effects of changing the vector length and/or flags are equivalent to "
+"those documented for PR_SVE_SET_VL."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:368
+msgid ""
+"The caller must make a further GETREGSET call if it needs to know what VL is "
+"actually set by SETREGSET, unless is it known in advance that the requested "
+"VL is supported."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:372
+msgid ""
+"In the SVE_PT_REGS_SVE case, the size and layout of the payload depends on "
+"the header fields.  The SVE_PT_SVE_*() macros are provided to facilitate "
+"access to the members."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:376
+msgid ""
+"In either case, for SETREGSET it is permissible to omit the payload, in "
+"which case only the vector length and flags are changed (along with any "
+"consequences of those changes)."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:380
+msgid ""
+"In systems supporting SME when in streaming mode a GETREGSET for NT_REG_SVE "
+"will return only the user_sve_header with no register data, similarly a "
+"GETREGSET for NT_REG_SSVE will not return any register data when not in "
+"streaming mode."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:385
+msgid "A GETREGSET for NT_ARM_SSVE will never return SVE_PT_REGS_FPSIMD."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:387
+msgid ""
+"For SETREGSET, if an SVE_PT_REGS_SVE payload is present and the requested VL "
+"is not supported, the effect will be the same as if the payload were "
+"omitted, except that an EIO error is reported.  No attempt is made to "
+"translate the payload data to the correct layout for the vector length "
+"actually set.  The thread's FPSIMD state is preserved, but the remaining "
+"bits of the SVE registers become unspecified.  It is up to the caller to "
+"translate the payload layout for the actual VL and retry."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:396
+msgid ""
+"Where SME is implemented it is not possible to GETREGSET the register state "
+"for normal SVE when in streaming mode, nor the streaming mode register state "
+"when in normal mode, regardless of the implementation defined behaviour of "
+"the hardware for sharing data between the two modes."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:401
+msgid ""
+"Any SETREGSET of NT_ARM_SVE will exit streaming mode if the target was in "
+"streaming mode and any SETREGSET of NT_ARM_SSVE will enter streaming mode if "
+"the target was not in streaming mode."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:405
+msgid ""
+"If any register data is provided along with SVE_PT_VL_ONEXEC then the "
+"registers data will be interpreted with the current vector length, not the "
+"vector length configured for use on exec."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:409
+msgid "The effect of writing a partial, incomplete payload is unspecified."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:413
+msgid "8.  ELF coredump extensions"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:415
+msgid ""
+"NT_ARM_SVE and NT_ARM_SSVE notes will be added to each coredump for each "
+"thread of the dumped process.  The contents will be equivalent to the data "
+"that would have been read if a PTRACE_GETREGSET of the corresponding type "
+"were executed for each thread when the coredump was generated."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:421
+msgid "9.  System runtime configuration"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:423
+msgid ""
+"To mitigate the ABI impact of expansion of the signal frame, a policy "
+"mechanism is provided for administrators, distro maintainers and developers "
+"to set the default vector length for userspace processes:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:427
+msgid "/proc/sys/abi/sve_default_vector_length"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:429
+msgid ""
+"Writing the text representation of an integer to this file sets the system "
+"default vector length to the specified value rounded to a supported value "
+"using the same rules as for setting vector length via PR_SVE_SET_VL."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:433
+msgid ""
+"The result can be determined by reopening the file and reading its contents."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:436
+msgid ""
+"At boot, the default vector length is initially set to 64 or the maximum "
+"supported vector length, whichever is smaller.  This determines the initial "
+"vector length of the init process (PID 1)."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:440
+msgid "Reading this file returns the current system default vector length."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:442
+msgid ""
+"At every execve() call, the new vector length of the new process is set to "
+"the system default vector length, unless"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:445
+msgid ""
+"PR_SVE_VL_INHERIT (or equivalently SVE_PT_VL_INHERIT) is set for the calling "
+"thread, or"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:448
+msgid ""
+"a deferred vector length change is pending, established via the "
+"PR_SVE_SET_VL_ONEXEC flag (or SVE_PT_VL_ONEXEC)."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:451
+msgid ""
+"Modifying the system default vector length does not affect the vector length "
+"of any existing process or thread that does not make an execve() call."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:455
+msgid "10.  Perf extensions"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:457
+msgid ""
+"The arm64 specific DWARF standard [5] added the VG (Vector Granule) register "
+"at index 46. This register is used for DWARF unwinding when variable length "
+"SVE registers are pushed onto the stack."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:461
+msgid ""
+"Its value is equivalent to the current SVE vector length (VL) in bits "
+"divided by 64."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:464
+msgid ""
+"The value is included in Perf samples in the regs[46] field if "
+"PERF_SAMPLE_REGS_USER is set and the sample_regs_user mask has bit 46 set."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:467
+msgid ""
+"The value is the current value at the time the sample was taken, and it can "
+"change over time."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:470
+msgid ""
+"If the system doesn't support SVE when perf_event_open is called with these "
+"settings, the event will fail to open."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:474
+msgid "Appendix A.  SVE programmer's model (informative)"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:476
+msgid ""
+"This section provides a minimal description of the additions made by SVE to "
+"the ARMv8-A programmer's model that are relevant to this document."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:479 ../../../arch/arm64/sve.rst:561
+msgid ""
+"Note: This section is for information only and not intended to be complete "
+"or to replace any architectural specification."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:483
+msgid "A.1.  Registers"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:485
+msgid "In A64 state, SVE adds the following:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:487
+msgid ""
+"32 8VL-bit vector registers Z0..Z31 For each Zn, Zn bits [127:0] alias the "
+"ARMv8-A vector register Vn."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:490
+msgid ""
+"A register write using a Vn register name zeros all bits of the "
+"corresponding Zn except for bits [127:0]."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:493
+msgid "16 VL-bit predicate registers P0..P15"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:495
+msgid ""
+"1 VL-bit special-purpose predicate register FFR (the \"first-fault "
+"register\")"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:497
+msgid ""
+"a VL \"pseudo-register\" that determines the size of each vector register"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:499
+msgid ""
+"The SVE instruction set architecture provides no way to write VL directly. "
+"Instead, it can be modified only by EL1 and above, by writing appropriate "
+"system registers."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:503
+msgid ""
+"The value of VL can be configured at runtime by EL1 and above: 16 <= VL <= "
+"VLmax, where VL must be a multiple of 16."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:506
+msgid ""
+"The maximum vector length is determined by the hardware: 16 <= VLmax <= 256."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:509
+msgid ""
+"(The SVE architecture specifies 256, but permits future architecture "
+"revisions to raise this limit.)"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:512
+msgid ""
+"FPSR and FPCR are retained from ARMv8-A, and interact with SVE floating-"
+"point operations in a similar way to the way in which they interact with "
+"ARMv8 floating-point operations::"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:539 ../../../arch/arm64/sve.rst:593
+msgid "(*) callee-save:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:540
+msgid ""
+"This only applies to bits [63:0] of Z-/V-registers. FPCR contains callee-"
+"save and caller-save bits.  See [4] for details."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:545
+msgid "A.2.  Procedure call standard"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:547
+msgid ""
+"The ARMv8-A base procedure call standard is extended as follows with respect "
+"to the additional SVE register state:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:550
+msgid "All SVE register bits that are not shared with FP/SIMD are caller-save."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:552
+msgid "Z8 bits [63:0] .. Z15 bits [63:0] are callee-save."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:554
+msgid ""
+"This follows from the way these bits are mapped to V8..V15, which are "
+"caller- save in the base procedure call standard."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:559
+msgid "Appendix B.  ARMv8-A FP/SIMD programmer's model"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:564
+msgid "Refer to [4] for more information."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:566
+msgid "ARMv8-A defines the following floating-point / SIMD register state:"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:568
+msgid "32 128-bit vector registers V0..V31"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:569
+msgid "2 32-bit status/control registers FPSR, FPCR"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:594
+msgid ""
+"This only applies to bits [63:0] of V-registers. FPCR contains a mixture of "
+"callee-save and caller-save bits."
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:599
+msgid "References"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:601
+msgid "[1] arch/arm64/include/uapi/asm/sigcontext.h"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:602
+msgid "AArch64 Linux signal ABI definitions"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:604
+msgid "[2] arch/arm64/include/uapi/asm/ptrace.h"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:605
+msgid "AArch64 Linux ptrace ABI definitions"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:607
+msgid "[3] Documentation/arch/arm64/cpu-feature-registers.rst"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:609
+msgid "[4] ARM IHI0055C"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:610
+msgid ""
+"http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055c/"
+"IHI0055C_beta_aapcs64.pdf http://infocenter.arm.com/help/topic/com.arm.doc."
+"subset.swdev.abi/index.html Procedure Call Standard for the ARM 64-bit "
+"Architecture (AArch64)"
+msgstr ""
+
+#: ../../../arch/arm64/sve.rst:614
+msgid ""
+"[5] https://github.com/ARM-software/abi-aa/blob/main/aadwarf64/aadwarf64.rst"
+msgstr ""

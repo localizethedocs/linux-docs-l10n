@@ -1,0 +1,1453 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../filesystems/coda.rst:5
+msgid "Coda Kernel-Venus Interface"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:9
+msgid ""
+"This is one of the technical documents describing a component of Coda -- "
+"this document describes the client kernel-Venus interface."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:12
+msgid "For more information:"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:14
+msgid "http://www.coda.cs.cmu.edu"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:16
+msgid "For user level software needed to run Coda:"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:18
+msgid "ftp://ftp.coda.cs.cmu.edu"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:20
+msgid ""
+"To run Coda you need to get a user level cache manager for the client, named "
+"Venus, as well as tools to manipulate ACLs, to log in, etc.  The client "
+"needs to have the Coda filesystem selected in the kernel configuration."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:25
+msgid ""
+"The server needs a user level server and at present does not depend on "
+"kernel support."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:28
+msgid "The Venus kernel interface"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:30
+msgid "Peter J. Braam"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:32
+msgid "v1.0, Nov 9, 1997"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:34
+msgid ""
+"This document describes the communication between Venus and kernel level "
+"filesystem code needed for the operation of the Coda file sys- tem.  This "
+"document version is meant to describe the current interface (version 1.0) as "
+"well as improvements we envisage."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:96
+msgid "1. Introduction"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:98
+msgid ""
+"A key component in the Coda Distributed File System is the cache manager, "
+"Venus."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:101
+msgid ""
+"When processes on a Coda enabled system access files in the Coda filesystem, "
+"requests are directed at the filesystem layer in the operating system. The "
+"operating system will communicate with Venus to service the request for the "
+"process.  Venus manages a persistent client cache and makes remote procedure "
+"calls to Coda file servers and related servers (such as authentication "
+"servers) to service these requests it receives from the operating system.  "
+"When Venus has serviced a request it replies to the operating system with "
+"appropriate return codes, and other data related to the request.  Optionally "
+"the kernel support for Coda may maintain a minicache of recently processed "
+"requests to limit the number of interactions with Venus.  Venus possesses "
+"the facility to inform the kernel when elements from its minicache are no "
+"longer valid."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:115
+msgid ""
+"This document describes precisely this communication between the kernel and "
+"Venus.  The definitions of so called upcalls and downcalls will be given "
+"with the format of the data they handle. We shall also describe the semantic "
+"invariants resulting from the calls."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:120
+msgid ""
+"Historically Coda was implemented in a BSD file system in Mach 2.6. The "
+"interface between the kernel and Venus is very similar to the BSD VFS "
+"interface.  Similar functionality is provided, and the format of the "
+"parameters and returned data is very similar to the BSD VFS.  This leads to "
+"an almost natural environment for implementing a kernel-level filesystem "
+"driver for Coda in a BSD system.  However, other operating systems such as "
+"Linux and Windows 95 and NT have virtual filesystem with different "
+"interfaces."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:129
+msgid ""
+"To implement Coda on these systems some reverse engineering of the Venus/"
+"Kernel protocol is necessary.  Also it came to light that other systems "
+"could profit significantly from certain small optimizations and "
+"modifications to the protocol. To facilitate this work as well as to make "
+"future ports easier, communication between Venus and the kernel should be "
+"documented in great detail.  This is the aim of this document."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:138
+msgid "2.  Servicing Coda filesystem calls"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:140
+msgid ""
+"The service of a request for a Coda file system service originates in a "
+"process P which accessing a Coda file. It makes a system call which traps to "
+"the OS kernel. Examples of such calls trapping to the kernel are ``read``, "
+"``write``, ``open``, ``close``, ``create``, ``mkdir``, ``rmdir``, ``chmod`` "
+"in a Unix context.  Similar calls exist in the Win32 environment, and are "
+"named ``CreateFile``."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:147
+msgid ""
+"Generally the operating system handles the request in a virtual filesystem "
+"(VFS) layer, which is named I/O Manager in NT and IFS manager in Windows "
+"95.  The VFS is responsible for partial processing of the request and for "
+"locating the specific filesystem(s) which will service parts of the "
+"request.  Usually the information in the path assists in locating the "
+"correct FS drivers.  Sometimes after extensive pre-processing, the VFS "
+"starts invoking exported routines in the FS driver.  This is the point where "
+"the FS specific processing of the request starts, and here the Coda specific "
+"kernel code comes into play."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:158
+msgid ""
+"The FS layer for Coda must expose and implement several interfaces. First "
+"and foremost the VFS must be able to make all necessary calls to the Coda FS "
+"layer, so the Coda FS driver must expose the VFS interface as applicable in "
+"the operating system. These differ very significantly among operating "
+"systems, but share features such as facilities to read/write and create and "
+"remove objects.  The Coda FS layer services such VFS requests by invoking "
+"one or more well defined services offered by the cache manager Venus.  When "
+"the replies from Venus have come back to the FS driver, servicing of the VFS "
+"call continues and finishes with a reply to the kernel's VFS. Finally the "
+"VFS layer returns to the process."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:170
+msgid ""
+"As a result of this design a basic interface exposed by the FS driver must "
+"allow Venus to manage message traffic.  In particular Venus must be able to "
+"retrieve and place messages and to be notified of the arrival of a new "
+"message. The notification must be through a mechanism which does not block "
+"Venus since Venus must attend to other tasks even when no messages are "
+"waiting or being processed."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:177
+msgid "**Interfaces of the Coda FS Driver**"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:179
+msgid ""
+"Furthermore the FS layer provides for a special path of communication "
+"between a user process and Venus, called the pioctl interface. The pioctl "
+"interface is used for Coda specific services, such as requesting detailed "
+"information about the persistent cache managed by Venus. Here the "
+"involvement of the kernel is minimal.  It identifies the calling process and "
+"passes the information on to Venus.  When Venus replies the response is "
+"passed back to the caller in unmodified form."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:188
+msgid ""
+"Finally Venus allows the kernel FS driver to cache the results from certain "
+"services.  This is done to avoid excessive context switches and results in "
+"an efficient system.  However, Venus may acquire information, for example "
+"from the network which implies that cached information must be flushed or "
+"replaced. Venus then makes a downcall to the Coda FS layer to request "
+"flushes or updates in the cache.  The kernel FS driver handles such requests "
+"synchronously."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:196
+msgid ""
+"Among these interfaces the VFS interface and the facility to place, receive "
+"and be notified of messages are platform specific.  We will not go into the "
+"calls exported to the VFS layer but we will state the requirements of the "
+"message exchange mechanism."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:203
+msgid "3.  The message layer"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:205
+msgid ""
+"At the lowest level the communication between Venus and the FS driver "
+"proceeds through messages.  The synchronization between processes requesting "
+"Coda file service and Venus relies on blocking and waking up processes.  The "
+"Coda FS driver processes VFS- and pioctl-requests on behalf of a process P, "
+"creates messages for Venus, awaits replies and finally returns to the "
+"caller.  The implementation of the exchange of messages is platform "
+"specific, but the semantics have (so far) appeared to be generally "
+"applicable.  Data buffers are created by the FS Driver in kernel memory on "
+"behalf of P and copied to user memory in Venus."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:216
+msgid ""
+"The FS Driver while servicing P makes upcalls to Venus.  Such an upcall is "
+"dispatched to Venus by creating a message structure.  The structure contains "
+"the identification of P, the message sequence number, the size of the "
+"request and a pointer to the data in kernel memory for the request.  Since "
+"the data buffer is re-used to hold the reply from Venus, there is a field "
+"for the size of the reply.  A flags field is used in the message to "
+"precisely record the status of the message.  Additional platform dependent "
+"structures involve pointers to determine the position of the message on "
+"queues and pointers to synchronization objects.  In the upcall routine the "
+"message structure is filled in, flags are set to 0, and it is placed on the "
+"*pending* queue.  The routine calling upcall is responsible for allocating "
+"the data buffer; its structure will be described in the next section."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:230
+msgid ""
+"A facility must exist to notify Venus that the message has been created, and "
+"implemented using available synchronization objects in the OS. This "
+"notification is done in the upcall context of the process P. When the "
+"message is on the pending queue, process P cannot proceed in upcall.  The "
+"(kernel mode) processing of P in the filesystem request routine must be "
+"suspended until Venus has replied.  Therefore the calling thread in P is "
+"blocked in upcall.  A pointer in the message structure will locate the "
+"synchronization object on which P is sleeping."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:240
+msgid ""
+"Venus detects the notification that a message has arrived, and the FS driver "
+"allow Venus to retrieve the message with a getmsg_from_kernel call. This "
+"action finishes in the kernel by putting the message on the queue of "
+"processing messages and setting flags to READ.  Venus is passed the contents "
+"of the data buffer. The getmsg_from_kernel call now returns and Venus "
+"processes the request."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:247
+msgid ""
+"At some later point the FS driver receives a message from Venus, namely when "
+"Venus calls sendmsg_to_kernel.  At this moment the Coda FS driver looks at "
+"the contents of the message and decides if:"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:252
+msgid ""
+"the message is a reply for a suspended thread P.  If so it removes the "
+"message from the processing queue and marks the message as WRITTEN.  "
+"Finally, the FS driver unblocks P (still in the kernel mode context of "
+"Venus) and the sendmsg_to_kernel call returns to Venus.  The process P will "
+"be scheduled at some point and continues processing its upcall with the data "
+"buffer replaced with the reply from Venus."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:260
+msgid ""
+"The message is a ``downcall``.  A downcall is a request from Venus to the FS "
+"Driver. The FS driver processes the request immediately (usually a cache "
+"eviction or replacement) and when it finishes sendmsg_to_kernel returns."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:265
+msgid ""
+"Now P awakes and continues processing upcall.  There are some subtleties to "
+"take account of. First P will determine if it was woken up in upcall by a "
+"signal from some other source (for example an attempt to terminate P) or as "
+"is normally the case by Venus in its sendmsg_to_kernel call.  In the normal "
+"case, the upcall routine will deallocate the message structure and return.  "
+"The FS routine can proceed with its processing."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:274
+msgid "**Sleeping and IPC arrangements**"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:276
+msgid ""
+"In case P is woken up by a signal and not by Venus, it will first look at "
+"the flags field.  If the message is not yet READ, the process P can handle "
+"its signal without notifying Venus.  If Venus has READ, and the request "
+"should not be processed, P can send Venus a signal message to indicate that "
+"it should disregard the previous message.  Such signals are put in the queue "
+"at the head, and read first by Venus.  If the message is already marked as "
+"WRITTEN it is too late to stop the processing.  The VFS routine will now "
+"continue.  (-- If a VFS request involves more than one upcall, this can lead "
+"to complicated state, an extra field \"handle_signals\" could be added in "
+"the message structure to indicate points of no return have been passed.--)"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:291
+msgid "3.1.  Implementation details"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:293
+msgid ""
+"The Unix implementation of this mechanism has been through the "
+"implementation of a character device associated with Coda.  Venus retrieves "
+"messages by doing a read on the device, replies are sent with a write and "
+"notification is through the select system call on the file descriptor for "
+"the device.  The process P is kept waiting on an interruptible wait queue "
+"object."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:300
+msgid ""
+"In Windows NT and the DPMI Windows 95 implementation a DeviceIoControl call "
+"is used.  The DeviceIoControl call is designed to copy buffers from user "
+"memory to kernel memory with OPCODES. The sendmsg_to_kernel is issued as a "
+"synchronous call, while the getmsg_from_kernel call is asynchronous.  "
+"Windows EventObjects are used for notification of message arrival.  The "
+"process P is kept waiting on a KernelEvent object in NT and a semaphore in "
+"Windows 95."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:310
+msgid "4.  The interface at the call level"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:313
+msgid ""
+"This section describes the upcalls a Coda FS driver can make to Venus. Each "
+"of these upcalls make use of two structures: inputArgs and outputArgs.   In "
+"pseudo BNF form the structures take the following form::"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:339
+msgid ""
+"Before going on let us elucidate the role of the various fields. The "
+"inputArgs start with the opcode which defines the type of service requested "
+"from Venus. There are approximately 30 upcalls at present which we will "
+"discuss.   The unique field labels the inputArg with a unique number which "
+"will identify the message uniquely.  A process and process group id are "
+"passed.  Finally the credentials of the caller are included."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:347
+msgid ""
+"Before delving into the specific calls we need to discuss a variety of data "
+"structures shared by the kernel and Venus."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:354
+msgid "4.1.  Data structures shared by the kernel and Venus"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:357
+msgid ""
+"The CodaCred structure defines a variety of user and group ids as they are "
+"set for the calling process. The vuid_t and vgid_t are 32 bit unsigned "
+"integers.  It also defines group membership in an array.  On Unix the "
+"CodaCred has proven sufficient to implement good security semantics for Coda "
+"but the structure may have to undergo modification for the Windows "
+"environment when these mature::"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:373
+msgid ""
+"It is questionable if we need CodaCreds in Venus. Finally Venus doesn't know "
+"about groups, although it does create files with the default uid/gid.  "
+"Perhaps the list of group membership is superfluous."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:378
+msgid ""
+"The next item is the fundamental identifier used to identify Coda files, the "
+"ViceFid.  A fid of a file uniquely defines a file or directory in the Coda "
+"filesystem within a cell [1]_::"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:388
+msgid ""
+"A cell is agroup of Coda servers acting under the aegis of a single system "
+"control machine or SCM. See the Coda Administration manual for a detailed "
+"description of the role of the SCM."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:392
+msgid ""
+"Each of the constituent fields: VolumeId, VnodeId and Unique_t are unsigned "
+"32 bit integers.  We envisage that a further field will need to be prefixed "
+"to identify the Coda cell; this will probably take the form of a Ipv6 size "
+"IP address naming the Coda cell through DNS."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:397
+msgid ""
+"The next important structure shared between Venus and the kernel is the "
+"attributes of the file.  The following structure is used to exchange "
+"information.  It has room for future extensions such as support for device "
+"files (currently not present in Coda)::"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:432
+msgid "4.2.  The pioctl interface"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:435
+msgid ""
+"Coda specific requests can be made by application through the pioctl "
+"interface. The pioctl is implemented as an ordinary ioctl on a fictitious "
+"file /coda/.CONTROL.  The pioctl call opens this file, gets a file handle "
+"and makes the ioctl call. Finally it closes the file."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:440
+msgid ""
+"The kernel involvement in this is limited to providing the facility to open "
+"and close and pass the ioctl message and to verify that a path in the pioctl "
+"data buffers is a file in a Coda filesystem."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:444
+msgid "The kernel is handed a data packet of the form::"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:454
+msgid "where::"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:465
+msgid ""
+"The path must be a Coda file, otherwise the ioctl upcall will not be made."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:468
+msgid "The data structures and code are a mess.  We need to clean this up."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:471
+msgid "**We now proceed to document the individual calls**:"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:475
+msgid "4.3.  root"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:478 ../../../filesystems/coda.rst:506
+#: ../../../filesystems/coda.rst:554 ../../../filesystems/coda.rst:599
+#: ../../../filesystems/coda.rst:631 ../../../filesystems/coda.rst:665
+#: ../../../filesystems/coda.rst:728 ../../../filesystems/coda.rst:774
+#: ../../../filesystems/coda.rst:807 ../../../filesystems/coda.rst:842
+#: ../../../filesystems/coda.rst:874 ../../../filesystems/coda.rst:903
+#: ../../../filesystems/coda.rst:937 ../../../filesystems/coda.rst:981
+#: ../../../filesystems/coda.rst:1018 ../../../filesystems/coda.rst:1059
+#: ../../../filesystems/coda.rst:1089 ../../../filesystems/coda.rst:1130
+#: ../../../filesystems/coda.rst:1167 ../../../filesystems/coda.rst:1195
+#: ../../../filesystems/coda.rst:1221 ../../../filesystems/coda.rst:1265
+#: ../../../filesystems/coda.rst:1300 ../../../filesystems/coda.rst:1321
+#: ../../../filesystems/coda.rst:1340 ../../../filesystems/coda.rst:1367
+#: ../../../filesystems/coda.rst:1448 ../../../filesystems/coda.rst:1465
+#: ../../../filesystems/coda.rst:1483 ../../../filesystems/coda.rst:1509
+#: ../../../filesystems/coda.rst:1529 ../../../filesystems/coda.rst:1548
+#: ../../../filesystems/coda.rst:1571
+msgid "Arguments"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:479 ../../../filesystems/coda.rst:1301
+#: ../../../filesystems/coda.rst:1322 ../../../filesystems/coda.rst:1342
+#: ../../../filesystems/coda.rst:1368
+msgid "in"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:481 ../../../filesystems/coda.rst:612
+#: ../../../filesystems/coda.rst:643 ../../../filesystems/coda.rst:787
+msgid "empty"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:483 ../../../filesystems/coda.rst:516
+#: ../../../filesystems/coda.rst:564 ../../../filesystems/coda.rst:679
+#: ../../../filesystems/coda.rst:739 ../../../filesystems/coda.rst:912
+#: ../../../filesystems/coda.rst:947 ../../../filesystems/coda.rst:1031
+#: ../../../filesystems/coda.rst:1101 ../../../filesystems/coda.rst:1139
+#: ../../../filesystems/coda.rst:1236 ../../../filesystems/coda.rst:1274
+msgid "out::"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:491 ../../../filesystems/coda.rst:525
+#: ../../../filesystems/coda.rst:572 ../../../filesystems/coda.rst:614
+#: ../../../filesystems/coda.rst:645 ../../../filesystems/coda.rst:688
+#: ../../../filesystems/coda.rst:749 ../../../filesystems/coda.rst:789
+#: ../../../filesystems/coda.rst:823 ../../../filesystems/coda.rst:856
+#: ../../../filesystems/coda.rst:888 ../../../filesystems/coda.rst:921
+#: ../../../filesystems/coda.rst:956 ../../../filesystems/coda.rst:995
+#: ../../../filesystems/coda.rst:1041 ../../../filesystems/coda.rst:1075
+#: ../../../filesystems/coda.rst:1110 ../../../filesystems/coda.rst:1148
+#: ../../../filesystems/coda.rst:1180 ../../../filesystems/coda.rst:1208
+#: ../../../filesystems/coda.rst:1246 ../../../filesystems/coda.rst:1282
+#: ../../../filesystems/coda.rst:1350 ../../../filesystems/coda.rst:1376
+#: ../../../filesystems/coda.rst:1454 ../../../filesystems/coda.rst:1474
+#: ../../../filesystems/coda.rst:1492 ../../../filesystems/coda.rst:1518
+#: ../../../filesystems/coda.rst:1539 ../../../filesystems/coda.rst:1557
+#: ../../../filesystems/coda.rst:1581
+msgid "Description"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:492
+msgid ""
+"This call is made to Venus during the initialization of the Coda filesystem. "
+"If the result is zero, the cfs_root structure contains the ViceFid of the "
+"root of the Coda filesystem. If a non-zero result is generated, its value is "
+"a platform dependent error code indicating the difficulty Venus encountered "
+"in locating the root of the Coda filesystem."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:500
+msgid "4.4.  lookup"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:503 ../../../filesystems/coda.rst:596
+#: ../../../filesystems/coda.rst:662 ../../../filesystems/coda.rst:725
+#: ../../../filesystems/coda.rst:771 ../../../filesystems/coda.rst:804
+#: ../../../filesystems/coda.rst:839 ../../../filesystems/coda.rst:871
+#: ../../../filesystems/coda.rst:900 ../../../filesystems/coda.rst:934
+#: ../../../filesystems/coda.rst:978 ../../../filesystems/coda.rst:1015
+#: ../../../filesystems/coda.rst:1056 ../../../filesystems/coda.rst:1086
+#: ../../../filesystems/coda.rst:1127 ../../../filesystems/coda.rst:1164
+#: ../../../filesystems/coda.rst:1192 ../../../filesystems/coda.rst:1218
+#: ../../../filesystems/coda.rst:1262 ../../../filesystems/coda.rst:1297
+#: ../../../filesystems/coda.rst:1318 ../../../filesystems/coda.rst:1337
+#: ../../../filesystems/coda.rst:1364 ../../../filesystems/coda.rst:1451
+#: ../../../filesystems/coda.rst:1568
+msgid "Summary"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:504
+msgid "Find the ViceFid and type of an object in a directory if it exists."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:507 ../../../filesystems/coda.rst:555
+#: ../../../filesystems/coda.rst:600 ../../../filesystems/coda.rst:632
+#: ../../../filesystems/coda.rst:666 ../../../filesystems/coda.rst:729
+#: ../../../filesystems/coda.rst:775 ../../../filesystems/coda.rst:808
+#: ../../../filesystems/coda.rst:843 ../../../filesystems/coda.rst:875
+#: ../../../filesystems/coda.rst:904 ../../../filesystems/coda.rst:938
+#: ../../../filesystems/coda.rst:982 ../../../filesystems/coda.rst:1019
+#: ../../../filesystems/coda.rst:1060 ../../../filesystems/coda.rst:1090
+#: ../../../filesystems/coda.rst:1131 ../../../filesystems/coda.rst:1168
+#: ../../../filesystems/coda.rst:1196 ../../../filesystems/coda.rst:1222
+#: ../../../filesystems/coda.rst:1266
+msgid "in::"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:526
+msgid ""
+"This call is made to determine the ViceFid and filetype of a directory "
+"entry.  The directory entry requested carries name 'name' and Venus will "
+"search the directory identified by cfs_lookup_in.VFid. The result may "
+"indicate that the name does not exist, or that difficulty was encountered in "
+"finding it (e.g. due to disconnection). If the result is zero, the field "
+"cfs_lookup_out.VFid contains the targets ViceFid and cfs_lookup_out.vtype "
+"the coda_vtype giving the type of object the name designates."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:535
+msgid ""
+"The name of the object is an 8 bit character string of maximum length "
+"CFS_MAXNAMLEN, currently set to 256 (including a 0 terminator.)"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:538
+msgid ""
+"It is extremely important to realize that Venus bitwise ors the field "
+"cfs_lookup.vtype with CFS_NOCACHE to indicate that the object should not be "
+"put in the kernel name cache."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:544
+msgid ""
+"The type of the vtype is currently wrong.  It should be coda_vtype. Linux "
+"does not take note of CFS_NOCACHE.  It should."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:549
+msgid "4.5.  getattr"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:552
+msgid "Summary Get the attributes of a file."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:573
+msgid "This call returns the attributes of the file identified by fid."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:575 ../../../filesystems/coda.rst:622
+#: ../../../filesystems/coda.rst:653 ../../../filesystems/coda.rst:701
+#: ../../../filesystems/coda.rst:755 ../../../filesystems/coda.rst:796
+#: ../../../filesystems/coda.rst:926 ../../../filesystems/coda.rst:1382
+msgid "Errors"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:576
+msgid ""
+"Errors can occur if the object with fid does not exist, is unaccessible or "
+"if the caller does not have permission to fetch attributes."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:582
+msgid ""
+"Many kernel FS drivers (Linux, NT and Windows 95) need to acquire the "
+"attributes as well as the Fid for the instantiation of an internal \"inode\" "
+"or \"FileHandle\".  A significant improvement in performance on such systems "
+"could be made by combining the lookup and getattr calls both at the Venus/"
+"kernel interaction level and at the RPC level."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:588
+msgid ""
+"The vattr structure included in the input arguments is superfluous and "
+"should be removed."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:593
+msgid "4.6.  setattr"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:597
+msgid "Set the attributes of a file."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:610 ../../../filesystems/coda.rst:641
+#: ../../../filesystems/coda.rst:785 ../../../filesystems/coda.rst:819
+#: ../../../filesystems/coda.rst:852 ../../../filesystems/coda.rst:884
+#: ../../../filesystems/coda.rst:991 ../../../filesystems/coda.rst:1071
+#: ../../../filesystems/coda.rst:1176 ../../../filesystems/coda.rst:1204
+#: ../../../filesystems/coda.rst:1306 ../../../filesystems/coda.rst:1326
+#: ../../../filesystems/coda.rst:1346 ../../../filesystems/coda.rst:1372
+msgid "out"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:615
+msgid ""
+"The structure attr is filled with attributes to be changed in BSD style.  "
+"Attributes not to be changed are set to -1, apart from vtype which is set to "
+"VNON. Other are set to the value to be assigned. The only attributes which "
+"the FS driver may request to change are the mode, owner, groupid, atime, "
+"mtime and ctime.  The return value indicates success or failure."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:623
+msgid ""
+"A variety of errors can occur.  The object may not exist, may be "
+"inaccessible, or permission may not be granted by Venus."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:628
+msgid "4.7.  access"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:646
+msgid ""
+"Verify if access to the object identified by VFid for operations described "
+"by flags is permitted.  The result indicates if access will be granted.  It "
+"is important to remember that Coda uses ACLs to enforce protection and that "
+"ultimately the servers, not the clients enforce the security of the system.  "
+"The result of this call will depend on whether a token is held by the user."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:654
+msgid ""
+"The object may not exist, or the ACL describing the protection may not be "
+"accessible."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:659
+msgid "4.8.  create"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:663
+msgid "Invoked to create a file"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:689
+msgid ""
+"This upcall is invoked to request creation of a file. The file will be "
+"created in the directory identified by VFid, its name will be name, and the "
+"mode will be mode.  If excl is set an error will be returned if the file "
+"already exists.  If the size field in attr is set to zero the file will be "
+"truncated.  The uid and gid of the file are set by converting the CodaCred "
+"to a uid using a macro CRTOUID (this macro is platform dependent).  Upon "
+"success the VFid and attributes of the file are returned.  The Coda FS "
+"Driver will normally instantiate a vnode, inode or file handle at kernel "
+"level for the new object."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:702
+msgid ""
+"A variety of errors can occur. Permissions may be insufficient. If the "
+"object exists and is not a file the error EISDIR is returned under Unix."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:708
+msgid ""
+"The packing of parameters is very inefficient and appears to indicate "
+"confusion between the system call creat and the VFS operation create. The "
+"VFS operation create is only called to create new objects. This create call "
+"differs from the Unix one in that it is not invoked to return a file "
+"descriptor. The truncate and exclusive options, together with the mode, "
+"could simply be part of the mode as it is under Unix.  There should be no "
+"flags argument; this is used in open (2) to return a file descriptor for "
+"READ or WRITE mode."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:717
+msgid ""
+"The attributes of the directory should be returned too, since the size and "
+"mtime changed."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:722
+msgid "4.9.  mkdir"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:726
+msgid "Create a new directory."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:750
+msgid ""
+"This call is similar to create but creates a directory. Only the mode field "
+"in the input parameters is used for creation. Upon successful creation, the "
+"attr returned contains the attributes of the new directory."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:756
+msgid "As for create."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:760
+msgid "The input parameter should be changed to mode instead of attributes."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:763
+msgid ""
+"The attributes of the parent should be returned since the size and mtime "
+"changes."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:768
+msgid "4.10.  link"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:772
+msgid "Create a link to an existing file."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:790
+msgid ""
+"This call creates a link to the sourceFid in the directory identified by "
+"destFid with name tname.  The source must reside in the target's parent, i."
+"e. the source must be have parent destFid, i.e. Coda does not support cross "
+"directory hard links.  Only the return value is relevant.  It indicates "
+"success or the type of failure."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:797
+msgid "The usual errors can occur."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:801
+msgid "4.11.  symlink"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:805
+msgid "create a symbolic link"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:821 ../../../filesystems/coda.rst:854
+#: ../../../filesystems/coda.rst:886 ../../../filesystems/coda.rst:993
+#: ../../../filesystems/coda.rst:1073 ../../../filesystems/coda.rst:1178
+#: ../../../filesystems/coda.rst:1206 ../../../filesystems/coda.rst:1370
+msgid "none"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:824
+msgid ""
+"Create a symbolic link. The link is to be placed in the directory identified "
+"by VFid and named tname.  It should point to the pathname srcname.  The "
+"attributes of the newly created object are to be set to attr."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:831
+msgid ""
+"The attributes of the target directory should be returned since its size "
+"changed."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:836
+msgid "4.12.  remove"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:840
+msgid "Remove a file"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:857
+msgid "Remove file named cfs_remove_in.name in directory identified by   VFid."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:863
+msgid ""
+"The attributes of the directory should be returned since its mtime and size "
+"may change."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:868
+msgid "4.13.  rmdir"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:872
+msgid "Remove a directory"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:889
+msgid ""
+"Remove the directory with name 'name' from the directory identified by VFid."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:892
+msgid ""
+"The attributes of the parent directory should be returned since its mtime "
+"and size may change."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:897
+msgid "4.14.  readlink"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:901
+msgid "Read the value of a symbolic link."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:922
+msgid ""
+"This routine reads the contents of symbolic link identified by VFid into the "
+"buffer data.  The buffer data must be able to hold any name up to "
+"CFS_MAXNAMLEN (PATH or NAM??)."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:927
+msgid "No unusual errors."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:931
+msgid "4.15.  open"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:935
+msgid "Open a file."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:957
+msgid ""
+"This request asks Venus to place the file identified by VFid in its cache "
+"and to note that the calling process wishes to open it with flags as in "
+"open(2).  The return value to the kernel differs for Unix and Windows "
+"systems.  For Unix systems the Coda FS Driver is informed of the device and "
+"inode number of the container file in the fields dev and inode.  For Windows "
+"the path of the container file is returned to the kernel."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:968
+msgid ""
+"Currently the cfs_open_out structure is not properly adapted to deal with "
+"the Windows case.  It might be best to implement two upcalls, one to open "
+"aiming at a container file name, the other at a container file inode."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:975
+msgid "4.16.  close"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:979
+msgid "Close a file, update it on the servers."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:996
+msgid "Close the file identified by VFid."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1000
+msgid ""
+"The flags argument is bogus and not used.  However, Venus' code has room to "
+"deal with an execp input field, probably this field should be used to inform "
+"Venus that the file was closed but is still memory mapped for execution.  "
+"There are comments about fetching versus not fetching the data in Venus "
+"vproc_vfscalls.  This seems silly.  If a file is being closed, the data in "
+"the container file is to be the new data.  Here again the execp flag might "
+"be in play to create confusion: currently Venus might think a file can be "
+"flushed from the cache when it is still memory mapped.  This needs to be "
+"understood."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1012
+msgid "4.17.  ioctl"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1016
+msgid "Do an ioctl on a file. This includes the pioctl interface."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1042
+msgid ""
+"Do an ioctl operation on a file.  The command, len and data arguments are "
+"filled as usual.  flags is not used by Venus."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1047
+msgid ""
+"Another bogus parameter.  flags is not used.  What is the business about "
+"PREFETCHING in the Venus code?"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1053
+msgid "4.18.  rename"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1057
+msgid "Rename a fid."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1076
+msgid ""
+"Rename the object with name srcname in directory sourceFid to destname in "
+"destFid.   It is important that the names srcname and destname are 0 "
+"terminated strings.  Strings in Unix kernels are not always null terminated."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1083
+msgid "4.19.  readdir"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1087
+msgid "Read directory entries."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1111
+msgid ""
+"Read directory entries from VFid starting at offset and read at most count "
+"bytes.  Returns the data in data and returns the size in size."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1118
+msgid ""
+"This call is not used.  Readdir operations exploit container files.  We will "
+"re-evaluate this during the directory revamp which is about to take place."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1124
+msgid "4.20.  vget"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1128
+msgid "instructs Venus to do an FSDB->Get."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1149
+msgid ""
+"This upcall asks Venus to do a get operation on an fsobj labelled by VFid."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1154
+msgid ""
+"This operation is not used.  However, it is extremely useful since it can be "
+"used to deal with read/write memory mapped files. These can be \"pinned\" in "
+"the Venus cache using vget and released with inactive."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1161
+msgid "4.21.  fsync"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1165
+msgid "Tell Venus to update the RVM attributes of a file."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1181
+msgid ""
+"Ask Venus to update RVM attributes of object VFid. This should be called as "
+"part of kernel level fsync type calls.  The result indicates if the syncing "
+"was successful."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1185
+msgid "Linux does not implement this call. It should."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1189
+msgid "4.22.  inactive"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1193
+msgid "Tell Venus a vnode is no longer in use."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1209
+msgid "This operation returns EOPNOTSUPP."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1211
+msgid "This should perhaps be removed."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1215
+msgid "4.23.  rdwr"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1219
+msgid "Read or write from a file"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1247
+msgid "This upcall asks Venus to read or write from a file."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1252
+msgid ""
+"It should be removed since it is against the Coda philosophy that read/write "
+"operations never reach Venus.  I have been told the operation does not "
+"work.  It is not currently used."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1259
+msgid "4.24.  odymount"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1263
+msgid "Allows mounting multiple Coda \"filesystems\" on one Unix mount point."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1283
+msgid ""
+"Asks Venus to return the rootfid of a Coda system named name.  The fid is "
+"returned in VFid."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1288
+msgid ""
+"This call was used by David for dynamic sets.  It should be removed since it "
+"causes a jungle of pointers in the VFS mounting area. It is not used by Coda "
+"proper.  Call is not implemented by Venus."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1294
+msgid "4.25.  ody_lookup"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1298
+msgid "Looks up something."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1303 ../../../filesystems/coda.rst:1308
+#: ../../../filesystems/coda.rst:1324 ../../../filesystems/coda.rst:1328
+msgid "irrelevant"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1311 ../../../filesystems/coda.rst:1330
+msgid "Gut it. Call is not implemented by Venus."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1315
+msgid "4.26.  ody_expand"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1319
+msgid "expands something in a dynamic set."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1334
+msgid "4.27.  prefetch"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1338
+msgid "Prefetch a dynamic set."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1344 ../../../filesystems/coda.rst:1348
+msgid "Not documented."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1351
+msgid ""
+"Venus worker.cc has support for this call, although it is noted that it "
+"doesn't work.  Not surprising, since the kernel does not have support for "
+"it. (ODY_PREFETCH is not a defined operation)."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1356
+msgid "Gut it. It isn't working and isn't used by Coda."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1361
+msgid "4.28.  signal"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1365
+msgid "Send Venus a signal about an upcall."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1374
+msgid "not applicable."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1377
+msgid ""
+"This is an out-of-band upcall to Venus to inform Venus that the calling "
+"process received a signal after Venus read the message from the input "
+"queue.  Venus is supposed to clean up the operation."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1383
+msgid "No reply is given."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1387
+msgid ""
+"We need to better understand what Venus needs to clean up and if it is doing "
+"this correctly.  Also we need to handle multiple upcall per system call "
+"situations correctly.  It would be important to know what state changes in "
+"Venus take place after an upcall for which the kernel is responsible for "
+"notifying Venus to clean up (e.g. open definitely is such a state change, "
+"but many others are maybe not)."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1396
+msgid "5.  The minicache and downcalls"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1399
+msgid ""
+"The Coda FS Driver can cache results of lookup and access upcalls, to limit "
+"the frequency of upcalls.  Upcalls carry a price since a process context "
+"switch needs to take place.  The counterpart of caching the information is "
+"that Venus will notify the FS Driver that cached entries must be flushed or "
+"renamed."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1405
+msgid ""
+"The kernel code generally has to maintain a structure which links the "
+"internal file handles (called vnodes in BSD, inodes in Linux and FileHandles "
+"in Windows) with the ViceFid's which Venus maintains.  The reason is that "
+"frequent translations back and forth are needed in order to make upcalls and "
+"use the results of upcalls.  Such linking objects are called cnodes."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1412
+msgid ""
+"The current minicache implementations have cache entries which record the "
+"following:"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1415
+msgid "the name of the file"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1417
+msgid "the cnode of the directory containing the object"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1419
+msgid "a list of CodaCred's for which the lookup is permitted."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1421
+msgid "the cnode of the object"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1423
+msgid ""
+"The lookup call in the Coda FS Driver may request the cnode of the desired "
+"object from the cache, by passing its name, directory and the CodaCred's of "
+"the caller.  The cache will return the cnode or indicate that it cannot be "
+"found.  The Coda FS Driver must be careful to invalidate cache entries when "
+"it modifies or removes objects."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1429
+msgid ""
+"When Venus obtains information that indicates that cache entries are no "
+"longer valid, it will make a downcall to the kernel.  Downcalls are "
+"intercepted by the Coda FS Driver and lead to cache invalidations of the "
+"kind described below.  The Coda FS Driver does not return an error unless "
+"the downcall data could not be read into kernel memory."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1437
+msgid "5.1.  INVALIDATE"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1440
+msgid "No information is available on this call."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1444
+msgid "5.2.  FLUSH"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1449
+msgid "None"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1452
+msgid "Flush the name cache entirely."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1455
+msgid ""
+"Venus issues this call upon startup and when it dies. This is to prevent "
+"stale cache information being held.  Some operating systems allow the kernel "
+"name cache to be switched off dynamically. When this is done, this downcall "
+"is made."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1462
+msgid "5.3.  PURGEUSER"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1475
+msgid ""
+"Remove all entries in the cache carrying the Cred.  This call is issued when "
+"tokens for a user expire or are flushed."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1480
+msgid "5.4.  ZAPFILE"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1493
+msgid ""
+"Remove all entries which have the (dir vnode, name) pair. This is issued as "
+"a result of an invalidation of cached attributes of a vnode."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1499
+msgid ""
+"Call is not named correctly in NetBSD and Mach.  The minicache zapfile "
+"routine takes different arguments. Linux does not implement the invalidation "
+"of attributes correctly."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1506
+msgid "5.5.  ZAPDIR"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1519
+msgid ""
+"Remove all entries in the cache lying in a directory CodaFid, and all "
+"children of this directory. This call is issued when Venus receives a "
+"callback on the directory."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1525
+msgid "5.6.  ZAPVNODE"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1540
+msgid ""
+"Remove all entries in the cache carrying the cred and VFid as in the "
+"arguments. This downcall is probably never issued."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1545
+msgid "5.7.  PURGEFID"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1558
+msgid ""
+"Flush the attribute for the file. If it is a dir (odd vnode), purge its "
+"children from the namecache and remove the file from the namecache."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1565
+msgid "5.8.  REPLACE"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1569
+msgid "Replace the Fid's for a collection of names."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1582
+msgid ""
+"This routine replaces a ViceFid in the name cache with another.  It is added "
+"to allow Venus during reintegration to replace locally allocated temp fids "
+"while disconnected with global fids even when the reference counts on those "
+"fids are not zero."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1589
+msgid "6.  Initialization and cleanup"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1592
+msgid ""
+"This section gives brief hints as to desirable features for the Coda FS "
+"Driver at startup and upon shutdown or Venus failures.  Before entering the "
+"discussion it is useful to repeat that the Coda FS Driver maintains the "
+"following data:"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1598
+msgid "message queues"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1600
+msgid "cnodes"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1602
+msgid "name cache entries"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1604
+msgid ""
+"The name cache entries are entirely private to the driver, so they can "
+"easily be manipulated.   The message queues will generally have clear points "
+"of initialization and destruction.  The cnodes are much more delicate.  User "
+"processes hold reference counts in Coda filesystems and it can be difficult "
+"to clean up the cnodes."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1610
+msgid "It can expect requests through:"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1612
+msgid "the message subsystem"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1614
+msgid "the VFS layer"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1616
+msgid "pioctl interface"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1618
+msgid ""
+"Currently the pioctl passes through the VFS for Coda so we can treat these "
+"similarly."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1623
+msgid "6.1.  Requirements"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1626
+msgid "The following requirements should be accommodated:"
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1628
+msgid ""
+"The message queues should have open and close routines.  On Unix the opening "
+"of the character devices are such routines."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1631
+msgid "Before opening, no messages can be placed."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1633
+msgid "Opening will remove any old messages still pending."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1635
+msgid ""
+"Close will notify any sleeping processes that their upcall cannot be "
+"completed."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1638
+msgid "Close will free all memory allocated by the message queues."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1641
+msgid "At open the namecache shall be initialized to empty state."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1643
+msgid ""
+"Before the message queues are open, all VFS operations will fail. "
+"Fortunately this can be achieved by making sure than mounting the Coda "
+"filesystem cannot succeed before opening."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1647
+msgid ""
+"After closing of the queues, no VFS operations can succeed.  Here one needs "
+"to be careful, since a few operations (lookup, read/write, readdir) can "
+"proceed without upcalls.  These must be explicitly blocked."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1652
+msgid "Upon closing the namecache shall be flushed and disabled."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1654
+msgid "All memory held by cnodes can be freed without relying on upcalls."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1656
+msgid "Unmounting the file system can be done without relying on upcalls."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1658
+msgid ""
+"Mounting the Coda filesystem should fail gracefully if Venus cannot get the "
+"rootfid or the attributes of the rootfid.  The latter is best implemented by "
+"Venus fetching these objects before attempting to mount."
+msgstr ""
+
+#: ../../../filesystems/coda.rst:1665
+msgid ""
+"NetBSD in particular but also Linux have not implemented the above "
+"requirements fully.  For smooth operation this needs to be corrected."
+msgstr ""

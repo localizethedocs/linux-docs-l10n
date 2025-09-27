@@ -1,0 +1,4073 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../gpu/drm-internals.rst:3
+msgid "DRM Internals"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:5
+msgid ""
+"This chapter documents DRM internals relevant to driver authors and "
+"developers working to add support for the latest features to existing "
+"drivers."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:9
+msgid ""
+"First, we go over some typical driver initialization requirements, like "
+"setting up command buffers, creating an initial output configuration, and "
+"initializing core services. Subsequent sections cover core internals in more "
+"detail, providing implementation notes and examples."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:14
+msgid ""
+"The DRM layer provides several services to graphics drivers, many of them "
+"driven by the application interfaces it provides through libdrm, the library "
+"that wraps most of the DRM ioctls. These include vblank event handling, "
+"memory management, output management, framebuffer management, command "
+"submission & fencing, suspend/resume support, and DMA services."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:22
+msgid "Driver Initialization"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:24
+msgid ""
+"At the core of every DRM driver is a :c:type:`struct drm_driver "
+"<drm_driver>` structure. Drivers typically statically initialize a "
+"drm_driver structure, and then pass it to drm_dev_alloc() to allocate a "
+"device instance. After the device instance is fully initialized it can be "
+"registered (which makes it accessible from userspace) using "
+"drm_dev_register()."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:31
+msgid ""
+"The :c:type:`struct drm_driver <drm_driver>` structure contains static "
+"information that describes the driver and features it supports, and pointers "
+"to methods that the DRM core will call to implement the DRM API. We will "
+"first go through the :c:type:`struct drm_driver <drm_driver>` static "
+"information fields, and will then describe individual operations in details "
+"as they get used in later sections."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:40
+msgid "Driver Information"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:43
+msgid "Major, Minor and Patchlevel"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:45
+msgid ""
+"int major; int minor; int patchlevel; The DRM core identifies driver "
+"versions by a major, minor and patch level triplet. The information is "
+"printed to the kernel log at initialization time and passed to userspace "
+"through the DRM_IOCTL_VERSION ioctl."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:51
+msgid ""
+"The major and minor numbers are also used to verify the requested driver API "
+"version passed to DRM_IOCTL_SET_VERSION. When the driver API changes between "
+"minor versions, applications can call DRM_IOCTL_SET_VERSION to select a "
+"specific version of the API. If the requested major isn't equal to the "
+"driver major, or the requested minor is larger than the driver minor, the "
+"DRM_IOCTL_SET_VERSION call will return an error. Otherwise the driver's "
+"set_version() method will be called with the requested version."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:61
+msgid "Name and Description"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:63
+msgid ""
+"char \\*name; char \\*desc; char \\*date; The driver name is printed to the "
+"kernel log at initialization time, used for IRQ registration and passed to "
+"userspace through DRM_IOCTL_VERSION."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:68
+msgid ""
+"The driver description is a purely informative string passed to userspace "
+"through the DRM_IOCTL_VERSION ioctl and otherwise unused by the kernel."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:73
+msgid "Module Initialization"
+msgstr ""
+
+#: ../../../gpu/drm-internals:75: include/drm/drm_module.h:12
+msgid ""
+"This library provides helpers registering DRM drivers during module "
+"initialization and shutdown. The provided helpers act like bus-specific "
+"module helpers, such as module_pci_driver(), but respect additional "
+"parameters that control DRM driver registration."
+msgstr ""
+
+#: ../../../gpu/drm-internals:75: include/drm/drm_module.h:17
+msgid ""
+"Below is an example of initializing a DRM driver for a device on the PCI bus."
+msgstr ""
+
+#: ../../../gpu/drm-internals:75: include/drm/drm_module.h:27
+msgid ""
+"The generated code will test if DRM drivers are enabled and register the PCI "
+"driver my_pci_drv. For more complex module initialization, you can still use "
+"module_init() and module_exit() in your driver."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:79
+msgid "Device Instance and Driver Handling"
+msgstr ""
+
+#: ../../../gpu/drm-internals:81: drivers/gpu/drm/drm_drv.c:265
+msgid ""
+"A device instance for a drm driver is represented by :c:type:`struct "
+"drm_device <drm_device>`. This is allocated and initialized with "
+"devm_drm_dev_alloc(), usually from bus-specific ->probe() callbacks "
+"implemented by the driver. The driver then needs to initialize all the "
+"various subsystems for the drm device like memory management, vblank "
+"handling, modesetting support and initial output configuration plus "
+"obviously initialize all the corresponding hardware bits. Finally when "
+"everything is up and running and ready for userspace the device instance can "
+"be published using drm_dev_register()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:81: drivers/gpu/drm/drm_drv.c:274
+msgid ""
+"There is also deprecated support for initializing device instances using bus-"
+"specific helpers and the :c:type:`drm_driver.load <drm_driver>` callback. "
+"But due to backwards-compatibility needs the device instance have to be "
+"published too early, which requires unpretty global locking to make safe and "
+"is therefore only support for existing drivers not yet converted to the new "
+"scheme."
+msgstr ""
+
+#: ../../../gpu/drm-internals:81: drivers/gpu/drm/drm_drv.c:280
+msgid ""
+"When cleaning up a device instance everything needs to be done in reverse: "
+"First unpublish the device instance with drm_dev_unregister(). Then clean up "
+"any other resources allocated at device initialization and drop the driver's "
+"reference to :c:type:`drm_device` using drm_dev_put()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:81: drivers/gpu/drm/drm_drv.c:285
+msgid ""
+"Note that any allocation or resource which is visible to userspace must be "
+"released only when the final drm_dev_put() is called, and not when the "
+"driver is unbound from the underlying physical struct :c:type:`device`. Best "
+"to use :c:type:`drm_device` managed resources with drmm_add_action(), "
+"drmm_kmalloc() and related functions."
+msgstr ""
+
+#: ../../../gpu/drm-internals:81: drivers/gpu/drm/drm_drv.c:291
+msgid ""
+"devres managed resources like devm_kmalloc() can only be used for resources "
+"directly related to the underlying hardware device, and only used in code "
+"paths fully protected by drm_dev_enter() and drm_dev_exit()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:81: drivers/gpu/drm/drm_drv.c:298
+msgid ""
+"The following example shows a typical structure of a DRM display driver. The "
+"example focus on the probe() function and the other functions that is almost "
+"always present and serves as a demonstration of devm_drm_dev_alloc()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:81: drivers/gpu/drm/drm_drv.c:397
+msgid ""
+"Drivers that want to support device unplugging (USB, DT overlay unload) "
+"should use drm_dev_unplug() instead of drm_dev_unregister(). The driver must "
+"protect regions that is accessing device resources to prevent use after "
+"they're released. This is done using drm_dev_enter() and drm_dev_exit(). "
+"There is one shortcoming however, drm_dev_unplug() marks the drm_device as "
+"unplugged before drm_atomic_helper_shutdown() is called. This means that if "
+"the disable code paths are protected, they will not run on regular driver "
+"module unload, possibly leaving the hardware enabled."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:35
+msgid "information about the guilty task of a wedge dev"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:73
+#: include/drm/drm_file.h:93 include/drm/drm_file.h:164
+#: include/drm/drm_file.h:495 ../../../gpu/drm-internals:164:
+#: include/drm/drm_print.h:173 include/drm/drm_print.h:235
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:39
+#: include/drm/drm_device.h:67 ../../../gpu/drm-internals:87:
+#: include/drm/drm_drv.h:177
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:78
+#: include/drm/drm_file.h:105 include/drm/drm_file.h:203
+#: include/drm/drm_file.h:505 ../../../gpu/drm-internals:164:
+#: include/drm/drm_print.h:178 include/drm/drm_print.h:243
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:46
+#: include/drm/drm_device.h:116 ../../../gpu/drm-internals:87:
+#: include/drm/drm_drv.h:208
+msgid "**Members**"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:272
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:38
+msgid "``pid``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:39
+msgid "pid of the task"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:40
+msgid "``comm``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:41
+msgid "command name of the task"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:45
+msgid "power state of drm device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:78
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:49
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:56
+msgid "**Constants**"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:51
+msgid "``DRM_SWITCH_POWER_ON``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:52
+msgid "Power state is ON"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:54
+msgid "``DRM_SWITCH_POWER_OFF``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:55
+msgid "Power state is OFF"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:57
+msgid "``DRM_SWITCH_POWER_CHANGING``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:58
+msgid "Power state is changing"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:60
+msgid "``DRM_SWITCH_POWER_DYNAMIC_OFF``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:61
+msgid "Suspended"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:63
+msgid "DRM device structure"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:69
+msgid "``if_version``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:70
+msgid "Highest interface version set"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:72
+msgid "``ref``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:73
+msgid "Object ref-count"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:22
+#: include/drm/drm_managed.h:39 include/drm/drm_managed.h:121
+#: include/drm/drm_managed.h:139 ../../../gpu/drm-internals:164:
+#: include/drm/drm_print.h:522 include/drm/drm_print.h:533
+#: include/drm/drm_print.h:577 include/drm/drm_print.h:587
+#: include/drm/drm_print.h:597 ../../../gpu/drm-internals:84:
+#: include/drm/drm_device.h:75
+msgid "``dev``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:76
+msgid "Device structure of bus-device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:79
+msgid "``dma_dev``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:80
+msgid ""
+"Device for DMA operations. Only required if the device **dev** cannot "
+"perform DMA by itself. Should be NULL otherwise. Call drm_dev_dma_dev() to "
+"get the DMA device instead of using this field directly. Call "
+"drm_dev_set_dma_dev() to set this field."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:85
+msgid ""
+"DRM devices are sometimes bound to virtual devices that cannot perform DMA "
+"by themselves. Drivers should set this field to the respective DMA "
+"controller."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:89
+msgid ""
+"Devices on USB and other peripheral busses also cannot perform DMA by "
+"themselves. The **dma_dev** field should point the bus controller that does "
+"DMA on behalve of such a device. Required for importing buffers via dma-buf."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:94
+msgid ""
+"If set, the DRM core automatically releases the reference on the device."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:101
+msgid "``managed``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:102
+msgid ""
+"Managed resources linked to the lifetime of this :c:type:`drm_device` as "
+"tracked by **ref**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:115
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:448
+msgid "``driver``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:116
+msgid "DRM driver managing the device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:119
+msgid "``dev_private``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:120
+msgid ""
+"DRM driver private data. This is deprecated and should be left set to NULL."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:123
+msgid ""
+"Instead of using this pointer it is recommended that drivers use "
+"devm_drm_dev_alloc() and embed struct :c:type:`drm_device` in their larger "
+"per-device structure."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:131
+msgid "``primary``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:132
+msgid ""
+"Primary node. Drivers should not interact with this directly. debugfs "
+"interfaces can be registered with drm_debugfs_add_file(), and sysfs should "
+"be directly added on the hardware (and not character device node) struct "
+"device **dev**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:141
+msgid "``render``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:142
+msgid ""
+"Render node. Drivers should not interact with this directly ever. Drivers "
+"should not expose any additional interfaces in debugfs or sysfs on this node."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:149
+msgid "``accel``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:150
+msgid "Compute Acceleration node"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:153
+msgid "``registered``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:154
+msgid "Internally used by drm_dev_register() and drm_connector_register()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:244
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:160
+msgid "``master``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:161
+msgid ""
+"Currently active master for this device. Protected by :c:type:`master_mutex`"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:168
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:407
+msgid "``driver_features``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:169
+msgid "per-device driver features"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:171
+msgid ""
+"Drivers can clear specific flags here to disallow certain features on a per-"
+"device basis while still sharing a single :c:type:`struct drm_driver "
+"<drm_driver>` instance across all devices."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:178
+msgid "``unplugged``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:179
+msgid ""
+"Flag to tell if the device has been unplugged. See drm_dev_enter() and "
+"drm_dev_is_unplugged()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:185
+msgid "``anon_inode``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:186
+msgid "inode for private address-space"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:188
+msgid "``unique``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:189
+msgid "Unique name of the device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:192
+msgid "``struct_mutex``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:193
+msgid ""
+"Lock for others (not :c:type:`drm_minor.master <drm_minor>` and :c:type:"
+"`drm_file.is_master <drm_file>`)"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:195
+msgid "TODO: This lock used to be the BKL of the DRM subsystem. Move the"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:196
+msgid "lock into i915, which is the only remaining user."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:202
+msgid "``master_mutex``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:203
+msgid ""
+"Lock for :c:type:`drm_minor.master <drm_minor>` and :c:type:`drm_file."
+"is_master <drm_file>`"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:209
+msgid "``open_count``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:210
+msgid "Usage counter for outstanding files open, protected by drm_global_mutex"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:216
+msgid "``filelist_mutex``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:217
+msgid "Protects **filelist**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:219
+msgid "``filelist``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:220
+msgid ""
+"List of userspace clients, linked through :c:type:`drm_file.lhead "
+"<drm_file>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:226
+msgid "``filelist_internal``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:227
+msgid ""
+"List of open DRM files for in-kernel clients. Protected by :c:type:"
+"`filelist_mutex`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:234
+msgid "``clientlist_mutex``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:235
+msgid "Protects :c:type:`clientlist` access."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:241
+msgid "``clientlist``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:242
+msgid "List of in-kernel clients. Protected by :c:type:`clientlist_mutex`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:248
+msgid "``vblank_disable_immediate``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:249
+msgid ""
+"If true, vblank interrupt will be disabled immediately when the refcount "
+"drops to zero, as opposed to via the vblank disable timer."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:253
+msgid ""
+"This can be set to true it the hardware has a working vblank counter with "
+"high-precision timestamping (otherwise there are races) and the driver uses "
+"drm_crtc_vblank_on() and drm_crtc_vblank_off() appropriately. Also, see "
+"**max_vblank_count**, :c:type:`drm_crtc_funcs.get_vblank_counter "
+"<drm_crtc_funcs>` and :c:type:`drm_vblank_crtc_config.disable_immediate "
+"<drm_vblank_crtc_config>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:264
+msgid "``vblank``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:265
+msgid ""
+"Array of vblank tracking structures, one per :c:type:`struct drm_crtc "
+"<drm_crtc>`. For historical reasons (vblank support predates kernel "
+"modesetting) this is free-standing and not part of :c:type:`struct drm_crtc "
+"<drm_crtc>` itself. It must be initialized explicitly by calling "
+"drm_vblank_init()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:274
+msgid "``vblank_time_lock``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:275
+msgid "Protects vblank count and time updates during vblank enable/disable"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:280
+msgid "``vbl_lock``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:281
+msgid ""
+"Top-level vblank references lock, wraps the low-level **vblank_time_lock**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:286
+msgid "``max_vblank_count``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:287
+msgid ""
+"Maximum value of the vblank registers. This value +1 will result in a wrap-"
+"around of the vblank register. It is used by the vblank core to handle wrap-"
+"arounds."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:291
+msgid ""
+"If set to zero the vblank core will try to guess the elapsed vblanks between "
+"times when the vblank interrupt is disabled through high-precision "
+"timestamps. That approach is suffering from small races and imprecision over "
+"longer time periods, hence exposing a hardware vblank counter is always "
+"recommended."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:297
+msgid ""
+"This is the statically configured device wide maximum. The driver can "
+"instead choose to use a runtime configurable per-crtc value :c:type:"
+"`drm_vblank_crtc.max_vblank_count <drm_vblank_crtc>`, in which case "
+"**max_vblank_count** must be left at zero. See "
+"drm_crtc_set_max_vblank_count() on how to use the per-crtc value."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:303
+msgid ""
+"If non-zero, :c:type:`drm_crtc_funcs.get_vblank_counter <drm_crtc_funcs>` "
+"must be set."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:308
+msgid "``vblank_event_list``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:309
+msgid "List of vblank events"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:312
+msgid "``event_lock``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:313
+msgid ""
+"Protects **vblank_event_list** and event delivery in general. See "
+"drm_send_event() and drm_send_event_locked()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:319
+msgid "``num_crtcs``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:320
+msgid "Number of CRTCs on this device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:322
+msgid "``mode_config``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:323
+msgid "Current mode config"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:325
+msgid "``object_name_lock``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:326
+#: include/drm/drm_device.h:329 include/drm/drm_device.h:332
+msgid "GEM information"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:328
+msgid "``object_name_idr``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:331
+msgid "``vma_offset_manager``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:334
+msgid "``vram_mm``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:335
+msgid "VRAM MM memory manager"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:338
+msgid "``switch_power_state``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:339
+msgid ""
+"Power state of the client. Used by drivers supporting the switcheroo driver. "
+"The state is maintained in the :c:type:`vga_switcheroo_client_ops."
+"set_gpu_state <vga_switcheroo_client_ops>` callback"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:348
+msgid "``fb_helper``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:349
+msgid ""
+"Pointer to the fbdev emulation structure. Set by drm_fb_helper_init() and "
+"cleared by drm_fb_helper_fini()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:356
+msgid "``debugfs_root``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:357
+msgid "Root directory for debugfs files."
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:186
+#: drivers/gpu/drm/drm_managed.c:225 drivers/gpu/drm/drm_managed.c:253
+#: drivers/gpu/drm/drm_managed.c:278 ../../../gpu/drm-internals:135:
+#: include/drm/drm_managed.h:21 include/drm/drm_managed.h:38
+#: include/drm/drm_managed.h:60 include/drm/drm_managed.h:76
+#: include/drm/drm_managed.h:98 include/drm/drm_managed.h:121
+#: include/drm/drm_managed.h:139 ../../../gpu/drm-internals:149:
+#: include/drm/drm_file.h:81 include/drm/drm_file.h:156
+#: include/drm/drm_file.h:412 include/drm/drm_file.h:419
+#: include/drm/drm_file.h:434 include/drm/drm_file.h:448
+#: include/drm/drm_file.h:500 ../../../gpu/drm-internals:152:
+#: drivers/gpu/drm/drm_file.c:3 drivers/gpu/drm/drm_file.c:362
+#: drivers/gpu/drm/drm_file.c:419 drivers/gpu/drm/drm_file.c:489
+#: drivers/gpu/drm/drm_file.c:523 drivers/gpu/drm/drm_file.c:614
+#: drivers/gpu/drm/drm_file.c:645 drivers/gpu/drm/drm_file.c:686
+#: drivers/gpu/drm/drm_file.c:723 drivers/gpu/drm/drm_file.c:784
+#: drivers/gpu/drm/drm_file.c:805 drivers/gpu/drm/drm_file.c:825
+#: drivers/gpu/drm/drm_file.c:912 drivers/gpu/drm/drm_file.c:969
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:112
+#: include/drm/drm_print.h:181 include/drm/drm_print.h:250
+#: include/drm/drm_print.h:351 include/drm/drm_print.h:448
+#: include/drm/drm_print.h:532 ../../../gpu/drm-internals:167:
+#: drivers/gpu/drm/drm_print.c:258 drivers/gpu/drm/drm_print.c:295
+#: drivers/gpu/drm/drm_print.c:374 drivers/gpu/drm/drm_print.c:402
+#: ../../../gpu/drm-internals:176: include/drm/drm_util.h:3
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:360
+#: include/drm/drm_device.h:369 ../../../gpu/drm-internals:87:
+#: include/drm/drm_drv.h:121 include/drm/drm_drv.h:433
+#: include/drm/drm_drv.h:451 include/drm/drm_drv.h:497
+#: include/drm/drm_drv.h:523 include/drm/drm_drv.h:542
+#: include/drm/drm_drv.h:558 ../../../gpu/drm-internals:90:
+#: drivers/gpu/drm/drm_drv.c:413 drivers/gpu/drm/drm_drv.c:442
+#: drivers/gpu/drm/drm_drv.c:466 drivers/gpu/drm/drm_drv.c:479
+#: drivers/gpu/drm/drm_drv.c:508 drivers/gpu/drm/drm_drv.c:550
+#: drivers/gpu/drm/drm_drv.c:847 drivers/gpu/drm/drm_drv.c:886
+#: drivers/gpu/drm/drm_drv.c:919 drivers/gpu/drm/drm_drv.c:938
+#: drivers/gpu/drm/drm_drv.c:959 drivers/gpu/drm/drm_drv.c:1040
+#: drivers/gpu/drm/drm_drv.c:1131
+msgid "**Description**"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:64
+msgid ""
+"This structure represent a complete card that may contain multiple heads."
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:366
+msgid "returns the DMA device for a DRM device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:185
+#: drivers/gpu/drm/drm_managed.c:224 drivers/gpu/drm/drm_managed.c:252
+#: drivers/gpu/drm/drm_managed.c:278 ../../../gpu/drm-internals:135:
+#: include/drm/drm_managed.h:20 include/drm/drm_managed.h:37
+#: include/drm/drm_managed.h:59 include/drm/drm_managed.h:74
+#: include/drm/drm_managed.h:96 include/drm/drm_managed.h:119
+#: include/drm/drm_managed.h:137 ../../../gpu/drm-internals:149:
+#: include/drm/drm_file.h:420 include/drm/drm_file.h:435
+#: include/drm/drm_file.h:449 ../../../gpu/drm-internals:152:
+#: drivers/gpu/drm/drm_file.c:362 drivers/gpu/drm/drm_file.c:419
+#: drivers/gpu/drm/drm_file.c:489 drivers/gpu/drm/drm_file.c:521
+#: drivers/gpu/drm/drm_file.c:614 drivers/gpu/drm/drm_file.c:643
+#: drivers/gpu/drm/drm_file.c:684 drivers/gpu/drm/drm_file.c:723
+#: drivers/gpu/drm/drm_file.c:782 drivers/gpu/drm/drm_file.c:805
+#: drivers/gpu/drm/drm_file.c:825 drivers/gpu/drm/drm_file.c:880
+#: drivers/gpu/drm/drm_file.c:912 drivers/gpu/drm/drm_file.c:969
+#: drivers/gpu/drm/drm_file.c:1012 ../../../gpu/drm-internals:164:
+#: include/drm/drm_print.h:212 include/drm/drm_print.h:226
+#: include/drm/drm_print.h:250 include/drm/drm_print.h:352
+#: include/drm/drm_print.h:372 include/drm/drm_print.h:389
+#: include/drm/drm_print.h:405 include/drm/drm_print.h:428
+#: include/drm/drm_print.h:447 include/drm/drm_print.h:520
+#: include/drm/drm_print.h:531 include/drm/drm_print.h:575
+#: include/drm/drm_print.h:585 include/drm/drm_print.h:595
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:258
+#: drivers/gpu/drm/drm_print.c:275 drivers/gpu/drm/drm_print.c:290
+#: drivers/gpu/drm/drm_print.c:372 drivers/gpu/drm/drm_print.c:400
+#: ../../../gpu/drm-internals:176: include/drm/drm_util.h:56
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:370
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:449
+#: include/drm/drm_drv.h:498 include/drm/drm_drv.h:523
+#: include/drm/drm_drv.h:542 include/drm/drm_drv.h:558
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:414
+#: drivers/gpu/drm/drm_drv.c:442 drivers/gpu/drm/drm_drv.c:467
+#: drivers/gpu/drm/drm_drv.c:480 drivers/gpu/drm/drm_drv.c:508
+#: drivers/gpu/drm/drm_drv.c:549 drivers/gpu/drm/drm_drv.c:845
+#: drivers/gpu/drm/drm_drv.c:886 drivers/gpu/drm/drm_drv.c:920
+#: drivers/gpu/drm/drm_drv.c:939 drivers/gpu/drm/drm_drv.c:958
+#: drivers/gpu/drm/drm_drv.c:1040 drivers/gpu/drm/drm_drv.c:1132
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:187
+#: drivers/gpu/drm/drm_managed.c:226 drivers/gpu/drm/drm_managed.c:254
+#: drivers/gpu/drm/drm_managed.c:280 ../../../gpu/drm-internals:135:
+#: include/drm/drm_managed.h:61 include/drm/drm_managed.h:76
+#: include/drm/drm_managed.h:98 ../../../gpu/drm-internals:152:
+#: drivers/gpu/drm/drm_file.c:645 drivers/gpu/drm/drm_file.c:686
+#: drivers/gpu/drm/drm_file.c:725 drivers/gpu/drm/drm_file.c:784
+#: drivers/gpu/drm/drm_file.c:807 drivers/gpu/drm/drm_file.c:827
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:372
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:500
+#: include/drm/drm_drv.h:560 ../../../gpu/drm-internals:90:
+#: drivers/gpu/drm/drm_drv.c:416 drivers/gpu/drm/drm_drv.c:444
+#: drivers/gpu/drm/drm_drv.c:482 drivers/gpu/drm/drm_drv.c:510
+#: drivers/gpu/drm/drm_drv.c:551 drivers/gpu/drm/drm_drv.c:922
+#: drivers/gpu/drm/drm_drv.c:941 drivers/gpu/drm/drm_drv.c:960
+#: drivers/gpu/drm/drm_drv.c:1042 drivers/gpu/drm/drm_drv.c:1134
+msgid "``struct drm_device *dev``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:182
+#: drivers/gpu/drm/drm_managed.c:221 drivers/gpu/drm/drm_managed.c:249
+#: drivers/gpu/drm/drm_managed.c:275 ../../../gpu/drm-internals:135:
+#: include/drm/drm_managed.h:17 include/drm/drm_managed.h:34
+#: include/drm/drm_managed.h:56 include/drm/drm_managed.h:71
+#: include/drm/drm_managed.h:93 include/drm/drm_managed.h:116
+#: include/drm/drm_managed.h:134 ../../../gpu/drm-internals:152:
+#: drivers/gpu/drm/drm_file.c:640 drivers/gpu/drm/drm_file.c:681
+#: drivers/gpu/drm/drm_file.c:720 drivers/gpu/drm/drm_file.c:779
+#: drivers/gpu/drm/drm_file.c:802 drivers/gpu/drm/drm_file.c:822
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:367
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:495
+#: include/drm/drm_drv.h:556 ../../../gpu/drm-internals:90:
+#: drivers/gpu/drm/drm_drv.c:411 drivers/gpu/drm/drm_drv.c:439
+#: drivers/gpu/drm/drm_drv.c:477 drivers/gpu/drm/drm_drv.c:505
+#: drivers/gpu/drm/drm_drv.c:546
+msgid "DRM device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:368
+msgid ""
+"Returns the DMA device of the given DRM device. By default, this the DRM "
+"device's parent. See drm_dev_set_dma_dev()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:119
+#: include/drm/drm_managed.h:141 ../../../gpu/drm-internals:152:
+#: drivers/gpu/drm/drm_file.c:365 drivers/gpu/drm/drm_file.c:423
+#: drivers/gpu/drm/drm_file.c:493 drivers/gpu/drm/drm_file.c:535
+#: drivers/gpu/drm/drm_file.c:620 drivers/gpu/drm/drm_file.c:657
+#: drivers/gpu/drm/drm_file.c:698 ../../../gpu/drm-internals:164:
+#: include/drm/drm_print.h:328 include/drm/drm_print.h:353
+#: include/drm/drm_print.h:371 include/drm/drm_print.h:388
+#: include/drm/drm_print.h:406 include/drm/drm_print.h:428
+#: include/drm/drm_print.h:484 ../../../gpu/drm-internals:176:
+#: include/drm/drm_util.h:58 ../../../gpu/drm-internals:84:
+#: include/drm/drm_device.h:371 ../../../gpu/drm-internals:87:
+#: include/drm/drm_drv.h:466 ../../../gpu/drm-internals:90:
+#: drivers/gpu/drm/drm_drv.c:445 drivers/gpu/drm/drm_drv.c:558
+#: drivers/gpu/drm/drm_drv.c:854 drivers/gpu/drm/drm_drv.c:889
+#: drivers/gpu/drm/drm_drv.c:1052
+msgid "**Return**"
+msgstr ""
+
+#: ../../../gpu/drm-internals:84: include/drm/drm_device.h:372
+msgid "A DMA-capable device for the DRM device."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:52
+msgid "feature flags"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:58
+msgid "``DRIVER_GEM``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:59
+msgid ""
+"Driver use the GEM memory manager. This should be set for all modern drivers."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:62
+msgid "``DRIVER_MODESET``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:63
+msgid "Driver supports mode setting interfaces (KMS)."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:65
+msgid "``DRIVER_RENDER``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:66
+msgid ""
+"Driver supports dedicated render nodes. See also the :ref:`section on render "
+"nodes <drm_render_node>` for details."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:69
+msgid "``DRIVER_ATOMIC``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:70
+msgid ""
+"Driver supports the full atomic modesetting userspace API. Drivers which "
+"only use atomic internally, but do not support the full userspace API (e.g. "
+"not all properties converted to atomic, or multi-plane updates are not "
+"guaranteed to be tear-free) should not set this flag."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:76
+msgid "``DRIVER_SYNCOBJ``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:77
+msgid ""
+"Driver supports :c:type:`drm_syncobj` for explicit synchronization of "
+"command submission."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:80
+msgid "``DRIVER_SYNCOBJ_TIMELINE``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:81
+msgid ""
+"Driver supports the timeline flavor of :c:type:`drm_syncobj` for explicit "
+"synchronization of command submission."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:84
+msgid "``DRIVER_COMPUTE_ACCEL``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:85
+msgid ""
+"Driver supports compute acceleration devices. This flag is mutually "
+"exclusive with **DRIVER_RENDER** and **DRIVER_MODESET**. Devices that "
+"support both graphics and compute acceleration should be handled by two "
+"drivers that are connected using auxiliary bus."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:89
+msgid "``DRIVER_GEM_GPUVA``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:90
+msgid "Driver supports user defined GPU VA bindings for GEM objects."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:92
+msgid "``DRIVER_CURSOR_HOTSPOT``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:93
+msgid ""
+"Driver supports and requires cursor hotspot information in the cursor plane "
+"(e.g. cursor plane has to actually track the mouse cursor and the clients "
+"are required to set hotspot in order for the cursor planes to work "
+"correctly)."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:98
+msgid "``DRIVER_USE_AGP``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:99
+msgid ""
+"Set up DRM AGP support, see drm_agp_init(), the DRM core will manage AGP "
+"resources. New drivers don't need this."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:102
+msgid "``DRIVER_LEGACY``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:103
+msgid "Denote a legacy driver using shadow attach. Do not use."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:105
+msgid "``DRIVER_PCI_DMA``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:106
+msgid ""
+"Driver is capable of PCI DMA, mapping of PCI DMA buffers to userspace will "
+"be enabled. Only for legacy drivers. Do not use."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:109
+msgid "``DRIVER_SG``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:110
+msgid ""
+"Driver can perform scatter/gather DMA, allocation and mapping of scatter/"
+"gather buffers will be enabled. Only for legacy drivers. Do not use."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:114
+msgid "``DRIVER_HAVE_DMA``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:115
+msgid ""
+"Driver supports DMA, the userspace DMA API will be supported. Only for "
+"legacy drivers. Do not use."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:118
+msgid "``DRIVER_HAVE_IRQ``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:119
+msgid "Legacy irq support. Only for legacy drivers. Do not use."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:53
+msgid ""
+"See :c:type:`drm_driver.driver_features <drm_driver>`, drm_device."
+"driver_features and drm_core_check_feature()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:173
+msgid "DRM driver structure"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:183
+msgid "``load``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:184
+msgid ""
+"Backward-compatible driver callback to complete initialization steps after "
+"the driver is registered.  For this reason, may suffer from race conditions "
+"and its use is deprecated for new drivers.  It is therefore only supported "
+"for existing drivers not yet converted to the new scheme.  See "
+"devm_drm_dev_alloc() and drm_dev_register() for proper and race-free way to "
+"set up a :c:type:`struct drm_device <drm_device>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:191
+msgid "This is deprecated, do not use!"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:193
+#: include/drm/drm_drv.h:212 include/drm/drm_drv.h:345
+#: include/drm/drm_drv.h:363 include/drm/drm_drv.h:380
+msgid "Returns:"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:195
+msgid "Zero on success, non-zero value on failure."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:201
+msgid "``open``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:202
+msgid ""
+"Driver callback when a new :c:type:`struct drm_file <drm_file>` is opened. "
+"Useful for setting up driver-private data structures like buffer allocators, "
+"execution contexts or similar things. Such driver-private resources must be "
+"released again in **postclose**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:207
+msgid ""
+"Since the display/modeset side of DRM can only be owned by exactly one :c:"
+"type:`struct drm_file <drm_file>` (see :c:type:`drm_file.is_master "
+"<drm_file>` and :c:type:`drm_device.master <drm_device>`) there should never "
+"be a need to set up any modeset related resources in this callback. Doing so "
+"would be a driver design bug."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:214
+msgid ""
+"0 on success, a negative error code on failure, which will be promoted to "
+"userspace as the result of the open() system call."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:221
+msgid "``postclose``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:222
+msgid ""
+"One of the driver callbacks when a new :c:type:`struct drm_file <drm_file>` "
+"is closed. Useful for tearing down driver-private data structures allocated "
+"in **open** like buffer allocators, execution contexts or similar things."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:226
+msgid ""
+"Since the display/modeset side of DRM can only be owned by exactly one :c:"
+"type:`struct drm_file <drm_file>` (see :c:type:`drm_file.is_master "
+"<drm_file>` and :c:type:`drm_device.master <drm_device>`) there should never "
+"be a need to tear down any modeset related resources in this callback. Doing "
+"so would be a driver design bug."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:235
+msgid "``unload``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:236
+msgid ""
+"Reverse the effects of the driver load callback.  Ideally, the clean up "
+"performed by the driver should happen in the reverse order of the "
+"initialization.  Similarly to the load hook, this handler is deprecated and "
+"its usage should be dropped in favor of an open-coded teardown function at "
+"the driver layer.  See drm_dev_unregister() and drm_dev_put() for the proper "
+"way to remove a :c:type:`struct drm_device <drm_device>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:244
+msgid "The unload() hook is called right after unregistering the device."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:252
+msgid "``release``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:253
+msgid ""
+"Optional callback for destroying device data after the final reference is "
+"released, i.e. the device is being destroyed."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:256
+msgid ""
+"This is deprecated, clean up all memory allocations associated with a :c:"
+"type:`drm_device` using drmm_add_action(), drmm_kmalloc() and related "
+"managed resources functions."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:264
+msgid "``master_set``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:265
+msgid "Called whenever the minor master is set. Only used by vmwgfx."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:271
+msgid "``master_drop``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:272
+msgid "Called whenever the minor master is dropped. Only used by vmwgfx."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:278
+msgid "``debugfs_init``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:279
+msgid "Allows drivers to create driver-specific debugfs files."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:285
+msgid "``gem_create_object``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:286
+msgid "constructor for gem objects"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:288
+msgid ""
+"Hook for allocating the GEM object struct, for use by the CMA and SHMEM GEM "
+"helpers. Returns a GEM object on success, or an ERR_PTR()-encoded error code "
+"otherwise."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:295
+msgid "``prime_handle_to_fd``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:296
+msgid "PRIME export function. Only used by vmwgfx."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:302
+msgid "``prime_fd_to_handle``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:303
+msgid "PRIME import function. Only used by vmwgfx."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:310
+msgid "``gem_prime_import``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:311
+msgid "Import hook for GEM drivers."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:313
+msgid "This defaults to drm_gem_prime_import() if not set."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:319
+msgid "``gem_prime_import_sg_table``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:320
+msgid ""
+"Optional hook used by the PRIME helper functions drm_gem_prime_import() "
+"respectively drm_gem_prime_import_dev()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:330
+msgid "``dumb_create``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:331
+msgid ""
+"This creates a new dumb buffer in the driver's backing storage manager (GEM, "
+"TTM or something else entirely) and returns the resulting buffer handle. "
+"This handle can then be wrapped up into a framebuffer modeset object."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:335
+msgid ""
+"Note that userspace is not allowed to use such objects for render "
+"acceleration - drivers must create their own private ioctls for such a use "
+"case."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:339
+msgid ""
+"Width, height and depth are specified in the :c:type:`drm_mode_create_dumb` "
+"argument. The callback needs to fill the handle, pitch and size for the "
+"created buffer."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:343
+#: include/drm/drm_drv.h:361
+msgid "Called by the user via ioctl."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:347
+#: include/drm/drm_drv.h:365
+msgid "Zero on success, negative errno on failure."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:354
+msgid "``dumb_map_offset``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:355
+msgid ""
+"Allocate an offset in the drm device node's address space to be able to "
+"memory map a dumb buffer."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:358
+msgid ""
+"The default implementation is drm_gem_create_mmap_offset(). GEM based "
+"drivers must not overwrite this."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:373
+msgid "``fbdev_probe``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:374
+msgid ""
+"Allocates and initialize the fb_info structure for fbdev emulation. "
+"Furthermore it also needs to allocate the DRM framebuffer used to back the "
+"fbdev."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:378
+msgid "This callback is mandatory for fbdev support."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:382
+msgid "0 on success ot a negative error code otherwise."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:389
+msgid "``show_fdinfo``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:390
+msgid ""
+"Print device specific fdinfo.  See Documentation/gpu/drm-usage-stats.rst."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:395
+msgid "``major``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:396
+msgid "driver major number"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:295
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:397
+msgid "``minor``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:398
+msgid "driver minor number"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:399
+msgid "``patchlevel``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:400
+msgid "driver patch level"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:401
+msgid "``name``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:402
+msgid "driver name"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:403
+msgid "``desc``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:404
+msgid "driver description"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:408
+msgid ""
+"Driver features, see :c:type:`enum drm_driver_feature <drm_driver_feature>`. "
+"Drivers can disable some features on a per-instance basis using :c:type:"
+"`drm_device.driver_features <drm_device>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:415
+msgid "``ioctls``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:416
+msgid ""
+"Array of driver-private IOCTL description entries. See the chapter on :ref:"
+"`IOCTL support in the userland interfaces chapter<drm_driver_ioctl>` for the "
+"full details."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:423
+msgid "``num_ioctls``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:424
+msgid "Number of entries in **ioctls**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:427
+msgid "``fops``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:428
+msgid ""
+"File operations for the DRM device node. See the discussion in :ref:`file "
+"operations<drm_driver_fops>` for in-depth coverage and some examples."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:174
+msgid ""
+"This structure represent the common code for a family of cards. There will "
+"be one :c:type:`struct drm_device <drm_device>` for each card present in "
+"this family. It contains lots of vfunc entries, and a pile of those probably "
+"should be moved to more appropriate places like :c:type:"
+"`drm_mode_config_funcs` or into a new operations structure for GEM drivers."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:447
+msgid "``devm_drm_dev_alloc (parent, driver, type, member)``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:445
+msgid "Resource managed allocation of a :c:type:`drm_device` instance"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:451
+msgid "``parent``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:446
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:842
+#: drivers/gpu/drm/drm_drv.c:884
+msgid "Parent device object"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:447
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:843
+msgid "DRM driver"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:449
+msgid "``type``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:448
+msgid "the type of the struct which contains struct :c:type:`drm_device`"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:450
+msgid "``member``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:449
+msgid "the name of the :c:type:`drm_device` within **type**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:450
+msgid ""
+"This allocates and initialize a new DRM device. No device registration is "
+"done. Call drm_dev_register() to advertice the device to user space and "
+"register it with other core subsystems. This should be done last in the "
+"device initialization sequence to make sure userspace can't access an "
+"inconsistent state."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:456
+msgid ""
+"The initial ref-count of the object is 1. Use drm_dev_get() and "
+"drm_dev_put() to take and drop further ref-counts."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:459
+msgid ""
+"It is recommended that drivers embed :c:type:`struct drm_device "
+"<drm_device>` into their own device structure."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:462
+msgid ""
+"Note that this manages the lifetime of the resulting :c:type:`drm_device` "
+"automatically using devres. The DRM device initialized with this function is "
+"automatically put on driver detach using drm_dev_put()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:467
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:890
+msgid "Pointer to new DRM device, or ERR_PTR on failure."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:494
+msgid "is a DRM device unplugged"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:496
+msgid ""
+"This function can be called to check whether a hotpluggable is unplugged. "
+"Unplugging itself is singalled through drm_dev_unplug(). If a device is "
+"unplugged, these two functions guarantee that any store before calling "
+"drm_dev_unplug() is visible to callers of this function after it completes"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:501
+msgid ""
+"WARNING: This function fundamentally races against drm_dev_unplug(). It is "
+"recommended that drivers instead use the underlying drm_dev_enter() and "
+"drm_dev_exit() function pairs."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:519
+msgid "check driver feature flags mask"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:525
+#: include/drm/drm_drv.h:544
+msgid "``const struct drm_device *dev``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:520
+#: include/drm/drm_drv.h:539
+msgid "DRM device to check"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:522
+msgid "``u32 features``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:521
+msgid "feature flag(s) mask"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:522
+#: include/drm/drm_drv.h:541
+msgid ""
+"This checks **dev** for driver features, see :c:type:`drm_driver."
+"driver_features <drm_driver>`, :c:type:`drm_device.driver_features "
+"<drm_device>`, and the various :c:type:`enum drm_driver_feature "
+"<drm_driver_feature>` flags."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:525
+msgid ""
+"Returns true if all features in the **features** mask are supported, false "
+"otherwise."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:538
+msgid "check driver feature flags"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:541
+msgid "``enum drm_driver_feature feature``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:540
+msgid "feature flag"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:544
+msgid "Returns true if the **feature** is supported, false otherwise."
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:554
+msgid "check if the driver implements atomic_commit()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:87: include/drm/drm_drv.h:557
+msgid ""
+"This check is useful if drivers do not have DRIVER_ATOMIC set but have "
+"atomic modesetting internally implemented."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:410
+msgid "Unregister and release a DRM device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:412
+msgid "Called at module unload time or when a PCI device is unplugged."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:414
+msgid "Cleans up all DRM device, calling drm_lastclose()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:416
+msgid "**Note**"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:417
+msgid ""
+"Use of this function is deprecated. It will eventually go away completely.  "
+"Please use drm_dev_unregister() and drm_dev_put() explicitly instead to make "
+"sure that the device isn't userspace accessible any more while teardown is "
+"in progress, ensuring that userspace can't access an inconsistent state."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:438
+msgid "Enter device critical section"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:441
+msgid "``int *idx``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:440
+msgid "Pointer to index that will be passed to the matching drm_dev_exit()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:441
+msgid ""
+"This function marks and protects the beginning of a section that should not "
+"be entered after the device has been unplugged. The section end is marked "
+"with drm_dev_exit(). Calls to this function can be nested."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:446
+msgid "True if it is OK to enter the section, false otherwise."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:463
+msgid "Exit device critical section"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:469
+msgid "``int idx``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:464
+msgid "index returned from drm_dev_enter()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:465
+msgid ""
+"This function marks the end of a section that should not be entered after "
+"the device has been unplugged."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:476
+msgid "unplug a DRM device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:478
+msgid ""
+"This unplugs a hotpluggable DRM device, which makes it inaccessible to "
+"userspace operations. Entry-points can use drm_dev_enter() and "
+"drm_dev_exit() to protect device resources in a race free manner. This "
+"essentially unregisters the device like drm_dev_unregister(), but can be "
+"called while there are still open users of **dev**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:504
+msgid "set the DMA device for a DRM device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:507
+msgid "``struct device *dma_dev``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:506
+msgid "DMA device or NULL"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:507
+msgid ""
+"Sets the DMA device of the given DRM device. Only required if the DMA device "
+"is different from the DRM device's parent. After calling this function, the "
+"DRM device holds a reference on **dma_dev**. Pass NULL to clear the DMA "
+"device."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:545
+msgid "generate a device wedged uevent"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:548
+msgid "``unsigned long method``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:547
+msgid "method(s) to be used for recovery"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:549
+msgid "``struct drm_wedge_task_info *info``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:548
+msgid "optional information about the guilty task"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:549
+msgid ""
+"This generates a device wedged uevent for the DRM device specified by "
+"**dev**. Recovery **method**\\(s) of choice will be sent in the uevent "
+"environment as ``WEDGED=<method1>[,..,<methodN>]`` in order of less to more "
+"side-effects. If caller is unsure about recovery or **method** is unknown "
+"(0), ``WEDGED=unknown`` will be sent instead."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:555
+msgid ""
+"Refer to \"Device Wedging\" chapter in Documentation/gpu/drm-uapi.rst for "
+"more details."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:559
+msgid "0 on success, negative error code otherwise."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:841
+msgid "Allocation of a :c:type:`drm_device` instance"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:847
+#: drivers/gpu/drm/drm_drv.c:885
+msgid "``struct device *parent``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:844
+#: drivers/gpu/drm/drm_drv.c:888
+msgid "``const struct drm_driver *driver``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:223
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:58
+#: include/drm/drm_managed.h:74 include/drm/drm_managed.h:96
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:845
+msgid "``size_t size``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:844
+msgid "the size of the struct which contains struct drm_device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:846
+msgid "``size_t offset``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:845
+msgid "the offset of the :c:type:`drm_device` within the container."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:846
+msgid ""
+"This should *NOT* be by any drivers, but is a dedicated interface for the "
+"corresponding Rust abstraction."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:849
+msgid ""
+"This is the same as devm_drm_dev_alloc(), but without the corresponding "
+"resource management through the parent device, but not the same as "
+"drm_dev_alloc(), since the latter is the deprecated version, which does not "
+"support subclassing."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:855
+msgid "A pointer to new DRM device, or an ERR_PTR on failure."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:882
+msgid "Allocate new DRM device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:883
+msgid "DRM driver to allocate device for"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:885
+msgid ""
+"This is the deprecated version of devm_drm_dev_alloc(), which does not "
+"support subclassing through embedding the struct :c:type:`drm_device` in a "
+"driver private structure, and which does not support automatic cleanup "
+"through devres."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:916
+msgid "Take reference of a DRM device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:917
+msgid "device to take reference of or NULL"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:918
+msgid ""
+"This increases the ref-count of **dev** by one. You *must* already own a "
+"reference when calling this. Use drm_dev_put() to drop this reference again."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:922
+msgid ""
+"This function never fails. However, this function does not provide *any* "
+"guarantee whether the device is alive or running. It only provides a "
+"reference to the object and the memory associated with it."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:935
+msgid "Drop reference of a DRM device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:936
+msgid "device to drop reference of or NULL"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:937
+#: drivers/gpu/drm/drm_drv.c:958
+msgid ""
+"This decreases the ref-count of **dev** by one. The device is destroyed if "
+"the ref-count drops to zero."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:954
+msgid "Register a region of a DRM device to cgroups"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:955
+msgid "device for region"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:957
+msgid "``const char *region_name``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:956
+msgid "Region name for registering"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:958
+msgid "``u64 size``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:957
+msgid "Size of region in bytes"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1036
+msgid "Register DRM device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1037
+msgid "Device to register"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1039
+msgid "``unsigned long flags``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1038
+msgid "Flags passed to the driver's .load() function"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1039
+msgid ""
+"Register the DRM device **dev** with the system, advertise device to user-"
+"space and start normal device operation. **dev** must be initialized via "
+"drm_dev_init() previously."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1043
+msgid "Never call this twice on any device!"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:3
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1045
+msgid "**NOTE**"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1046
+msgid ""
+"To ensure backward compatibility with existing drivers method this function "
+"calls the :c:type:`drm_driver.load <drm_driver>` method after registering "
+"the device nodes, creating race conditions. Usage of the :c:type:`drm_driver."
+"load <drm_driver>` methods is therefore deprecated, drivers must perform all "
+"initialization before calling drm_dev_register()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1052
+msgid "0 on success, negative error code on failure."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1128
+msgid "Unregister DRM device"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1129
+msgid "Device to unregister"
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1130
+msgid ""
+"Unregister the DRM device from the system. This does the reverse of "
+"drm_dev_register() but does not deallocate the device. The caller must call "
+"drm_dev_put() to drop their final reference, unless it is managed with "
+"devres (as devices allocated with devm_drm_dev_alloc() are), in which case "
+"there is already an unwind action registered."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1136
+msgid ""
+"A special form of unregistering for hotpluggable devices is "
+"drm_dev_unplug(), which can be called while there are still open users of "
+"**dev**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:90: drivers/gpu/drm/drm_drv.c:1139
+msgid ""
+"This should be called first in the device teardown code to make sure "
+"userspace can't access the device instance any more."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:94
+msgid "Driver Load"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:97
+msgid "Component Helper Usage"
+msgstr ""
+
+#: ../../../gpu/drm-internals:99: drivers/gpu/drm/drm_drv.c:660
+msgid ""
+"DRM drivers that drive hardware where a logical device consists of a pile of "
+"independent hardware blocks are recommended to use the :ref:`component "
+"helper library<component>`. For consistency and better options for code "
+"reuse the following guidelines apply:"
+msgstr ""
+
+#: ../../../gpu/drm-internals:99: drivers/gpu/drm/drm_drv.c:665
+msgid ""
+"The entire device initialization procedure should be run from the :c:type:"
+"`component_master_ops.master_bind <component_master_ops>` callback, starting "
+"with devm_drm_dev_alloc(), then binding all components with "
+"component_bind_all() and finishing with drm_dev_register()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:99: drivers/gpu/drm/drm_drv.c:670
+msgid ""
+"The opaque pointer passed to all components through component_bind_all() "
+"should point at :c:type:`struct drm_device <drm_device>` of the device "
+"instance, not some driver specific private structure."
+msgstr ""
+
+#: ../../../gpu/drm-internals:99: drivers/gpu/drm/drm_drv.c:674
+msgid ""
+"The component helper fills the niche where further standardization of "
+"interfaces is not practical. When there already is, or will be, a "
+"standardized interface like :c:type:`drm_bridge` or :c:type:`drm_panel`, "
+"providing its own functions to find such components at driver load time, "
+"like drm_of_find_panel_or_bridge(), then the component helper should not be "
+"used."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:103
+msgid "Memory Manager Initialization"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:105
+msgid ""
+"Every DRM driver requires a memory manager which must be initialized at load "
+"time. DRM currently contains two memory managers, the Translation Table "
+"Manager (TTM) and the Graphics Execution Manager (GEM). This document "
+"describes the use of the GEM memory manager only. See ? for details."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:112
+msgid "Miscellaneous Device Configuration"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:114
+msgid ""
+"Another task that may be necessary for PCI devices during configuration is "
+"mapping the video BIOS. On many devices, the VBIOS describes device "
+"configuration, LCD panel timings (if any), and contains flags indicating "
+"device state. Mapping the BIOS can be done using the pci_map_rom() call, a "
+"convenience function that takes care of mapping the actual ROM, whether it "
+"has been shadowed into memory (typically at address 0xc0000) or exists on "
+"the PCI device in the ROM BAR. Note that after the ROM has been mapped and "
+"any necessary information has been extracted, it should be unmapped; on many "
+"devices, the ROM address decoder is shared with other BARs, so leaving it "
+"mapped could cause undesired behaviour like hangs or memory corruption."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:127
+msgid "Managed Resources"
+msgstr ""
+
+#: ../../../gpu/drm-internals:129: drivers/gpu/drm/drm_managed.c:22
+msgid ""
+"Inspired by struct :c:type:`device` managed resources, but tied to the "
+"lifetime of struct :c:type:`drm_device`, which can outlive the underlying "
+"physical device, usually when userspace has some open files and other "
+"handles to resources still open."
+msgstr ""
+
+#: ../../../gpu/drm-internals:129: drivers/gpu/drm/drm_managed.c:26
+msgid ""
+"Release actions can be added with drmm_add_action(), memory allocations can "
+"be done directly with drmm_kmalloc() and the related functions. Everything "
+"will be released on the final drm_dev_put() in reverse order of how the "
+"release actions have been added and memory has been allocated since driver "
+"loading started with devm_drm_dev_alloc()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:129: drivers/gpu/drm/drm_managed.c:32
+msgid ""
+"Note that release actions and managed memory can also be added and removed "
+"during the lifetime of the driver, all the functions are fully concurrent "
+"safe. But it is recommended to use managed resources only for resources that "
+"change rarely, if ever, during the lifetime of the :c:type:`drm_device` "
+"instance."
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:181
+msgid "release a managed action from a :c:type:`drm_device`"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:184
+msgid "``drmres_release_t action``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:183
+msgid "function which would be called when **dev** is released"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:185
+#: drivers/gpu/drm/drm_managed.c:277
+msgid "``void *data``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:184
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:19
+#: include/drm/drm_managed.h:36
+msgid "opaque pointer, passed to **action**"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:185
+msgid ""
+"This function calls the **action** previously added by drmm_add_action() "
+"immediately. The **action** is removed from the list of cleanup actions for "
+"**dev**, which means that it won't be called in the final drm_dev_put()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:220
+msgid ":c:type:`drm_device` managed kmalloc()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:222
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:57
+msgid "size of the memory allocation"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:224
+#: drivers/gpu/drm/drm_managed.c:252 ../../../gpu/drm-internals:135:
+#: include/drm/drm_managed.h:59
+msgid "``gfp_t gfp``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:223
+#: drivers/gpu/drm/drm_managed.c:251 ../../../gpu/drm-internals:135:
+#: include/drm/drm_managed.h:58 include/drm/drm_managed.h:74
+#: include/drm/drm_managed.h:96
+msgid "GFP allocation flags"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:224
+msgid ""
+"This is a :c:type:`drm_device` managed version of kmalloc(). The allocated "
+"memory is automatically freed on the final drm_dev_put(). Memory can also be "
+"freed before the final drm_dev_put() by calling drmm_kfree()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:248
+msgid ":c:type:`drm_device` managed kstrdup()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:251
+msgid "``const char *s``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:250
+msgid "0-terminated string to be duplicated"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:252
+msgid ""
+"This is a :c:type:`drm_device` managed version of kstrdup(). The allocated "
+"memory is automatically freed on the final drm_dev_put() and works exactly "
+"like a memory allocation obtained by drmm_kmalloc()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:274
+msgid ":c:type:`drm_device` managed kfree()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:276
+msgid "memory allocation to be freed"
+msgstr ""
+
+#: ../../../gpu/drm-internals:132: drivers/gpu/drm/drm_managed.c:277
+msgid ""
+"This is a :c:type:`drm_device` managed version of kfree() which can be used "
+"to release memory allocated through drmm_kmalloc() or any of its related "
+"functions before the final drm_dev_put() of **dev**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:18
+msgid "``drmm_add_action (dev, action, data)``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:16
+#: include/drm/drm_managed.h:33
+msgid "add a managed release action to a :c:type:`drm_device`"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:19
+#: include/drm/drm_managed.h:36
+msgid "``action``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:18
+#: include/drm/drm_managed.h:35
+msgid "function which should be called when **dev** is released"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:20
+#: include/drm/drm_managed.h:37 ../../../gpu/drm-internals:164:
+#: include/drm/drm_print.h:232
+msgid "``data``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:20
+msgid ""
+"This function adds the **release** action with optional parameter **data** "
+"to the list of cleanup actions for **dev**. The cleanup actions will be run "
+"in reverse order in the final drm_dev_put() call for **dev**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:35
+msgid "``drmm_add_action_or_reset (dev, action, data)``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:37
+msgid ""
+"Similar to drmm_add_action(), with the only difference that upon failure "
+"**action** is directly called for any cleanup work necessary on failures."
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:55
+msgid ":c:type:`drm_device` managed kzalloc()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:59
+msgid ""
+"This is a :c:type:`drm_device` managed version of kzalloc(). The allocated "
+"memory is automatically freed on the final drm_dev_put(). Memory can also be "
+"freed before the final drm_dev_put() by calling drmm_kfree()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:70
+msgid ":c:type:`drm_device` managed kmalloc_array()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:73
+#: include/drm/drm_managed.h:95
+msgid "``size_t n``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:72
+#: include/drm/drm_managed.h:94
+msgid "number of array elements to allocate"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:73
+#: include/drm/drm_managed.h:95
+msgid "size of array member"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:75
+#: include/drm/drm_managed.h:97
+msgid "``gfp_t flags``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:75
+msgid ""
+"This is a :c:type:`drm_device` managed version of kmalloc_array(). The "
+"allocated memory is automatically freed on the final drm_dev_put() and works "
+"exactly like a memory allocation obtained by drmm_kmalloc()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:92
+msgid ":c:type:`drm_device` managed kcalloc()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:97
+msgid ""
+"This is a :c:type:`drm_device` managed version of kcalloc(). The allocated "
+"memory is automatically freed on the final drm_dev_put() and works exactly "
+"like a memory allocation obtained by drmm_kmalloc()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:117
+msgid "``drmm_mutex_init (dev, lock)``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:115
+msgid ":c:type:`drm_device`-managed mutex_init()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:118
+msgid "``lock``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:117
+msgid "lock to be initialized"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:119
+msgid "0 on success, or a negative errno code otherwise."
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:121
+msgid ""
+"This is a :c:type:`drm_device`-managed version of mutex_init(). The "
+"initialized lock is automatically destroyed on the final drm_dev_put()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:135
+msgid "``drmm_alloc_ordered_workqueue (dev, fmt, flags, args...)``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:133
+msgid ":c:type:`drm_device` managed alloc_ordered_workqueue()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:136
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:226
+#: include/drm/drm_print.h:522 include/drm/drm_print.h:534
+#: include/drm/drm_print.h:577 include/drm/drm_print.h:587
+#: include/drm/drm_print.h:597
+msgid "``fmt``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:135
+msgid "printf format for the name of the workqueue"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:137
+msgid "``flags``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:136
+msgid "WQ_* flags (only WQ_FREEZABLE and WQ_MEM_RECLAIM are meaningful)"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:138
+msgid "``args...``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:137
+msgid "args for **fmt**"
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:138
+msgid ""
+"This is a :c:type:`drm_device`-managed version of alloc_ordered_workqueue(). "
+"The allocated workqueue is automatically destroyed on the final "
+"drm_dev_put()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:135: include/drm/drm_managed.h:142
+msgid "workqueue on success, negative ERR_PTR otherwise."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:139
+msgid "Open/Close, File Operations and IOCTLs"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:144
+msgid "File Operations"
+msgstr ""
+
+#: ../../../gpu/drm-internals:146: drivers/gpu/drm/drm_file.c:72
+msgid ""
+"Drivers must define the file operations structure that forms the DRM "
+"userspace API entry point, even though most of those operations are "
+"implemented in the DRM core. The resulting :c:type:`struct file_operations "
+"<file_operations>` must be stored in the :c:type:`drm_driver.fops "
+"<drm_driver>` field. The mandatory functions are drm_open(), drm_read(), "
+"drm_ioctl() and drm_compat_ioctl() if CONFIG_COMPAT is enabled Note that "
+"drm_compat_ioctl will be NULL if CONFIG_COMPAT=n, so there's no need to "
+"sprinkle #ifdef into the code. Drivers which implement private ioctls that "
+"require 32/64 bit compatibility support must provide their own :c:type:"
+"`file_operations.compat_ioctl <file_operations>` handler that processes "
+"private ioctls and calls drm_compat_ioctl() for core ioctls."
+msgstr ""
+
+#: ../../../gpu/drm-internals:146: drivers/gpu/drm/drm_file.c:83
+msgid ""
+"In addition drm_read() and drm_poll() provide support for DRM events. DRM "
+"events are a generic and extensible means to send asynchronous events to "
+"userspace through the file descriptor. They are used to send vblank event "
+"and page flip completions by the KMS API. But drivers can also use it for "
+"their own needs, e.g. to signal completion of rendering."
+msgstr ""
+
+#: ../../../gpu/drm-internals:146: drivers/gpu/drm/drm_file.c:89
+msgid ""
+"For the driver-side event interface see drm_event_reserve_init() and "
+"drm_send_event() as the main starting points."
+msgstr ""
+
+#: ../../../gpu/drm-internals:146: drivers/gpu/drm/drm_file.c:92
+msgid ""
+"The memory mapping implementation will vary depending on how the driver "
+"manages memory. For GEM-based drivers this is drm_gem_mmap()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:146: drivers/gpu/drm/drm_file.c:95
+msgid ""
+"No other file operations are supported by the DRM userspace API. Overall the "
+"following is an example :c:type:`file_operations` structure::"
+msgstr ""
+
+#: ../../../gpu/drm-internals:146: drivers/gpu/drm/drm_file.c:109
+msgid ""
+"For plain GEM based drivers there is the DEFINE_DRM_GEM_FOPS() macro, and "
+"for DMA based drivers there is the DEFINE_DRM_GEM_DMA_FOPS() macro to make "
+"this simpler."
+msgstr ""
+
+#: ../../../gpu/drm-internals:146: drivers/gpu/drm/drm_file.c:113
+msgid ""
+"The driver's :c:type:`file_operations` must be stored in :c:type:`drm_driver."
+"fops <drm_driver>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:146: drivers/gpu/drm/drm_file.c:115
+msgid ""
+"For driver-private IOCTL handling see the more detailed discussion in :ref:"
+"`IOCTL support in the userland interfaces chapter<drm_driver_ioctl>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:69
+msgid "DRM device minor structure"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:70
+msgid ""
+"This structure represents a DRM minor number for device nodes in /dev. "
+"Entirely opaque to drivers and should never be inspected directly by "
+"drivers. Drivers instead should only interact with :c:type:`struct drm_file "
+"<drm_file>` and of course :c:type:`struct drm_device <drm_device>`, which is "
+"also where driver-private data and resources can be attached to."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:89
+msgid "Event queued up for userspace to read"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:97
+msgid "``completion``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:98
+msgid ""
+"Optional pointer to a kernel internal completion signalled when "
+"drm_send_event() is called, useful to internally synchronize with "
+"nonblocking operations."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:106
+msgid "``completion_release``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:107
+msgid ""
+"Optional callback currently only used by the atomic modeset helpers to clean "
+"up the reference count for the structure **completion** is stored in."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:115
+msgid "``event``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:116
+msgid ""
+"Pointer to the actual event that should be sent to userspace to be read "
+"using drm_read(). Can be optional, since nowadays events are also used to "
+"signal kernel internal threads with **completion** or DMA transactions using "
+"**fence**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:125
+msgid "``fence``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:126
+msgid ""
+"Optional DMA fence to unblock other hardware transactions which depend upon "
+"the nonblocking DRM operation this event represents."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:133
+msgid "``file_priv``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:134
+msgid ""
+":c:type:`struct drm_file <drm_file>` where **event** should be delivered to. "
+"Only set when **event** is set."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:141
+msgid "``link``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:142
+msgid ""
+"Double-linked list to keep track of this event. Can be used by the driver up "
+"to the point when it calls drm_send_event(), after that this list entry is "
+"owned by the core for its own book-keeping."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:150
+msgid "``pending_link``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:151
+msgid ""
+"Entry on :c:type:`drm_file.pending_event_list <drm_file>`, to keep track of "
+"all pending events for **file_priv**, to allow correct unwinding of them "
+"when userspace closes the file before the event is delivered."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:90
+msgid ""
+"This represents a DRM event. Drivers can use this as a generic completion "
+"mechanism, which supports kernel-internal :c:type:`struct completion "
+"<completion>`, :c:type:`struct dma_fence <dma_fence>` and also the DRM-"
+"specific :c:type:`struct drm_event <drm_event>` delivery mechanism."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:160
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:641
+#: drivers/gpu/drm/drm_file.c:682
+msgid "DRM file private data"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:166
+msgid "``authenticated``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:167
+msgid ""
+"Whether the client is allowed to submit rendering, which for legacy nodes "
+"means it must be authenticated."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:170
+#: include/drm/drm_file.h:225 include/drm/drm_file.h:421
+msgid ""
+"See also the :ref:`section on primary nodes and authentication "
+"<drm_primary_node>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:177
+msgid "``stereo_allowed``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:178
+msgid "True when the client has asked us to expose stereo 3D mode flags."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:184
+msgid "``universal_planes``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:185
+msgid ""
+"True if client understands CRTC primary planes and cursor planes in the "
+"plane list. Automatically set when **atomic** is set."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:191
+msgid "``atomic``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:192
+msgid "True if client understands atomic properties."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:195
+msgid "``aspect_ratio_allowed``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:196
+msgid ""
+"True, if client can handle picture aspect ratios, and has requested to pass "
+"this information along with the mode."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:203
+msgid "``writeback_connectors``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:204
+msgid "True if client understands writeback connectors"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:210
+msgid "``was_master``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:211
+msgid ""
+"This client has or had, master capability. Protected by struct :c:type:"
+"`drm_device.master_mutex <drm_device>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:214
+msgid ""
+"This is used to ensure that CAP_SYS_ADMIN is not enforced, if the client is "
+"or was master in the past."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:221
+msgid "``is_master``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:222
+msgid ""
+"This client is the creator of **master**. Protected by struct :c:type:"
+"`drm_device.master_mutex <drm_device>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:232
+msgid "``supports_virtualized_cursor_plane``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:233
+msgid ""
+"This client is capable of handling the cursor plane with the restrictions "
+"imposed on it by the virtualized drivers."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:236
+msgid ""
+"This implies that the cursor plane has to behave like a cursor i.e. track "
+"cursor movement. It also requires setting of the hotspot properties by the "
+"client on the cursor plane."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:245
+msgid ""
+"Master this node is currently associated with. Protected by struct :c:type:"
+"`drm_device.master_mutex <drm_device>`, and serialized by "
+"**master_lookup_lock**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:248
+msgid ""
+"Only relevant if drm_is_primary_client() returns true. Note that this only "
+"matches :c:type:`drm_device.master <drm_device>` if the master is the "
+"currently active one."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:252
+msgid ""
+"To update **master**, both :c:type:`drm_device.master_mutex <drm_device>` "
+"and **master_lookup_lock** need to be held, therefore holding either of them "
+"is safe and enough for the read side."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:256
+msgid ""
+"When dereferencing this pointer, either hold struct :c:type:`drm_device."
+"master_mutex <drm_device>` for the duration of the pointer's use, or use "
+"drm_file_get_master() if struct :c:type:`drm_device.master_mutex "
+"<drm_device>` is not currently held and there is no other need to hold it. "
+"This prevents **master** from being freed during use."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:262
+msgid ""
+"See also **authentication** and **is_master** and the :ref:`section on "
+"primary nodes and authentication <drm_primary_node>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:268
+msgid "``master_lookup_lock``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:269
+msgid "Serializes **master**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:273
+msgid "Process that is using this file."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:275
+msgid "Must only be dereferenced under a rcu_read_lock or equivalent."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:277
+msgid ""
+"Updates are guarded with dev->filelist_mutex and reference must be dropped "
+"after a RCU grace period to accommodate lockless readers."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:281
+msgid "``client_id``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:282
+msgid "A unique id for fdinfo"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:284
+msgid "``magic``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:285
+msgid "Authentication magic, see **authenticated**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:288
+msgid "``lhead``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:289
+msgid ""
+"List of all open files of a DRM device, linked into :c:type:`drm_device."
+"filelist <drm_device>`. Protected by :c:type:`drm_device.filelist_mutex "
+"<drm_device>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:296
+msgid ":c:type:`struct drm_minor <drm_minor>` for this file."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:299
+msgid "``object_idr``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:300
+msgid ""
+"Mapping of mm object handles to object pointers. Used by the GEM subsystem. "
+"Protected by **table_lock**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:303
+msgid ""
+"Note that allocated entries might be NULL as a transient state when creating "
+"or deleting a handle."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:309
+msgid "``table_lock``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:310
+msgid "Protects **object_idr**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:312
+msgid "``syncobj_idr``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:313
+msgid "Mapping of sync object handles to object pointers."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:314
+msgid "``syncobj_table_lock``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:315
+msgid "Protects **syncobj_idr**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:317
+msgid "``filp``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:318
+msgid "Pointer to the core file structure."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:321
+msgid "``driver_priv``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:322
+msgid ""
+"Optional pointer for driver private data. Can be allocated in :c:type:"
+"`drm_driver.open <drm_driver>` and should be freed in :c:type:`drm_driver."
+"postclose <drm_driver>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:329
+msgid "``fbs``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:330
+msgid ""
+"List of :c:type:`struct drm_framebuffer <drm_framebuffer>` associated with "
+"this file, using the :c:type:`drm_framebuffer.filp_head <drm_framebuffer>` "
+"entry."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:333
+msgid ""
+"Protected by **fbs_lock**. Note that the **fbs** list holds a reference on "
+"the framebuffer object to prevent it from untimely disappearing."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:339
+msgid "``fbs_lock``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:340
+msgid "Protects **fbs**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:343
+msgid "``blobs``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:344
+msgid "User-created blob properties; this retains a reference on the property."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:347
+msgid "Protected by **drm_mode_config.blob_lock**;"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:352
+msgid "``event_wait``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:353
+msgid "Waitqueue for new events added to **event_list**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:356
+msgid "``pending_event_list``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:357
+msgid ""
+"List of pending :c:type:`struct drm_pending_event <drm_pending_event>`, used "
+"to clean up pending events in case this file gets closed before the event is "
+"signalled. Uses the :c:type:`drm_pending_event.pending_link "
+"<drm_pending_event>` entry."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:361
+#: include/drm/drm_file.h:371
+msgid "Protect by :c:type:`drm_device.event_lock <drm_device>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:367
+msgid "``event_list``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:368
+msgid ""
+"List of :c:type:`struct drm_pending_event <drm_pending_event>`, ready for "
+"delivery to userspace through drm_read(). Uses the :c:type:"
+"`drm_pending_event.link <drm_pending_event>` entry."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:377
+msgid "``event_space``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:378
+msgid ""
+"Available event space to prevent userspace from exhausting kernel memory. "
+"Currently limited to the fairly arbitrary value of 4KB."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:385
+msgid "``event_read_lock``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:386
+msgid "Serializes drm_read()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:389
+msgid "``prime``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:390
+msgid "Per-file buffer caches used by the PRIME buffer sharing code."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:396
+msgid "``client_name``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:397
+msgid "Userspace-provided name; useful for accounting and debugging."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:403
+msgid "``client_name_lock``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:404
+msgid "Protects **client_name**."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:408
+msgid "``debugfs_client``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:409
+msgid "debugfs directory for each client under a drm node."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:161
+msgid "This structure tracks DRM state per open file descriptor."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:416
+msgid "is this an open file of the primary node"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:422
+#: include/drm/drm_file.h:437 include/drm/drm_file.h:451
+msgid "``const struct drm_file *file_priv``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:417
+#: include/drm/drm_file.h:432 include/drm/drm_file.h:446
+msgid "DRM file"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:418
+msgid ""
+"Returns true if this is an open file of the primary node, i.e. :c:type:"
+"`drm_file.minor <drm_file>` of **file_priv** is a primary minor."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:431
+msgid "is this an open file of the render node"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:433
+msgid ""
+"Returns true if this is an open file of the render node, i.e. :c:type:"
+"`drm_file.minor <drm_file>` of **file_priv** is a render minor."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:436
+msgid "See also the :ref:`section on render nodes <drm_render_node>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:445
+msgid "is this an open file of the compute acceleration node"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:447
+msgid ""
+"Returns true if this is an open file of the compute acceleration node, i.e. :"
+"c:type:`drm_file.minor <drm_file>` of **file_priv** is a accel minor."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:450
+msgid ""
+"See also :doc:`Introduction to compute accelerators subsystem </accel/"
+"introduction>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:491
+msgid "GEM object stats associated"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:492
+msgid "``shared``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:493
+msgid "Total size of GEM objects shared between processes"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:493
+msgid "``private``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:494
+msgid "Total size of GEM objects"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:494
+msgid "``resident``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:495
+msgid "Total size of GEM objects backing pages"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:495
+msgid "``purgeable``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:496
+msgid "Total size of GEM objects that can be purged (resident and not active)"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:496
+msgid "``active``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:497
+msgid "Total size of GEM objects active on one or more engines"
+msgstr ""
+
+#: ../../../gpu/drm-internals:149: include/drm/drm_file.h:497
+msgid "Used by drm_print_memory_stats()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:358
+msgid "open method for DRM file"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:364
+#: drivers/gpu/drm/drm_file.c:421 drivers/gpu/drm/drm_file.c:491
+msgid "``struct inode *inode``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:359
+#: drivers/gpu/drm/drm_file.c:416 drivers/gpu/drm/drm_file.c:486
+msgid "device inode"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:361
+#: drivers/gpu/drm/drm_file.c:418 drivers/gpu/drm/drm_file.c:488
+#: drivers/gpu/drm/drm_file.c:523 drivers/gpu/drm/drm_file.c:616
+msgid "``struct file *filp``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:360
+#: drivers/gpu/drm/drm_file.c:417 drivers/gpu/drm/drm_file.c:487
+msgid "file pointer."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:361
+msgid ""
+"This function must be used by drivers as their :c:type:`file_operations.open "
+"<file_operations>` method. It looks up the correct DRM device and "
+"instantiates all the per-file resources for it. It also calls the :c:type:"
+"`drm_driver.open <drm_driver>` driver callback."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:366
+msgid "0 on success or negative errno value on failure."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:415
+#: drivers/gpu/drm/drm_file.c:485
+msgid "release method for DRM file"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:418
+msgid ""
+"This function must be used by drivers as their :c:type:`file_operations."
+"release <file_operations>` method. It frees any resources associated with "
+"the open file. If this is the last open file for the DRM device, it also "
+"restores the active in-kernel DRM client."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:424
+#: drivers/gpu/drm/drm_file.c:494
+msgid "Always succeeds and returns 0."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:488
+msgid ""
+"This function may be used by drivers as their :c:type:`file_operations."
+"release <file_operations>` method. It frees any resources associated with "
+"the open file prior to taking the drm_global_mutex. If this is the last open "
+"file for the DRM device, it then restores the active in-kernel DRM client."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:517
+msgid "read method for DRM file"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:518
+#: drivers/gpu/drm/drm_file.c:611
+msgid "file pointer"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:520
+msgid "``char __user *buffer``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:519
+msgid "userspace destination pointer for the read"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:521
+msgid "``size_t count``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:520
+msgid "count in bytes to read"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:522
+msgid "``loff_t *offset``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:521
+msgid "offset to read"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:522
+msgid ""
+"This function must be used by drivers as their :c:type:`file_operations.read "
+"<file_operations>` method if they use DRM events for asynchronous signalling "
+"to userspace. Since events are used by the KMS API for vblank and page flip "
+"completion this means all modern display drivers must use it."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:527
+msgid ""
+"**offset** is ignored, DRM events are read like a pipe. Polling support is "
+"provided by drm_poll()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:530
+msgid ""
+"This function will only ever read a full event. Therefore userspace must "
+"supply a big enough buffer to fit any event to ensure forward progress. "
+"Since the maximum event space is currently 4K it's recommended to just use "
+"that for safety."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:536
+msgid ""
+"Number of bytes read (always aligned to full events, and can be 0) or a "
+"negative error code on failure."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:610
+msgid "poll method for DRM file"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:613
+msgid "``struct poll_table_struct *wait``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:612
+msgid "poll waiter table"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:613
+msgid ""
+"This function must be used by drivers as their :c:type:`file_operations.read "
+"<file_operations>` method if they use DRM events for asynchronous signalling "
+"to userspace.  Since events are used by the KMS API for vblank and page flip "
+"completion this means all modern display drivers must use it."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:618
+msgid "See also drm_read()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:621
+msgid "Mask of POLL flags indicating the current status of the file."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:639
+#: drivers/gpu/drm/drm_file.c:680
+msgid "init a DRM event and reserve space for it"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:642
+#: drivers/gpu/drm/drm_file.c:683 drivers/gpu/drm/drm_file.c:1014
+msgid "``struct drm_file *file_priv``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:643
+#: drivers/gpu/drm/drm_file.c:684 drivers/gpu/drm/drm_file.c:722
+msgid "``struct drm_pending_event *p``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:642
+#: drivers/gpu/drm/drm_file.c:683 drivers/gpu/drm/drm_file.c:721
+msgid "tracking structure for the pending event"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:644
+#: drivers/gpu/drm/drm_file.c:685
+msgid "``struct drm_event *e``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:643
+#: drivers/gpu/drm/drm_file.c:684
+msgid "actual event data to deliver to userspace"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:644
+#: drivers/gpu/drm/drm_file.c:685
+msgid ""
+"This function prepares the passed in event for eventual delivery. If the "
+"event doesn't get delivered (because the IOCTL fails later on, before "
+"queuing up anything) then the even must be cancelled and freed using "
+"drm_event_cancel_free(). Successfully initialized events should be sent out "
+"using drm_send_event() or drm_send_event_locked() to signal completion of "
+"the asynchronous event to userspace."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:651
+#: drivers/gpu/drm/drm_file.c:692
+msgid ""
+"If callers embedded **p** into a larger structure it must be allocated with "
+"kmalloc and **p** must be the first member element."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:654
+msgid ""
+"This is the locked version of drm_event_reserve_init() for callers which "
+"already hold :c:type:`drm_device.event_lock <drm_device>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:658
+#: drivers/gpu/drm/drm_file.c:699
+msgid "0 on success or a negative error code on failure."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:695
+msgid ""
+"Callers which already hold :c:type:`drm_device.event_lock <drm_device>` "
+"should use drm_event_reserve_init_locked() instead."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:719
+msgid "free a DRM event and release its space"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:722
+msgid ""
+"This function frees the event **p** initialized with "
+"drm_event_reserve_init() and releases any allocated space. It is used to "
+"cancel an event when the nonblocking operation could not be submitted and "
+"needed to be aborted."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:778
+#: drivers/gpu/drm/drm_file.c:801 drivers/gpu/drm/drm_file.c:821
+msgid "send DRM event to file descriptor"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:781
+#: drivers/gpu/drm/drm_file.c:804 drivers/gpu/drm/drm_file.c:824
+msgid "``struct drm_pending_event *e``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:780
+#: drivers/gpu/drm/drm_file.c:803 drivers/gpu/drm/drm_file.c:823
+msgid "DRM event to deliver"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:782
+msgid "``ktime_t timestamp``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:781
+msgid ""
+"timestamp to set for the fence event in kernel's CLOCK_MONOTONIC time domain"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:783
+msgid ""
+"This function sends the event **e**, initialized with "
+"drm_event_reserve_init(), to its associated userspace DRM file. Callers must "
+"already hold :c:type:`drm_device.event_lock <drm_device>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:787
+#: drivers/gpu/drm/drm_file.c:808 drivers/gpu/drm/drm_file.c:829
+msgid ""
+"Note that the core will take care of unlinking and disarming events when the "
+"corresponding DRM file is closed. Drivers need not worry about whether the "
+"DRM file for this event still exists and can call this function upon "
+"completion of the asynchronous work unconditionally."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:804
+msgid ""
+"This function sends the event **e**, initialized with "
+"drm_event_reserve_init(), to its associated userspace DRM file. Callers must "
+"already hold :c:type:`drm_device.event_lock <drm_device>`, see "
+"drm_send_event() for the unlocked version."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:824
+msgid ""
+"This function sends the event **e**, initialized with "
+"drm_event_reserve_init(), to its associated userspace DRM file. This "
+"function acquires :c:type:`drm_device.event_lock <drm_device>`, see "
+"drm_send_event_locked() for callers which already hold this lock."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:876
+msgid "A helper to print memory stats"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:882
+#: drivers/gpu/drm/drm_file.c:914 ../../../gpu/drm-internals:164:
+#: include/drm/drm_print.h:214 include/drm/drm_print.h:354
+#: include/drm/drm_print.h:449 ../../../gpu/drm-internals:167:
+#: drivers/gpu/drm/drm_print.c:260 drivers/gpu/drm/drm_print.c:277
+#: drivers/gpu/drm/drm_print.c:292 drivers/gpu/drm/drm_print.c:374
+#: drivers/gpu/drm/drm_print.c:402
+msgid "``struct drm_printer *p``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:877
+msgid "The printer to print output to"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:879
+msgid "``const struct drm_memory_stats *stats``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:878
+msgid "The collected memory stats"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:880
+msgid "``enum drm_gem_object_status supported_status``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:879
+msgid "Bitmask of optional stats which are available"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:881
+msgid "``const char *region``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:880
+msgid "The memory region"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:908
+msgid "Helper to collect and show standard fdinfo memory stats"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:909
+msgid "the printer to print output to"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:911
+msgid "``struct drm_file *file``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:910
+msgid "the DRM file"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:911
+msgid ""
+"Helper to iterate over GEM objects with a handle allocated in the specified "
+"file."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:965
+msgid "helper for drm file fops"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:971
+msgid "``struct seq_file *m``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:966
+msgid "output stream"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:968
+msgid "``struct file *f``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:967
+msgid "the device file instance"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:968
+msgid ""
+"Helper to implement fdinfo, for userspace to query usage stats, etc, of a "
+"process using the GPU.  See also :c:type:`drm_driver.show_fdinfo "
+"<drm_driver>`."
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:971
+msgid ""
+"For text output format description please see Documentation/gpu/drm-usage-"
+"stats.rst"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:1008
+msgid "log process name, pid and client_name associated with a drm_file"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:1009
+msgid "context of interest for process name and pid"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:1011
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:211
+msgid "``const char *fmt``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:1010
+msgid "printf() like format string"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:1012
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:227
+#: include/drm/drm_print.h:523 include/drm/drm_print.h:535
+#: include/drm/drm_print.h:578 include/drm/drm_print.h:588
+#: include/drm/drm_print.h:598 ../../../gpu/drm-internals:167:
+#: drivers/gpu/drm/drm_print.c:275
+msgid "``...``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:1
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:1
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:1
+msgid "variable arguments"
+msgstr ""
+
+#: ../../../gpu/drm-internals:152: drivers/gpu/drm/drm_file.c:1011
+msgid ""
+"Helper function for clients which needs to log process details such as name "
+"and pid etc along with user logs."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:156
+msgid "Misc Utilities"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:159
+msgid "Printer"
+msgstr ""
+
+#: ../../../gpu/drm-internals:161: include/drm/drm_print.h:45
+msgid ""
+"A simple wrapper for dev_printk(), seq_printf(), etc.  Allows same debug "
+"code to be used for both debugfs and printk logging."
+msgstr ""
+
+#: ../../../gpu/drm-internals:161: include/drm/drm_print.h:48
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:253
+#: include/drm/drm_print.h:287
+msgid "For example::"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:74
+msgid "The DRM debug categories"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:80
+msgid "``DRM_UT_CORE``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:81
+msgid "Used in the generic drm code: drm_ioctl.c, drm_mm.c, drm_memory.c, ..."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:84
+msgid "``DRM_UT_DRIVER``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:85
+msgid ""
+"Used in the vendor specific part of the driver: i915, radeon, ... macro."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:88
+msgid "``DRM_UT_KMS``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:89
+msgid "Used in the modesetting code."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:91
+msgid "``DRM_UT_PRIME``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:92
+msgid "Used in the prime code."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:94
+msgid "``DRM_UT_ATOMIC``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:95
+msgid "Used in the atomic code."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:97
+msgid "``DRM_UT_VBL``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:98
+msgid "Used for verbose debug message in the vblank code."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:100
+msgid "``DRM_UT_STATE``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:101
+msgid "Used for verbose atomic state debugging."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:103
+msgid "``DRM_UT_LEASE``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:104
+msgid "Used in the lease code."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:106
+msgid "``DRM_UT_DP``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:107
+msgid "Used in the DP code."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:109
+msgid "``DRM_UT_DRMRES``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:110
+msgid "Used in the drm managed resources code."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:75
+msgid ""
+"Each of the DRM debug logging macros use a specific category, and the "
+"logging is filtered by the drm.debug module parameter. This enum specifies "
+"the values for the interface."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:79
+msgid ""
+"Each DRM_DEBUG_<CATEGORY> macro logs to DRM_UT_<CATEGORY> category, except "
+"DRM_DEBUG() logs to DRM_UT_CORE."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:82
+msgid ""
+"Enabling verbose debug messages is done through the drm.debug parameter, "
+"each category being enabled by a bit:"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:85
+msgid "drm.debug=0x1 will enable CORE messages"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:86
+msgid "drm.debug=0x2 will enable DRIVER messages"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:87
+msgid "drm.debug=0x3 will enable CORE and DRIVER messages"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:88
+msgid "..."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:89
+msgid "drm.debug=0x1ff will enable all messages"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:91
+msgid ""
+"An interesting feature is that it's possible to enable verbose logging at "
+"run-time by echoing the debug value in its sysfs node::"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:169
+msgid "drm output \"stream\""
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:170
+msgid ""
+"Do not use struct members directly.  Use drm_printer_seq_file(), "
+"drm_printer_info(), etc to initialize.  And drm_printf() for output."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:208
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:271
+msgid "print to a :c:type:`drm_printer` stream"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:209
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:272
+#: drivers/gpu/drm/drm_print.c:290
+msgid "the :c:type:`drm_printer`"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:210
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:273
+msgid "format string"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:212
+msgid "``va_list *va``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:211
+msgid "the va_list"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:224
+msgid "``drm_printf_indent (printer, indent, fmt, ...)``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:222
+msgid "Print to a :c:type:`drm_printer` stream with indentation"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:228
+msgid "``printer``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:223
+msgid "DRM printer"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:225
+msgid "``indent``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:224
+msgid "Tab indentation level (max 5)"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:225
+msgid "Format string"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:231
+msgid "local struct used with drm_printer_coredump"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:233
+msgid ""
+"Pointer to the devcoredump output buffer, can be NULL if using "
+"drm_printer_coredump to determine size of devcoredump"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:234
+msgid "``start``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:235
+msgid "The offset within the buffer to start writing"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:235
+msgid "``remain``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:236
+msgid "The number of bytes to write for this iteration"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:246
+msgid ""
+"construct a :c:type:`drm_printer` that can output to a buffer from the read "
+"function for devcoredump"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:252
+msgid "``struct drm_print_iterator *iter``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:248
+msgid "A pointer to a struct drm_print_iterator for the read instance"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:249
+msgid ""
+"This wrapper extends drm_printf() to work with a dev_coredumpm() callback "
+"function. The passed in drm_print_iterator struct contains the buffer "
+"pointer, size and offset as passed in from devcoredump."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:277
+msgid ""
+"The above example has a time complexity of O(N^2), where N is the size of "
+"the devcoredump. This is acceptable for small devcoredumps but scales poorly "
+"for larger ones."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:281
+msgid ""
+"Another use case for drm_coredump_printer is to capture the devcoredump into "
+"a saved buffer before the dev_coredump() callback. This involves two passes: "
+"one to determine the size of the devcoredump and another to print it to a "
+"buffer. Then, in dev_coredump(), copy from the saved buffer into the "
+"devcoredump read buffer."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:324
+msgid ""
+"The above example has a time complexity of O(N*2), where N is the size of "
+"the devcoredump. This scales better than the previous example for larger "
+"devcoredumps."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:329
+#: include/drm/drm_print.h:371 include/drm/drm_print.h:388
+#: include/drm/drm_print.h:406 include/drm/drm_print.h:428
+#: include/drm/drm_print.h:485
+msgid "The :c:type:`drm_printer` object"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:348
+msgid "DRM coredump printer output is full"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:349
+msgid "DRM coredump printer"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:350
+msgid ""
+"DRM printer output is full, useful to short circuit coredump printing once "
+"printer is full."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:354
+msgid "True if DRM coredump printer output buffer is full, False otherwise"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:368
+msgid "construct a :c:type:`drm_printer` that outputs to :c:type:`seq_file`"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:374
+msgid "``struct seq_file *f``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:369
+msgid "the :c:type:`struct seq_file <seq_file>` to output to"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:385
+msgid "construct a :c:type:`drm_printer` that outputs to dev_printk()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:391
+msgid "``struct device *dev``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:386
+msgid "the :c:type:`struct device <device>` pointer"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:401
+msgid "construct a :c:type:`drm_printer` for drm device specific output"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:407
+#: include/drm/drm_print.h:430
+msgid "``struct drm_device *drm``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:402
+msgid "the :c:type:`struct drm_device <drm_device>` pointer, or NULL"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:404
+msgid "``enum drm_debug_category category``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:403
+msgid "the debug category to use"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:405
+#: include/drm/drm_print.h:427 include/drm/drm_print.h:446
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:399
+msgid "``const char *prefix``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:404
+#: include/drm/drm_print.h:426
+msgid "debug output prefix, or NULL for no prefix"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:424
+msgid "construct a :c:type:`drm_printer` that outputs to drm_err()"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:425
+msgid "the :c:type:`struct drm_device <drm_device>` pointer"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:443
+msgid ""
+"construct a :c:type:`drm_printer` that prefixes outputs with line numbers"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:444
+msgid ""
+"the :c:type:`struct drm_printer <drm_printer>` which actually generates the "
+"output"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:445
+msgid "optional output prefix, or NULL for no prefix"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:447
+msgid "``unsigned int series``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:446
+msgid ""
+"optional unique series identifier, or 0 to omit identifier in the output"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:447
+msgid ""
+"This printer can be used to increase the robustness of the captured output "
+"to make sure we didn't lost any intermediate lines of the output. Helpful "
+"while capturing some crash data."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:451
+msgid "Example 1::"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:463
+msgid "Above code will print into the dmesg something like::"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:468
+msgid "Example 2::"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:479
+msgid "Above code will print::"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:518
+msgid "``DRM_DEV_ERROR (dev, fmt, ...)``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:516
+msgid "Error output."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:520
+#: include/drm/drm_print.h:532 include/drm/drm_print.h:575
+#: include/drm/drm_print.h:585 include/drm/drm_print.h:595
+msgid "device pointer"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:521
+#: include/drm/drm_print.h:533 include/drm/drm_print.h:576
+#: include/drm/drm_print.h:586 include/drm/drm_print.h:596
+msgid "printf() like format string."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:518
+msgid "this is deprecated in favor of drm_err() or dev_err()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:529
+msgid "``DRM_DEV_ERROR_RATELIMITED (dev, fmt, ...)``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:527
+msgid "Rate limited error output."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:529
+msgid ""
+"this is deprecated in favor of drm_err_ratelimited() or "
+"dev_err_ratelimited()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:534
+msgid "Like DRM_ERROR() but won't flood the log."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:573
+msgid "``DRM_DEV_DEBUG (dev, fmt, ...)``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:571
+msgid "Debug output for generic drm code"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:573
+msgid "this is deprecated in favor of drm_dbg_core()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:583
+msgid "``DRM_DEV_DEBUG_DRIVER (dev, fmt, ...)``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:581
+msgid "Debug output for vendor specific part of the driver"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:583
+msgid "this is deprecated in favor of drm_dbg() or dev_dbg()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:593
+msgid "``DRM_DEV_DEBUG_KMS (dev, fmt, ...)``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:591
+msgid "Debug output for modesetting code"
+msgstr ""
+
+#: ../../../gpu/drm-internals:164: include/drm/drm_print.h:593
+msgid "this is deprecated in favor of drm_dbg_kms()."
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:254
+msgid "print a const string to a :c:type:`drm_printer` stream"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:255
+#: drivers/gpu/drm/drm_print.c:371
+msgid "the :c:type:`drm` printer"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:257
+msgid "``const char *str``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:256
+msgid "const string"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:257
+msgid ""
+"Allow :c:type:`drm_printer` types that have a constant string option to use "
+"it."
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:274
+msgid "``const char *f``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:286
+msgid "print bits to a :c:type:`drm_printer` stream"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:292
+msgid "``unsigned long value``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:291
+msgid "field value."
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:293
+msgid "``const char * const bits[]``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:292
+msgid "Array with bit names."
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:294
+msgid "``unsigned int nbits``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:293
+msgid "Size of bit names array."
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:287
+msgid "Print bits (in flag fields for example) in human readable form."
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:368
+msgid "print the contents of registers to a :c:type:`drm_printer` stream."
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:373
+msgid "``struct debugfs_regset32 *regset``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:372
+msgid "the list of registers to print."
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:373
+msgid ""
+"Often in driver debug, it's useful to be able to either capture the contents "
+"of registers in the steady state using debugfs or at specific points during "
+"operation.  This lets the driver have a single list of registers for both."
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:396
+msgid "print a hex dump to a :c:type:`drm_printer` stream"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:397
+msgid "The :c:type:`drm_printer`"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:398
+msgid "Prefix for each line, may be NULL for no prefix"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:400
+msgid "``const u8 *buf``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:399
+msgid "Buffer to dump"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:401
+msgid "``size_t len``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:400
+msgid "Length of buffer"
+msgstr ""
+
+#: ../../../gpu/drm-internals:167: drivers/gpu/drm/drm_print.c:401
+msgid ""
+"Print hex dump to :c:type:`drm_printer`, with 16 space-separated hex bytes "
+"per line, optionally with a prefix on each line. No separator is added after "
+"prefix."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:171
+msgid "Utilities"
+msgstr ""
+
+#: ../../../gpu/drm-internals:173: include/drm/drm_util.h:30
+msgid ""
+"Macros and inline functions that does not naturally belong in other places"
+msgstr ""
+
+#: ../../../gpu/drm-internals:176: include/drm/drm_util.h:52
+msgid "returns true if currently okay to sleep"
+msgstr ""
+
+#: ../../../gpu/drm-internals:176: include/drm/drm_util.h:58
+msgid "``void``"
+msgstr ""
+
+#: ../../../gpu/drm-internals:176: include/drm/drm_util.h:1
+msgid "no arguments"
+msgstr ""
+
+#: ../../../gpu/drm-internals:176: include/drm/drm_util.h:53
+msgid ""
+"This function shall not be used in new code. The check for running in atomic "
+"context may not work - see linux/preempt.h."
+msgstr ""
+
+#: ../../../gpu/drm-internals:176: include/drm/drm_util.h:56
+msgid "FIXME: All users of drm_can_sleep should be removed (see todo.rst)"
+msgstr ""
+
+#: ../../../gpu/drm-internals:176: include/drm/drm_util.h:59
+msgid "False if kgdb is active, we are in atomic context or irqs are disabled."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:181
+msgid "Unit testing"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:184
+msgid "KUnit"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:186
+msgid ""
+"KUnit (Kernel unit testing framework) provides a common framework for unit "
+"tests within the Linux kernel."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:189
+msgid ""
+"This section covers the specifics for the DRM subsystem. For general "
+"information about KUnit, please refer to Documentation/dev-tools/kunit/start."
+"rst."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:193
+msgid "How to run the tests?"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:195
+msgid ""
+"In order to facilitate running the test suite, a configuration file is "
+"present in ``drivers/gpu/drm/tests/.kunitconfig``. It can be used by ``kunit."
+"py`` as follows:"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:206
+msgid ""
+"The configuration included in ``.kunitconfig`` should be as generic as "
+"possible. ``CONFIG_VIRTIO_UML`` and ``CONFIG_UML_PCI_OVER_VIRTIO`` are not "
+"included in it because they are only required for User Mode Linux."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:212
+msgid "KUnit Coverage Rules"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:214
+msgid ""
+"KUnit support is gradually added to the DRM framework and helpers. There's "
+"no general requirement for the framework and helpers to have KUnit tests at "
+"the moment. However, patches that are affecting a function or helper already "
+"covered by KUnit tests must provide tests if the change calls for one."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:220
+msgid "Legacy Support Code"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:222
+msgid ""
+"The section very briefly covers some of the old legacy support code which is "
+"only used by old DRM drivers which have done a so-called shadow-attach to "
+"the underlying device instead of registering as a real driver. This also "
+"includes some of the old generic buffer management and command submission "
+"code. Do not use any of this in new and modern drivers."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:230
+msgid "Legacy Suspend/Resume"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:232
+msgid ""
+"The DRM core provides some suspend/resume code, but drivers wanting full "
+"suspend/resume support should provide save() and restore() functions. These "
+"are called at suspend, hibernate, or resume time, and should perform any "
+"state save or restore required by your device across suspend or hibernate "
+"states."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:238
+msgid ""
+"int (\\*suspend) (struct drm_device \\*, pm_message_t state); int "
+"(\\*resume) (struct drm_device \\*); Those are legacy suspend and resume "
+"methods which *only* work with the legacy shadow-attach driver registration "
+"functions. New driver should use the power management interface provided by "
+"their bus type (usually through the :c:type:`struct device_driver "
+"<device_driver>` dev_pm_ops) and set these methods to NULL."
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:247
+msgid "Legacy DMA Services"
+msgstr ""
+
+#: ../../../gpu/drm-internals.rst:249
+msgid ""
+"This should cover how DMA mapping etc. is supported by the core. These "
+"functions are deprecated and should not be used."
+msgstr ""

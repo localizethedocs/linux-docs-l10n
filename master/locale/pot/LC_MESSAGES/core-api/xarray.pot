@@ -1,0 +1,3066 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../core-api/xarray.rst:5
+msgid "XArray"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:0
+msgid "Author"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:7
+msgid "Matthew Wilcox"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:10
+msgid "Overview"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:12
+msgid ""
+"The XArray is an abstract data type which behaves like a very large array of "
+"pointers.  It meets many of the same needs as a hash or a conventional "
+"resizable array.  Unlike a hash, it allows you to sensibly go to the next or "
+"previous entry in a cache-efficient manner.  In contrast to a resizable "
+"array, there is no need to copy data or change MMU mappings in order to grow "
+"the array.  It is more memory-efficient, parallelisable and cache friendly "
+"than a doubly-linked list.  It takes advantage of RCU to perform lookups "
+"without locking."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:21
+msgid ""
+"The XArray implementation is efficient when the indices used are densely "
+"clustered; hashing the object and using the hash as the index will not "
+"perform well.  The XArray is optimised for small indices, but still has good "
+"performance with large indices.  If your index can be larger than "
+"``ULONG_MAX`` then the XArray is not the data type for you.  The most "
+"important user of the XArray is the page cache."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:28
+msgid ""
+"Normal pointers may be stored in the XArray directly.  They must be 4-byte "
+"aligned, which is true for any pointer returned from kmalloc() and "
+"alloc_page().  It isn't true for arbitrary user-space pointers, nor for "
+"function pointers.  You can store pointers to statically allocated objects, "
+"as long as those objects have an alignment of at least 4."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:34
+msgid ""
+"You can also store integers between 0 and ``LONG_MAX`` in the XArray. You "
+"must first convert it into an entry using xa_mk_value(). When you retrieve "
+"an entry from the XArray, you can check whether it is a value entry by "
+"calling xa_is_value(), and convert it back to an integer by calling "
+"xa_to_value()."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:40
+msgid ""
+"Some users want to tag the pointers they store in the XArray.  You can call "
+"xa_tag_pointer() to create an entry with a tag, xa_untag_pointer() to turn a "
+"tagged entry back into an untagged pointer and xa_pointer_tag() to retrieve "
+"the tag of an entry.  Tagged pointers use the same bits that are used to "
+"distinguish value entries from normal pointers, so you must decide whether "
+"you want to store value entries or tagged pointers in any particular XArray."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:48
+msgid ""
+"The XArray does not support storing IS_ERR() pointers as some conflict with "
+"value entries or internal entries."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:51
+msgid ""
+"An unusual feature of the XArray is the ability to create entries which "
+"occupy a range of indices.  Once stored to, looking up any index in the "
+"range will return the same entry as looking up any other index in the "
+"range.  Storing to any index will store to all of them.  Multi-index entries "
+"can be explicitly split into smaller entries. Unsetting (using xa_erase() or "
+"xa_store() with ``NULL``) any entry will cause the XArray to forget about "
+"the range."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:60
+msgid "Normal API"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:62
+msgid ""
+"Start by initialising an XArray, either with DEFINE_XARRAY() for statically "
+"allocated XArrays or xa_init() for dynamically allocated ones.  A freshly-"
+"initialised XArray contains a ``NULL`` pointer at every index."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:67
+msgid ""
+"You can then set entries using xa_store() and get entries using xa_load().  "
+"xa_store() will overwrite any entry with the new entry and return the "
+"previous entry stored at that index.  You can unset entries using xa_erase() "
+"or by setting the entry to ``NULL`` using xa_store(). There is no difference "
+"between an entry that has never been stored to and one that has been erased "
+"with xa_erase(); an entry that has most recently had ``NULL`` stored to it "
+"is also equivalent except if the XArray was initialized with "
+"``XA_FLAGS_ALLOC``."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:76
+msgid ""
+"You can conditionally replace an entry at an index by using xa_cmpxchg().  "
+"Like cmpxchg(), it will only succeed if the entry at that index has the "
+"'old' value.  It also returns the entry which was at that index; if it "
+"returns the same entry which was passed as 'old', then xa_cmpxchg() "
+"succeeded."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:82
+msgid ""
+"If you want to only store a new entry to an index if the current entry at "
+"that index is ``NULL``, you can use xa_insert() which returns ``-EBUSY`` if "
+"the entry is not empty."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:86
+msgid ""
+"You can copy entries out of the XArray into a plain array by calling "
+"xa_extract().  Or you can iterate over the present entries in the XArray by "
+"calling xa_for_each(), xa_for_each_start() or xa_for_each_range(). You may "
+"prefer to use xa_find() or xa_find_after() to move to the next present entry "
+"in the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:92
+msgid ""
+"Calling xa_store_range() stores the same entry in a range of indices.  If "
+"you do this, some of the other operations will behave in a slightly odd "
+"way.  For example, marking the entry at one index may result in the entry "
+"being marked at some, but not all of the other indices.  Storing into one "
+"index may result in the entry retrieved by some, but not all of the other "
+"indices changing."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:99
+msgid ""
+"Sometimes you need to ensure that a subsequent call to xa_store() will not "
+"need to allocate memory.  The xa_reserve() function will store a reserved "
+"entry at the indicated index.  Users of the normal API will see this entry "
+"as containing ``NULL``.  If you do not need to use the reserved entry, you "
+"can call xa_release() to remove the unused entry.  If another user has "
+"stored to the entry in the meantime, xa_release() will do nothing; if "
+"instead you want the entry to become ``NULL``, you should use xa_erase(). "
+"Using xa_insert() on a reserved entry will fail."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:109
+msgid ""
+"If all entries in the array are ``NULL``, the xa_empty() function will "
+"return ``true``."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:112
+msgid ""
+"Finally, you can remove all entries from an XArray by calling xa_destroy().  "
+"If the XArray entries are pointers, you may wish to free the entries first.  "
+"You can do this by iterating over all present entries in the XArray using "
+"the xa_for_each() iterator."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:118
+msgid "Search Marks"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:120
+msgid ""
+"Each entry in the array has three bits associated with it called marks. Each "
+"mark may be set or cleared independently of the others.  You can iterate "
+"over marked entries by using the xa_for_each_marked() iterator."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:124
+msgid ""
+"You can enquire whether a mark is set on an entry by using xa_get_mark().  "
+"If the entry is not ``NULL``, you can set a mark on it by using "
+"xa_set_mark() and remove the mark from an entry by calling xa_clear_mark().  "
+"You can ask whether any entry in the XArray has a particular mark set by "
+"calling xa_marked().  Erasing an entry from the XArray causes all marks "
+"associated with that entry to be cleared."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:131
+msgid ""
+"Setting or clearing a mark on any index of a multi-index entry will affect "
+"all indices covered by that entry.  Querying the mark on any index will "
+"return the same result."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:135
+msgid ""
+"There is no way to iterate over entries which are not marked; the data "
+"structure does not allow this to be implemented efficiently.  There are not "
+"currently iterators to search for logical combinations of bits (eg iterate "
+"over all entries which have both ``XA_MARK_1`` and ``XA_MARK_2`` set, or "
+"iterate over all entries which have ``XA_MARK_0`` or ``XA_MARK_2`` set).  It "
+"would be possible to add these if a user arises."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:143
+msgid "Allocating XArrays"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:145
+msgid ""
+"If you use DEFINE_XARRAY_ALLOC() to define the XArray, or initialise it by "
+"passing ``XA_FLAGS_ALLOC`` to xa_init_flags(), the XArray changes to track "
+"whether entries are in use or not."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:149
+msgid ""
+"You can call xa_alloc() to store the entry at an unused index in the "
+"XArray.  If you need to modify the array from interrupt context, you can use "
+"xa_alloc_bh() or xa_alloc_irq() to disable interrupts while allocating the "
+"ID."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:154
+msgid ""
+"Using xa_store(), xa_cmpxchg() or xa_insert() will also mark the entry as "
+"being allocated.  Unlike a normal XArray, storing ``NULL`` will mark the "
+"entry as being in use, like xa_reserve(). To free an entry, use xa_erase() "
+"(or xa_release() if you only want to free the entry if it's ``NULL``)."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:160
+msgid ""
+"By default, the lowest free entry is allocated starting from 0.  If you want "
+"to allocate entries starting at 1, it is more efficient to use "
+"DEFINE_XARRAY_ALLOC1() or ``XA_FLAGS_ALLOC1``.  If you want to allocate IDs "
+"up to a maximum, then wrap back around to the lowest free ID, you can use "
+"xa_alloc_cyclic()."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:166
+msgid ""
+"You cannot use ``XA_MARK_0`` with an allocating XArray as this mark is used "
+"to track whether an entry is free or not.  The other marks are available for "
+"your use."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:171
+msgid "Memory allocation"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:173
+msgid ""
+"The xa_store(), xa_cmpxchg(), xa_alloc(), xa_reserve() and xa_insert() "
+"functions take a gfp_t parameter in case the XArray needs to allocate memory "
+"to store this entry. If the entry is being deleted, no memory allocation "
+"needs to be performed, and the GFP flags specified will be ignored."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:179
+msgid ""
+"It is possible for no memory to be allocatable, particularly if you pass a "
+"restrictive set of GFP flags.  In that case, the functions return a special "
+"value which can be turned into an errno using xa_err(). If you don't need to "
+"know exactly which error occurred, using xa_is_err() is slightly more "
+"efficient."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:186
+msgid "Locking"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:188
+msgid ""
+"When using the Normal API, you do not have to worry about locking. The "
+"XArray uses RCU and an internal spinlock to synchronise access:"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:191
+msgid "No lock needed:"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:192
+msgid "xa_empty()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:193
+msgid "xa_marked()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:195
+msgid "Takes RCU read lock:"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:196
+msgid "xa_load()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:197
+msgid "xa_for_each()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:198
+msgid "xa_for_each_start()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:199
+msgid "xa_for_each_range()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:200
+msgid "xa_find()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:201
+msgid "xa_find_after()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:202
+msgid "xa_extract()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:203
+msgid "xa_get_mark()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:205
+msgid "Takes xa_lock internally:"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:206
+msgid "xa_store()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:207
+msgid "xa_store_bh()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:208
+msgid "xa_store_irq()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:209
+msgid "xa_insert()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:210
+msgid "xa_insert_bh()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:211
+msgid "xa_insert_irq()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:212
+msgid "xa_erase()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:213
+msgid "xa_erase_bh()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:214
+msgid "xa_erase_irq()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:215
+msgid "xa_cmpxchg()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:216
+msgid "xa_cmpxchg_bh()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:217
+msgid "xa_cmpxchg_irq()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:218
+msgid "xa_store_range()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:219
+msgid "xa_alloc()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:220
+msgid "xa_alloc_bh()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:221
+msgid "xa_alloc_irq()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:222
+msgid "xa_reserve()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:223
+msgid "xa_reserve_bh()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:224
+msgid "xa_reserve_irq()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:225
+msgid "xa_destroy()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:226
+msgid "xa_set_mark()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:227
+msgid "xa_clear_mark()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:229
+msgid "Assumes xa_lock held on entry:"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:230
+msgid "__xa_store()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:231
+msgid "__xa_insert()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:232
+msgid "__xa_erase()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:233
+msgid "__xa_cmpxchg()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:234
+msgid "__xa_alloc()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:235
+msgid "__xa_set_mark()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:236
+msgid "__xa_clear_mark()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:238
+msgid ""
+"If you want to take advantage of the lock to protect the data structures "
+"that you are storing in the XArray, you can call xa_lock() before calling "
+"xa_load(), then take a reference count on the object you have found before "
+"calling xa_unlock().  This will prevent stores from removing the object from "
+"the array between looking up the object and incrementing the refcount.  You "
+"can also use RCU to avoid dereferencing freed memory, but an explanation of "
+"that is beyond the scope of this document."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:247
+msgid ""
+"The XArray does not disable interrupts or softirqs while modifying the "
+"array.  It is safe to read the XArray from interrupt or softirq context as "
+"the RCU lock provides enough protection."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:251
+msgid ""
+"If, for example, you want to store entries in the XArray in process context "
+"and then erase them in softirq context, you can do that this way::"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:280
+msgid ""
+"If you are going to modify the XArray from interrupt or softirq context, you "
+"need to initialise the array using xa_init_flags(), passing "
+"``XA_FLAGS_LOCK_IRQ`` or ``XA_FLAGS_LOCK_BH``."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:284
+msgid ""
+"The above example also shows a common pattern of wanting to extend the "
+"coverage of the xa_lock on the store side to protect some statistics "
+"associated with the array."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:288
+msgid ""
+"Sharing the XArray with interrupt context is also possible, either using "
+"xa_lock_irqsave() in both the interrupt handler and process context, or "
+"xa_lock_irq() in process context and xa_lock() in the interrupt handler.  "
+"Some of the more common patterns have helper functions such as "
+"xa_store_bh(), xa_store_irq(), xa_erase_bh(), xa_erase_irq(), "
+"xa_cmpxchg_bh() and xa_cmpxchg_irq()."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:296
+msgid ""
+"Sometimes you need to protect access to the XArray with a mutex because that "
+"lock sits above another mutex in the locking hierarchy.  That does not "
+"entitle you to use functions like __xa_erase() without taking the xa_lock; "
+"the xa_lock is used for lockdep validation and will be used for other "
+"purposes in the future."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:302
+msgid ""
+"The __xa_set_mark() and __xa_clear_mark() functions are also available for "
+"situations where you look up an entry and want to atomically set or clear a "
+"mark.  It may be more efficient to use the advanced API in this case, as it "
+"will save you from walking the tree twice."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:308
+msgid "Advanced API"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:310
+msgid ""
+"The advanced API offers more flexibility and better performance at the cost "
+"of an interface which can be harder to use and has fewer safeguards. No "
+"locking is done for you by the advanced API, and you are required to use the "
+"xa_lock while modifying the array.  You can choose whether to use the "
+"xa_lock or the RCU lock while doing read-only operations on the array.  You "
+"can mix advanced and normal operations on the same array; indeed the normal "
+"API is implemented in terms of the advanced API.  The advanced API is only "
+"available to modules with a GPL-compatible license."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:319
+msgid ""
+"The advanced API is based around the xa_state.  This is an opaque data "
+"structure which you declare on the stack using the XA_STATE() macro. This "
+"macro initialises the xa_state ready to start walking around the XArray.  It "
+"is used as a cursor to maintain the position in the XArray and let you "
+"compose various operations together without having to restart from the top "
+"every time.  The contents of the xa_state are protected by the "
+"rcu_read_lock() or the xas_lock().  If you need to drop whichever of those "
+"locks is protecting your state and tree, you must call xas_pause() so that "
+"future calls do not rely on the parts of the state which were left "
+"unprotected."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:330
+msgid ""
+"The xa_state is also used to store errors.  You can call xas_error() to "
+"retrieve the error.  All operations check whether the xa_state is in an "
+"error state before proceeding, so there's no need for you to check for an "
+"error after each call; you can make multiple calls in succession and only "
+"check at a convenient point.  The only errors currently generated by the "
+"XArray code itself are ``ENOMEM`` and ``EINVAL``, but it supports arbitrary "
+"errors in case you want to call xas_set_err() yourself."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:339
+msgid ""
+"If the xa_state is holding an ``ENOMEM`` error, calling xas_nomem() will "
+"attempt to allocate more memory using the specified gfp flags and cache it "
+"in the xa_state for the next attempt.  The idea is that you take the "
+"xa_lock, attempt the operation and drop the lock.  The operation attempts to "
+"allocate memory while holding the lock, but it is more likely to fail.  Once "
+"you have dropped the lock, xas_nomem() can try harder to allocate more "
+"memory.  It will return ``true`` if it is worth retrying the operation (i.e. "
+"that there was a memory error *and* more memory was allocated).  If it has "
+"previously allocated memory, and that memory wasn't used, and there is no "
+"error (or some error that isn't ``ENOMEM``), then it will free the memory "
+"previously allocated."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:352
+msgid "Internal Entries"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:354
+msgid ""
+"The XArray reserves some entries for its own purposes.  These are never "
+"exposed through the normal API, but when using the advanced API, it's "
+"possible to see them.  Usually the best way to handle them is to pass them "
+"to xas_retry(), and retry the operation if it returns ``true``."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:362
+msgid "Name"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:363
+msgid "Test"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:364
+msgid "Usage"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:366
+msgid "Node"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:367
+msgid "xa_is_node()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:368
+msgid "An XArray node.  May be visible when using a multi-index xa_state."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:370
+msgid "Sibling"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:371
+msgid "xa_is_sibling()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:372
+msgid ""
+"A non-canonical entry for a multi-index entry.  The value indicates which "
+"slot in this node has the canonical entry."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:375
+msgid "Retry"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:376
+msgid "xa_is_retry()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:377
+msgid ""
+"This entry is currently being modified by a thread which has the xa_lock.  "
+"The node containing this entry may be freed at the end of this RCU period.  "
+"You should restart the lookup from the head of the array."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:382
+msgid "Zero"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:383
+msgid "xa_is_zero()"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:384
+msgid ""
+"Zero entries appear as ``NULL`` through the Normal API, but occupy an entry "
+"in the XArray which can be used to reserve the index for future use.  This "
+"is used by allocating XArrays for allocated entries which are ``NULL``."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:389
+msgid ""
+"Other internal entries may be added in the future.  As far as possible, they "
+"will be handled by xas_retry()."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:393
+msgid "Additional functionality"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:395
+msgid ""
+"The xas_create_range() function allocates all the necessary memory to store "
+"every entry in a range.  It will set ENOMEM in the xa_state if it cannot "
+"allocate memory."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:399
+msgid ""
+"You can use xas_init_marks() to reset the marks on an entry to their default "
+"state.  This is usually all marks clear, unless the XArray is marked with "
+"``XA_FLAGS_TRACK_FREE``, in which case mark 0 is set and all other marks are "
+"clear.  Replacing one entry with another using xas_store() will not reset "
+"the marks on that entry; if you want the marks reset, you should do that "
+"explicitly."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:406
+msgid ""
+"The xas_load() will walk the xa_state as close to the entry as it can.  If "
+"you know the xa_state has already been walked to the entry and need to check "
+"that the entry hasn't changed, you can use xas_reload() to save a function "
+"call."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:411
+msgid ""
+"If you need to move to a different index in the XArray, call xas_set().  "
+"This resets the cursor to the top of the tree, which will generally make the "
+"next operation walk the cursor to the desired spot in the tree.  If you want "
+"to move to the next or previous index, call xas_next() or xas_prev().  "
+"Setting the index does not walk the cursor around the array so does not "
+"require a lock to be held, while moving to the next or previous index does."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:419
+msgid ""
+"You can search for the next present entry using xas_find().  This is the "
+"equivalent of both xa_find() and xa_find_after(); if the cursor has been "
+"walked to an entry, then it will find the next entry after the one currently "
+"referenced.  If not, it will return the entry at the index of the xa_state.  "
+"Using xas_next_entry() to move to the next present entry instead of "
+"xas_find() will save a function call in the majority of cases at the expense "
+"of emitting more inline code."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:428
+msgid ""
+"The xas_find_marked() function is similar.  If the xa_state has not been "
+"walked, it will return the entry at the index of the xa_state, if it is "
+"marked.  Otherwise, it will return the first marked entry after the entry "
+"referenced by the xa_state.  The xas_next_marked() function is the "
+"equivalent of xas_next_entry()."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:434
+msgid ""
+"When iterating over a range of the XArray using xas_for_each() or "
+"xas_for_each_marked(), it may be necessary to temporarily stop the "
+"iteration.  The xas_pause() function exists for this purpose. After you have "
+"done the necessary work and wish to resume, the xa_state is in an "
+"appropriate state to continue the iteration after the entry you last "
+"processed.  If you have interrupts disabled while iterating, then it is good "
+"manners to pause the iteration and reenable interrupts every "
+"``XA_CHECK_SCHED`` entries."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:443
+msgid ""
+"The xas_get_mark(), xas_set_mark() and xas_clear_mark() functions require "
+"the xa_state cursor to have been moved to the appropriate location in the "
+"XArray; they will do nothing if you have called xas_pause() or xas_set() "
+"immediately before."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:448
+msgid ""
+"You can call xas_set_update() to have a callback function called each time "
+"the XArray updates a node.  This is used by the page cache workingset code "
+"to maintain its list of nodes which contain only shadow entries."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:454
+msgid "Multi-Index Entries"
+msgstr ""
+
+#: ../../../core-api/xarray.rst:456
+msgid ""
+"The XArray has the ability to tie multiple indices together so that "
+"operations on one index affect all indices.  For example, storing into any "
+"index will change the value of the entry retrieved from any index. Setting "
+"or clearing a mark on any index will set or clear the mark on every index "
+"that is tied together.  The current implementation only allows tying ranges "
+"which are aligned powers of two together; eg indices 64-127 may be tied "
+"together, but 2-6 may not be.  This may save substantial quantities of "
+"memory; for example tying 512 entries together will save over 4kB."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:466
+msgid ""
+"You can create a multi-index entry by using XA_STATE_ORDER() or "
+"xas_set_order() followed by a call to xas_store(). Calling xas_load() with a "
+"multi-index xa_state will walk the xa_state to the right location in the "
+"tree, but the return value is not meaningful, potentially being an internal "
+"entry or ``NULL`` even when there is an entry stored within the range.  "
+"Calling xas_find_conflict() will return the first entry within the range or "
+"``NULL`` if there are no entries in the range.  The xas_for_each_conflict() "
+"iterator will iterate over every entry which overlaps the specified range."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:476
+msgid ""
+"If xas_load() encounters a multi-index entry, the xa_index in the xa_state "
+"will not be changed.  When iterating over an XArray or calling xas_find(), "
+"if the initial index is in the middle of a multi-index entry, it will not be "
+"altered.  Subsequent calls or iterations will move the index to the first "
+"index in the range. Each entry will only be returned once, no matter how "
+"many indices it occupies."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:484
+msgid ""
+"Using xas_next() or xas_prev() with a multi-index xa_state is not "
+"supported.  Using either of these functions on a multi-index entry will "
+"reveal sibling entries; these should be skipped over by the caller."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:488
+msgid ""
+"Storing ``NULL`` into any index of a multi-index entry will set the entry at "
+"every index to ``NULL`` and dissolve the tie.  A multi-index entry can be "
+"split into entries occupying smaller ranges by calling xas_split_alloc() "
+"without the xa_lock held, followed by taking the lock and calling "
+"xas_split() or calling xas_try_split() with xa_lock. The difference between "
+"xas_split_alloc()+xas_split() and xas_try_alloc() is that xas_split_alloc() "
+"+ xas_split() split the entry from the original order to the new order in "
+"one shot uniformly, whereas xas_try_split() iteratively splits the entry "
+"containing the index non-uniformly. For example, to split an order-9 entry, "
+"which takes 2^(9-6)=8 slots, assuming ``XA_CHUNK_SHIFT`` is 6, "
+"xas_split_alloc() + xas_split() need 8 xa_node. xas_try_split() splits the "
+"order-9 entry into 2 order-8 entries, then split one order-8 entry, based on "
+"the given index, to 2 order-7 entries, ..., and split one order-1 entry to 2 "
+"order-0 entries. When splitting the order-6 entry and a new xa_node is "
+"needed, xas_try_split() will try to allocate one if possible. As a result, "
+"xas_try_split() would only need 1 xa_node instead of 8."
+msgstr ""
+
+#: ../../../core-api/xarray.rst:507
+msgid "Functions and structures"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:52
+msgid "Create an XArray entry from an integer."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:56
+#: include/linux/xarray.h:69 include/linux/xarray.h:81
+#: include/linux/xarray.h:93 include/linux/xarray.h:111
+#: include/linux/xarray.h:126 include/linux/xarray.h:185
+#: include/linux/xarray.h:199 include/linux/xarray.h:216
+#: include/linux/xarray.h:318 include/linux/xarray.h:331
+#: include/linux/xarray.h:342 include/linux/xarray.h:351
+#: include/linux/xarray.h:376 include/linux/xarray.h:394
+#: include/linux/xarray.h:407 include/linux/xarray.h:419
+#: include/linux/xarray.h:432 include/linux/xarray.h:462
+#: include/linux/xarray.h:488 include/linux/xarray.h:512
+#: include/linux/xarray.h:580 include/linux/xarray.h:607
+#: include/linux/xarray.h:634 include/linux/xarray.h:658
+#: include/linux/xarray.h:682 include/linux/xarray.h:710
+#: include/linux/xarray.h:738 include/linux/xarray.h:766
+#: include/linux/xarray.h:796 include/linux/xarray.h:826
+#: include/linux/xarray.h:856 include/linux/xarray.h:889
+#: include/linux/xarray.h:922 include/linux/xarray.h:955
+#: include/linux/xarray.h:994 include/linux/xarray.h:1033
+#: include/linux/xarray.h:1072 include/linux/xarray.h:1096
+#: include/linux/xarray.h:1114 include/linux/xarray.h:1132
+#: include/linux/xarray.h:1290 include/linux/xarray.h:1304
+#: include/linux/xarray.h:1315 include/linux/xarray.h:1333
+#: include/linux/xarray.h:1393 include/linux/xarray.h:1404
+#: include/linux/xarray.h:1434 include/linux/xarray.h:1445
+#: include/linux/xarray.h:1459 include/linux/xarray.h:1470
+#: include/linux/xarray.h:1481 include/linux/xarray.h:1510
+#: include/linux/xarray.h:1525 include/linux/xarray.h:1605
+#: include/linux/xarray.h:1639 include/linux/xarray.h:1654
+#: include/linux/xarray.h:1672 include/linux/xarray.h:1692
+#: include/linux/xarray.h:1711 include/linux/xarray.h:1767
+#: include/linux/xarray.h:1809 include/linux/xarray.h:1826
+#: include/linux/xarray.h:1844 include/linux/xarray.h:1862
+#: include/linux/xarray.h:1891 ../../../core-api/xarray:510: lib/xarray.c:227
+#: lib/xarray.c:288 lib/xarray.c:527 lib/xarray.c:708 lib/xarray.c:775
+#: lib/xarray.c:862 lib/xarray.c:880 lib/xarray.c:909 lib/xarray.c:941
+#: lib/xarray.c:1036 lib/xarray.c:1080 lib/xarray.c:1142 lib/xarray.c:1164
+#: lib/xarray.c:1265 lib/xarray.c:1382 lib/xarray.c:1446 lib/xarray.c:1548
+#: lib/xarray.c:1609 lib/xarray.c:1639 lib/xarray.c:1658 lib/xarray.c:1682
+#: lib/xarray.c:1717 lib/xarray.c:1749 lib/xarray.c:1796 lib/xarray.c:1859
+#: lib/xarray.c:1913 lib/xarray.c:1946 lib/xarray.c:1970 lib/xarray.c:2018
+#: lib/xarray.c:2071 lib/xarray.c:2091 lib/xarray.c:2109 lib/xarray.c:2141
+#: lib/xarray.c:2159 lib/xarray.c:2177 lib/xarray.c:2227 lib/xarray.c:2313
+#: lib/xarray.c:2355 lib/xarray.c:2378
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:58
+msgid "``unsigned long v``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:53
+msgid "Value to store in XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:55
+#: include/linux/xarray.h:68 include/linux/xarray.h:80
+#: include/linux/xarray.h:97 include/linux/xarray.h:112
+#: include/linux/xarray.h:127 include/linux/xarray.h:201
+#: include/linux/xarray.h:219 include/linux/xarray.h:379
+#: include/linux/xarray.h:394 include/linux/xarray.h:406
+#: include/linux/xarray.h:419 include/linux/xarray.h:448
+#: include/linux/xarray.h:477 include/linux/xarray.h:501
+#: include/linux/xarray.h:528 include/linux/xarray.h:584
+#: include/linux/xarray.h:611 include/linux/xarray.h:637
+#: include/linux/xarray.h:661 include/linux/xarray.h:687
+#: include/linux/xarray.h:715 include/linux/xarray.h:743
+#: include/linux/xarray.h:772 include/linux/xarray.h:802
+#: include/linux/xarray.h:832 include/linux/xarray.h:865
+#: include/linux/xarray.h:898 include/linux/xarray.h:931
+#: include/linux/xarray.h:970 include/linux/xarray.h:1009
+#: include/linux/xarray.h:1048 include/linux/xarray.h:1080
+#: include/linux/xarray.h:1098 include/linux/xarray.h:1116
+#: include/linux/xarray.h:1328 include/linux/xarray.h:1512
+#: include/linux/xarray.h:1528 ../../../core-api/xarray:510: lib/xarray.c:233
+#: lib/xarray.c:1042 lib/xarray.c:1083 lib/xarray.c:1147 lib/xarray.c:1173
+#: lib/xarray.c:1548 lib/xarray.c:1609 lib/xarray.c:1642 lib/xarray.c:1661
+#: lib/xarray.c:1687 lib/xarray.c:1722 lib/xarray.c:1758 lib/xarray.c:1801
+#: lib/xarray.c:1866 lib/xarray.c:1979 lib/xarray.c:2030 lib/xarray.c:2073
+#: lib/xarray.c:2092 lib/xarray.c:2112 lib/xarray.c:2143 lib/xarray.c:2161
+#: lib/xarray.c:2185 lib/xarray.c:2235 lib/xarray.c:2332 lib/xarray.c:2355
+#: lib/xarray.c:2380
+msgid "**Context**"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:55
+#: include/linux/xarray.h:68 include/linux/xarray.h:80
+#: include/linux/xarray.h:98 include/linux/xarray.h:113
+#: include/linux/xarray.h:128 include/linux/xarray.h:202
+#: include/linux/xarray.h:220 include/linux/xarray.h:380
+#: include/linux/xarray.h:395 include/linux/xarray.h:406
+#: include/linux/xarray.h:419 include/linux/xarray.h:1513
+#: include/linux/xarray.h:1529 ../../../core-api/xarray:510: lib/xarray.c:1147
+msgid "Any context."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:57
+#: include/linux/xarray.h:70 include/linux/xarray.h:82
+#: include/linux/xarray.h:100 include/linux/xarray.h:115
+#: include/linux/xarray.h:130 include/linux/xarray.h:186
+#: include/linux/xarray.h:204 include/linux/xarray.h:222
+#: include/linux/xarray.h:408 include/linux/xarray.h:421
+#: include/linux/xarray.h:588 include/linux/xarray.h:615
+#: include/linux/xarray.h:641 include/linux/xarray.h:665
+#: include/linux/xarray.h:691 include/linux/xarray.h:719
+#: include/linux/xarray.h:747 include/linux/xarray.h:776
+#: include/linux/xarray.h:806 include/linux/xarray.h:836
+#: include/linux/xarray.h:869 include/linux/xarray.h:902
+#: include/linux/xarray.h:935 include/linux/xarray.h:974
+#: include/linux/xarray.h:1013 include/linux/xarray.h:1052
+#: include/linux/xarray.h:1084 include/linux/xarray.h:1102
+#: include/linux/xarray.h:1120 include/linux/xarray.h:1289
+#: include/linux/xarray.h:1303 include/linux/xarray.h:1314
+#: include/linux/xarray.h:1433 include/linux/xarray.h:1458
+#: include/linux/xarray.h:1469 include/linux/xarray.h:1480
+#: include/linux/xarray.h:1531 include/linux/xarray.h:1611
+#: include/linux/xarray.h:1714 include/linux/xarray.h:1771
+#: include/linux/xarray.h:1869 include/linux/xarray.h:1898
+#: ../../../core-api/xarray:510: lib/xarray.c:236 lib/xarray.c:298
+#: lib/xarray.c:780 lib/xarray.c:862 lib/xarray.c:1144 lib/xarray.c:1390
+#: lib/xarray.c:1459 lib/xarray.c:1551 lib/xarray.c:1611 lib/xarray.c:1645
+#: lib/xarray.c:1664 lib/xarray.c:1691 lib/xarray.c:1726 lib/xarray.c:1762
+#: lib/xarray.c:1805 lib/xarray.c:1870 lib/xarray.c:1914 lib/xarray.c:1946
+#: lib/xarray.c:1983 lib/xarray.c:2034 lib/xarray.c:2115 lib/xarray.c:2188
+#: lib/xarray.c:2238 lib/xarray.c:2335
+msgid "**Return**"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:56
+msgid "An entry suitable for storing in the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:65
+msgid "Get value stored in an XArray entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:71
+#: include/linux/xarray.h:83 include/linux/xarray.h:187
+#: include/linux/xarray.h:201 include/linux/xarray.h:1292
+#: include/linux/xarray.h:1306 include/linux/xarray.h:1317
+#: include/linux/xarray.h:1524
+msgid "``const void *entry``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:66
+#: include/linux/xarray.h:78 include/linux/xarray.h:108
+#: include/linux/xarray.h:123
+msgid "XArray entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:69
+msgid "The value stored in the XArray entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:77
+msgid "Determine if an entry is a value."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:81
+msgid "True if the entry is a value, false if it is a pointer."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:89
+msgid "Create an XArray entry for a tagged pointer."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:95
+msgid "``void *p``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:90
+msgid "Plain pointer."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:92
+msgid "``unsigned long tag``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:91
+msgid "Tag value (0, 1 or 3)."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:93
+#: include/linux/xarray.h:110 include/linux/xarray.h:125
+#: include/linux/xarray.h:184 include/linux/xarray.h:198
+#: include/linux/xarray.h:215 include/linux/xarray.h:237
+#: include/linux/xarray.h:290 include/linux/xarray.h:318
+#: include/linux/xarray.h:330 include/linux/xarray.h:341
+#: include/linux/xarray.h:350 include/linux/xarray.h:376
+#: include/linux/xarray.h:393 include/linux/xarray.h:435
+#: include/linux/xarray.h:464 include/linux/xarray.h:489
+#: include/linux/xarray.h:514 include/linux/xarray.h:582
+#: include/linux/xarray.h:609 include/linux/xarray.h:634
+#: include/linux/xarray.h:658 include/linux/xarray.h:685
+#: include/linux/xarray.h:713 include/linux/xarray.h:741
+#: include/linux/xarray.h:769 include/linux/xarray.h:799
+#: include/linux/xarray.h:829 include/linux/xarray.h:859
+#: include/linux/xarray.h:892 include/linux/xarray.h:925
+#: include/linux/xarray.h:959 include/linux/xarray.h:998
+#: include/linux/xarray.h:1037 include/linux/xarray.h:1073
+#: include/linux/xarray.h:1097 include/linux/xarray.h:1115
+#: include/linux/xarray.h:1132 include/linux/xarray.h:1325
+#: include/linux/xarray.h:1394 include/linux/xarray.h:1406
+#: include/linux/xarray.h:1445 include/linux/xarray.h:1509
+#: include/linux/xarray.h:1525 include/linux/xarray.h:1604
+#: include/linux/xarray.h:1639 include/linux/xarray.h:1654
+#: include/linux/xarray.h:1692 include/linux/xarray.h:1711
+#: include/linux/xarray.h:1768 include/linux/xarray.h:1810
+#: include/linux/xarray.h:1828 include/linux/xarray.h:1844
+#: include/linux/xarray.h:1861 include/linux/xarray.h:1890
+#: ../../../core-api/xarray:510: lib/xarray.c:226 lib/xarray.c:288
+#: lib/xarray.c:527 lib/xarray.c:707 lib/xarray.c:775 lib/xarray.c:880
+#: lib/xarray.c:909 lib/xarray.c:940 lib/xarray.c:1038 lib/xarray.c:1081
+#: lib/xarray.c:1141 lib/xarray.c:1165 lib/xarray.c:1264 lib/xarray.c:1382
+#: lib/xarray.c:1447 lib/xarray.c:1547 lib/xarray.c:1639 lib/xarray.c:1658
+#: lib/xarray.c:1684 lib/xarray.c:1719 lib/xarray.c:1752 lib/xarray.c:1798
+#: lib/xarray.c:1862 lib/xarray.c:1912 lib/xarray.c:1973 lib/xarray.c:2022
+#: lib/xarray.c:2072 lib/xarray.c:2110 lib/xarray.c:2142 lib/xarray.c:2160
+#: lib/xarray.c:2179 lib/xarray.c:2229 lib/xarray.c:2317 lib/xarray.c:2377
+msgid "**Description**"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:92
+msgid ""
+"If the user of the XArray prefers, they can tag their pointers instead of "
+"storing value entries.  Three tags are available (0, 1 and 3). These are "
+"distinct from the xa_mark_t as they are not replicated up through the array "
+"and cannot be searched for."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:99
+msgid "An XArray entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:107
+msgid "Turn an XArray entry into a plain pointer."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:113
+#: include/linux/xarray.h:128 include/linux/xarray.h:218
+#: include/linux/xarray.h:580 include/linux/xarray.h:607
+#: include/linux/xarray.h:683 include/linux/xarray.h:711
+#: include/linux/xarray.h:739 include/linux/xarray.h:767
+#: include/linux/xarray.h:797 include/linux/xarray.h:827
+#: include/linux/xarray.h:856 include/linux/xarray.h:889
+#: include/linux/xarray.h:922 include/linux/xarray.h:955
+#: include/linux/xarray.h:994 include/linux/xarray.h:1033
+#: ../../../core-api/xarray:510: lib/xarray.c:774 lib/xarray.c:1035
+#: lib/xarray.c:1079 lib/xarray.c:1163 lib/xarray.c:1682 lib/xarray.c:1717
+#: lib/xarray.c:1750 lib/xarray.c:1796 lib/xarray.c:1860 lib/xarray.c:1970
+#: lib/xarray.c:2018
+msgid "``void *entry``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:109
+msgid ""
+"If you have stored a tagged pointer in the XArray, call this function to get "
+"the untagged version of the pointer."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:114
+msgid "A pointer."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:122
+msgid "Get the tag stored in an XArray entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:124
+msgid ""
+"If you have stored a tagged pointer in the XArray, call this function to get "
+"the tag of that pointer."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:129
+msgid "A tag."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:181
+msgid "Is the entry a zero entry?"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:182
+#: include/linux/xarray.h:1287 include/linux/xarray.h:1301
+msgid "Entry retrieved from the XArray"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:183
+msgid ""
+"The normal API will return NULL as the contents of a slot containing a zero "
+"entry.  You can only see zero entries by using the advanced API."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:187
+msgid "``true`` if the entry is a zero entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:195
+msgid "Report whether an XArray operation returned an error"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:196
+msgid "Result from calling an XArray function"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:197
+msgid ""
+"If an XArray operation cannot complete an operation, it will return a "
+"special value indicating an error.  This function tells you whether an error "
+"occurred; xa_err() tells you which error occurred."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:203
+msgid "``true`` if the entry indicates an error."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:212
+msgid "Turn an XArray result into an errno."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:213
+msgid "Result from calling an XArray function."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:214
+msgid ""
+"If an XArray operation cannot complete an operation, it will return a "
+"special pointer value which encodes an errno.  This function extracts the "
+"errno from the pointer value, or returns 0 if the pointer does not represent "
+"an errno."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:221
+msgid "A negative errno or 0."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:232
+msgid "Represents a range of IDs."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:236
+#: include/linux/xarray.h:289
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:243
+#: include/linux/xarray.h:295
+msgid "**Members**"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:234
+#: include/linux/xarray.h:1809 include/linux/xarray.h:1826
+msgid "``max``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:235
+msgid "The maximum ID to allocate (inclusive)."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:233
+msgid "``min``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:234
+msgid "The lowest ID to allocate (inclusive)."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:235
+msgid ""
+"This structure is used either directly or via the XA_LIMIT() macro to "
+"communicate the range of IDs that are valid for allocation. Three common "
+"ranges are predefined for you: * xa_limit_32b       - [0 - UINT_MAX] * "
+"xa_limit_31b       - [0 - INT_MAX] * xa_limit_16b       - [0 - USHRT_MAX]"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:285
+msgid "The anchor of the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:286
+msgid "``xa_lock``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:287
+msgid "Lock that protects the contents of the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:287
+msgid ""
+"To use the xarray, define it statically or embed it in your data structure. "
+"It is a very small data structure, so it does not usually make sense to "
+"allocate it separately and keep a pointer to it in your data structure."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:291
+msgid "You may use the xa_lock to protect your own data structures as well."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:316
+msgid "``DEFINE_XARRAY_FLAGS (name, flags)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:314
+msgid "Define an XArray with custom flags."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:320
+#: include/linux/xarray.h:333 include/linux/xarray.h:344
+#: include/linux/xarray.h:353 include/linux/xarray.h:1395
+#: include/linux/xarray.h:1406
+msgid "``name``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:315
+#: include/linux/xarray.h:328 include/linux/xarray.h:339
+#: include/linux/xarray.h:348
+msgid "A string that names your XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:317
+msgid "``flags``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:316
+#: include/linux/xarray.h:374
+msgid "XA_FLAG values."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:317
+msgid ""
+"This is intended for file scope definitions of XArrays.  It declares and "
+"initialises an empty XArray with the chosen name and flags.  It is "
+"equivalent to calling xa_init_flags() on the array, but it does the "
+"initialisation at compiletime instead of runtime."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:329
+msgid "``DEFINE_XARRAY (name)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:327
+msgid "Define an XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:329
+msgid ""
+"This is intended for file scope definitions of XArrays.  It declares and "
+"initialises an empty XArray with the chosen name.  It is equivalent to "
+"calling xa_init() on the array, but it does the initialisation at "
+"compiletime instead of runtime."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:340
+msgid "``DEFINE_XARRAY_ALLOC (name)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:338
+msgid "Define an XArray which allocates IDs starting at 0."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:340
+#: include/linux/xarray.h:349
+msgid ""
+"This is intended for file scope definitions of allocating XArrays. See also "
+"DEFINE_XARRAY()."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:349
+msgid "``DEFINE_XARRAY_ALLOC1 (name)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:347
+msgid "Define an XArray which allocates IDs starting at 1."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:372
+msgid "Initialise an empty XArray with flags."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:378
+#: include/linux/xarray.h:396 include/linux/xarray.h:582
+#: include/linux/xarray.h:609 include/linux/xarray.h:636
+#: include/linux/xarray.h:660 include/linux/xarray.h:684
+#: include/linux/xarray.h:712 include/linux/xarray.h:740
+#: include/linux/xarray.h:768 include/linux/xarray.h:798
+#: include/linux/xarray.h:828 include/linux/xarray.h:858
+#: include/linux/xarray.h:891 include/linux/xarray.h:924
+#: include/linux/xarray.h:957 include/linux/xarray.h:996
+#: include/linux/xarray.h:1035 include/linux/xarray.h:1074
+#: include/linux/xarray.h:1098 include/linux/xarray.h:1116
+#: include/linux/xarray.h:1134 ../../../core-api/xarray:510: lib/xarray.c:1611
+#: lib/xarray.c:1641 lib/xarray.c:1660 lib/xarray.c:1684 lib/xarray.c:1719
+#: lib/xarray.c:1751 lib/xarray.c:1798 lib/xarray.c:1861 lib/xarray.c:1948
+#: lib/xarray.c:1972 lib/xarray.c:2020 lib/xarray.c:2073 lib/xarray.c:2093
+#: lib/xarray.c:2111 lib/xarray.c:2143 lib/xarray.c:2161 lib/xarray.c:2179
+#: lib/xarray.c:2229 lib/xarray.c:2315 lib/xarray.c:2380
+msgid "``struct xarray *xa``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:373
+#: include/linux/xarray.h:391 include/linux/xarray.h:404
+#: include/linux/xarray.h:429 include/linux/xarray.h:459
+#: include/linux/xarray.h:485 include/linux/xarray.h:509
+#: include/linux/xarray.h:577 include/linux/xarray.h:604
+#: include/linux/xarray.h:631 include/linux/xarray.h:655
+#: include/linux/xarray.h:679 include/linux/xarray.h:707
+#: include/linux/xarray.h:735 include/linux/xarray.h:764
+#: include/linux/xarray.h:794 include/linux/xarray.h:824
+#: include/linux/xarray.h:853 include/linux/xarray.h:886
+#: include/linux/xarray.h:919 include/linux/xarray.h:952
+#: include/linux/xarray.h:991 include/linux/xarray.h:1030
+#: include/linux/xarray.h:1069 include/linux/xarray.h:1093
+#: include/linux/xarray.h:1111 include/linux/xarray.h:1129
+#: ../../../core-api/xarray:510: lib/xarray.c:1606 lib/xarray.c:1636
+#: lib/xarray.c:1655 lib/xarray.c:1679 lib/xarray.c:1714 lib/xarray.c:1746
+#: lib/xarray.c:1793 lib/xarray.c:1856 lib/xarray.c:1943 lib/xarray.c:1967
+#: lib/xarray.c:2015 lib/xarray.c:2068 lib/xarray.c:2088 lib/xarray.c:2106
+#: lib/xarray.c:2138 lib/xarray.c:2156 lib/xarray.c:2174 lib/xarray.c:2224
+#: lib/xarray.c:2375
+msgid "XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:375
+msgid "``gfp_t flags``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:375
+msgid ""
+"If you need to initialise an XArray with special flags (eg you need to take "
+"the lock from interrupt context), use this function instead of xa_init()."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:390
+msgid "Initialise an empty XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:392
+msgid "An empty XArray is full of NULL entries."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:403
+msgid "Determine if an array has any present entries."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:409
+#: include/linux/xarray.h:421
+msgid "``const struct xarray *xa``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:407
+msgid "``true`` if the array contains only NULL pointers."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:415
+msgid "Inquire whether any entry in this array has a mark set"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:416
+msgid "Array"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:418
+#: include/linux/xarray.h:1767 ../../../core-api/xarray:510: lib/xarray.c:861
+#: lib/xarray.c:879 lib/xarray.c:908 lib/xarray.c:1446 lib/xarray.c:2071
+#: lib/xarray.c:2091 lib/xarray.c:2109 lib/xarray.c:2141 lib/xarray.c:2159
+msgid "``xa_mark_t mark``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:417
+msgid "Mark value"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:420
+msgid "``true`` if any entry has this mark set."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:430
+msgid "``xa_for_each_range (xa, index, entry, start, last)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:428
+#: include/linux/xarray.h:458
+msgid "Iterate over a portion of an XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:434
+#: include/linux/xarray.h:464 include/linux/xarray.h:490
+#: include/linux/xarray.h:514
+msgid "``xa``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:431
+#: include/linux/xarray.h:461 include/linux/xarray.h:487
+#: include/linux/xarray.h:511 include/linux/xarray.h:1393
+#: include/linux/xarray.h:1404
+msgid "``index``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:430
+#: include/linux/xarray.h:460 include/linux/xarray.h:486
+#: include/linux/xarray.h:510
+msgid "Index of **entry**."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:432
+#: include/linux/xarray.h:462 include/linux/xarray.h:488
+#: include/linux/xarray.h:512 include/linux/xarray.h:1808
+#: include/linux/xarray.h:1825 include/linux/xarray.h:1843
+msgid "``entry``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:431
+#: include/linux/xarray.h:461 include/linux/xarray.h:487
+#: include/linux/xarray.h:511
+msgid "Entry retrieved from array."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:433
+#: include/linux/xarray.h:463
+msgid "``start``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:432
+#: include/linux/xarray.h:462
+msgid "First index to retrieve from array."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:434
+msgid "``last``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:433
+msgid "Last index to retrieve from array."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:434
+#: include/linux/xarray.h:463 include/linux/xarray.h:488
+msgid ""
+"During the iteration, **entry** will have the value of the entry stored in "
+"**xa** at **index**.  You may modify **index** during the iteration if you "
+"want to skip or reprocess indices.  It is safe to modify the array during "
+"the iteration.  At the end of the iteration, **entry** will be set to NULL "
+"and **index** will have a value less than or equal to max."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:440
+msgid ""
+"xa_for_each_range() is O(n.log(n)) while xas_for_each() is O(n).  You have "
+"to handle your own locking with xas_for_each(), and if you have to unlock "
+"after each iteration, it will also end up being O(n.log(n)). "
+"xa_for_each_range() will spin if it hits a retry entry; if you intend to see "
+"retry entries, you should use the xas_for_each() iterator instead. The "
+"xas_for_each() iterator will expand into more inline code than "
+"xa_for_each_range()."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:449
+#: include/linux/xarray.h:478 include/linux/xarray.h:502
+#: include/linux/xarray.h:529 ../../../core-api/xarray:510: lib/xarray.c:1609
+#: lib/xarray.c:2113 lib/xarray.c:2186 lib/xarray.c:2236 lib/xarray.c:2333
+msgid "Any context.  Takes and releases the RCU lock."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:460
+msgid "``xa_for_each_start (xa, index, entry, start)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:469
+msgid ""
+"xa_for_each_start() is O(n.log(n)) while xas_for_each() is O(n).  You have "
+"to handle your own locking with xas_for_each(), and if you have to unlock "
+"after each iteration, it will also end up being O(n.log(n)). "
+"xa_for_each_start() will spin if it hits a retry entry; if you intend to see "
+"retry entries, you should use the xas_for_each() iterator instead. The "
+"xas_for_each() iterator will expand into more inline code than "
+"xa_for_each_start()."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:486
+msgid "``xa_for_each (xa, index, entry)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:484
+msgid "Iterate over present entries in an XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:494
+msgid ""
+"xa_for_each() is O(n.log(n)) while xas_for_each() is O(n).  You have to "
+"handle your own locking with xas_for_each(), and if you have to unlock after "
+"each iteration, it will also end up being O(n.log(n)).  xa_for_each() will "
+"spin if it hits a retry entry; if you intend to see retry entries, you "
+"should use the xas_for_each() iterator instead.  The xas_for_each() iterator "
+"will expand into more inline code than xa_for_each()."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:510
+msgid "``xa_for_each_marked (xa, index, entry, filter)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:508
+msgid "Iterate over marked entries in an XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:513
+msgid "``filter``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:512
+#: ../../../core-api/xarray:510: lib/xarray.c:2177 lib/xarray.c:2227
+#: lib/xarray.c:2315
+msgid "Selection criterion."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:513
+msgid ""
+"During the iteration, **entry** will have the value of the entry stored in "
+"**xa** at **index**.  The iteration will skip all entries in the array which "
+"do not match **filter**.  You may modify **index** during the iteration if "
+"you want to skip or reprocess indices.  It is safe to modify the array "
+"during the iteration.  At the end of the iteration, **entry** will be set to "
+"NULL and **index** will have a value less than or equal to max."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:520
+msgid ""
+"xa_for_each_marked() is O(n.log(n)) while xas_for_each_marked() is O(n). You "
+"have to handle your own locking with xas_for_each(), and if you have to "
+"unlock after each iteration, it will also end up being O(n.log(n)). "
+"xa_for_each_marked() will spin if it hits a retry entry; if you intend to "
+"see retry entries, you should use the xas_for_each_marked() iterator "
+"instead.  The xas_for_each_marked() iterator will expand into more inline "
+"code than xa_for_each_marked()."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:576
+#: include/linux/xarray.h:603 ../../../core-api/xarray:510: lib/xarray.c:771
+#: lib/xarray.c:1678 lib/xarray.c:1713
+msgid "Store this entry in the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:579
+#: include/linux/xarray.h:606 include/linux/xarray.h:633
+#: include/linux/xarray.h:657 include/linux/xarray.h:681
+#: include/linux/xarray.h:709 include/linux/xarray.h:737
+#: include/linux/xarray.h:766 include/linux/xarray.h:796
+#: include/linux/xarray.h:826 include/linux/xarray.h:1071
+#: include/linux/xarray.h:1095 include/linux/xarray.h:1113
+#: include/linux/xarray.h:1131 include/linux/xarray.h:1638
+#: include/linux/xarray.h:1653 include/linux/xarray.h:1671
+#: ../../../core-api/xarray:510: lib/xarray.c:1608 lib/xarray.c:1638
+#: lib/xarray.c:1657 lib/xarray.c:1681 lib/xarray.c:1716 lib/xarray.c:1748
+#: lib/xarray.c:1795 lib/xarray.c:1945 lib/xarray.c:2070 lib/xarray.c:2090
+#: lib/xarray.c:2108 lib/xarray.c:2140 lib/xarray.c:2158
+msgid "``unsigned long index``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:578
+#: include/linux/xarray.h:605 include/linux/xarray.h:680
+#: include/linux/xarray.h:708 include/linux/xarray.h:736
+#: include/linux/xarray.h:765 include/linux/xarray.h:795
+#: include/linux/xarray.h:825 include/linux/xarray.h:1070
+#: include/linux/xarray.h:1094 include/linux/xarray.h:1112
+#: ../../../core-api/xarray:510: lib/xarray.c:1637 lib/xarray.c:1680
+#: lib/xarray.c:1715 lib/xarray.c:1747 lib/xarray.c:1794
+msgid "Index into array."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:579
+#: include/linux/xarray.h:606 include/linux/xarray.h:766
+#: include/linux/xarray.h:796 include/linux/xarray.h:826
+#: include/linux/xarray.h:855 include/linux/xarray.h:888
+#: include/linux/xarray.h:921 include/linux/xarray.h:954
+#: include/linux/xarray.h:993 include/linux/xarray.h:1032
+#: ../../../core-api/xarray:510: lib/xarray.c:773 lib/xarray.c:1681
+#: lib/xarray.c:1716 lib/xarray.c:1795 lib/xarray.c:1859 lib/xarray.c:1970
+#: lib/xarray.c:2017
+msgid "New entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:581
+#: include/linux/xarray.h:608 include/linux/xarray.h:684
+#: include/linux/xarray.h:712 include/linux/xarray.h:740
+#: include/linux/xarray.h:768 include/linux/xarray.h:798
+#: include/linux/xarray.h:828 include/linux/xarray.h:858
+#: include/linux/xarray.h:891 include/linux/xarray.h:924
+#: include/linux/xarray.h:958 include/linux/xarray.h:997
+#: include/linux/xarray.h:1036 include/linux/xarray.h:1072
+#: include/linux/xarray.h:1096 include/linux/xarray.h:1114
+#: ../../../core-api/xarray:510: lib/xarray.c:287 lib/xarray.c:1037
+#: lib/xarray.c:1683 lib/xarray.c:1718 lib/xarray.c:1751 lib/xarray.c:1797
+#: lib/xarray.c:1861 lib/xarray.c:1971 lib/xarray.c:2021
+msgid "``gfp_t gfp``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:580
+#: include/linux/xarray.h:607 include/linux/xarray.h:683
+#: include/linux/xarray.h:711 include/linux/xarray.h:739
+#: include/linux/xarray.h:767 include/linux/xarray.h:797
+#: include/linux/xarray.h:827 include/linux/xarray.h:857
+#: include/linux/xarray.h:890 include/linux/xarray.h:923
+#: include/linux/xarray.h:957 include/linux/xarray.h:996
+#: include/linux/xarray.h:1035 include/linux/xarray.h:1071
+#: include/linux/xarray.h:1095 include/linux/xarray.h:1113
+#: ../../../core-api/xarray:510: lib/xarray.c:286 lib/xarray.c:1036
+#: lib/xarray.c:1682 lib/xarray.c:1717 lib/xarray.c:1750 lib/xarray.c:1796
+#: lib/xarray.c:1860 lib/xarray.c:1971 lib/xarray.c:2020
+msgid "Memory allocation flags."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:581
+msgid ""
+"This function is like calling xa_store() except it disables softirqs while "
+"holding the array lock."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:585
+#: include/linux/xarray.h:638 include/linux/xarray.h:1099
+msgid "Any context.  Takes and releases the xa_lock while disabling softirqs."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:587
+#: include/linux/xarray.h:614 ../../../core-api/xarray:510: lib/xarray.c:1690
+msgid "The old entry at this index or xa_err() if an error happened."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:608
+msgid ""
+"This function is like calling xa_store() except it disables interrupts while "
+"holding the array lock."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:612
+#: include/linux/xarray.h:662 include/linux/xarray.h:1117
+msgid ""
+"Process context.  Takes and releases the xa_lock while disabling interrupts."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:630
+#: include/linux/xarray.h:654 ../../../core-api/xarray:510: lib/xarray.c:1654
+msgid "Erase this entry from the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:632
+#: include/linux/xarray.h:656 include/linux/xarray.h:1130
+#: ../../../core-api/xarray:510: lib/xarray.c:1656 lib/xarray.c:2069
+#: lib/xarray.c:2089 lib/xarray.c:2107 lib/xarray.c:2139 lib/xarray.c:2157
+msgid "Index of entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:633
+#: include/linux/xarray.h:657 ../../../core-api/xarray:510: lib/xarray.c:1638
+#: lib/xarray.c:1657
+msgid ""
+"After this function returns, loading from **index** will return ``NULL``. If "
+"the index is part of a multi-index entry, all indices will be erased and "
+"none of the entries will be part of a multi-index entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:640
+#: include/linux/xarray.h:664 ../../../core-api/xarray:510: lib/xarray.c:1644
+#: lib/xarray.c:1663
+msgid "The entry which used to be at this index."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:678
+#: include/linux/xarray.h:706 include/linux/xarray.h:734
+#: ../../../core-api/xarray:510: lib/xarray.c:1745
+msgid "Conditionally replace an entry in the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:682
+#: include/linux/xarray.h:710 include/linux/xarray.h:738
+#: ../../../core-api/xarray:510: lib/xarray.c:1749
+msgid "``void *old``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:681
+#: include/linux/xarray.h:709 include/linux/xarray.h:737
+#: ../../../core-api/xarray:510: lib/xarray.c:1748
+msgid "Old value to test against."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:682
+#: include/linux/xarray.h:710 include/linux/xarray.h:738
+#: ../../../core-api/xarray:510: lib/xarray.c:1749
+msgid "New value to place in array."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:684
+#: ../../../core-api/xarray:510: lib/xarray.c:1755
+msgid ""
+"If the entry at **index** is the same as **old**, replace it with **entry**. "
+"If the return value is equal to **old**, then the exchange was successful."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:688
+#: include/linux/xarray.h:773 include/linux/xarray.h:866
+#: include/linux/xarray.h:971
+msgid ""
+"Any context.  Takes and releases the xa_lock.  May sleep if the **gfp** "
+"flags permit."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:690
+#: include/linux/xarray.h:718 include/linux/xarray.h:746
+#: ../../../core-api/xarray:510: lib/xarray.c:1761
+msgid "The old value at this index or xa_err() if an error happened."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:712
+msgid ""
+"This function is like calling xa_cmpxchg() except it disables softirqs while "
+"holding the array lock."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:716
+#: include/linux/xarray.h:803 include/linux/xarray.h:899
+#: include/linux/xarray.h:1010
+msgid ""
+"Any context.  Takes and releases the xa_lock while disabling softirqs.  May "
+"sleep if the **gfp** flags permit."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:740
+msgid ""
+"This function is like calling xa_cmpxchg() except it disables interrupts "
+"while holding the array lock."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:744
+#: include/linux/xarray.h:833 include/linux/xarray.h:932
+#: include/linux/xarray.h:1049
+msgid ""
+"Process context.  Takes and releases the xa_lock while disabling "
+"interrupts.  May sleep if the **gfp** flags permit."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:762
+#: include/linux/xarray.h:792 include/linux/xarray.h:822
+msgid "Store this entry in the XArray unless another entry is already present."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:768
+#: include/linux/xarray.h:798 include/linux/xarray.h:828
+#: ../../../core-api/xarray:510: lib/xarray.c:1797
+msgid ""
+"Inserting a NULL entry will store a reserved entry (like xa_reserve()) if no "
+"entry is present.  Inserting will fail if a reserved entry is present, even "
+"though loading from this index will return NULL."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:775
+#: include/linux/xarray.h:805 include/linux/xarray.h:835
+#: ../../../core-api/xarray:510: lib/xarray.c:1804
+msgid ""
+"0 if the store succeeded.  -EBUSY if another entry was present. -ENOMEM if "
+"memory could not be allocated."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:852
+#: include/linux/xarray.h:885 include/linux/xarray.h:918
+#: include/linux/xarray.h:951 include/linux/xarray.h:990
+#: include/linux/xarray.h:1029 ../../../core-api/xarray:510: lib/xarray.c:1966
+#: lib/xarray.c:2014
+msgid "Find somewhere to store this entry in the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:855
+#: include/linux/xarray.h:888 include/linux/xarray.h:921
+#: include/linux/xarray.h:954 include/linux/xarray.h:993
+#: include/linux/xarray.h:1032 ../../../core-api/xarray:510: lib/xarray.c:1969
+#: lib/xarray.c:2017
+msgid "``u32 *id``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:854
+#: include/linux/xarray.h:887 include/linux/xarray.h:920
+#: include/linux/xarray.h:953 include/linux/xarray.h:992
+#: include/linux/xarray.h:1031 ../../../core-api/xarray:510: lib/xarray.c:1968
+#: lib/xarray.c:2016
+msgid "Pointer to ID."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:857
+#: include/linux/xarray.h:890 include/linux/xarray.h:923
+#: include/linux/xarray.h:956 include/linux/xarray.h:995
+#: include/linux/xarray.h:1034 ../../../core-api/xarray:510: lib/xarray.c:1972
+#: lib/xarray.c:2019
+msgid "``struct xa_limit limit``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:856
+#: include/linux/xarray.h:889 include/linux/xarray.h:922
+msgid "Range of ID to allocate."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:858
+#: include/linux/xarray.h:891 include/linux/xarray.h:924
+#: ../../../core-api/xarray:510: lib/xarray.c:1972
+msgid ""
+"Finds an empty entry in **xa** between **limit.min** and **limit.max**, "
+"stores the index into the **id** pointer, then stores the entry at that "
+"index.  A concurrent lookup will not see an uninitialised **id**."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:862
+#: include/linux/xarray.h:895 include/linux/xarray.h:928
+#: include/linux/xarray.h:964 include/linux/xarray.h:1003
+#: include/linux/xarray.h:1042 ../../../core-api/xarray:510: lib/xarray.c:1976
+#: lib/xarray.c:2027
+msgid ""
+"Must only be operated on an xarray initialized with flag XA_FLAGS_ALLOC set "
+"in xa_init_flags()."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:868
+#: include/linux/xarray.h:901 include/linux/xarray.h:934
+#: ../../../core-api/xarray:510: lib/xarray.c:1982
+msgid ""
+"0 on success, -ENOMEM if memory could not be allocated or -EBUSY if there "
+"are no free entries in **limit**."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:955
+#: include/linux/xarray.h:994 include/linux/xarray.h:1033
+#: ../../../core-api/xarray:510: lib/xarray.c:2018
+msgid "Range of allocated ID."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:957
+#: include/linux/xarray.h:996 include/linux/xarray.h:1035
+#: ../../../core-api/xarray:510: lib/xarray.c:2020
+msgid "``u32 *next``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:956
+#: include/linux/xarray.h:995 include/linux/xarray.h:1034
+#: ../../../core-api/xarray:510: lib/xarray.c:2019
+msgid "Pointer to next ID to allocate."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:958
+#: include/linux/xarray.h:997 include/linux/xarray.h:1036
+#: ../../../core-api/xarray:510: lib/xarray.c:2021
+msgid ""
+"Finds an empty entry in **xa** between **limit.min** and **limit.max**, "
+"stores the index into the **id** pointer, then stores the entry at that "
+"index.  A concurrent lookup will not see an uninitialised **id**. The search "
+"for an empty entry will start at **next** and will wrap around if necessary."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:967
+#: include/linux/xarray.h:1006 include/linux/xarray.h:1045
+msgid ""
+"Note that callers interested in whether wrapping has occurred should use "
+"__xa_alloc_cyclic() instead."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:973
+#: include/linux/xarray.h:1012 include/linux/xarray.h:1051
+msgid ""
+"0 if the allocation succeeded, -ENOMEM if memory could not be allocated or -"
+"EBUSY if there are no free entries in **limit**."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1068
+#: include/linux/xarray.h:1092 include/linux/xarray.h:1110
+msgid "Reserve this index in the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1072
+msgid ""
+"Ensures there is somewhere to store an entry at **index** in the array. If "
+"there is already something stored at **index**, this function does nothing.  "
+"If there was nothing there, the entry is marked as reserved. Loading from a "
+"reserved entry returns a ``NULL`` pointer."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1077
+msgid ""
+"If you do not use the entry that you have reserved, call xa_release() or "
+"xa_erase() to free any unnecessary memory."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1081
+#: ../../../core-api/xarray:510: lib/xarray.c:1723
+msgid ""
+"Any context.  Takes and releases the xa_lock. May sleep if the **gfp** flags "
+"permit."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1083
+#: include/linux/xarray.h:1101 include/linux/xarray.h:1119
+msgid "0 if the reservation succeeded or -ENOMEM if it failed."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1096
+msgid "A softirq-disabling version of xa_reserve()."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1114
+msgid "An interrupt-disabling version of xa_reserve()."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1128
+msgid "Release a reserved entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1131
+msgid ""
+"After calling xa_reserve(), you can call this function to release the "
+"reservation.  If the entry at **index** has been stored to, this function "
+"will do nothing."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1286
+msgid "Is the entry a sibling entry?"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1289
+msgid "``true`` if the entry is a sibling entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1300
+msgid "Is the entry a retry entry?"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1303
+msgid "``true`` if the entry is a retry entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1311
+msgid "Is the entry only permitted for the advanced API?"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1312
+msgid "Entry to be stored in the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1314
+msgid "``true`` if the entry cannot be stored by the normal API."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1324
+msgid "**Typedef**: A callback function from the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1327
+msgid "**Syntax**"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1329
+msgid "``void xa_update_node_t (struct xa_node *node)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1335
+#: ../../../core-api/xarray:510: lib/xarray.c:2357
+msgid "``struct xa_node *node``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1323
+msgid "The node which is being processed"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1324
+msgid ""
+"This function is called every time the XArray updates the count of present "
+"and value entries in a node.  It allows advanced users to maintain the "
+"private_list in the node."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1329
+msgid ""
+"The xa_lock is held and interrupts may be disabled. Implementations should "
+"not drop the xa_lock, nor re-enable interrupts."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1391
+msgid "``XA_STATE (name, array, index)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1389
+#: include/linux/xarray.h:1400
+msgid "Declare an XArray operation state."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1390
+#: include/linux/xarray.h:1401
+msgid "Name of this operation state (usually xas)."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1392
+#: include/linux/xarray.h:1403
+msgid "``array``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1391
+#: include/linux/xarray.h:1402
+msgid "Array to operate on."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1392
+#: include/linux/xarray.h:1403
+msgid "Initial index of interest."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1393
+msgid "Declare and initialise an xa_state on the stack."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1402
+msgid "``XA_STATE_ORDER (name, array, index, order)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1405
+msgid "``order``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1404
+msgid "Order of entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1405
+msgid ""
+"Declare and initialise an xa_state on the stack.  This variant of XA_STATE() "
+"allows you to specify the 'order' of the element you want to operate on.`"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1430
+msgid "Return an errno stored in the xa_state."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1436
+#: include/linux/xarray.h:1461 include/linux/xarray.h:1472
+#: include/linux/xarray.h:1483 ../../../core-api/xarray:510: lib/xarray.c:864
+#: lib/xarray.c:882 lib/xarray.c:911 lib/xarray.c:943
+msgid "``const struct xa_state *xas``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1431
+#: include/linux/xarray.h:1442 include/linux/xarray.h:1456
+#: include/linux/xarray.h:1467 include/linux/xarray.h:1478
+#: include/linux/xarray.h:1507 include/linux/xarray.h:1522
+#: include/linux/xarray.h:1602 include/linux/xarray.h:1636
+#: include/linux/xarray.h:1651 include/linux/xarray.h:1669
+#: include/linux/xarray.h:1689 include/linux/xarray.h:1708
+#: include/linux/xarray.h:1764 include/linux/xarray.h:1806
+#: include/linux/xarray.h:1823 include/linux/xarray.h:1841
+#: include/linux/xarray.h:1859 include/linux/xarray.h:1888
+#: ../../../core-api/xarray:510: lib/xarray.c:224 lib/xarray.c:285
+#: lib/xarray.c:705 lib/xarray.c:772 lib/xarray.c:859 lib/xarray.c:877
+#: lib/xarray.c:906 lib/xarray.c:1033 lib/xarray.c:1077 lib/xarray.c:1161
+#: lib/xarray.c:1262 lib/xarray.c:1379 lib/xarray.c:1443 lib/xarray.c:1545
+#: lib/xarray.c:1910
+msgid "XArray operation state."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1433
+msgid "0 if no error has been noted.  A negative errno if one has."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1441
+msgid "Note an error in the xa_state."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1447
+#: include/linux/xarray.h:1512 include/linux/xarray.h:1527
+#: include/linux/xarray.h:1607 include/linux/xarray.h:1641
+#: include/linux/xarray.h:1656 include/linux/xarray.h:1674
+#: include/linux/xarray.h:1694 include/linux/xarray.h:1713
+#: include/linux/xarray.h:1769 include/linux/xarray.h:1864
+#: include/linux/xarray.h:1893 ../../../core-api/xarray:510: lib/xarray.c:229
+#: lib/xarray.c:290 lib/xarray.c:529 lib/xarray.c:710 lib/xarray.c:777
+#: lib/xarray.c:1038 lib/xarray.c:1082 lib/xarray.c:1166 lib/xarray.c:1267
+#: lib/xarray.c:1384 lib/xarray.c:1448 lib/xarray.c:1550 lib/xarray.c:1915
+msgid "``struct xa_state *xas``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1444
+msgid "``long err``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1443
+msgid "Negative error number."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1444
+msgid ""
+"Only call this function with a negative **err**; zero or positive errors "
+"will probably not behave the way you think they should.  If you want to "
+"clear the error from an xa_state, use xas_reset()."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1455
+msgid "Is the xas in a retry or error state?"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1458
+msgid "``true`` if the xas cannot be used for operations."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1466
+msgid "Is the xas a valid cursor into the array?"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1469
+msgid "``true`` if the xas can be used for operations."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1477
+msgid "Does the xas point to a node?"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1480
+msgid "``true`` if the xas currently references a node."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1506
+msgid "Reset an XArray operation state."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1508
+msgid ""
+"Resets the error or walk state of the **xas** so future walks of the array "
+"will start from the root.  Use this if you have dropped the xarray lock and "
+"want to reuse the xa_state."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1521
+msgid "Retry the operation if appropriate."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1523
+msgid "Entry from xarray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1524
+msgid ""
+"The advanced functions may sometimes return an internal entry, such as a "
+"retry entry or a zero entry.  This function sets up the **xas** to restart "
+"the walk from the head of the array if needed."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1530
+msgid "true if the operation needs to be retried."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1601
+msgid "Refetch an entry from the xarray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1603
+msgid ""
+"Use this function to check that a previously loaded entry still has the same "
+"value.  This is useful for the lockless pagecache lookup where we walk the "
+"array with only the RCU lock to protect us, lock the page, then check that "
+"the page hasn't moved since we looked it up."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1608
+msgid ""
+"The caller guarantees that **xas** is still valid.  If it may be in an error "
+"or restart state, call xas_load() instead."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1612
+msgid "The entry at this location in the xarray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1635
+msgid "Set up XArray operation state for a different index."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1637
+msgid "New index into the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1638
+msgid ""
+"Move the operation state to refer to a different index.  This will have the "
+"effect of starting a walk from the top; see xas_next() to move to an "
+"adjacent index."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1650
+msgid "Skip over sibling entries."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1652
+msgid "Index of last sibling entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1653
+msgid ""
+"Move the operation state to refer to the last sibling entry. This is useful "
+"for loops that normally want to see sibling entries but sometimes want to "
+"skip them.  Use xas_set() if you want to move to an index which is not part "
+"of this entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1668
+msgid "Set up XArray operation state for a multislot entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1670
+msgid "Target of the operation."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1672
+#: ../../../core-api/xarray:510: lib/xarray.c:1036 lib/xarray.c:1080
+#: lib/xarray.c:1144 lib/xarray.c:1164
+msgid "``unsigned int order``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1671
+msgid "Entry occupies 2^**order** indices."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1688
+msgid "Set up XArray operation state for a callback."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1691
+#: ../../../core-api/xarray:510: lib/xarray.c:2354
+msgid "``xa_update_node_t update``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1690
+msgid "Function to call when updating a node."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1691
+msgid ""
+"The XArray can notify a caller after it has updated an xa_node. This is "
+"advanced functionality and is only needed by the page cache and swap cache."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1707
+msgid "Advance iterator to next present entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1710
+#: include/linux/xarray.h:1766 ../../../core-api/xarray:510: lib/xarray.c:1381
+#: lib/xarray.c:1445 lib/xarray.c:2177 lib/xarray.c:2227 lib/xarray.c:2314
+msgid "``unsigned long max``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1709
+#: include/linux/xarray.h:1765 ../../../core-api/xarray:510: lib/xarray.c:1380
+#: lib/xarray.c:1444
+msgid "Highest index to return."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1710
+msgid ""
+"xas_next_entry() is an inline function to optimise xarray traversal for "
+"speed.  It is equivalent to calling xas_find(), and will call xas_find() for "
+"all the hard cases."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1715
+msgid "The next present entry after the one currently referred to by **xas**."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1763
+msgid "Advance iterator to next marked entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1766
+#: include/linux/xarray.h:1826
+msgid "Mark to search for."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1767
+msgid ""
+"xas_next_marked() is an inline function to optimise xarray traversal for "
+"speed.  It is equivalent to calling xas_find_marked(), and will call "
+"xas_find_marked() for all the hard cases."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1772
+msgid "The next marked entry after the one currently referred to by **xas**."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1807
+msgid "``xas_for_each (xas, entry, max)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1805
+#: include/linux/xarray.h:1822 include/linux/xarray.h:1840
+msgid "Iterate over a range of an XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1811
+#: include/linux/xarray.h:1828 include/linux/xarray.h:1846
+msgid "``xas``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1807
+#: include/linux/xarray.h:1824 include/linux/xarray.h:1842
+msgid "Entry retrieved from the array."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1808
+#: include/linux/xarray.h:1825
+msgid "Maximum index to retrieve from array."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1809
+msgid ""
+"The loop body will be executed for each entry present in the xarray between "
+"the current xas position and **max**.  **entry** will be set to the entry "
+"retrieved from the xarray.  It is safe to delete entries from the array in "
+"the loop body.  You should hold either the RCU lock or the xa_lock while "
+"iterating.  If you need to drop the lock, call xas_pause() first."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1824
+msgid "``xas_for_each_marked (xas, entry, max, mark)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1827
+msgid "``mark``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1827
+msgid ""
+"The loop body will be executed for each marked entry in the xarray between "
+"the current xas position and **max**.  **entry** will be set to the entry "
+"retrieved from the xarray.  It is safe to delete entries from the array in "
+"the loop body.  You should hold either the RCU lock or the xa_lock while "
+"iterating.  If you need to drop the lock, call xas_pause() first."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1842
+msgid "``xas_for_each_conflict (xas, entry)``"
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1843
+msgid ""
+"The loop body will be executed for each entry in the XArray that lies within "
+"the range specified by **xas**.  If the loop terminates normally, **entry** "
+"will be ``NULL``.  The user may break out of the loop, which will leave "
+"**entry** set to the conflicting entry.  The caller may also call "
+"xa_set_err() to exit the loop while setting an error to record the reason."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1858
+msgid "Move iterator to previous index."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1860
+msgid ""
+"If the **xas** was in an error state, it will remain in an error state and "
+"this function will return ``NULL``.  If the **xas** has never been walked, "
+"it will have the effect of calling xas_load().  Otherwise one will be "
+"subtracted from the index and the state will be walked to the correct "
+"location in the array for the next operation."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1866
+msgid ""
+"If the iterator was referencing index 0, this function wraps around to "
+"``ULONG_MAX``."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1870
+#: include/linux/xarray.h:1899
+msgid "The entry at the new index.  This may be ``NULL`` or an internal entry."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1887
+msgid "Move state to next index."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1889
+msgid ""
+"If the **xas** was in an error state, it will remain in an error state and "
+"this function will return ``NULL``.  If the **xas** has never been walked, "
+"it will have the effect of calling xas_load().  Otherwise one will be added "
+"to the index and the state will be walked to the correct location in the "
+"array for the next operation."
+msgstr ""
+
+#: ../../../core-api/xarray:509: include/linux/xarray.h:1895
+msgid ""
+"If the iterator was referencing index ``ULONG_MAX``, this function wraps "
+"around to 0."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:223
+msgid "Load an entry from the XArray (advanced)."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:225
+msgid ""
+"Usually walks the **xas** to the appropriate state to load the entry stored "
+"at xa_index.  However, it will do nothing and return ``NULL`` if **xas** is "
+"in an error state.  xas_load() will never expand the tree."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:229
+msgid ""
+"If the xa_state is set up to operate on a multi-index entry, xas_load() may "
+"return ``NULL`` or an internal entry, even if there are entries present "
+"within the range specified by **xas**."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:234
+msgid "Any context.  The caller should hold the xa_lock or the RCU lock."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:235
+msgid "Usually an entry in the XArray, but see description for exceptions."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:284
+msgid "Allocate memory if needed."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:287
+msgid ""
+"If we need to add new nodes to the XArray, we try to allocate memory with "
+"GFP_NOWAIT while holding the lock, which will usually succeed. If it fails, "
+"**xas** is flagged as needing memory to continue.  The caller should drop "
+"the lock and call xas_nomem().  If xas_nomem() succeeds, the caller should "
+"retry the operation."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:293
+msgid ""
+"Forward progress is guaranteed as one node is allocated here and stored in "
+"the xa_state where it will be found by xas_alloc().  More nodes will likely "
+"be found in the slab allocator, but we do not tie them up here."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:299
+msgid "true if memory was needed, and was successfully allocated."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:523
+msgid "Free this node and all nodes that it references"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:524
+msgid "Array operation state."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:526
+msgid "``struct xa_node *top``"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:525
+msgid "Node to free"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:526
+msgid ""
+"This node has been removed from the tree.  We must now free it and all of "
+"its subnodes.  There may be RCU walkers with references into the tree, so we "
+"must replace all entries with retry markers."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:704
+msgid "Ensure that stores to this range will succeed"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:706
+msgid ""
+"Creates all of the slots in the range covered by **xas**.  Sets **xas** to "
+"create single-index entries and positions it at the beginning of the range.  "
+"This is for the benefit of users which have not yet been converted to use "
+"multi-index entries."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:774
+msgid ""
+"If **xas** is operating on a multi-index entry, the entry returned by this "
+"function is essentially meaningless (it may be an internal entry or it may "
+"be ``NULL``, even if there are non-NULL entries at some of the indices "
+"covered by the range).  This is not a problem for any current users, and can "
+"be changed if needed."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:781
+msgid "The old entry at this index."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:858
+msgid "Returns the state of this mark."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:860 lib/xarray.c:878
+#: lib/xarray.c:907 lib/xarray.c:2070 lib/xarray.c:2090 lib/xarray.c:2108
+#: lib/xarray.c:2140 lib/xarray.c:2158
+msgid "Mark number."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:862
+msgid ""
+"true if the mark is set, false if the mark is clear or **xas** is in an "
+"error state."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:876
+msgid "Sets the mark on this entry and its parents."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:879
+msgid ""
+"Sets the specified mark on this entry, and walks up the tree setting it on "
+"all the ancestor entries.  Does nothing if **xas** has not been walked to an "
+"entry, or is in an error state."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:905
+msgid "Clears the mark on this entry and its parents."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:908
+msgid ""
+"Clears the specified mark on this entry, and walks back to the head "
+"attempting to clear it on all the ancestor entries.  Does nothing if **xas** "
+"has not been walked to an entry, or is in an error state."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:937
+msgid "Initialise all marks for the entry"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:938
+msgid "Array operations state."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:939
+msgid ""
+"Initialise all marks for the entry specified by **xas**.  If we're tracking "
+"free entries with a mark, we need to set it on all entries.  All other marks "
+"are cleared."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:943
+msgid ""
+"This implementation is not as efficient as it could be; we may walk up the "
+"tree multiple times."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1032
+msgid "Allocate memory for splitting an entry."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1034
+msgid "New entry which will be stored in the array."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1035 lib/xarray.c:1079
+#: lib/xarray.c:1139 lib/xarray.c:1163
+msgid "Current entry order."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1037
+msgid ""
+"This function should be called before calling xas_split(). If necessary, it "
+"will allocate new nodes (and fill them with **entry**) to prepare for the "
+"upcoming split of an entry of **order** size into entries of the order "
+"stored in the **xas**."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1043
+msgid "May sleep if **gfp** flags permit."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1076
+msgid "Split a multi-index entry into smaller entries."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1078 lib/xarray.c:1162
+msgid "New entry to store in the array."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1080
+msgid ""
+"The size of the new entries is set in **xas**.  The value in **entry** is "
+"copied to all the replacement entries."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1084 lib/xarray.c:1173
+msgid "Any context.  The caller should hold the xa_lock."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1138
+msgid "Minimal split order xas_try_split() can accept"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1140
+msgid ""
+"xas_try_split() can split a multi-index entry to smaller than **order** - 1 "
+"if no new xa_node is needed. This function provides the minimal order "
+"xas_try_split() supports."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1145
+msgid "the minimal order xas_try_split() supports"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1160
+msgid "Try to split a multi-index entry."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1164
+msgid ""
+"The size of the new entries is set in **xas**.  The value in **entry** is "
+"copied to all the replacement entries. If and only if one new xa_node is "
+"needed, the function will use GFP_NOWAIT to get one if xas->xa_alloc is "
+"NULL. If more new xa_node are needed, the function gives EINVAL error."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1169
+msgid "**NOTE**"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1170
+msgid ""
+"use xas_try_split_min_order() to get next split order instead of **order** - "
+"1 if you want to minmize xas_try_split() calls."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1261
+msgid "Pause a walk to drop a lock."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1263
+msgid ""
+"Some users need to pause a walk and drop the lock they're holding in order "
+"to yield to a higher priority thread or carry out an operation on an entry.  "
+"Those users should call this function before they drop the lock.  It resets "
+"the **xas** to be suitable for the next iteration of the loop after the user "
+"has reacquired the lock.  If most entries found during a walk require you to "
+"call xas_pause(), the xa_for_each() iterator may be more appropriate."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1271
+msgid ""
+"Note that xas_pause() only works for forward iteration.  If a user needs to "
+"pause a reverse iteration, we will need a xas_pause_rev()."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1378
+msgid "Find the next present entry in the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1381
+msgid ""
+"If the **xas** has not yet been walked to an entry, return the entry which "
+"has an index >= xas.xa_index.  If it has been walked, the entry currently "
+"being pointed at has been processed, and so we move to the next entry."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1386
+msgid ""
+"If no entry is found and the array is smaller than **max**, the iterator is "
+"set to the smallest index not yet in the array.  This allows **xas** to be "
+"immediately passed to xas_store()."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1391 lib/xarray.c:1460
+#: lib/xarray.c:2187
+msgid "The entry, if found, otherwise ``NULL``."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1442
+msgid "Find the next marked entry in the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1445
+msgid "Mark number to search for."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1446
+msgid ""
+"If the **xas** has not yet been walked to an entry, return the marked entry "
+"which has an index >= xas.xa_index.  If it has been walked, the entry "
+"currently being pointed at has been processed, and so we return the first "
+"marked entry with an index > xas.xa_index."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1451
+msgid ""
+"If no marked entry is found and the array is smaller than **max**, **xas** "
+"is set to the bounds state and xas->xa_index is set to the smallest index "
+"not yet in the array.  This allows **xas** to be immediately passed to "
+"xas_store()."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1456
+msgid ""
+"If no entry is found before **max** is reached, **xas** is set to the "
+"restart state."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1544
+msgid "Find the next present entry in a range."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1546
+msgid "The **xas** describes both a range and a position within that range."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1549
+msgid "Any context.  Expects xa_lock to be held."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1550
+msgid "The next entry in the range covered by **xas** or ``NULL``."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1605
+msgid "Load an entry from an XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1607
+msgid "index into array."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1610
+msgid "The entry at **index** in **xa**."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1635
+msgid "Erase this entry from the XArray while locked."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1643 lib/xarray.c:2074
+#: lib/xarray.c:2092
+msgid "Any context.  Expects xa_lock to be held on entry."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1662
+msgid "Any context.  Takes and releases the xa_lock."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1683 lib/xarray.c:1751
+msgid ""
+"You must already be holding the xa_lock when calling this function. It will "
+"drop the lock if needed to allocate memory, and then reacquire it afterwards."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1688 lib/xarray.c:1759
+#: lib/xarray.c:1802 lib/xarray.c:1980 lib/xarray.c:2031
+msgid ""
+"Any context.  Expects xa_lock to be held on entry.  May release and "
+"reacquire xa_lock if **gfp** flags permit."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1718
+msgid ""
+"After this function returns, loads from this index will return **entry**. "
+"Storing into an existing multi-index entry updates the entry of every index. "
+"The marks associated with **index** are unaffected unless **entry** is "
+"``NULL``."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1725
+msgid ""
+"The old entry at this index on success, xa_err(-EINVAL) if **entry** cannot "
+"be stored in an XArray, or xa_err(-ENOMEM) if memory allocation failed."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1792
+msgid "Store this entry in the XArray if no entry is present."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1855
+msgid "Store this entry at a range of indices in the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1858
+msgid "``unsigned long first``"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1857
+msgid "First index to affect."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1859
+msgid "``unsigned long last``"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1858
+msgid "Last index to affect."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1861
+msgid ""
+"After this function returns, loads from any index between **first** and "
+"**last**, inclusive will return **entry**. Storing into an existing multi-"
+"index entry updates the entry of every index. The marks associated with "
+"**index** are unaffected unless **entry** is ``NULL``."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1867
+msgid ""
+"Process context.  Takes and releases the xa_lock.  May sleep if the **gfp** "
+"flags permit."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1869
+msgid ""
+"``NULL`` on success, xa_err(-EINVAL) if **entry** cannot be stored in an "
+"XArray, or xa_err(-ENOMEM) if memory allocation failed."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1909 lib/xarray.c:1942
+msgid "Get the order of an entry."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1911
+msgid ""
+"Called after xas_load, the xas should not be in an error state. The xas "
+"should not be pointing to a sibling entry."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1915 lib/xarray.c:1946
+msgid "A number between 0 and 63 indicating the order of the entry."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1944
+msgid "Index of the entry."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:1969
+msgid "Range for allocated ID."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2033
+msgid ""
+"0 if the allocation succeeded without wrapping.  1 if the allocation "
+"succeeded after wrapping, -ENOMEM if memory could not be allocated or -EBUSY "
+"if there are no free entries in **limit**."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2067
+msgid "Set this mark on this entry while locked."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2071 lib/xarray.c:2141
+msgid "Attempting to set a mark on a ``NULL`` entry does not succeed."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2087
+msgid "Clear this mark on this entry while locked."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2105
+msgid "Inquire whether this mark is set on this entry."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2109
+msgid ""
+"This function uses the RCU read lock, so the result may be out of date by "
+"the time it returns.  If you need the result to be stable, use a lock."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2114
+msgid "True if the entry at **index** has this mark set, false if it doesn't."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2137
+msgid "Set this mark on this entry."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2144 lib/xarray.c:2162
+msgid "Process context.  Takes and releases the xa_lock."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2155
+msgid "Clear this mark on this entry."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2159
+msgid "Clearing a mark always succeeds."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2173
+msgid "Search the XArray for an entry."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2176 lib/xarray.c:2226
+msgid "``unsigned long *indexp``"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2175 lib/xarray.c:2225
+msgid "Pointer to an index."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2176 lib/xarray.c:2226
+msgid "Maximum index to search to."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2178 lib/xarray.c:2228
+#: lib/xarray.c:2316
+msgid "``xa_mark_t filter``"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2178
+msgid ""
+"Finds the entry in **xa** which matches the **filter**, and has the lowest "
+"index that is at least **indexp** and no more than **max**. If an entry is "
+"found, **indexp** is updated to be the index of the entry. This function is "
+"protected by the RCU read lock, so it may not find entries which are being "
+"simultaneously added.  It will not return an ``XA_RETRY_ENTRY``; if you need "
+"to see retry entries, use xas_find()."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2223
+msgid "Search the XArray for a present entry."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2228
+msgid ""
+"Finds the entry in **xa** which matches the **filter** and has the lowest "
+"index that is above **indexp** and no more than **max**. If an entry is "
+"found, **indexp** is updated to be the index of the entry. This function is "
+"protected by the RCU read lock, so it may miss entries which are being "
+"simultaneously added.  It will not return an ``XA_RETRY_ENTRY``; if you need "
+"to see retry entries, use xas_find()."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2237
+msgid "The pointer, if found, otherwise ``NULL``."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2309
+msgid "Copy selected entries from the XArray into a normal array."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2310
+msgid "The source XArray to copy from."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2312
+msgid "``void **dst``"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2311
+msgid "The buffer to copy entries into."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2313
+msgid "``unsigned long start``"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2312
+msgid "The first index in the XArray eligible to be selected."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2313
+msgid "The last index in the XArray eligible to be selected."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2315
+msgid "``unsigned int n``"
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2314
+msgid "The maximum number of entries to copy."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2316
+msgid ""
+"Copies up to **n** entries that match **filter** from the XArray.  The "
+"copied entries will have indices between **start** and **max**, inclusive."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2319
+msgid ""
+"The **filter** may be an XArray mark value, in which case entries which are "
+"marked with that mark will be copied.  It may also be ``XA_PRESENT``, in "
+"which case all entries which are not ``NULL`` will be copied."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2323
+msgid ""
+"The entries returned may not represent a snapshot of the XArray at a moment "
+"in time.  For example, if another thread stores to index 5, then index 10, "
+"calling xa_extract() may return the old contents of index 5 and the new "
+"contents of index 10.  Indices not modified while this function is running "
+"will not be skipped."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2329
+msgid ""
+"If you need stronger guarantees, holding the xa_lock across calls to this "
+"function will prevent concurrent modification."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2334
+msgid "The number of entries copied."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2351
+msgid "Private interface for workingset code."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2352
+msgid "Node to be removed from the tree."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2353
+msgid "Function to call to update ancestor nodes."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2355
+msgid "xa_lock must be held on entry and will not be released."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2374
+msgid "Free all internal data structures."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2376
+msgid ""
+"After calling this function, the XArray is empty and has freed all memory "
+"allocated for its internal data structures.  You are responsible for freeing "
+"the objects referenced by the XArray."
+msgstr ""
+
+#: ../../../core-api/xarray:510: lib/xarray.c:2381
+msgid "Any context.  Takes and releases the xa_lock, interrupt-safe."
+msgstr ""
