@@ -1,0 +1,554 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:53+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../driver-api/pci/p2pdma.rst:5
+msgid "PCI Peer-to-Peer DMA Support"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:7
+msgid ""
+"The PCI bus has pretty decent support for performing DMA transfers between "
+"two devices on the bus. This type of transaction is henceforth called Peer-"
+"to-Peer (or P2P). However, there are a number of issues that make P2P "
+"transactions tricky to do in a perfectly safe way."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:12
+msgid ""
+"One of the biggest issues is that PCI doesn't require forwarding "
+"transactions between hierarchy domains, and in PCIe, each Root Port defines "
+"a separate hierarchy domain. To make things worse, there is no simple way to "
+"determine if a given Root Complex supports this or not. (See PCIe r4.0, sec "
+"1.3.1). Therefore, as of this writing, the kernel only supports doing P2P "
+"when the endpoints involved are all behind the same PCI bridge, as such "
+"devices are all in the same PCI hierarchy domain, and the spec guarantees "
+"that all transactions within the hierarchy will be routable, but it does not "
+"require routing between hierarchies."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:23
+msgid ""
+"The second issue is that to make use of existing interfaces in Linux, memory "
+"that is used for P2P transactions needs to be backed by struct pages. "
+"However, PCI BARs are not typically cache coherent so there are a few corner "
+"case gotchas with these pages so developers need to be careful about what "
+"they do with them."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:31
+msgid "Driver Writer's Guide"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:33
+msgid ""
+"In a given P2P implementation there may be three or more different types of "
+"kernel drivers in play:"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:36
+msgid ""
+"Provider - A driver which provides or publishes P2P resources like memory or "
+"doorbell registers to other drivers."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:38
+msgid ""
+"Client - A driver which makes use of a resource by setting up a DMA "
+"transaction to or from it."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:40
+msgid ""
+"Orchestrator - A driver which orchestrates the flow of data between clients "
+"and providers."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:43
+msgid ""
+"In many cases there could be overlap between these three types (i.e., it may "
+"be typical for a driver to be both a provider and a client)."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:46
+msgid "For example, in the NVMe Target Copy Offload implementation:"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:48
+msgid ""
+"The NVMe PCI driver is both a client, provider and orchestrator in that it "
+"exposes any CMB (Controller Memory Buffer) as a P2P memory resource "
+"(provider), it accepts P2P memory pages as buffers in requests to be used "
+"directly (client) and it can also make use of the CMB as submission queue "
+"entries (orchestrator)."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:53
+msgid ""
+"The RDMA driver is a client in this arrangement so that an RNIC can DMA "
+"directly to the memory exposed by the NVMe device."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:55
+msgid ""
+"The NVMe Target driver (nvmet) can orchestrate the data from the RNIC to the "
+"P2P memory (CMB) and then to the NVMe device (and vice versa)."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:58
+msgid ""
+"This is currently the only arrangement supported by the kernel but one could "
+"imagine slight tweaks to this that would allow for the same functionality. "
+"For example, if a specific RNIC added a BAR with some memory behind it, its "
+"driver could add support as a P2P provider and then the NVMe Target could "
+"use the RNIC's memory instead of the CMB in cases where the NVMe cards in "
+"use do not have CMB support."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:67
+msgid "Provider Drivers"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:69
+msgid ""
+"A provider simply needs to register a BAR (or a portion of a BAR) as a P2P "
+"DMA resource using :c:func:`pci_p2pdma_add_resource()`. This will register "
+"struct pages for all the specified memory."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:73
+msgid ""
+"After that it may optionally publish all of its resources as P2P memory "
+"using :c:func:`pci_p2pmem_publish()`. This will allow any orchestrator "
+"drivers to find and use the memory. When marked in this way, the resource "
+"must be regular memory with no side effects."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:78
+msgid ""
+"For the time being this is fairly rudimentary in that all resources are "
+"typically going to be P2P memory. Future work will likely expand this to "
+"include other types of resources like doorbells."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:84
+msgid "Client Drivers"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:86
+msgid ""
+"A client driver only has to use the mapping API :c:func:`dma_map_sg()` and :"
+"c:func:`dma_unmap_sg()` functions as usual, and the implementation will do "
+"the right thing for the P2P capable memory."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:92
+msgid "Orchestrator Drivers"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:94
+msgid ""
+"The first task an orchestrator driver must do is compile a list of all "
+"client devices that will be involved in a given transaction. For example, "
+"the NVMe Target driver creates a list including the namespace block device "
+"and the RNIC in use. If the orchestrator has access to a specific P2P "
+"provider to use it may check compatibility using :c:func:"
+"`pci_p2pdma_distance()` otherwise it may find a memory provider that's "
+"compatible with all clients using  :c:func:`pci_p2pmem_find()`. If more than "
+"one provider is supported, the one nearest to all the clients will be chosen "
+"first. If more than one provider is an equal distance away, the one returned "
+"will be chosen at random (it is not an arbitrary but truly random). This "
+"function returns the PCI device to use for the provider with a reference "
+"taken and therefore when it's no longer needed it should be returned with "
+"pci_dev_put()."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:108
+msgid ""
+"Once a provider is selected, the orchestrator can then use :c:func:"
+"`pci_alloc_p2pmem()` and :c:func:`pci_free_p2pmem()` to allocate P2P memory "
+"from the provider. :c:func:`pci_p2pmem_alloc_sgl()` and :c:func:"
+"`pci_p2pmem_free_sgl()` are convenience functions for allocating scatter-"
+"gather lists with P2P memory."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:115
+msgid "Struct Page Caveats"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:117
+msgid ""
+"Driver writers should be very careful about not passing these special struct "
+"pages to code that isn't prepared for it. At this time, the kernel "
+"interfaces do not have any checks for ensuring this. This obviously "
+"precludes passing these pages to userspace."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:122
+msgid ""
+"P2P memory is also technically IO memory but should never have any side "
+"effects behind it. Thus, the order of loads and stores should not be "
+"important and ioreadX(), iowriteX() and friends should not be necessary."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma.rst:128
+msgid "P2P DMA Support Library"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:285
+msgid "add memory for use as p2p memory"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:289
+#: drivers/pci/p2pdma.c:683 drivers/pci/p2pdma.c:742 drivers/pci/p2pdma.c:760
+#: drivers/pci/p2pdma.c:824 drivers/pci/p2pdma.c:861 drivers/pci/p2pdma.c:878
+#: drivers/pci/p2pdma.c:904 drivers/pci/p2pdma.c:938 drivers/pci/p2pdma.c:958
+#: drivers/pci/p2pdma.c:1020 drivers/pci/p2pdma.c:1075
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:291
+#: drivers/pci/p2pdma.c:744 drivers/pci/p2pdma.c:826 drivers/pci/p2pdma.c:863
+#: drivers/pci/p2pdma.c:880 drivers/pci/p2pdma.c:906 drivers/pci/p2pdma.c:940
+#: drivers/pci/p2pdma.c:960
+msgid "``struct pci_dev *pdev``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:286
+msgid "the device to add the memory to"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:288
+msgid "``int bar``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:287
+msgid "PCI BAR to add"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:289
+#: drivers/pci/p2pdma.c:823 drivers/pci/p2pdma.c:861
+msgid "``size_t size``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:288
+msgid "size of the memory to add, may be zero to use the whole BAR"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:290
+msgid "``u64 offset``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:289
+msgid "offset into the PCI BAR"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:291
+#: drivers/pci/p2pdma.c:686 drivers/pci/p2pdma.c:761 drivers/pci/p2pdma.c:824
+#: drivers/pci/p2pdma.c:959 drivers/pci/p2pdma.c:1023 drivers/pci/p2pdma.c:1077
+msgid "**Description**"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:290
+msgid ""
+"The memory will be given ZONE_DEVICE struct pages so that it may be used "
+"with any DMA request."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:679
+msgid ""
+"Determine the cumulative distance between a p2pdma provider and the clients "
+"in use."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:685
+msgid "``struct pci_dev *provider``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:681
+msgid "p2pdma provider to check against the client list"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:683
+#: drivers/pci/p2pdma.c:762
+msgid "``struct device **clients``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:682
+#: drivers/pci/p2pdma.c:758
+msgid "array of devices to check (NULL-terminated)"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:684
+#: drivers/pci/p2pdma.c:760
+msgid "``int num_clients``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:683
+msgid "number of clients in the array"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:685
+msgid "``bool verbose``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:684
+msgid "if true, print warnings for devices when we return -1"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:685
+msgid ""
+"Returns -1 if any of the clients are not compatible, otherwise returns a "
+"positive number where a lower number is the preferable choice. (If there's "
+"one client that's the same as the provider it will return 0, which is best "
+"choice)."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:690
+msgid ""
+"\"compatible\" means the provider and the clients are either all behind the "
+"same PCI root port or the host bridges connected to each of the devices are "
+"listed in the 'pci_p2pdma_whitelist'."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:738
+msgid "check if a given PCI device has published any p2pmem"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:739
+msgid "PCI device to check"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:756
+msgid ""
+"find a peer-to-peer DMA memory device compatible with the specified list of "
+"clients and shortest distance"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:759
+msgid "number of client devices in the list"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:760
+msgid ""
+"If multiple devices are behind the same switch, the one \"closest\" to the "
+"client devices in use will be chosen first. (So if one of the providers is "
+"the same as one of the clients, that provider will be used ahead of any "
+"other providers that are unrelated). If multiple providers are an equal "
+"distance away, one will be chosen at random."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:766
+msgid ""
+"Returns a pointer to the PCI device with a reference taken (use pci_dev_put "
+"to return the reference) or NULL if no compatible device is found. The found "
+"provider will also be assigned to the client list."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:820
+msgid "allocate peer-to-peer DMA memory"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:821
+#: drivers/pci/p2pdma.c:901 drivers/pci/p2pdma.c:935
+msgid "the device to allocate memory from"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:822
+#: drivers/pci/p2pdma.c:903
+msgid "number of bytes to allocate"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:823
+msgid "Returns the allocated memory or NULL on error."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:857
+msgid "free peer-to-peer DMA memory"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:858
+#: drivers/pci/p2pdma.c:876
+msgid "the device the memory was allocated from"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:860
+#: drivers/pci/p2pdma.c:878
+msgid "``void *addr``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:859
+#: drivers/pci/p2pdma.c:877
+msgid "address of the memory that was allocated"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:860
+msgid "number of bytes that were allocated"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:874
+msgid ""
+"return the PCI bus address for a given virtual address obtained with "
+"pci_alloc_p2pmem()"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:900
+msgid "allocate peer-to-peer DMA memory in a scatterlist"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:903
+msgid "``unsigned int *nents``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:902
+msgid "the number of SG entries in the list"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:904
+msgid "``u32 length``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:905
+msgid "**Return**"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:905
+msgid ""
+"``NULL`` on error or :c:type:`struct scatterlist <scatterlist>` pointer and "
+"**nents** on success"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:934
+msgid "free a scatterlist allocated by pci_p2pmem_alloc_sgl()"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:937
+msgid "``struct scatterlist *sgl``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:936
+msgid "the allocated scatterlist"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:954
+msgid ""
+"publish the peer-to-peer DMA memory for use by other devices with "
+"pci_p2pmem_find()"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:956
+msgid "the device with peer-to-peer DMA memory to publish"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:958
+msgid "``bool publish``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:957
+msgid "set to true to publish the memory, false to unpublish it"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:958
+msgid ""
+"Published memory can be used by other PCI device drivers for peer-2-peer DMA "
+"operations. Non-published memory is reserved for exclusive use of the device "
+"driver that registers the peer-to-peer memory."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1016
+msgid "parse a configfs/sysfs attribute store to enable p2pdma"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1022
+msgid "``const char *page``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1018
+msgid "contents of the value to be stored"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1020
+msgid "``struct pci_dev **p2p_dev``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1019
+msgid ""
+"returns the PCI device that was selected to be used (if one was specified in "
+"the stored value)"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1022
+msgid "``bool *use_p2pdma``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1021
+msgid "returns whether to enable p2pdma or not"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1022
+msgid ""
+"Parses an attribute value to decide whether to enable p2pdma. The value can "
+"select a PCI device (using its full BDF device name) or a boolean (in any "
+"format kstrtobool() accepts). A false value disables p2pdma, a true value "
+"expects the caller to automatically find a compatible device and specifying "
+"a PCI device expects the caller to use the specific provider."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1029
+msgid ""
+"pci_p2pdma_enable_show() should be used as the show operation for the "
+"attribute."
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1032
+#: drivers/pci/p2pdma.c:1079
+msgid "Returns 0 on success"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1071
+msgid "show a configfs/sysfs attribute indicating whether p2pdma is enabled"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1077
+msgid "``char *page``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1073
+msgid "contents of the stored value"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1075
+msgid "``struct pci_dev *p2p_dev``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1074
+msgid "the selected p2p device (NULL if no device is selected)"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1076
+msgid "``bool use_p2pdma``"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1075
+msgid "whether p2pdma has been enabled"
+msgstr ""
+
+#: ../../../driver-api/pci/p2pdma:130: drivers/pci/p2pdma.c:1076
+msgid ""
+"Attributes that use pci_p2pdma_enable_store() should use this function to "
+"show the value of the attribute."
+msgstr ""
