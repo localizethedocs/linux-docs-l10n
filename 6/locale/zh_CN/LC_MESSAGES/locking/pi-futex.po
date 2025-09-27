@@ -1,0 +1,194 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel 6\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:54+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../locking/pi-futex.rst:3
+msgid "Lightweight PI-futexes"
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:5
+msgid "We are calling them lightweight for 3 reasons:"
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:7
+msgid ""
+"in the user-space fastpath a PI-enabled futex involves no kernel work (or "
+"any other PI complexity) at all. No registration, no extra kernel calls - "
+"just pure fast atomic ops in userspace."
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:11
+msgid ""
+"even in the slowpath, the system call and scheduling pattern is very similar "
+"to normal futexes."
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:14
+msgid ""
+"the in-kernel PI implementation is streamlined around the mutex abstraction, "
+"with strict rules that keep the implementation relatively simple: only a "
+"single owner may own a lock (i.e. no read-write lock support), only the "
+"owner may unlock a lock, no recursive locking, etc."
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:21
+msgid "Priority Inheritance - why?"
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:23
+msgid ""
+"The short reply: user-space PI helps achieving/improving determinism for "
+"user-space applications. In the best-case, it can help achieve determinism "
+"and well-bound latencies. Even in the worst-case, PI will improve the "
+"statistical distribution of locking related application delays."
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:30
+msgid "The longer reply"
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:32
+msgid ""
+"Firstly, sharing locks between multiple tasks is a common programming "
+"technique that often cannot be replaced with lockless algorithms. As we can "
+"see it in the kernel [which is a quite complex program in itself], lockless "
+"structures are rather the exception than the norm - the current ratio of "
+"lockless vs. locky code for shared data structures is somewhere between 1:10 "
+"and 1:100. Lockless is hard, and the complexity of lockless algorithms often "
+"endangers to ability to do robust reviews of said code. I.e. critical RT "
+"apps often choose lock structures to protect critical data structures, "
+"instead of lockless algorithms. Furthermore, there are cases (like shared "
+"hardware, or other resource limits) where lockless access is mathematically "
+"impossible."
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:44
+msgid ""
+"Media players (such as Jack) are an example of reasonable application design "
+"with multiple tasks (with multiple priority levels) sharing short-held "
+"locks: for example, a highprio audio playback thread is combined with medium-"
+"prio construct-audio-data threads and low-prio display-colory-stuff threads. "
+"Add video and decoding to the mix and we've got even more priority levels."
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:51
+msgid ""
+"So once we accept that synchronization objects (locks) are an unavoidable "
+"fact of life, and once we accept that multi-task userspace apps have a very "
+"fair expectation of being able to use locks, we've got to think about how to "
+"offer the option of a deterministic locking implementation to user-space."
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:57
+msgid ""
+"Most of the technical counter-arguments against doing priority inheritance "
+"only apply to kernel-space locks. But user-space locks are different, there "
+"we cannot disable interrupts or make the task non-preemptible in a critical "
+"section, so the 'use spinlocks' argument does not apply (user-space "
+"spinlocks have the same priority inversion problems as other user-space "
+"locking constructs). Fact is, pretty much the only technique that currently "
+"enables good determinism for userspace locks (such as futex-based pthread "
+"mutexes) is priority inheritance:"
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:66
+msgid ""
+"Currently (without PI), if a high-prio and a low-prio task shares a lock "
+"[this is a quite common scenario for most non-trivial RT applications], even "
+"if all critical sections are coded carefully to be deterministic (i.e. all "
+"critical sections are short in duration and only execute a limited number of "
+"instructions), the kernel cannot guarantee any deterministic execution of "
+"the high-prio task: any medium-priority task could preempt the low-prio task "
+"while it holds the shared lock and executes the critical section, and could "
+"delay it indefinitely."
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:76
+msgid "Implementation"
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:78
+msgid ""
+"As mentioned before, the userspace fastpath of PI-enabled pthread mutexes "
+"involves no kernel work at all - they behave quite similarly to normal futex-"
+"based locks: a 0 value means unlocked, and a value==TID means locked. (This "
+"is the same method as used by list-based robust futexes.) Userspace uses "
+"atomic ops to lock/unlock these mutexes without entering the kernel."
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:85
+msgid "To handle the slowpath, we have added two new futex ops:"
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:87
+msgid "FUTEX_LOCK_PI"
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:88
+msgid "FUTEX_UNLOCK_PI"
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:90
+msgid ""
+"If the lock-acquire fastpath fails, [i.e. an atomic transition from 0 to TID "
+"fails], then FUTEX_LOCK_PI is called. The kernel does all the remaining "
+"work: if there is no futex-queue attached to the futex address yet then the "
+"code looks up the task that owns the futex [it has put its own TID into the "
+"futex value], and attaches a 'PI state' structure to the futex-queue. The "
+"pi_state includes an rt-mutex, which is a PI-aware, kernel-based "
+"synchronization object. The 'other' task is made the owner of the rt-mutex, "
+"and the FUTEX_WAITERS bit is atomically set in the futex value. Then this "
+"task tries to lock the rt-mutex, on which it blocks. Once it returns, it has "
+"the mutex acquired, and it sets the futex value to its own TID and returns. "
+"Userspace has no other work to perform - it now owns the lock, and futex "
+"value contains FUTEX_WAITERS|TID."
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:104
+msgid ""
+"If the unlock side fastpath succeeds, [i.e. userspace manages to do a TID -> "
+"0 atomic transition of the futex value], then no kernel work is triggered."
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:108
+msgid ""
+"If the unlock fastpath fails (because the FUTEX_WAITERS bit is set), then "
+"FUTEX_UNLOCK_PI is called, and the kernel unlocks the futex on the behalf of "
+"userspace - and it also unlocks the attached pi_state->rt_mutex and thus "
+"wakes up any potential waiters."
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:113
+msgid ""
+"Note that under this approach, contrary to previous PI-futex approaches, "
+"there is no prior 'registration' of a PI-futex. [which is not quite possible "
+"anyway, due to existing ABI properties of pthread mutexes.]"
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:117
+msgid ""
+"Also, under this scheme, 'robustness' and 'PI' are two orthogonal properties "
+"of futexes, and all four combinations are possible: futex, robust-futex, PI-"
+"futex, robust+PI-futex."
+msgstr ""
+
+#: ../../../locking/pi-futex.rst:121
+msgid ""
+"More details about priority inheritance can be found in Documentation/"
+"locking/rt-mutex.rst."
+msgstr ""

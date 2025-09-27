@@ -1,0 +1,151 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel 6\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:54+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../RCU/NMI-RCU.rst:4
+msgid "Using RCU to Protect Dynamic NMI Handlers"
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:7
+msgid ""
+"Although RCU is usually used to protect read-mostly data structures, it is "
+"possible to use RCU to provide dynamic non-maskable interrupt handlers, as "
+"well as dynamic irq handlers.  This document describes how to do this, "
+"drawing loosely from Zwane Mwaikambo's NMI-timer work in an old version of "
+"\"arch/x86/kernel/traps.c\"."
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:13
+msgid ""
+"The relevant pieces of code are listed below, each followed by a brief "
+"explanation::"
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:21
+msgid ""
+"The dummy_nmi_callback() function is a \"dummy\" NMI handler that does "
+"nothing, but returns zero, thus saying that it did nothing, allowing the NMI "
+"handler to take the default machine-specific action::"
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:27
+msgid ""
+"This nmi_callback variable is a global function pointer to the current NMI "
+"handler::"
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:45
+msgid ""
+"The do_nmi() function processes each NMI.  It first disables preemption in "
+"the same way that a hardware irq would, then increments the per-CPU count of "
+"NMIs.  It then invokes the NMI handler stored in the nmi_callback function "
+"pointer.  If this handler returns zero, do_nmi() invokes the "
+"default_do_nmi() function to handle a machine-specific NMI.  Finally, "
+"preemption is restored."
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:52
+msgid ""
+"In theory, rcu_dereference_sched() is not needed, since this code runs only "
+"on i386, which in theory does not need rcu_dereference_sched() anyway.  "
+"However, in practice it is a good documentation aid, particularly for anyone "
+"attempting to do something similar on Alpha or on systems with aggressive "
+"optimizing compilers."
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:58
+msgid "Quick Quiz:"
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:59 ../../../RCU/NMI-RCU.rst:107
+msgid ""
+"Why might the rcu_dereference_sched() be necessary on Alpha, given that the "
+"code referenced by the pointer is read-only?"
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:61
+msgid ":ref:`Answer to Quick Quiz <answer_quick_quiz_NMI>`"
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:63
+msgid "Back to the discussion of NMI and RCU::"
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:70
+msgid ""
+"The set_nmi_callback() function registers an NMI handler.  Note that any "
+"data that is to be used by the callback must be initialized up -before- the "
+"call to set_nmi_callback().  On architectures that do not order writes, the "
+"rcu_assign_pointer() ensures that the NMI handler sees the initialized "
+"values::"
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:81
+msgid ""
+"This function unregisters an NMI handler, restoring the original "
+"dummy_nmi_handler().  However, there may well be an NMI handler currently "
+"executing on some other CPU.  We therefore cannot free up any data "
+"structures used by the old NMI handler until execution of it completes on "
+"all other CPUs."
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:87
+msgid ""
+"One way to accomplish this is via synchronize_rcu(), perhaps as follows::"
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:94
+msgid ""
+"This works because (as of v4.20) synchronize_rcu() blocks until all CPUs "
+"complete any preemption-disabled segments of code that they were executing. "
+"Since NMI handlers disable preemption, synchronize_rcu() is guaranteed not "
+"to return until all ongoing NMI handlers exit.  It is therefore safe to free "
+"up the handler's data as soon as synchronize_rcu() returns."
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:101
+msgid ""
+"Important note: for this to work, the architecture in question must invoke "
+"nmi_enter() and nmi_exit() on NMI entry and exit, respectively."
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:106
+msgid "Answer to Quick Quiz:"
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:109
+msgid ""
+"The caller to set_nmi_callback() might well have initialized some data that "
+"is to be used by the new NMI handler.  In this case, the "
+"rcu_dereference_sched() would be needed, because otherwise a CPU that "
+"received an NMI just after the new handler was set might see the pointer to "
+"the new NMI handler, but the old pre-initialized version of the handler's "
+"data."
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:117
+msgid ""
+"This same sad story can happen on other CPUs when using a compiler with "
+"aggressive pointer-value speculation optimizations.  (But please don't!)"
+msgstr ""
+
+#: ../../../RCU/NMI-RCU.rst:121
+msgid ""
+"More important, the rcu_dereference_sched() makes it clear to someone "
+"reading the code that the pointer is being protected by RCU-sched."
+msgstr ""

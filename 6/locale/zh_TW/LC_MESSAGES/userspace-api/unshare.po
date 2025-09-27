@@ -1,0 +1,558 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel 6\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:54+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../userspace-api/unshare.rst:2
+msgid "unshare system call"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:4
+msgid ""
+"This document describes the new system call, unshare(). The document "
+"provides an overview of the feature, why it is needed, how it can be used, "
+"its interface specification, design, implementation and how it can be tested."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:10
+msgid "Change Log"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:11
+msgid ""
+"version 0.1  Initial document, Janak Desai (janak@us.ibm.com), Jan 11, 2006"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:14
+msgid "Contents"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:15
+msgid "Overview"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:16
+msgid "Benefits"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:17
+msgid "Cost"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:18
+msgid "Requirements"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:19
+msgid "Functional Specification"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:20
+msgid "High Level Design"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:21
+msgid "Low Level Design"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:22
+msgid "Test Specification"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:23
+msgid "Future Work"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:26
+msgid "1) Overview"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:28
+msgid ""
+"Most legacy operating system kernels support an abstraction of threads as "
+"multiple execution contexts within a process. These kernels provide special "
+"resources and mechanisms to maintain these \"threads\". The Linux kernel, in "
+"a clever and simple manner, does not make distinction between processes and "
+"\"threads\". The kernel allows processes to share resources and thus they "
+"can achieve legacy \"threads\" behavior without requiring additional data "
+"structures and mechanisms in the kernel. The power of implementing threads "
+"in this manner comes not only from its simplicity but also from allowing "
+"application programmers to work outside the confinement of all-or-nothing "
+"shared resources of legacy threads. On Linux, at the time of thread creation "
+"using the clone system call, applications can selectively choose which "
+"resources to share between threads."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:42
+msgid ""
+"unshare() system call adds a primitive to the Linux thread model that allows "
+"threads to selectively 'unshare' any resources that were being shared at the "
+"time of their creation. unshare() was conceptualized by Al Viro in the "
+"August of 2000, on the Linux-Kernel mailing list, as part of the discussion "
+"on POSIX threads on Linux.  unshare() augments the usefulness of Linux "
+"threads for applications that would like to control shared resources without "
+"creating a new process. unshare() is a natural addition to the set of "
+"available primitives on Linux that implement the concept of process/thread "
+"as a virtual machine."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:53
+msgid "2) Benefits"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:55
+msgid ""
+"unshare() would be useful to large application frameworks such as PAM where "
+"creating a new process to control sharing/unsharing of process resources is "
+"not possible. Since namespaces are shared by default when creating a new "
+"process using fork or clone, unshare() can benefit even non-threaded "
+"applications if they have a need to disassociate from default shared "
+"namespace. The following lists two use-cases where unshare() can be used."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:64
+msgid "2.1 Per-security context namespaces"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:66
+msgid ""
+"unshare() can be used to implement polyinstantiated directories using the "
+"kernel's per-process namespace mechanism. Polyinstantiated directories, such "
+"as per-user and/or per-security context instance of /tmp, /var/tmp or per-"
+"security context instance of a user's home directory, isolate user processes "
+"when working with these directories. Using unshare(), a PAM module can "
+"easily setup a private namespace for a user at login. Polyinstantiated "
+"directories are required for Common Criteria certification with Labeled "
+"System Protection Profile, however, with the availability of shared-tree "
+"feature in the Linux kernel, even regular Linux systems can benefit from "
+"setting up private namespaces at login and polyinstantiating /tmp, /var/tmp "
+"and other directories deemed appropriate by system administrators."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:80
+msgid "2.2 unsharing of virtual memory and/or open files"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:82
+msgid ""
+"Consider a client/server application where the server is processing client "
+"requests by creating processes that share resources such as virtual memory "
+"and open files. Without unshare(), the server has to decide what needs to be "
+"shared at the time of creating the process which services the request. "
+"unshare() allows the server an ability to disassociate parts of the context "
+"during the servicing of the request. For large and complex middleware "
+"application frameworks, this ability to unshare() after the process was "
+"created can be very useful."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:93
+msgid "3) Cost"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:95
+msgid ""
+"In order to not duplicate code and to handle the fact that unshare() works "
+"on an active task (as opposed to clone/fork working on a newly allocated "
+"inactive task) unshare() had to make minor reorganizational changes to "
+"copy_* functions utilized by clone/fork system call. There is a cost "
+"associated with altering existing, well tested and stable code to implement "
+"a new feature that may not get exercised extensively in the beginning. "
+"However, with proper design and code review of the changes and creation of "
+"an unshare() test for the LTP the benefits of this new feature can exceed "
+"its cost."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:106
+msgid "4) Requirements"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:108
+msgid ""
+"unshare() reverses sharing that was done using clone(2) system call, so "
+"unshare() should have a similar interface as clone(2). That is, since flags "
+"in clone(int flags, void \\*stack) specifies what should be shared, similar "
+"flags in unshare(int flags) should specify what should be unshared. "
+"Unfortunately, this may appear to invert the meaning of the flags from the "
+"way they are used in clone(2). However, there was no easy solution that was "
+"less confusing and that allowed incremental context unsharing in future "
+"without an ABI change."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:117
+msgid ""
+"unshare() interface should accommodate possible future addition of new "
+"context flags without requiring a rebuild of old applications. If and when "
+"new context flags are added, unshare() design should allow incremental "
+"unsharing of those resources on an as needed basis."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:123
+msgid "5) Functional Specification"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:125
+msgid "NAME"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:126
+msgid "unshare - disassociate parts of the process execution context"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:128
+msgid "SYNOPSIS"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:129
+msgid "#include <sched.h>"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:131
+msgid "int unshare(int flags);"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:133
+msgid "DESCRIPTION"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:134
+msgid ""
+"unshare() allows a process to disassociate parts of its execution context "
+"that are currently being shared with other processes. Part of execution "
+"context, such as the namespace, is shared by default when a new process is "
+"created using fork(2), while other parts, such as the virtual memory, open "
+"file descriptors, etc, may be shared by explicit request to share them when "
+"creating a process using clone(2)."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:142
+msgid ""
+"The main use of unshare() is to allow a process to control its shared "
+"execution context without creating a new process."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:145
+msgid ""
+"The flags argument specifies one or bitwise-or'ed of several of the "
+"following constants."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:148
+msgid "CLONE_FS"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:149
+msgid ""
+"If CLONE_FS is set, file system information of the caller is disassociated "
+"from the shared file system information."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:152
+msgid "CLONE_FILES"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:153
+msgid ""
+"If CLONE_FILES is set, the file descriptor table of the caller is "
+"disassociated from the shared file descriptor table."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:157
+msgid "CLONE_NEWNS"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:158
+msgid ""
+"If CLONE_NEWNS is set, the namespace of the caller is disassociated from the "
+"shared namespace."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:161
+msgid "CLONE_VM"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:162
+msgid ""
+"If CLONE_VM is set, the virtual memory of the caller is disassociated from "
+"the shared virtual memory."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:165
+msgid "RETURN VALUE"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:166
+msgid "On success, zero returned. On failure, -1 is returned and errno is"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:168
+msgid "ERRORS"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:169
+msgid "EPERM   CLONE_NEWNS was specified by a non-root process (process"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:170
+msgid "without CAP_SYS_ADMIN)."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:172
+msgid "ENOMEM  Cannot allocate sufficient memory to copy parts of caller's"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:173
+msgid "context that need to be unshared."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:175
+msgid "EINVAL  Invalid flag was specified as an argument."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:177
+msgid "CONFORMING TO"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:178
+msgid ""
+"The unshare() call is Linux-specific and  should  not be used in programs "
+"intended to be portable."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:181
+msgid "SEE ALSO"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:182
+msgid "clone(2), fork(2)"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:185
+msgid "6) High Level Design"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:187
+msgid ""
+"Depending on the flags argument, the unshare() system call allocates "
+"appropriate process context structures, populates it with values from the "
+"current shared version, associates newly duplicated structures with the "
+"current task structure and releases corresponding shared versions. Helper "
+"functions of clone (copy_*) could not be used directly by unshare() because "
+"of the following two reasons."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:194
+msgid ""
+"clone operates on a newly allocated not-yet-active task structure, where as "
+"unshare() operates on the current active task. Therefore unshare() has to "
+"take appropriate task_lock() before associating newly duplicated context "
+"structures"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:199
+msgid ""
+"unshare() has to allocate and duplicate all context structures that are "
+"being unshared, before associating them with the current task and releasing "
+"older shared structures. Failure do so will create race conditions and/or "
+"oops when trying to backout due to an error. Consider the case of unsharing "
+"both virtual memory and namespace. After successfully unsharing vm, if the "
+"system call encounters an error while allocating new namespace structure, "
+"the error return code will have to reverse the unsharing of vm. As part of "
+"the reversal the system call will have to go back to older, shared, vm "
+"structure, which may not exist anymore."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:211
+msgid ""
+"Therefore code from copy_* functions that allocated and duplicated current "
+"context structure was moved into new dup_* functions. Now, copy_* functions "
+"call dup_* functions to allocate and duplicate appropriate context "
+"structures and then associate them with the task structure that is being "
+"constructed. unshare() system call on the other hand performs the following:"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:218
+msgid "Check flags to force missing, but implied, flags"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:220
+msgid ""
+"For each context structure, call the corresponding unshare() helper function "
+"to allocate and duplicate a new context structure, if the appropriate bit is "
+"set in the flags argument."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:224
+msgid ""
+"If there is no error in allocation and duplication and there are new context "
+"structures then lock the current task structure, associate new context "
+"structures with the current task structure, and release the lock on the "
+"current task structure."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:229
+msgid "Appropriately release older, shared, context structures."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:232
+msgid "7) Low Level Design"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:234
+msgid ""
+"Implementation of unshare() can be grouped in the following 4 different "
+"items:"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:237
+msgid "Reorganization of existing copy_* functions"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:239
+msgid "unshare() system call service function"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:241
+msgid "unshare() helper functions for each different process context"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:243
+msgid "Registration of system call number for different architectures"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:246
+msgid "7.1) Reorganization of copy_* functions"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:248
+msgid ""
+"Each copy function such as copy_mm, copy_namespace, copy_files, etc, had "
+"roughly two components. The first component allocated and duplicated the "
+"appropriate structure and the second component linked it to the task "
+"structure passed in as an argument to the copy function. The first component "
+"was split into its own function. These dup_* functions allocated and "
+"duplicated the appropriate context structure. The reorganized copy_* "
+"functions invoked their corresponding dup_* functions and then linked the "
+"newly duplicated structures to the task structure with which the copy "
+"function was called."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:260
+msgid "7.2) unshare() system call service function"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:262
+msgid ""
+"Check flags Force implied flags. If CLONE_THREAD is set force CLONE_VM. If "
+"CLONE_VM is set, force CLONE_SIGHAND. If CLONE_SIGHAND is set and signals "
+"are also being shared, force CLONE_THREAD. If CLONE_NEWNS is set, force "
+"CLONE_FS."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:268
+msgid ""
+"For each context flag, invoke the corresponding unshare_* helper routine "
+"with flags passed into the system call and a reference to pointer pointing "
+"the new unshared structure"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:272
+msgid ""
+"If any new structures are created by unshare_* helper functions, take the "
+"task_lock() on the current task, modify appropriate context pointers, and "
+"release the task lock."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:277
+msgid ""
+"For all newly unshared structures, release the corresponding older, shared, "
+"structures."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:281
+msgid "7.3) unshare_* helper functions"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:283
+msgid ""
+"For unshare_* helpers corresponding to CLONE_SYSVSEM, CLONE_SIGHAND, and "
+"CLONE_THREAD, return -EINVAL since they are not implemented yet. For others, "
+"check the flag value to see if the unsharing is required for that structure. "
+"If it is, invoke the corresponding dup_* function to allocate and duplicate "
+"the structure and return a pointer to it."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:291
+msgid "7.4) Finally"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:293
+msgid ""
+"Appropriately modify architecture specific code to register the new system "
+"call."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:297
+msgid "8) Test Specification"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:299
+msgid "The test for unshare() should test the following:"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:301
+msgid ""
+"Valid flags: Test to check that clone flags for signal and signal handlers, "
+"for which unsharing is not implemented yet, return -EINVAL."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:305
+msgid ""
+"Missing/implied flags: Test to make sure that if unsharing namespace without "
+"specifying unsharing of filesystem, correctly unshares both namespace and "
+"filesystem information."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:309
+msgid ""
+"For each of the four (namespace, filesystem, files and vm) supported "
+"unsharing, verify that the system call correctly unshares the appropriate "
+"structure. Verify that unsharing them individually as well as in combination "
+"with each other works as expected."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:315
+msgid ""
+"Concurrent execution: Use shared memory segments and futex on an address in "
+"the shm segment to synchronize execution of about 10 threads. Have a couple "
+"of threads execute execve, a couple _exit and the rest unshare with "
+"different combination of flags. Verify that unsharing is performed as "
+"expected and that there are no oops or hangs."
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:323
+msgid "9) Future Work"
+msgstr ""
+
+#: ../../../userspace-api/unshare.rst:325
+msgid ""
+"The current implementation of unshare() does not allow unsharing of signals "
+"and signal handlers. Signals are complex to begin with and to unshare "
+"signals and/or signal handlers of a currently running process is even more "
+"complex. If in the future there is a specific need to allow unsharing of "
+"signals and/or signal handlers, it can be incrementally added to unshare() "
+"without affecting legacy applications using unshare()."
+msgstr ""

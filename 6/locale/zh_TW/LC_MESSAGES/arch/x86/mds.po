@@ -1,0 +1,363 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel 6\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:54+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../arch/x86/mds.rst:2
+msgid "Microarchitectural Data Sampling (MDS) mitigation"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:7
+msgid "Overview"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:9
+msgid ""
+"Microarchitectural Data Sampling (MDS) is a family of side channel attacks "
+"on internal buffers in Intel CPUs. The variants are:"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:12
+msgid "Microarchitectural Store Buffer Data Sampling (MSBDS) (CVE-2018-12126)"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:13
+msgid "Microarchitectural Fill Buffer Data Sampling (MFBDS) (CVE-2018-12130)"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:14
+msgid "Microarchitectural Load Port Data Sampling (MLPDS) (CVE-2018-12127)"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:15
+msgid ""
+"Microarchitectural Data Sampling Uncacheable Memory (MDSUM) (CVE-2019-11091)"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:17
+msgid ""
+"MSBDS leaks Store Buffer Entries which can be speculatively forwarded to a "
+"dependent load (store-to-load forwarding) as an optimization. The forward "
+"can also happen to a faulting or assisting load operation for a different "
+"memory address, which can be exploited under certain conditions. Store "
+"buffers are partitioned between Hyper-Threads so cross thread forwarding is "
+"not possible. But if a thread enters or exits a sleep state the store buffer "
+"is repartitioned which can expose data from one thread to the other."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:25
+msgid ""
+"MFBDS leaks Fill Buffer Entries. Fill buffers are used internally to manage "
+"L1 miss situations and to hold data which is returned or sent in response to "
+"a memory or I/O operation. Fill buffers can forward data to a load operation "
+"and also write data to the cache. When the fill buffer is deallocated it can "
+"retain the stale data of the preceding operations which can then be "
+"forwarded to a faulting or assisting load operation, which can be exploited "
+"under certain conditions. Fill buffers are shared between Hyper-Threads so "
+"cross thread leakage is possible."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:34
+msgid ""
+"MLPDS leaks Load Port Data. Load ports are used to perform load operations "
+"from memory or I/O. The received data is then forwarded to the register file "
+"or a subsequent operation. In some implementations the Load Port can contain "
+"stale data from a previous operation which can be forwarded to faulting or "
+"assisting loads under certain conditions, which again can be exploited "
+"eventually. Load ports are shared between Hyper-Threads so cross thread "
+"leakage is possible."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:42
+msgid ""
+"MDSUM is a special case of MSBDS, MFBDS and MLPDS. An uncacheable load from "
+"memory that takes a fault or assist can leave data in a microarchitectural "
+"structure that may later be observed using one of the same methods used by "
+"MSBDS, MFBDS or MLPDS."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:48
+msgid "Exposure assumptions"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:50
+msgid ""
+"It is assumed that attack code resides in user space or in a guest with one "
+"exception. The rationale behind this assumption is that the code construct "
+"needed for exploiting MDS requires:"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:54
+msgid "to control the load to trigger a fault or assist"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:56
+msgid ""
+"to have a disclosure gadget which exposes the speculatively accessed data "
+"for consumption through a side channel."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:59
+msgid ""
+"to control the pointer through which the disclosure gadget exposes the data"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:62
+msgid ""
+"The existence of such a construct in the kernel cannot be excluded with 100% "
+"certainty, but the complexity involved makes it extremely unlikely."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:65
+msgid ""
+"There is one exception, which is untrusted BPF. The functionality of "
+"untrusted BPF is limited, but it needs to be thoroughly investigated whether "
+"it can be used to create such a construct."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:71
+msgid "Mitigation strategy"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:73
+msgid ""
+"All variants have the same mitigation strategy at least for the single CPU "
+"thread case (SMT off): Force the CPU to clear the affected buffers."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:76
+msgid ""
+"This is achieved by using the otherwise unused and obsolete VERW instruction "
+"in combination with a microcode update. The microcode clears the affected "
+"CPU buffers when the VERW instruction is executed."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:80
+msgid ""
+"For virtualization there are two ways to achieve CPU buffer clearing. Either "
+"the modified VERW instruction or via the L1D Flush command. The latter is "
+"issued when L1TF mitigation is enabled so the extra VERW can be avoided. If "
+"the CPU is not affected by L1TF then VERW needs to be issued."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:86
+msgid ""
+"If the VERW instruction with the supplied segment selector argument is "
+"executed on a CPU without the microcode update there is no side effect other "
+"than a small number of pointlessly wasted CPU cycles."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:90
+msgid ""
+"This does not protect against cross Hyper-Thread attacks except for MSBDS "
+"which is only exploitable cross Hyper-thread when one of the Hyper-Threads "
+"enters a C-state."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:94
+msgid "The kernel provides a function to invoke the buffer clearing:"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:96
+msgid "x86_clear_cpu_buffers()"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:98
+msgid ""
+"Also macro CLEAR_CPU_BUFFERS can be used in ASM late in exit-to-user path. "
+"Other than CFLAGS.ZF, this macro doesn't clobber any registers."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:101
+msgid ""
+"The mitigation is invoked on kernel/userspace, hypervisor/guest and C-state "
+"(idle) transitions."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:104
+msgid ""
+"As a special quirk to address virtualization scenarios where the host has "
+"the microcode updated, but the hypervisor does not (yet) expose the MD_CLEAR "
+"CPUID bit to guests, the kernel issues the VERW instruction in the hope that "
+"it might actually clear the buffers. The state is reflected accordingly."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:110
+msgid ""
+"According to current knowledge additional mitigations inside the kernel "
+"itself are not required because the necessary gadgets to expose the leaked "
+"data cannot be controlled in a way which allows exploitation from malicious "
+"user space or VM guests."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:116
+msgid "Kernel internal mitigation modes"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:119
+msgid "off"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:119
+msgid ""
+"Mitigation is disabled. Either the CPU is not affected or mds=off is "
+"supplied on the kernel command line"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:122
+msgid "full"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:122
+msgid ""
+"Mitigation is enabled. CPU is affected and MD_CLEAR is advertised in CPUID."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:125
+msgid "vmwerv"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:125
+msgid ""
+"Mitigation is enabled. CPU is affected and MD_CLEAR is not advertised in "
+"CPUID. That is mainly for virtualization scenarios where the host has the "
+"updated microcode but the hypervisor does not expose MD_CLEAR in CPUID. It's "
+"a best effort approach without guarantee."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:132
+msgid ""
+"If the CPU is affected and mds=off is not supplied on the kernel command "
+"line then the kernel selects the appropriate mitigation mode depending on "
+"the availability of the MD_CLEAR CPUID bit."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:137
+msgid "Mitigation points"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:140
+msgid "1. Return to user space"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:142
+msgid ""
+"When transitioning from kernel to user space the CPU buffers are flushed on "
+"affected CPUs when the mitigation is not disabled on the kernel command "
+"line. The mitigation is enabled through the feature flag "
+"X86_FEATURE_CLEAR_CPU_BUF."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:147
+msgid ""
+"The mitigation is invoked just before transitioning to userspace after user "
+"registers are restored. This is done to minimize the window in which kernel "
+"data could be accessed after VERW e.g. via an NMI after VERW."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:152
+msgid ""
+"**Corner case not handled** Interrupts returning to kernel don't clear CPUs "
+"buffers since the exit-to-user path is expected to do that anyways. But, "
+"there could be a case when an NMI is generated in kernel after the exit-to-"
+"user path has cleared the buffers. This case is not handled and NMI "
+"returning to kernel don't clear CPU buffers because:"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:159
+msgid "It is rare to get an NMI after VERW, but before returning to userspace."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:160
+msgid ""
+"For an unprivileged user, there is no known way to make that NMI less rare "
+"or target it."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:162
+msgid ""
+"It would take a large number of these precisely-timed NMIs to mount an "
+"actual attack.  There's presumably not enough bandwidth."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:164
+msgid ""
+"The NMI in question occurs after a VERW, i.e. when user state is restored "
+"and most interesting data is already scrubbed. What's left is only the data "
+"that NMI touches, and that may or may not be of any interest."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:171
+msgid "2. C-State transition"
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:173
+msgid ""
+"When a CPU goes idle and enters a C-State the CPU buffers need to be cleared "
+"on affected CPUs when SMT is active. This addresses the repartitioning of "
+"the store buffer when one of the Hyper-Threads enters a C-State."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:178
+msgid ""
+"When SMT is inactive, i.e. either the CPU does not support it or all sibling "
+"threads are offline CPU buffer clearing is not required."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:181
+msgid ""
+"The idle clearing is enabled on CPUs which are only affected by MSBDS and "
+"not by any other MDS variant. The other MDS variants cannot be protected "
+"against cross Hyper-Thread attacks because the Fill Buffer and the Load "
+"Ports are shared. So on CPUs affected by other variants, the idle clearing "
+"would be a window dressing exercise and is therefore not activated."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:188
+msgid ""
+"The invocation is controlled by the static key cpu_buf_idle_clear which is "
+"switched depending on the chosen mitigation mode and the SMT state of the "
+"system."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:192
+msgid ""
+"The buffer clear is only invoked before entering the C-State to prevent that "
+"stale data from the idling CPU from spilling to the Hyper-Thread sibling "
+"after the store buffer got repartitioned and all entries are available to "
+"the non idle sibling."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:197
+msgid ""
+"When coming out of idle the store buffer is partitioned again so each "
+"sibling has half of it available. The back from idle CPU could be then "
+"speculatively exposed to contents of the sibling. The buffers are flushed "
+"either on exit to user space or on VMENTER so malicious code in user space "
+"or the guest cannot speculatively access them."
+msgstr ""
+
+#: ../../../arch/x86/mds.rst:203
+msgid ""
+"The mitigation is hooked into all variants of halt()/mwait(), but does not "
+"cover the legacy ACPI IO-Port mechanism because the ACPI idle driver has "
+"been superseded by the intel_idle driver around 2010 and is preferred on all "
+"affected CPUs which are expected to gain the MD_CLEAR functionality in "
+"microcode. Aside of that the IO-Port mechanism is a legacy interface which "
+"is only used on older systems which are either not affected or do not "
+"receive microcode updates anymore."
+msgstr ""

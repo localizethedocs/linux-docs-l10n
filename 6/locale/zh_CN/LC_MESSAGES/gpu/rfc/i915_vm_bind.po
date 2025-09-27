@@ -1,0 +1,863 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel 6\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-27 13:54+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:3
+msgid "I915 VM_BIND feature design and use cases"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:6
+msgid "VM_BIND feature"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:7
+msgid ""
+"DRM_I915_GEM_VM_BIND/UNBIND ioctls allows UMD to bind/unbind GEM buffer "
+"objects (BOs) or sections of a BOs at specified GPU virtual addresses on a "
+"specified address space (VM). These mappings (also referred to as persistent "
+"mappings) will be persistent across multiple GPU submissions (execbuf calls) "
+"issued by the UMD, without user having to provide a list of all required "
+"mappings during each submission (as required by older execbuf mode)."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:14
+msgid ""
+"The VM_BIND/UNBIND calls allow UMDs to request a timeline out fence for "
+"signaling the completion of bind/unbind operation."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:17
+msgid ""
+"VM_BIND feature is advertised to user via I915_PARAM_VM_BIND_VERSION. User "
+"has to opt-in for VM_BIND mode of binding for an address space (VM) during "
+"VM creation time via I915_VM_CREATE_FLAGS_USE_VM_BIND extension."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:21
+msgid ""
+"VM_BIND/UNBIND ioctl calls executed on different CPU threads concurrently "
+"are not ordered. Furthermore, parts of the VM_BIND/UNBIND operations can be "
+"done asynchronously, when valid out fence is specified."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:25
+msgid "VM_BIND features include:"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:27
+msgid ""
+"Multiple Virtual Address (VA) mappings can map to the same physical pages of "
+"an object (aliasing)."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:29
+msgid "VA mapping can map to a partial section of the BO (partial binding)."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:30
+msgid "Support capture of persistent mappings in the dump upon GPU error."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:31
+msgid "Support for userptr gem objects (no special uapi is required for this)."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:34
+msgid "TLB flush consideration"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:35
+msgid ""
+"The i915 driver flushes the TLB for each submission and when an object's "
+"pages are released. The VM_BIND/UNBIND operation will not do any additional "
+"TLB flush. Any VM_BIND mapping added will be in the working set for "
+"subsequent submissions on that VM and will not be in the working set for "
+"currently running batches (which would require additional TLB flushes, which "
+"is not supported)."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:42
+msgid "Execbuf ioctl in VM_BIND mode"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:43
+msgid ""
+"A VM in VM_BIND mode will not support older execbuf mode of binding. The "
+"execbuf ioctl handling in VM_BIND mode differs significantly from the older "
+"execbuf2 ioctl (See struct drm_i915_gem_execbuffer2). Hence, a new execbuf3 "
+"ioctl has been added to support VM_BIND mode. (See struct "
+"drm_i915_gem_execbuffer3). The execbuf3 ioctl will not accept any execlist. "
+"Hence, no support for implicit sync. It is expected that the below work will "
+"be able to support requirements of object dependency setting in all use "
+"cases:"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:52
+msgid ""
+"\"dma-buf: Add an API for exporting sync files\" (https://lwn.net/"
+"Articles/859290/)"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:55
+msgid ""
+"The new execbuf3 ioctl only works in VM_BIND mode and the VM_BIND mode only "
+"works with execbuf3 ioctl for submission. All BOs mapped on that VM (through "
+"VM_BIND call) at the time of execbuf3 call are deemed required for that "
+"submission."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:60
+msgid ""
+"The execbuf3 ioctl directly specifies the batch addresses instead of as "
+"object handles as in execbuf2 ioctl. The execbuf3 ioctl will also not "
+"support many of the older features like in/out/submit fences, fence array, "
+"default gem context and many more (See struct drm_i915_gem_execbuffer3)."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:65
+msgid ""
+"In VM_BIND mode, VA allocation is completely managed by the user instead of "
+"the i915 driver. Hence all VA assignment, eviction are not applicable in "
+"VM_BIND mode. Also, for determining object activeness, VM_BIND mode will not "
+"be using the i915_vma active reference tracking. It will instead use dma-"
+"resv object for that (See `VM_BIND dma_resv usage`_)."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:71
+msgid ""
+"So, a lot of existing code supporting execbuf2 ioctl, like relocations, VA "
+"evictions, vma lookup table, implicit sync, vma active reference tracking "
+"etc., are not applicable for execbuf3 ioctl. Hence, all execbuf3 specific "
+"handling should be in a separate file and only functionalities common to "
+"these ioctls can be the shared code where possible."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:78
+msgid "VM_PRIVATE objects"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:79
+msgid ""
+"By default, BOs can be mapped on multiple VMs and can also be dma-buf "
+"exported. Hence these BOs are referred to as Shared BOs. During each execbuf "
+"submission, the request fence must be added to the dma-resv fence list of "
+"all shared BOs mapped on the VM."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:84
+msgid ""
+"VM_BIND feature introduces an optimization where user can create BO which is "
+"private to a specified VM via I915_GEM_CREATE_EXT_VM_PRIVATE flag during BO "
+"creation. Unlike Shared BOs, these VM private BOs can only be mapped on the "
+"VM they are private to and can't be dma-buf exported. All private BOs of a "
+"VM share the dma-resv object. Hence during each execbuf submission, they "
+"need only one dma-resv fence list updated. Thus, the fast path (where "
+"required mappings are already bound) submission latency is O(1) w.r.t the "
+"number of VM private BOs."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:94
+msgid "VM_BIND locking hierarchy"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:95
+msgid ""
+"The locking design here supports the older (execlist based) execbuf mode, "
+"the newer VM_BIND mode, the VM_BIND mode with GPU page faults and possible "
+"future system allocator support (See `Shared Virtual Memory (SVM) "
+"support`_). The older execbuf mode and the newer VM_BIND mode without page "
+"faults manages residency of backing storage using dma_fence. The VM_BIND "
+"mode with page faults and the system allocator support do not use any "
+"dma_fence at all."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:102
+msgid "VM_BIND locking order is as below."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:104
+msgid ""
+"Lock-A: A vm_bind mutex will protect vm_bind lists. This lock is taken in "
+"vm_bind/vm_unbind ioctl calls, in the execbuf path and while releasing the "
+"mapping."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:108
+msgid ""
+"In future, when GPU page faults are supported, we can potentially use a "
+"rwsem instead, so that multiple page fault handlers can take the read side "
+"lock to lookup the mapping and hence can run in parallel. The older execbuf "
+"mode of binding do not need this lock."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:113
+msgid ""
+"Lock-B: The object's dma-resv lock will protect i915_vma state and needs to "
+"be held while binding/unbinding a vma in the async worker and while updating "
+"dma-resv fence list of an object. Note that private BOs of a VM will all "
+"share a dma-resv object."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:118
+msgid ""
+"The future system allocator support will use the HMM prescribed locking "
+"instead."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:121
+msgid ""
+"Lock-C: Spinlock/s to protect some of the VM's lists like the list of "
+"invalidated vmas (due to eviction and userptr invalidation) etc."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:124
+msgid ""
+"When GPU page faults are supported, the execbuf path do not take any of "
+"these locks. There we will simply smash the new batch buffer address into "
+"the ring and then tell the scheduler run that. The lock taking only happens "
+"from the page fault handler, where we take lock-A in read mode, whichever "
+"lock-B we need to find the backing storage (dma_resv lock for gem objects, "
+"and hmm/core mm for system allocator) and some additional locks (lock-D) for "
+"taking care of page table races. Page fault mode should not need to ever "
+"manipulate the vm lists, so won't ever need lock-C."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:134
+msgid "VM_BIND LRU handling"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:135
+msgid ""
+"We need to ensure VM_BIND mapped objects are properly LRU tagged to avoid "
+"performance degradation. We will also need support for bulk LRU movement of "
+"VM_BIND objects to avoid additional latencies in execbuf path."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:139
+msgid ""
+"The page table pages are similar to VM_BIND mapped objects (See `Evictable "
+"page table allocations`_) and are maintained per VM and needs to be pinned "
+"in memory when VM is made active (ie., upon an execbuf call with that VM). "
+"So, bulk LRU movement of page table pages is also needed."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:145
+msgid "VM_BIND dma_resv usage"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:146
+msgid ""
+"Fences needs to be added to all VM_BIND mapped objects. During each execbuf "
+"submission, they are added with DMA_RESV_USAGE_BOOKKEEP usage to prevent "
+"over sync (See enum dma_resv_usage). One can override it with either "
+"DMA_RESV_USAGE_READ or DMA_RESV_USAGE_WRITE usage during explicit object "
+"dependency setting."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:152
+msgid ""
+"Note that DRM_I915_GEM_WAIT and DRM_I915_GEM_BUSY ioctls do not check for "
+"DMA_RESV_USAGE_BOOKKEEP usage and hence should not be used for end of batch "
+"check. Instead, the execbuf3 out fence should be used for end of batch check "
+"(See struct drm_i915_gem_execbuffer3)."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:157
+msgid ""
+"Also, in VM_BIND mode, use dma-resv apis for determining object activeness "
+"(See dma_resv_test_signaled() and dma_resv_wait_timeout()) and do not use "
+"the older i915_vma active reference tracking which is deprecated. This "
+"should be easier to get it working with the current TTM backend."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:163
+msgid "Mesa use case"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:164
+msgid ""
+"VM_BIND can potentially reduce the CPU overhead in Mesa (both Vulkan and "
+"Iris), hence improving performance of CPU-bound applications. It also allows "
+"us to implement Vulkan's Sparse Resources. With increasing GPU hardware "
+"performance, reducing CPU overhead becomes more impactful."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:171
+msgid "Other VM_BIND use cases"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:174
+msgid "Long running Compute contexts"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:175
+msgid ""
+"Usage of dma-fence expects that they complete in reasonable amount of time. "
+"Compute on the other hand can be long running. Hence it is appropriate for "
+"compute to use user/memory fence (See `User/Memory Fence`_) and dma-fence "
+"usage must be limited to in-kernel consumption only."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:180
+msgid ""
+"Where GPU page faults are not available, kernel driver upon buffer "
+"invalidation will initiate a suspend (preemption) of long running context, "
+"finish the invalidation, revalidate the BO and then resume the compute "
+"context. This is done by having a per-context preempt fence which is enabled "
+"when someone tries to wait on it and triggers the context preemption."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:187
+msgid "User/Memory Fence"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:188
+msgid ""
+"User/Memory fence is a <address, value> pair. To signal the user fence, the "
+"specified value will be written at the specified virtual address and wakeup "
+"the waiting process. User fence can be signaled either by the GPU or kernel "
+"async worker (like upon bind completion). User can wait on a user fence with "
+"a new user fence wait ioctl."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:194
+msgid ""
+"Here is some prior work on this: https://patchwork.freedesktop.org/"
+"patch/349417/"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:198
+msgid "Low Latency Submission"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:199
+msgid ""
+"Allows compute UMD to directly submit GPU jobs instead of through execbuf "
+"ioctl. This is made possible by VM_BIND is not being synchronized against "
+"execbuf. VM_BIND allows bind/unbind of mappings required for the directly "
+"submitted jobs."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:205
+msgid "Debugger"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:206
+msgid ""
+"With debug event interface user space process (debugger) is able to keep "
+"track of and act upon resources created by another process (debugged) and "
+"attached to GPU via vm_bind interface."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:211
+msgid "GPU page faults"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:212
+msgid ""
+"GPU page faults when supported (in future), will only be supported in the "
+"VM_BIND mode. While both the older execbuf mode and the newer VM_BIND mode "
+"of binding will require using dma-fence to ensure residency, the GPU page "
+"faults mode when supported, will not use any dma-fence as residency is "
+"purely managed by installing and removing/invalidating page table entries."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:219
+msgid "Page level hints settings"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:220
+msgid ""
+"VM_BIND allows any hints setting per mapping instead of per BO. Possible "
+"hints include placement and atomicity. Sub-BO level placement hint will be "
+"even more relevant with upcoming GPU on-demand page fault support."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:225
+msgid "Page level Cache/CLOS settings"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:226
+msgid "VM_BIND allows cache/CLOS settings per mapping instead of per BO."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:229
+msgid "Evictable page table allocations"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:230
+msgid ""
+"Make pagetable allocations evictable and manage them similar to VM_BIND "
+"mapped objects. Page table pages are similar to persistent mappings of a VM "
+"(difference here are that the page table pages will not have an i915_vma "
+"structure and after swapping pages back in, parent page link needs to be "
+"updated)."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:237
+msgid "Shared Virtual Memory (SVM) support"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:238
+msgid ""
+"VM_BIND interface can be used to map system memory directly (without gem BO "
+"abstraction) using the HMM interface. SVM is only supported with GPU page "
+"faults enabled."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind.rst:243
+msgid "VM_BIND UAPI"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:3
+msgid "**I915_PARAM_VM_BIND_VERSION**"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:7
+msgid ""
+"VM_BIND feature version supported. See typedef drm_i915_getparam_t param."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:10
+msgid ""
+"Specifies the VM_BIND feature version supported. The following versions of "
+"VM_BIND have been defined:"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:13
+msgid "0: No VM_BIND support."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:15
+msgid "1: In VM_UNBIND calls, the UMD must specify the exact mappings created"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:16
+msgid ""
+"previously with VM_BIND, the ioctl will not support unbinding multiple "
+"mappings or splitting them. Similarly, VM_BIND calls will not replace any "
+"existing mappings."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:20
+msgid "2: The restrictions on unbinding partial or multiple mappings is"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:21
+msgid ""
+"lifted, Similarly, binding will replace any mappings in the given range."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:23
+msgid "See struct drm_i915_gem_vm_bind and struct drm_i915_gem_vm_unbind."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:28
+msgid "**I915_VM_CREATE_FLAGS_USE_VM_BIND**"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:30
+msgid ""
+"Flag to opt-in for VM_BIND mode of binding during VM creation. See struct "
+"drm_i915_gem_vm_control flags."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:33
+msgid ""
+"The older execbuf2 ioctl will not support VM_BIND mode of operation. For "
+"VM_BIND mode, we have new execbuf3 ioctl which will not accept any execlist "
+"(See struct drm_i915_gem_execbuffer3 for more details)."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:51
+msgid "An input or output timeline fence."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:55
+#: Documentation/gpu/rfc/i915_vm_bind.h:90
+#: Documentation/gpu/rfc/i915_vm_bind.h:163
+#: Documentation/gpu/rfc/i915_vm_bind.h:221
+#: Documentation/gpu/rfc/i915_vm_bind.h:282
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:66
+#: Documentation/gpu/rfc/i915_vm_bind.h:104
+#: Documentation/gpu/rfc/i915_vm_bind.h:175
+#: Documentation/gpu/rfc/i915_vm_bind.h:235
+#: Documentation/gpu/rfc/i915_vm_bind.h:290
+msgid "**Members**"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:59
+#: Documentation/gpu/rfc/i915_vm_bind.h:114
+msgid "``handle``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:60
+msgid "User's handle for a drm_syncobj to wait on or signal."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:63
+#: Documentation/gpu/rfc/i915_vm_bind.h:127
+#: Documentation/gpu/rfc/i915_vm_bind.h:189
+#: Documentation/gpu/rfc/i915_vm_bind.h:250
+msgid "``flags``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:64
+#: Documentation/gpu/rfc/i915_vm_bind.h:128
+msgid "Supported flags are:"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:66
+msgid ""
+"I915_TIMELINE_FENCE_WAIT: Wait for the input fence before the operation."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:69
+msgid ""
+"I915_TIMELINE_FENCE_SIGNAL: Return operation completion fence as output."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:77
+msgid "``value``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:78
+msgid ""
+"A point in the timeline. Value must be 0 for a binary drm_syncobj. A Value "
+"of 0 for a timeline drm_syncobj is invalid as it turns a drm_syncobj into a "
+"binary one."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:84
+#: Documentation/gpu/rfc/i915_vm_bind.h:157
+#: Documentation/gpu/rfc/i915_vm_bind.h:215
+#: Documentation/gpu/rfc/i915_vm_bind.h:276
+#: Documentation/gpu/rfc/i915_vm_bind.h:292
+msgid "**Description**"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:52
+msgid "The operation will wait for input fence to signal."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:54
+msgid ""
+"The returned output fence will be signaled after the completion of the "
+"operation."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:86
+msgid "VA to object mapping to bind."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:111
+#: Documentation/gpu/rfc/i915_vm_bind.h:176
+#: Documentation/gpu/rfc/i915_vm_bind.h:288
+msgid "``vm_id``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:112
+#: Documentation/gpu/rfc/i915_vm_bind.h:177
+msgid "VM (address space) id to bind"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:115
+msgid "Object handle"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:117
+#: Documentation/gpu/rfc/i915_vm_bind.h:182
+msgid "``start``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:118
+msgid "Virtual Address start to bind"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:120
+msgid "``offset``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:121
+msgid "Offset in object to bind"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:123
+#: Documentation/gpu/rfc/i915_vm_bind.h:185
+msgid "``length``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:124
+msgid "Length of mapping to bind"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:130
+msgid ""
+"I915_GEM_VM_BIND_CAPTURE: Capture this mapping in the dump upon GPU error."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:133
+#: Documentation/gpu/rfc/i915_vm_bind.h:192
+msgid "Note that **fence** carries its own flags."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:138
+#: Documentation/gpu/rfc/i915_vm_bind.h:196
+msgid "``fence``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:139
+msgid "Timeline fence for bind completion signaling."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:141
+#: Documentation/gpu/rfc/i915_vm_bind.h:199
+msgid "Timeline fence is of format struct drm_i915_gem_timeline_fence."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:143
+#: Documentation/gpu/rfc/i915_vm_bind.h:201
+msgid ""
+"It is an out fence, hence using I915_TIMELINE_FENCE_WAIT flag is invalid, "
+"and an error will be returned."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:146
+msgid ""
+"If I915_TIMELINE_FENCE_SIGNAL flag is not set, then out fence is not "
+"requested and binding is completed synchronously."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:151
+#: Documentation/gpu/rfc/i915_vm_bind.h:209
+#: Documentation/gpu/rfc/i915_vm_bind.h:270
+msgid "``extensions``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:152
+#: Documentation/gpu/rfc/i915_vm_bind.h:210
+#: Documentation/gpu/rfc/i915_vm_bind.h:271
+msgid "Zero-terminated chain of extensions."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:154
+#: Documentation/gpu/rfc/i915_vm_bind.h:212
+#: Documentation/gpu/rfc/i915_vm_bind.h:273
+msgid "For future extensions. See struct i915_user_extension."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:87
+msgid ""
+"This structure is passed to VM_BIND ioctl and specifies the mapping of GPU "
+"virtual address (VA) range to the section of an object that should be bound "
+"in the device page table of the specified address space (VM). The VA range "
+"specified must be unique (ie., not currently bound) and can be mapped to "
+"whole object or a section of the object (partial binding). Multiple VA "
+"mappings can be created to the same section of the object (aliasing)."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:95
+msgid ""
+"The **start**, **offset** and **length** must be 4K page aligned. However "
+"the DG2 has 64K page size for device local memory and has compact page "
+"table. On that platform, for binding device local-memory objects, the "
+"**start**, **offset** and **length** must be 64K aligned. Also, UMDs should "
+"not mix the local memory 64K page and the system memory 4K page bindings in "
+"the same 2M range."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:101
+msgid ""
+"Error code -EINVAL will be returned if **start**, **offset** and **length** "
+"are not properly aligned. In version 1 (See I915_PARAM_VM_BIND_VERSION), "
+"error code -ENOSPC will be returned if the VA range specified can't be "
+"reserved."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:105
+msgid ""
+"VM_BIND/UNBIND ioctl calls executed on different CPU threads concurrently "
+"are not ordered. Furthermore, parts of the VM_BIND operation can be done "
+"asynchronously, if valid **fence** is specified."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:159
+msgid "VA to object mapping to unbind."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:179
+msgid "``rsvd``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:180
+#: Documentation/gpu/rfc/i915_vm_bind.h:254
+#: Documentation/gpu/rfc/i915_vm_bind.h:267
+msgid "Reserved, MBZ"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:183
+msgid "Virtual Address start to unbind"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:186
+msgid "Length of mapping to unbind"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:190
+msgid "Currently reserved, MBZ."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:197
+msgid "Timeline fence for unbind completion signaling."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:204
+msgid ""
+"If I915_TIMELINE_FENCE_SIGNAL flag is not set, then out fence is not "
+"requested and unbinding is completed synchronously."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:160
+msgid ""
+"This structure is passed to VM_UNBIND ioctl and specifies the GPU virtual "
+"address (VA) range that should be unbound from the device page table of the "
+"specified address space (VM). VM_UNBIND will force unbind the specified "
+"range from device page table without waiting for any GPU job to complete. It "
+"is UMDs responsibility to ensure the mapping is no longer in use before "
+"calling VM_UNBIND."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:167
+msgid ""
+"If the specified mapping is not found, the ioctl will simply return without "
+"any error."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:170
+msgid ""
+"VM_BIND/UNBIND ioctl calls executed on different CPU threads concurrently "
+"are not ordered. Furthermore, parts of the VM_UNBIND operation can be done "
+"asynchronously, if valid **fence** is specified."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:217
+msgid "Structure for DRM_I915_GEM_EXECBUFFER3 ioctl."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:226
+msgid "``ctx_id``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:227
+msgid "Context id"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:229
+msgid "Only contexts with user engine map are allowed."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:233
+msgid "``engine_idx``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:234
+msgid "Engine index"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:236
+msgid "An index in the user engine map of the context specified by **ctx_id**."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:240
+msgid "``batch_address``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:241
+msgid "Batch gpu virtual address/es."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:243
+msgid ""
+"For normal submission, it is the gpu virtual address of the batch buffer. "
+"For parallel submission, it is a pointer to an array of batch buffer gpu "
+"virtual addresses with array size equal to the number of (parallel) engines "
+"involved in that submission (See struct "
+"i915_context_engines_parallel_submit)."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:251
+msgid "Currently reserved, MBZ"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:253
+msgid "``rsvd1``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:256
+msgid "``fence_count``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:257
+msgid "Number of fences in **timeline_fences** array."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:260
+msgid "``timeline_fences``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:261
+msgid "Pointer to an array of timeline fences."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:263
+msgid "Timeline fences are of format struct drm_i915_gem_timeline_fence."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:266
+msgid "``rsvd2``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:218
+msgid ""
+"DRM_I915_GEM_EXECBUFFER3 ioctl only works in VM_BIND mode and VM_BIND mode "
+"only works with this ioctl for submission. See "
+"I915_VM_CREATE_FLAGS_USE_VM_BIND."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:278
+msgid "Extension to make the object private to the specified VM."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:285
+msgid "``base``"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:286
+msgid "Extension link. See struct i915_user_extension."
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:289
+msgid "Id of the VM to which the object is private"
+msgstr ""
+
+#: ../../../gpu/rfc/i915_vm_bind:245: Documentation/gpu/rfc/i915_vm_bind.h:279
+msgid "See struct drm_i915_gem_create_ext."
+msgstr ""
