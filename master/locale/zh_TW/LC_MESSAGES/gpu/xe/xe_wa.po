@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"POT-Creation-Date: 2025-10-06 15:47+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -36,10 +36,11 @@ msgid ""
 "commands) once when initializing the device and saved in the default "
 "context. That default context is then used on every context creation to have "
 "a \"primed golden context\", i.e. a context image that already contains the "
-"changes needed to all the registers."
+"changes needed to all the registers. See drivers/gpu/drm/xe/xe_lrc.c for "
+"default context handling."
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:42
+#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:43
 msgid ""
 "Engine workarounds: the list of these WAs is applied whenever the specific "
 "engine is reset. It's also possible that a set of engine classes share a "
@@ -48,19 +49,19 @@ msgid ""
 "them need to keeep the workaround programming: the approach taken in the "
 "driver is to tie those workarounds to the first compute/render engine that "
 "is registered.  When executing with GuC submission, engine resets are "
-"outside of kernel driver control, hence the list of registers involved in "
+"outside of kernel driver control, hence the list of registers involved is "
 "written once, on engine initialization, and then passed to GuC, that saves/"
-"restores their values before/after the reset takes place. See ``drivers/gpu/"
-"drm/xe/xe_guc_ads.c`` for reference."
+"restores their values before/after the reset takes place. See drivers/gpu/"
+"drm/xe/xe_guc_ads.c for reference."
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:54
+#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:55
 msgid ""
 "GT workarounds: the list of these WAs is applied whenever these registers "
 "revert to their default values: on GPU reset, suspend/resume [1]_, etc."
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:57
+#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:58
 msgid ""
 "Register whitelist: some workarounds need to be implemented in userspace, "
 "but need to touch privileged registers. The whitelist in the kernel "
@@ -69,46 +70,56 @@ msgid ""
 "these to/be-whitelisted registers to some special HW registers)."
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:63
+#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:64
 msgid ""
 "Workaround batchbuffers: buffers that get executed automatically by the "
 "hardware on every HW context restore. These buffers are created and "
 "programmed in the default context so the hardware always go through those "
 "programming sequences when switching contexts. The support for workaround "
-"batchbuffers is enabled these hardware mechanisms:"
+"batchbuffers is enabled via these hardware mechanisms:"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:69
+#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:70
 msgid ""
-"INDIRECT_CTX: A batchbuffer and an offset are provided in the default "
-"context, pointing the hardware to jump to that location when that offset is "
-"reached in the context restore. Workaround batchbuffer in the driver "
-"currently uses this mechanism for all platforms."
+"INDIRECT_CTX (also known as **mid context restore bb**): A batchbuffer and "
+"an offset are provided in the default context, pointing the hardware to jump "
+"to that location when that offset is reached in the context restore.  When a "
+"context is being restored, this is executed after the ring context, in the "
+"middle (or beginning) of the engine context image."
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:74
+#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:76
 msgid ""
-"BB_PER_CTX_PTR: A batchbuffer is provided in the default context, pointing "
-"the hardware to a buffer to continue executing after the engine registers "
-"are restored in a context restore sequence. This is currently not used in "
-"the driver."
+"BB_PER_CTX_PTR (also known as **post context restore bb**): A batchbuffer is "
+"provided in the default context, pointing the hardware to a buffer to "
+"continue executing after the engine registers are restored in a context "
+"restore sequence."
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:79
+#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:81
+msgid "Below is the timeline for a context restore sequence:"
+msgstr ""
+
+#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:92
 msgid ""
 "Other/OOB:  There are WAs that, due to their nature, cannot be applied from "
 "a central place. Those are peppered around the rest of the code, as needed. "
-"Workarounds related to the display IP are the main example."
+"There's a central place to control which workarounds are enabled: drivers/"
+"gpu/drm/xe/xe_wa_oob.rules for GT workarounds and drivers/gpu/drm/xe/"
+"xe_device_wa_oob.rules for device/SoC workarounds. These files only record "
+"which workarounds are enabled: during early device initialization those "
+"rules are evaluated and recorded by the driver. Then later the driver checks "
+"with ``XE_GT_WA()`` and ``XE_DEVICE_WA()`` to implement them."
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:83
+#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:102
 msgid ""
 "Technically, some registers are powercontext saved & restored, so they "
 "survive a suspend/resume. In practice, writing them again is not too costly "
 "and simplifies things, so it's the approach taken in the driver."
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:88
+#: ../../../gpu/xe/xe_wa:7: drivers/gpu/drm/xe/xe_wa.c:107
 msgid ""
 "Hardware workarounds in xe work the same way as in i915, with the difference "
 "of how they are maintained in the code. In xe it uses the xe_rtp "
@@ -120,118 +131,121 @@ msgstr ""
 msgid "Internal API"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:890
-#: drivers/gpu/drm/xe/xe_wa.c:908
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:938
 msgid "process OOB workaround table"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:894
-#: drivers/gpu/drm/xe/xe_wa.c:912 drivers/gpu/drm/xe/xe_wa.c:929
-#: drivers/gpu/drm/xe/xe_wa.c:946 drivers/gpu/drm/xe/xe_wa.c:963
-#: drivers/gpu/drm/xe/xe_wa.c:980 drivers/gpu/drm/xe/xe_wa.c:1002
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:942
+#: drivers/gpu/drm/xe/xe_wa.c:960 drivers/gpu/drm/xe/xe_wa.c:977
+#: drivers/gpu/drm/xe/xe_wa.c:994 drivers/gpu/drm/xe/xe_wa.c:1011
+#: drivers/gpu/drm/xe/xe_wa.c:1028 drivers/gpu/drm/xe/xe_wa.c:1050
 msgid "**Parameters**"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:896
-#: drivers/gpu/drm/xe/xe_wa.c:982
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:944
+#: drivers/gpu/drm/xe/xe_wa.c:1030
 msgid "``struct xe_device *xe``"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:891
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:939
 msgid "device instance to process workarounds for"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:893
-#: drivers/gpu/drm/xe/xe_wa.c:911 drivers/gpu/drm/xe/xe_wa.c:928
-#: drivers/gpu/drm/xe/xe_wa.c:945 drivers/gpu/drm/xe/xe_wa.c:962
-#: drivers/gpu/drm/xe/xe_wa.c:979 drivers/gpu/drm/xe/xe_wa.c:1001
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:941
+#: drivers/gpu/drm/xe/xe_wa.c:959 drivers/gpu/drm/xe/xe_wa.c:976
+#: drivers/gpu/drm/xe/xe_wa.c:993 drivers/gpu/drm/xe/xe_wa.c:1010
+#: drivers/gpu/drm/xe/xe_wa.c:1027 drivers/gpu/drm/xe/xe_wa.c:1049
 msgid "**Description**"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:892
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:940
 msgid ""
 "process OOB workaround table for this device, marking in **xe** the "
 "workarounds that are active."
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:914
-#: drivers/gpu/drm/xe/xe_wa.c:931 drivers/gpu/drm/xe/xe_wa.c:1004
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:956
+msgid "process GT OOB workaround table"
+msgstr ""
+
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:962
+#: drivers/gpu/drm/xe/xe_wa.c:979 drivers/gpu/drm/xe/xe_wa.c:1052
 msgid "``struct xe_gt *gt``"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:909
-#: drivers/gpu/drm/xe/xe_wa.c:926
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:957
+#: drivers/gpu/drm/xe/xe_wa.c:974
 msgid "GT instance to process workarounds for"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:910
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:958
 msgid ""
 "Process OOB workaround table for this platform, marking in **gt** the "
 "workarounds that are active."
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:925
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:973
 msgid "process GT workaround table"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:927
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:975
 msgid ""
 "Process GT workaround table for this platform, saving in **gt** all the "
 "workarounds that need to be applied at the GT level."
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:942
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:990
 msgid "process engine workaround table"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:948
-#: drivers/gpu/drm/xe/xe_wa.c:965
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:996
+#: drivers/gpu/drm/xe/xe_wa.c:1013
 msgid "``struct xe_hw_engine *hwe``"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:943
-#: drivers/gpu/drm/xe/xe_wa.c:960
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:991
+#: drivers/gpu/drm/xe/xe_wa.c:1008
 msgid "engine instance to process workarounds for"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:944
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:992
 msgid ""
 "Process engine workaround table for this platform, saving in **hwe** all the "
 "workarounds that need to be applied at the engine level that match this "
 "engine."
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:959
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:1007
 msgid "process context workaround table"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:961
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:1009
 msgid ""
 "Process context workaround table for this platform, saving in **hwe** all "
 "the workarounds that need to be applied on context restore. These are "
 "workarounds touching registers that are part of the HW context image."
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:976
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:1024
 msgid "initialize device with workaround oob bookkeeping"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:977
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:1025
 msgid "Xe device instance to initialize"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:978
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:1026
 msgid "Returns 0 for success, negative with error code otherwise"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:998
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:1046
 msgid "initialize gt with workaround bookkeeping"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:999
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:1047
 msgid "GT instance to initialize"
 msgstr ""
 
-#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:1000
+#: ../../../gpu/xe/xe_wa:13: drivers/gpu/drm/xe/xe_wa.c:1048
 msgid "Returns 0 for success, negative error code otherwise."
 msgstr ""
