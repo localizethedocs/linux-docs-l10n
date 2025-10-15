@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel 6\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-30 08:40+0000\n"
+"POT-Creation-Date: 2025-10-14 08:59+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -161,8 +161,8 @@ msgid "A test case will only run if it is associated with a test suite."
 msgstr ""
 
 #: ../../../dev-tools/kunit/usage.rst:174
-#: ../../../dev-tools/kunit/usage.rst:629
-#: ../../../dev-tools/kunit/usage.rst:863
+#: ../../../dev-tools/kunit/usage.rst:961
+#: ../../../dev-tools/kunit/usage.rst:1195
 msgid "For example:"
 msgstr ""
 
@@ -395,45 +395,262 @@ msgstr ""
 
 #: ../../../dev-tools/kunit/usage.rst:545
 msgid ""
-"The table-driven testing pattern is common enough that KUnit has special "
-"support for it."
+"To run a test case against multiple inputs, KUnit provides a parameterized "
+"testing framework. This feature formalizes and extends the concept of table-"
+"driven tests discussed previously."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:548
+#: ../../../dev-tools/kunit/usage.rst:549
 msgid ""
-"By reusing the same ``cases`` array from above, we can write the test as a "
-"\"parameterized test\" with the following."
+"A KUnit test is determined to be parameterized if a parameter generator "
+"function is provided when registering the test case. A test user can either "
+"write their own generator function or use one that is provided by KUnit. The "
+"generator function is stored in  ``kunit_case->generate_params`` and can be "
+"set using the macros described in the section below."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:594
+#: ../../../dev-tools/kunit/usage.rst:555
+msgid ""
+"To establish the terminology, a \"parameterized test\" is a test which is "
+"run multiple times (once per \"parameter\" or \"parameter run\"). Each "
+"parameter run has both its own independent ``struct kunit`` (the \"parameter "
+"run context\") and access to a shared parent ``struct kunit`` (the "
+"\"parameterized test context\")."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:561
+msgid "Passing Parameters to a Test"
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:562
+msgid "There are three ways to provide the parameters to a test:"
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:564
+msgid "Array Parameter Macros:"
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:566
+msgid ""
+"KUnit provides special support for the common table-driven testing pattern. "
+"By applying either ``KUNIT_ARRAY_PARAM`` or ``KUNIT_ARRAY_PARAM_DESC`` to "
+"the ``cases`` array from the previous section, we can create a parameterized "
+"test as shown below:"
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:613
+msgid "Custom Parameter Generator Function:"
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:615
+msgid ""
+"The generator function is responsible for generating parameters one-by-one "
+"and has the following signature: ``const void* (*)(struct kunit *test, const "
+"void *prev, char *desc)``. You can pass the generator function to the "
+"``KUNIT_CASE_PARAM`` or ``KUNIT_CASE_PARAM_WITH_INIT`` macros."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:621
+msgid ""
+"The function receives the previously generated parameter as the ``prev`` "
+"argument (which is ``NULL`` on the first call) and can also access the "
+"parameterized test context passed as the ``test`` argument. KUnit calls this "
+"function repeatedly until it returns ``NULL``, which signifies that a "
+"parameterized test ended."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:627
+msgid "Below is an example of how it works:"
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:673
+msgid "Runtime Parameter Array Registration in the Init Function:"
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:675
+msgid ""
+"For scenarios where you might need to initialize a parameterized test, you "
+"can directly register a parameter array to the parameterized test context."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:678
+msgid ""
+"To do this, you must pass the parameterized test context, the array itself, "
+"the array size, and a ``get_description()`` function to the "
+"``kunit_register_params_array()`` macro. This macro populates ``struct "
+"kunit_params`` within the parameterized test context, effectively storing a "
+"parameter array object. The ``get_description()`` function will be used for "
+"populating parameter descriptions and has the following signature: ``void (*)"
+"(struct kunit *test, const void *param, char *desc)``. Note that it also has "
+"access to the parameterized test context."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:688
+msgid ""
+"When using this way to register a parameter array, you will need to manually "
+"pass ``kunit_array_gen_params()`` as the generator function to "
+"``KUNIT_CASE_PARAM_WITH_INIT``. ``kunit_array_gen_params()`` is a KUnit "
+"helper that will use the registered array to generate the parameters."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:693
+msgid ""
+"If needed, instead of passing the KUnit helper, you can also pass your own "
+"custom generator function that utilizes the parameter array. To access the "
+"parameter array from within the parameter generator function use ``test-"
+">params_array.params``."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:698
+msgid ""
+"The ``kunit_register_params_array()`` macro should be called within a "
+"``param_init()`` function that initializes the parameterized test and has "
+"the following signature ``int (*)(struct kunit *test)``. For a detailed "
+"explanation of this mechanism please refer to the \"Adding Shared "
+"Resources\" section that is after this one. This method supports registering "
+"both dynamically built and static parameter arrays."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:705
+msgid ""
+"The code snippet below shows the ``example_param_init_dynamic_arr`` test "
+"that utilizes ``make_fibonacci_params()`` to create a dynamic array, which "
+"is then registered using ``kunit_register_params_array()``. To see the full "
+"code please refer to lib/kunit/kunit-example-test.c."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:752
+msgid "Adding Shared Resources"
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:753
+msgid ""
+"All parameter runs in this framework hold a reference to the parameterized "
+"test context, which can be accessed using the parent ``struct kunit`` "
+"pointer. The parameterized test context is not used to execute any test "
+"logic itself; instead, it serves as a container for shared resources."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:758
+msgid ""
+"It's possible to add resources to share between parameter runs within a "
+"parameterized test by using ``KUNIT_CASE_PARAM_WITH_INIT``, to which you "
+"pass custom ``param_init()`` and ``param_exit()`` functions. These functions "
+"run once before and once after the parameterized test, respectively."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:763
+msgid ""
+"The ``param_init()`` function, with the signature ``int (*)(struct kunit "
+"*test)``, can be used for adding resources to the ``resources`` or ``priv`` "
+"fields of the parameterized test context, registering the parameter array, "
+"and any other initialization logic."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:768
+msgid ""
+"The ``param_exit()`` function, with the signature ``void (*)(struct kunit "
+"*test)``, can be used to release any resources that were not parameterized "
+"test managed (i.e. not automatically cleaned up after the parameterized test "
+"ends) and for any other exit logic."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:773
+msgid ""
+"Both ``param_init()`` and ``param_exit()`` are passed the parameterized test "
+"context behind the scenes. However, the test case function receives the "
+"parameter run context. Therefore, to manage and access shared resources from "
+"within a test case function, you must use ``test->parent``."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:778
+msgid ""
+"For instance, finding a shared resource allocated by the Resource API "
+"requires passing ``test->parent`` to ``kunit_find_resource()``. This "
+"principle extends to all other APIs that might be used in the test case "
+"function, including ``kunit_kzalloc()``, ``kunit_kmalloc_array()``, and "
+"others (see Documentation/dev-tools/kunit/api/test.rst and the Documentation/"
+"dev-tools/kunit/api/resource.rst)."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:786
+msgid ""
+"The ``suite->init()`` function, which executes before each parameter run, "
+"receives the parameter run context. Therefore, any resources set up in "
+"``suite->init()`` are cleaned up after each parameter run."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:790
+msgid ""
+"The code below shows how you can add the shared resources. Note that this "
+"code utilizes the Resource API, which you can read more about here: "
+"Documentation/dev-tools/kunit/api/resource.rst. To see the full version of "
+"this code please refer to lib/kunit/kunit-example-test.c."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:850
+msgid ""
+"As an alternative to using the KUnit Resource API for sharing resources, you "
+"can place them in ``test->parent->priv``. This serves as a more lightweight "
+"method for resource storage, best for scenarios where complex resource "
+"management is not required."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:855
+msgid ""
+"As stated previously ``param_init()`` and ``param_exit()`` get the "
+"parameterized test context. So, you can directly use ``test->priv`` within "
+"``param_init/exit`` to manage shared resources. However, from within the "
+"test case function, you must navigate up to the parent ``struct kunit`` i.e. "
+"the parameterized test context. Therefore, you need to use ``test->parent-"
+">priv`` to access those same resources."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:862
+msgid ""
+"The resources placed in ``test->parent->priv`` will need to be allocated in "
+"memory to persist across the parameter runs. If memory is allocated using "
+"the KUnit memory allocation APIs (described more in the \"Allocating "
+"Memory\" section below), you won't need to worry about deallocation. The "
+"APIs will make the memory parameterized test 'managed', ensuring that it "
+"will automatically get cleaned up after the parameterized test concludes."
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:869
+msgid ""
+"The code below demonstrates example usage of the ``priv`` field for shared "
+"resources:"
+msgstr ""
+
+#: ../../../dev-tools/kunit/usage.rst:926
 msgid "Allocating Memory"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:596
+#: ../../../dev-tools/kunit/usage.rst:928
 msgid ""
 "Where you might use ``kzalloc``, you can instead use ``kunit_kzalloc`` as "
 "KUnit will then ensure that the memory is freed once the test completes."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:599
+#: ../../../dev-tools/kunit/usage.rst:931
 msgid ""
 "This is useful because it lets us use the ``KUNIT_ASSERT_EQ`` macros to exit "
 "early from a test without having to worry about remembering to call "
 "``kfree``. For example:"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:615
+#: ../../../dev-tools/kunit/usage.rst:947
 msgid "Registering Cleanup Actions"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:617
+#: ../../../dev-tools/kunit/usage.rst:949
 msgid ""
 "If you need to perform some cleanup beyond simple use of ``kunit_kzalloc``, "
 "you can register a custom \"deferred action\", which is a cleanup function "
 "run when the test exits (whether cleanly, or via a failed assertion)."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:621
+#: ../../../dev-tools/kunit/usage.rst:953
 msgid ""
 "Actions are simple functions with no return value, and a single ``void*`` "
 "context argument, and fulfill the same role as \"cleanup\" functions in "
@@ -441,45 +658,45 @@ msgid ""
 "and (in some cases) destructors in RAII languages."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:626
+#: ../../../dev-tools/kunit/usage.rst:958
 msgid ""
 "These are very useful for unregistering things from global lists, closing "
 "files or other resources, or freeing resources."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:649
+#: ../../../dev-tools/kunit/usage.rst:981
 msgid ""
 "Note that, for functions like device_unregister which only accept a single "
 "pointer-sized argument, it's possible to automatically generate a wrapper "
 "with the ``KUNIT_DEFINE_ACTION_WRAPPER()`` macro, for example:"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:658
+#: ../../../dev-tools/kunit/usage.rst:990
 msgid ""
 "You should do this in preference to manually casting to the "
 "``kunit_action_t`` type, as casting function pointers will break Control "
 "Flow Integrity (CFI)."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:661
+#: ../../../dev-tools/kunit/usage.rst:993
 msgid ""
 "``kunit_add_action`` can fail if, for example, the system is out of memory. "
 "You can use ``kunit_add_action_or_reset`` instead which runs the action "
 "immediately if it cannot be deferred."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:665
+#: ../../../dev-tools/kunit/usage.rst:997
 msgid ""
 "If you need more control over when the cleanup function is called, you can "
 "trigger it early using ``kunit_release_action``, or cancel it entirely with "
 "``kunit_remove_action``."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:671
+#: ../../../dev-tools/kunit/usage.rst:1003
 msgid "Testing Static Functions"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:673
+#: ../../../dev-tools/kunit/usage.rst:1005
 msgid ""
 "If you want to test static functions without exposing those functions "
 "outside of testing, one option is conditionally export the symbol. When "
@@ -487,39 +704,39 @@ msgid ""
 "this method, follow the template below."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:706
+#: ../../../dev-tools/kunit/usage.rst:1038
 msgid ""
 "For a full example, see this `patch <https://lore.kernel.org/"
 "all/20221207014024.340230-3-rmoar@google.com/>`_ where a test is modified to "
 "conditionally expose static functions for testing using the macros above."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:710
+#: ../../../dev-tools/kunit/usage.rst:1042
 msgid ""
 "As an **alternative** to the method above, you could conditionally "
 "``#include`` the test file at the end of your .c file. This is not "
 "recommended but works if needed. For example:"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:725
+#: ../../../dev-tools/kunit/usage.rst:1057
 msgid "Injecting Test-Only Code"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:727
+#: ../../../dev-tools/kunit/usage.rst:1059
 msgid "Similar to as shown above, we can add test-specific logic. For example:"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:740
+#: ../../../dev-tools/kunit/usage.rst:1072
 msgid ""
 "This test-only code can be made more useful by accessing the current "
 "``kunit_test`` as shown in next section: *Accessing The Current Test*."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:744
+#: ../../../dev-tools/kunit/usage.rst:1076
 msgid "Accessing The Current Test"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:746
+#: ../../../dev-tools/kunit/usage.rst:1078
 msgid ""
 "In some cases, we need to call test-only code from outside the test file.  "
 "This is helpful, for example, when providing a fake implementation of a "
@@ -528,7 +745,7 @@ msgid ""
 "using the ``kunit_get_current_test()`` function in ``kunit/test-bug.h``."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:752
+#: ../../../dev-tools/kunit/usage.rst:1084
 msgid ""
 "``kunit_get_current_test()`` is safe to call even if KUnit is not enabled. "
 "If KUnit is not enabled, or if no test is running in the current task, it "
@@ -536,13 +753,13 @@ msgid ""
 "check, so will have a negligible performance impact when no test is running."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:757
+#: ../../../dev-tools/kunit/usage.rst:1089
 msgid ""
 "The example below uses this to implement a \"mock\" implementation of a "
 "function, ``foo``:"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:791
+#: ../../../dev-tools/kunit/usage.rst:1123
 msgid ""
 "In this example, we are using the ``priv`` member of ``struct kunit`` as a "
 "way of passing data to the test from the init function. In general ``priv`` "
@@ -550,7 +767,7 @@ msgid ""
 "variables, as it avoids concurrency issues."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:796
+#: ../../../dev-tools/kunit/usage.rst:1128
 msgid ""
 "Had we wanted something more flexible, we could have used a named "
 "``kunit_resource``. Each test can have multiple resources which have string "
@@ -561,11 +778,11 @@ msgid ""
 "Documentation/dev-tools/kunit/api/resource.rst."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:804
+#: ../../../dev-tools/kunit/usage.rst:1136
 msgid "Failing The Current Test"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:806
+#: ../../../dev-tools/kunit/usage.rst:1138
 msgid ""
 "If we want to fail the current test, we can use "
 "``kunit_fail_current_test(fmt, args...)`` which is defined in ``<kunit/test-"
@@ -574,7 +791,7 @@ msgid ""
 "shown below:"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:829
+#: ../../../dev-tools/kunit/usage.rst:1161
 msgid ""
 "``kunit_fail_current_test()`` is safe to call even if KUnit is not enabled. "
 "If KUnit is not enabled, or if no test is running in the current task, it "
@@ -582,11 +799,11 @@ msgid ""
 "so will have a negligible performance impact when no test is running."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:835
+#: ../../../dev-tools/kunit/usage.rst:1167
 msgid "Managing Fake Devices and Drivers"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:837
+#: ../../../dev-tools/kunit/usage.rst:1169
 msgid ""
 "When testing drivers or code which interacts with drivers, many functions "
 "will require a ``struct device`` or ``struct device_driver``. In many cases, "
@@ -594,7 +811,7 @@ msgid ""
 "fake device can be used instead."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:842
+#: ../../../dev-tools/kunit/usage.rst:1174
 msgid ""
 "KUnit provides helper functions to create and manage these fake devices, "
 "which are internally of type ``struct kunit_device``, and are attached to a "
@@ -602,7 +819,7 @@ msgid ""
 "(devres), as described in Documentation/driver-api/driver-model/devres.rst"
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:847
+#: ../../../dev-tools/kunit/usage.rst:1179
 msgid ""
 "To create a KUnit-managed ``struct device_driver``, use "
 "``kunit_driver_create()``, which will create a driver with the given name, "
@@ -611,7 +828,7 @@ msgid ""
 "``driver_unregister()``."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:852
+#: ../../../dev-tools/kunit/usage.rst:1184
 msgid ""
 "To create a fake device, use the ``kunit_device_register()``, which will "
 "create and register a device, using a new KUnit-managed driver created with "
@@ -622,7 +839,7 @@ msgid ""
 "``kunit_device_unregister()``."
 msgstr ""
 
-#: ../../../dev-tools/kunit/usage.rst:859
+#: ../../../dev-tools/kunit/usage.rst:1191
 msgid ""
 "The KUnit devices should be used in preference to "
 "``root_device_register()``, and instead of ``platform_device_register()`` in "
