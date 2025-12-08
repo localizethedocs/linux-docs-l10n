@@ -5,10 +5,10 @@
 </div>
 
 <div align="center">
-<h1 id="localization-of-linux-kernel-documentation">Localization of Linux Kernel Documentation</h1>
+<h1 id="localization-of-linux-kernel-documentation">Linux 內核文件的在地化</h1>
 </div>
 
-<details><summary><strong>Switch Languages</strong></summary>
+<details><summary><strong>切換語言</strong></summary>
 <p></p>
 <ul>
   <li><a href="./README.md"><code>en_US</code> : English</a></li>
@@ -17,21 +17,21 @@
 </ul>
 </details>
 
-<h2 id="table-of-contents">Table of Contents</h2>
+<h2 id="table-of-contents">目次表</h2>
 
 <ul>
-  <li><a href="#introduction">Introduction</a></li>
-  <li><a href="#progress-of-translations">Progress of Translations</a></li>
-  <li><a href="#preview-translations">Preview Translations</a></li>
-  <li><a href="#maintainers">Maintainers</a></li>
+  <li><a href="#introduction">介紹</a></li>
+  <li><a href="#progress-of-translations">翻譯進度</a></li>
+  <li><a href="#preview-translations">預覽翻譯</a></li>
+  <li><a href="#maintainers">維護者</a></li>
   <li><a href="#support-this-project">Support this Project</a></li>
-  <li><a href="#sponsorship">Sponsorship</a></li>
-  <li><a href="#code-contributors">Code Contributors</a></li>
-  <li><a href="#financial-contributors">Financial Contributors</a></li>
-  <li><a href="#licenses">Licenses</a></li>
+  <li><a href="#sponsorship">贊助</a></li>
+  <li><a href="#code-contributors">程式碼貢獻者</a></li>
+  <li><a href="#financial-contributors">財務貢獻者</a></li>
+  <li><a href="#licenses">授權條款</a></li>
 </ul>
 
-<h2 id="introduction"><a href="#table-of-contents">Introduction</a></h2>
+<h2 id="introduction"><a href="#table-of-contents">介紹</a></h2>
 
 <div align="center"><a href="https://github.com/localizethedocs/linux-docs-l10n/stargazers" title="GitHub Stars" target="_blank">
   <img alt="GitHub Stars" src="https://img.shields.io/github/stars/localizethedocs/linux-docs-l10n.svg?logo=github&style=flat&color=blue" />
@@ -70,13 +70,13 @@ The goal of this project is to translate the Linux Kernel Documentation into mul
 <table>
   <thead>
     <tr>
-      <th rowspan="1" colspan="2" align="center" style="text-align: center;"><div>Project Links</div></th>
+      <th rowspan="1" colspan="2" align="center" style="text-align: center;"><div>專案連結</div></th>
     </tr>
   </thead>
   <tbody>
     <!-- Preview -->
     <tr>
-      <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>Preview</div></th>
+      <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>預覽翻譯</div></th>
       <td rowspan="1" colspan="1" align="center" style="text-align: center;">
         <div><a href="https://projects.localizethedocs.org/linux-docs-l10n" target="_blank">linux-docs-l10n</a></div>
       </td>
@@ -116,11 +116,11 @@ The goal of this project is to translate the Linux Kernel Documentation into mul
 <table>
   <thead>
     <tr>
-      <th rowspan="1" colspan="2" align="center" style="text-align: center;"><div>GitHub Workflows</div></th>
+      <th rowspan="1" colspan="2" align="center" style="text-align: center;"><div>GitHub 工作流</div></th>
     </tr>
     <tr>
-      <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>Status</div></th>
-      <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>Description</div></th>
+      <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>狀態</div></th>
+      <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>描述</div></th>
     </tr>
   </thead>
   <tbody>
@@ -161,7 +161,7 @@ The goal of this project is to translate the Linux Kernel Documentation into mul
         <div><a href="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-gettext-statistics.yml"><img alt="ci-gettext-statistics" src="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-gettext-statistics.yml/badge.svg" /></a></div>
       </td>
       <td rowspan="1" colspan="1" align="left" style="text-align: left;">
-        <div>Update statistics information of <code>.po</code> files by Gettext toolkit.</div>
+        <div>使用 Gettext 工具組更新 <code>.po</code> 檔案的統計資訊。</div>
       </td>
     </tr>
     <tr>
@@ -169,7 +169,7 @@ The goal of this project is to translate the Linux Kernel Documentation into mul
         <div><a href="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-crowdin-upload-pot.yml"><img alt="ci-crowdin-upload-pot" src="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-crowdin-upload-pot.yml/badge.svg" /></a></div>
       </td>
       <td rowspan="1" colspan="1" align="left" style="text-align: left;">
-        <div>Upload <code>.pot</code> files to Crowdin by its CLI tool.</div>
+        <div>透過 CLI 工具上傳 <code>.po</code> 檔案到 Crowdin。</div>
       </td>
     </tr>
     <tr>
@@ -177,7 +177,7 @@ The goal of this project is to translate the Linux Kernel Documentation into mul
         <div><a href="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-crowdin-download-po.yml"><img alt="ci-crowdin-download-po" src="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-crowdin-download-po.yml/badge.svg" /></a></div>
       </td>
       <td rowspan="1" colspan="1" align="left" style="text-align: left;">
-        <div>Download <code>.po</code> files from Crowdin by its CLI tool.</div>
+        <div>透過 CLI 工具從 Crowdin 下載 <code>.po</code> 檔案。</div>
       </td>
     </tr>
     <tr>
@@ -185,7 +185,7 @@ The goal of this project is to translate the Linux Kernel Documentation into mul
         <div><a href="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-crowdin-update-readme.yml"><img alt="ci-crowdin-update-readme" src="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-crowdin-update-readme.yml/badge.svg" /></a></div>
       </td>
       <td rowspan="1" colspan="1" align="left" style="text-align: left;">
-        <div>Update README translations by Crowdin CLI tool.</div>
+        <div>使用 Crowdin CLI 工具更新 README 翻譯。</div>
       </td>
     </tr>
     <tr>
@@ -193,7 +193,7 @@ The goal of this project is to translate the Linux Kernel Documentation into mul
         <div><a href="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-deploy-pages.yml"><img alt="ci-deploy-pages" src="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-deploy-pages.yml/badge.svg" /></a></div>
       </td>
       <td rowspan="1" colspan="1" align="left" style="text-align: left;">
-        <div>Download and deploy build artifacts to <code>pages</code> branch.</div>
+        <div>下載並將建置製品部署到 <code>pages</code> 分支。</div>
       </td>
     </tr>
     <tr>
@@ -201,7 +201,7 @@ The goal of this project is to translate the Linux Kernel Documentation into mul
         <div><a href="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-deploy-po-version.yml"><img alt="ci-deploy-po-version" src="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-deploy-po-version.yml/badge.svg" /></a></div>
       </td>
       <td rowspan="1" colspan="1" align="left" style="text-align: left;">
-        <div>Deploy <code>.po</code> files to <code>po/${VERSION}</code> branch.</div>
+        <div>將 <code>.po</code> 檔案部署到 <code>po/${VERSION}</code> 分支。</div>
       </td>
     </tr>
     <tr>
@@ -224,7 +224,7 @@ The goal of this project is to translate the Linux Kernel Documentation into mul
 </table>
 </div>
 
-<h2 id="progress-of-translations"><a href="#table-of-contents">Progress of Translations</a></h2>
+<h2 id="progress-of-translations"><a href="#table-of-contents">翻譯進度</a></h2>
 
 <div align="center">
 <table>
@@ -233,8 +233,8 @@ The goal of this project is to translate the Linux Kernel Documentation into mul
       <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>Locale</div></th>
       <th rowspan="1" colspan="1" align="center" style="text-align: center;">
         <div>
-          <div>English Name</div>
-          <div>Native Name</div>
+          <div>英文名稱</div>
+          <div>在地名稱</div>
         </div>
       </th>
       <th rowspan="1" colspan="1" align="center" style="text-align: center;">
@@ -285,7 +285,7 @@ The goal of this project is to translate the Linux Kernel Documentation into mul
 <div align="center"><a href="https://localizethedocs.crowdin.com/linux-docs-l10n"><img src="https://badges.awesome-crowdin.com/translation-200032568-11.png"></a>
 </div>
 
-<h2 id="preview-translations"><a href="#table-of-contents">Preview Translations</a></h2>
+<h2 id="preview-translations"><a href="#table-of-contents">預覽翻譯</a></h2>
 
 You can preview translations in <a href="https://projects.localizethedocs.org/linux-docs-l10n">GitHub Pages</a>:
 
@@ -293,7 +293,7 @@ You can preview translations in <a href="https://projects.localizethedocs.org/li
 <table>
   <thead>
     <tr>
-      <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>Language</div></th>
+      <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>語言</div></th>
       <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>GitHub Pages</div></th>
     </tr>
   </thead>
@@ -325,7 +325,7 @@ You can preview translations in <a href="https://projects.localizethedocs.org/li
 
 You can switch to other available languages and versions by the flyout navigation menu.
 
-<h2 id="maintainers"><a href="#table-of-contents">Maintainers</a></h2>
+<h2 id="maintainers"><a href="#table-of-contents">維護者</a></h2>
 
 This project is currently maintained by:
 
@@ -334,7 +334,7 @@ This project is currently maintained by:
   <thead>
     <tr>
       <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>Name</div></th>
-      <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>GitHub Username</div></th>
+      <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>GitHub 使用者名稱</div></th>
     </tr>
   </thead>
   <tbody>
@@ -351,7 +351,7 @@ This project is currently maintained by:
 You can contribute and support this project by doing any of the following:
 
 <ul>
-  <li>Star the project on GitHub or other mirrors.</li>
+  <li>在 GitHub 或其他鏡像儲存庫上收藏這個專案。</li>
   <li>Submit issues on <a href="https://github.com/localizethedocs/linux-docs-l10n/issues">GitHub</a> if you found any bug.</li>
   <li>Submit pull requests on <a href="https://github.com/localizethedocs/linux-docs-l10n/pulls">GitHub</a> if you know how to fix the bug.</li>
   <li>Contribute your translations on <a href="https://localizethedocs.crowdin.com/linux-docs-l10n">Crowdin</a>.</li>
@@ -360,9 +360,9 @@ You can contribute and support this project by doing any of the following:
 
 It will facilitate the creation and ongoing maintenance of l10n projects for open-source documentation.
 
-<h2 id="sponsorship"><a href="#table-of-contents">Sponsorship</a></h2>
+<h2 id="sponsorship"><a href="#table-of-contents">贊助</a></h2>
 
-You can sponsor the projects through the following platforms:
+您可以透過以下平臺來贊助這些專案：
 
 <div align="center">
 <table>
@@ -370,7 +370,7 @@ You can sponsor the projects through the following platforms:
     <!-- Row 1 -->
     <tr>
       <th rowspan="1" colspan="1" align="center" style="text-align: center; width: 50%;"><div>Patreon</div></th>
-      <th rowspan="1" colspan="1" align="center" style="text-align: center; width: 50%;"><div>Afdian</div></th>
+      <th rowspan="1" colspan="1" align="center" style="text-align: center; width: 50%;"><div>愛發電</div></th>
     </tr>
     <!-- Row 2 -->
     <tr>
@@ -400,7 +400,7 @@ Alternatively, you can sponsor the maintainers directly through the following pl
     <!-- Row 1 -->
     <tr>
       <th rowspan="1" colspan="1" align="center" style="text-align: center; width: 50%;"><div>Patreon</div></th>
-      <th rowspan="1" colspan="1" align="center" style="text-align: center; width: 50%;"><div>Afdian</div></th>
+      <th rowspan="1" colspan="1" align="center" style="text-align: center; width: 50%;"><div>愛發電</div></th>
     </tr>
     <!-- Row 2 -->
     <tr>
@@ -419,13 +419,13 @@ Alternatively, you can sponsor the maintainers directly through the following pl
 </table>
 </div>
 
-<h2 id="code-contributors"><a href="#table-of-contents">Code Contributors</a></h2>
+<h2 id="code-contributors"><a href="#table-of-contents">程式碼貢獻者</a></h2>
 
 <div align="center">
 <img width="100%" alt="GitHub Contributors SVG" src="https://contrib.nn.ci/api?repo=localizethedocs/linux-docs-l10n&no_bot=true" />
 </div>
 
-<h2 id="financial-contributors"><a href="#table-of-contents">Financial Contributors</a></h2>
+<h2 id="financial-contributors"><a href="#table-of-contents">財務貢獻者</a></h2>
 
 <div align="center">
 <h3 id="localize-the-docs">Localize The Docs</h3>
@@ -443,7 +443,7 @@ Alternatively, you can sponsor the maintainers directly through the following pl
 <img width="100%" alt="Haowei Hsu" src="https://cdn.jsdelivr.net/gh/hwhsu1231/sponsors/static/sponsors.svg" />
 </div>
 
-<h2 id="licenses"><a href="#table-of-contents">Licenses</a></h2>
+<h2 id="licenses"><a href="#table-of-contents">授權條款</a></h2>
 
 All original and translated text in the <code>.pot</code> and<code>.po</code> files stored in the <code>l10n</code> branch is made available under the same license as <a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git">the upstream project</a>.
 
