@@ -64,7 +64,7 @@
 The goal of this project is to translate the Linux Kernel Documentation into multiple languages. Translations are contributed via the Crowdin platform, automatically synchronized with the GitHub repository, and can be previewed on GitHub Pages.
 
 > [!NOTE]
-> The translation is community-driven. If you find any inaccuracies, always refer to the <a href="https://docs.kernel.org">official documentation</a> or the <a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git">source repository</a> of the upstream project for the most reliable information.
+> The translation is <strong>unofficial</strong> and <strong>community-driven</strong>. If you find any inaccuracies, always refer to the <a href="https://docs.kernel.org">official documentation</a> or the <a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git">source repository</a> of the upstream project for the most reliable information.
 
 <div align="center">
 <table>
@@ -116,10 +116,10 @@ The goal of this project is to translate the Linux Kernel Documentation into mul
 <table>
   <thead>
     <tr>
-      <th rowspan="1" colspan="2" align="center" style="text-align: center;"><div>Branch Structure</div></th>
+      <th rowspan="1" colspan="2" align="center" style="text-align: center;"><div>分支結構</div></th>
     </tr>
     <tr>
-      <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>Branch</div></th>
+      <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>分支</div></th>
       <th rowspan="1" colspan="1" align="center" style="text-align: center;"><div>描述</div></th>
     </tr>
   </thead>
