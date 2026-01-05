@@ -201,7 +201,7 @@ The goal of this project is to translate the Linux Kernel Documentation into mul
         <div><a href="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-gettext-statistics.yml"><img alt="ci-gettext-statistics" src="https://github.com/localizethedocs/linux-docs-l10n/actions/workflows/ci-gettext-statistics.yml/badge.svg" /></a></div>
       </td>
       <td rowspan="1" colspan="1" align="left" style="text-align: left;">
-        <div>使用 Gettext 工具組更新 <code>.po</code> 檔案的統計資訊。</div>
+        <div>透過 Gettext 工具組更新 <code>.po</code> 檔案的統計資訊。</div>
       </td>
     </tr>
     <tr>
