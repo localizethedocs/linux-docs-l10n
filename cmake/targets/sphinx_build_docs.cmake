@@ -69,6 +69,57 @@ foreach(_LANGUAGE ${LANGUAGE_LIST})
         OUT_JSON_VALUE      _LANGTAG)
 
 
+    # Parse KERNEL_RELEASE from the Linux Kernel's Makefile based on the following logic:
+    # KERNELVERSION = $(VERSION)$(if $(PATCHLEVEL),.$(PATCHLEVEL)$(if $(SUBLEVEL),.$(SUBLEVEL)))$(EXTRAVERSION)
+    message(STATUS "Parsing KERNEL_RELEASE from the Linux Kernel's Makefile...")
+    set(MAKEFILE_PATH "${PROJ_OUT_REPO_DIR}/Makefile")
+    if (NOT EXISTS "${MAKEFILE_PATH}")
+        message(FATAL_ERROR "Makefile not found at: ${MAKEFILE_PATH}")
+    endif()
+    file(STRINGS "${MAKEFILE_PATH}" MAKEFILE_LINES LIMIT_COUNT 20)
+    set(KERNEL_VERSION "")
+    set(KERNEL_PATCHLEVEL "")
+    set(KERNEL_SUBLEVEL "")
+    set(KERNEL_EXTRAVERSION "")
+    foreach(LINE ${MAKEFILE_LINES})
+        if     (LINE MATCHES "^VERSION[ \t]*=[ \t]*(.+)$")
+            string(STRIP "${CMAKE_MATCH_1}" KERNEL_VERSION)
+        elseif (LINE MATCHES "^PATCHLEVEL[ \t]*=[ \t]*(.+)$")
+            string(STRIP "${CMAKE_MATCH_1}" KERNEL_PATCHLEVEL)
+        elseif (LINE MATCHES "^SUBLEVEL[ \t]*=[ \t]*(.+)$")
+            string(STRIP "${CMAKE_MATCH_1}" KERNEL_SUBLEVEL)
+        elseif (LINE MATCHES "^EXTRAVERSION[ \t]*=[ \t]*(.+)$")
+            string(STRIP "${CMAKE_MATCH_1}" KERNEL_EXTRAVERSION)
+        endif()
+    endforeach()
+    if (NOT KERNEL_VERSION)
+        message(FATAL_ERROR "Could not parse VERSION from ${MAKEFILE_PATH}")
+    endif()
+    if (NOT KERNEL_PATCHLEVEL)
+        set(KERNEL_PATCHLEVEL "0")
+    endif()
+    if (NOT KERNEL_SUBLEVEL)
+        set(KERNEL_SUBLEVEL "0")
+    endif()
+    set(KERNEL_RELEASE "${KERNEL_VERSION}")
+    if (NOT KERNEL_PATCHLEVEL STREQUAL "")
+        set(KERNEL_RELEASE "${KERNEL_RELEASE}.${KERNEL_PATCHLEVEL}")
+        if (NOT KERNEL_SUBLEVEL STREQUAL "")
+            set(KERNEL_RELEASE "${KERNEL_RELEASE}.${KERNEL_SUBLEVEL}")
+        endif()
+    endif()
+    set(KERNEL_RELEASE "${KERNEL_RELEASE}${KERNEL_EXTRAVERSION}")
+    remove_cmake_message_indent()
+    message("")
+    message("KERNEL_VERSION       = ${KERNEL_VERSION}")
+    message("KERNEL_PATCHLEVEL    = ${KERNEL_PATCHLEVEL}")
+    message("KERNEL_SUBLEVEL      = ${KERNEL_SUBLEVEL}")
+    message("KERNEL_EXTRAVERSION  = ${KERNEL_EXTRAVERSION}")
+    message("KERNEL_RELEASE       = ${KERNEL_RELEASE}")
+    message("")
+    restore_cmake_message_indent()
+
+
     message(STATUS "Running 'sphinx-build' command with '${SPHINX_BUILDER}' builder to build documentation for '${_LANGUAGE}' language...")
     if (CMAKE_HOST_LINUX)
         set(ENV_PATH            "${PROJ_CONDA_DIR}/bin:$ENV{PATH}")
@@ -94,7 +145,7 @@ foreach(_LANGUAGE ${LANGUAGE_LIST})
                 ${ENV_VARS_OF_COMMON}
                 ${Sphinx_BUILD_EXECUTABLE}
                 -b ${SPHINX_BUILDER}
-                -D version=${VERSION}
+                -D version=${KERNEL_RELEASE}
                 -D language=${_LANGUAGE}
                 -D locale_dirs=${LOCALE_TO_SOURCE_DIR}              # Relative to <sourcedir>.
                 -D templates_path=${TMPLS_TO_CONFIG_DIR}            # Relative to <configdir>.
