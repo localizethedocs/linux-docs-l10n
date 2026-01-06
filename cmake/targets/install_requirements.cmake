@@ -146,6 +146,7 @@ execute_process(
     COMMAND ${Conda_EXECUTABLE} install
             conda-forge::python=${VERSION_OF_PYTHON}
             conda-forge::sphinx=${VERSION_OF_SPHINX}
+            conda-forge::graphviz=${VERSION_OF_GRAPHVIZ}
             --prefix ${PROJ_CONDA_DIR}
             --channel conda-forge
             --yes
