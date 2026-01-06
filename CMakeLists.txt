@@ -115,6 +115,9 @@ set(VERSION_OF_PYTHON "[default]"
 set(VERSION_OF_SPHINX "[default]"
     CACHE STRING "The version of Sphinx to install.")
 
+set(VERSION_OF_GRAPHVIZ "[default]"
+    CACHE STRING "The version of Graphviz to install.")
+
 #[============================================================[
 # Directory-Related Variables.
 #]============================================================]
@@ -264,10 +267,12 @@ endif()
 if     (VERSION MATCHES "^(master)$")
     set(VERSION_OF_PYTHON   "3.12")
     set(VERSION_OF_SPHINX   "8.2")
+    set(VERSION_OF_GRAPHVIZ "")
 elseif (VERSION MATCHES "^([0-9]+)$")
     if     (VERSION VERSION_EQUAL "6")
         set(VERSION_OF_PYTHON   "3.12")
         set(VERSION_OF_SPHINX   "8.2")
+        set(VERSION_OF_GRAPHVIZ "")
     else()
         message(FATAL_ERROR "Invalid VERSION value. (${VERSION})")
     endif()
@@ -279,6 +284,9 @@ if (NOT "$CACHE{VERSION_OF_PYTHON}" STREQUAL "[default]")
 endif()
 if (NOT "$CACHE{VERSION_OF_SPHINX}" STREQUAL "[default]")
     set(VERSION_OF_SPHINX "$CACHE{VERSION_OF_SPHINX}")
+endif()
+if (NOT "$CACHE{VERSION_OF_GRAPHVIZ}" STREQUAL "[default]")
+    set(VERSION_OF_GRAPHVIZ "$CACHE{VERSION_OF_GRAPHVIZ}")
 endif()
 
 #[============================================================[
@@ -384,6 +392,7 @@ message(STATUS "REMOTE_URL_OF_DOCS              = ${REMOTE_URL_OF_DOCS}")
 message(STATUS "BASEURL_HREF                    = ${BASEURL_HREF}")
 message(STATUS "VERSION_OF_PYTHON               = ${VERSION_OF_PYTHON} (CACHE: $CACHE{VERSION_OF_PYTHON})")
 message(STATUS "VERSION_OF_SPHINX               = ${VERSION_OF_SPHINX} (CACHE: $CACHE{VERSION_OF_SPHINX})")
+message(STATUS "VERSION_OF_GRAPHVIZ             = ${VERSION_OF_GRAPHVIZ} (CACHE: $CACHE{VERSION_OF_GRAPHVIZ})")
 message(STATUS "---------- Directory-Related Variables ----------")
 message(STATUS "PROJ_SOURCE_DIR                 = ${PROJ_SOURCE_DIR}")
 message(STATUS "PROJ_BINARY_DIR                 = ${PROJ_BINARY_DIR}")
@@ -484,6 +493,7 @@ set(SCRIPT_MODE_CACHE
     -D BASEURL_HREF=${BASEURL_HREF}
     -D VERSION_OF_PYTHON=${VERSION_OF_PYTHON}
     -D VERSION_OF_SPHINX=${VERSION_OF_SPHINX}
+    -D VERSION_OF_GRAPHVIZ=${VERSION_OF_GRAPHVIZ}
     # [Directory-Related Variables]
     -D PROJ_SOURCE_DIR=${PROJ_SOURCE_DIR}
     -D PROJ_BINARY_DIR=${PROJ_BINARY_DIR}
