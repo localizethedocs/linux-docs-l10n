@@ -69,43 +69,47 @@ foreach(_LANGUAGE ${LANGUAGE_LIST})
         OUT_JSON_VALUE      _LANGTAG)
 
 
-    message(STATUS "Running 'make ${SPHINX_BUILDER}docs' command to generate ${SPHINX_BUILDER} documentation...")
+    message(STATUS "Running 'sphinx-build' command with '${SPHINX_BUILDER}' builder to build documentation for '${_LANGUAGE}' language...")
     if (CMAKE_HOST_LINUX)
-        set(ENV_PATH                    "${PROJ_CONDA_DIR}/bin:$ENV{PATH}")
-        set(ENV_LD_LIBRARY_PATH         "${PROJ_CONDA_DIR}/lib:$ENV{LD_LIBRARY_PATH}")
-        set(ENV_VARS_OF_SYSTEM          PATH=${ENV_PATH}
-                                        LD_LIBRARY_PATH=${ENV_LD_LIBRARY_PATH})
+        set(ENV_PATH            "${PROJ_CONDA_DIR}/bin:$ENV{PATH}")
+        set(ENV_LD_LIBRARY_PATH "${PROJ_CONDA_DIR}/lib:$ENV{ENV_LD_LIBRARY_PATH}")
+        set(ENV_PYTHONPATH      "${PROJ_OUT_REPO_DOCS_EXTNS_DIR}")
+        set(ENV_VARS_OF_SYSTEM  PATH=${ENV_PATH}
+                                LD_LIBRARY_PATH=${ENV_LD_LIBRARY_PATH}
+                                PYTHONPATH=${ENV_PYTHONPATH})
     else()
         message(FATAL_ERROR "Invalid OS platform. (${CMAKE_HOST_SYSTEM_NAME})")
     endif()
-    set(HTML_BASEURL        "${BASEURL_HREF}")
-    set(CURRENT_LANGUAGE    "${_LANGTAG}")
-    set(CURRENT_VERSION     "${VERSION}")
-    set(WARNING_FILE_PATH   "${PROJ_BINARY_DIR}/log-${SPHINX_BUILDER}-${VERSION}-${_LANGTAG}.txt")
-    set(BUILDDIR            "${PROJ_OUT_BUILDER_DIR}/${_LANGTAG}/${VERSION}")
-    set(SPHINXBUILD         "${Sphinx_BUILD_EXECUTABLE}")
-    set(SPHINXOPTS          "")
-    set(SPHINXOPTS          "${SPHINXOPTS} -D language=${_LANGUAGE}")
-    set(SPHINXOPTS          "${SPHINXOPTS} -D locale_dirs=${LOCALE_TO_SOURCE_DIR}")
-    set(SPHINXOPTS          "${SPHINXOPTS} -D templates_path=${TMPLS_TO_CONFIG_DIR}")
-    set(SPHINXOPTS          "${SPHINXOPTS} -D gettext_compact=${SPHINX_GETTEXT_COMPACT}")
-    set(SPHINXOPTS          "${SPHINXOPTS} -D gettext_additional_targets=${SPHINX_GETTEXT_TARGETS}")
-    set(SPHINXOPTS          "${SPHINXOPTS} -D html_baseurl=${HTML_BASEURL}")
-    set(SPHINXOPTS          "${SPHINXOPTS} -D current_language=${CURRENT_LANGUAGE}")
-    set(SPHINXOPTS          "${SPHINXOPTS} -D current_version=${CURRENT_VERSION}")
-    set(SPHINXOPTS          "${SPHINXOPTS} -j ${SPHINX_JOB_NUMBER}")
-    set(SPHINXOPTS          "${SPHINXOPTS} -w ${WARNING_FILE_PATH}")
-    set(SPHINXOPTS          "${SPHINXOPTS} ${SPHINX_VERBOSE_ARGS}")
+    set(ENV_srctree             "${PROJ_OUT_REPO_DIR}")
+    set(ENV_VARS_OF_COMMON      srctree=${ENV_srctree})
+    set(HTML_BASEURL            "${BASEURL_HREF}")
+    set(CURRENT_LANGAUGE        "${_LANGTAG}")
+    set(CURRENT_VERSION         "${VERSION}")
+    set(WARNING_FILE_PATH       "${PROJ_BINARY_DIR}/log-${SPHINX_BUILDER}-${VERSION}-${_LANGTAG}.txt")
     remove_cmake_message_indent()
     message("")
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E env
                 ${ENV_VARS_OF_SYSTEM}
-                ${CMAKE_MAKE_PROGRAM} ${SPHINX_BUILDER}docs V=12
-                BUILDDIR=${BUILDDIR}
-                SPHINXBUILD=${SPHINXBUILD}
-                SPHINXOPTS=${SPHINXOPTS}
-        WORKING_DIRECTORY ${PROJ_OUT_REPO_DIR}
+                ${ENV_VARS_OF_COMMON}
+                ${Sphinx_BUILD_EXECUTABLE}
+                -b ${SPHINX_BUILDER}
+                -D version=${VERSION}
+                -D language=${_LANGUAGE}
+                -D locale_dirs=${LOCALE_TO_SOURCE_DIR}              # Relative to <sourcedir>.
+                -D templates_path=${TMPLS_TO_CONFIG_DIR}            # Relative to <configdir>.
+                -D gettext_compact=${SPHINX_GETTEXT_COMPACT}
+                -D gettext_additional_targets=${SPHINX_GETTEXT_TARGETS}
+                -D html_baseurl=${HTML_BASEURL}                     # Passed to 'custom.py'.
+                -D current_language=${CURRENT_LANGAUGE}             # Passed to 'custom.py'.
+                -D current_version=${CURRENT_VERSION}               # Passed to 'custom.py'.
+                -w ${WARNING_FILE_PATH}
+                -j ${SPHINX_JOB_NUMBER}
+                ${SPHINX_VERBOSE_ARGS}
+                -c ${PROJ_OUT_REPO_DOCS_CONFIG_DIR}                 # <configdir>, where conf.py locates.
+                ${PROJ_OUT_REPO_DOCS_SOURCE_DIR}                    # <sourcedir>, where index.rst locates.
+                ${PROJ_OUT_BUILDER_DIR}/${_LANGTAG}/${VERSION}      # <outputdir>, where .html generates.
+        WORKING_DIRECTORY ${PROJ_OUT_REPO_DOCS_DIR}
         ECHO_OUTPUT_VARIABLE
         ECHO_ERROR_VARIABLE
         RESULT_VARIABLE RES_VAR
