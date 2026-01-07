@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"POT-Creation-Date: 2026-01-06 06:05+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -89,12 +89,13 @@ msgid ""
 "**VMA locks** - The VMA lock is at VMA granularity (of course) which behaves "
 "as a read/write semaphore in practice. A VMA read lock is obtained via :c:"
 "func:`!lock_vma_under_rcu` (and unlocked via :c:func:`!vma_end_read`) and a "
-"write lock via :c:func:`!vma_start_write` (all VMA write locks are unlocked "
-"automatically when the mmap write lock is released). To take a VMA write "
-"lock you **must** have already acquired an :c:func:`!mmap_write_lock`."
+"write lock via vma_start_write() or vma_start_write_killable() (all VMA "
+"write locks are unlocked automatically when the mmap write lock is "
+"released). To take a VMA write lock you **must** have already acquired an :c:"
+"func:`!mmap_write_lock`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:54
+#: ../../../mm/process_addrs.rst:55
 msgid ""
 "**rmap locks** - When trying to access VMAs through the reverse mapping via "
 "a :c:struct:`!struct address_space` or :c:struct:`!struct anon_vma` object "
@@ -106,11 +107,11 @@ msgid ""
 "locks' for brevity."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:62
+#: ../../../mm/process_addrs.rst:63
 msgid "We discuss page table locks separately in the dedicated section below."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:64
+#: ../../../mm/process_addrs.rst:65
 msgid ""
 "The first thing **any** of these locks achieve is to **stabilise** the VMA "
 "within the MM tree. That is, guaranteeing that the VMA object will not be "
@@ -118,28 +119,28 @@ msgid ""
 "described below)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:69
+#: ../../../mm/process_addrs.rst:70
 msgid "Stabilising a VMA also keeps the address space described by it around."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:72
+#: ../../../mm/process_addrs.rst:73
 msgid "Lock usage"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:74
+#: ../../../mm/process_addrs.rst:75
 msgid ""
 "If you want to **read** VMA metadata fields or just keep the VMA stable, you "
 "must do one of the following:"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:77
+#: ../../../mm/process_addrs.rst:78
 msgid ""
 "Obtain an mmap read lock at the MM granularity via :c:func:`!mmap_read_lock` "
 "(or a suitable variant), unlocking it with a matching :c:func:`!"
 "mmap_read_unlock` when you're done with the VMA, *or*"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:80
+#: ../../../mm/process_addrs.rst:81
 msgid ""
 "Try to obtain a VMA read lock via :c:func:`!lock_vma_under_rcu`. This tries "
 "to acquire the lock atomically so might fail, in which case fall-back logic "
@@ -147,40 +148,40 @@ msgid ""
 "NULL`, *or*"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:84
+#: ../../../mm/process_addrs.rst:85
 msgid ""
 "Acquire an rmap lock before traversing the locked interval tree (whether "
 "anonymous or file-backed) to obtain the required VMA."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:87
+#: ../../../mm/process_addrs.rst:88
 msgid ""
 "If you want to **write** VMA metadata fields, then things vary depending on "
 "the field (we explore each VMA field in detail below). For the majority you "
 "must:"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:90
+#: ../../../mm/process_addrs.rst:91
 msgid ""
 "Obtain an mmap write lock at the MM granularity via :c:func:`!"
 "mmap_write_lock` (or a suitable variant), unlocking it with a matching :c:"
 "func:`!mmap_write_unlock` when you're done with the VMA, *and*"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:93
+#: ../../../mm/process_addrs.rst:94
 msgid ""
 "Obtain a VMA write lock via :c:func:`!vma_start_write` for each VMA you wish "
 "to modify, which will be released automatically when :c:func:`!"
 "mmap_write_unlock` is called."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:96
+#: ../../../mm/process_addrs.rst:97
 msgid ""
 "If you want to be able to write to **any** field, you must also hide the VMA "
 "from the reverse mapping by obtaining an **rmap write lock**."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:99
+#: ../../../mm/process_addrs.rst:100
 msgid ""
 "VMA locks are special in that you must obtain an mmap **write** lock "
 "**first** in order to obtain a VMA **write** lock. A VMA **read** lock "
@@ -189,95 +190,95 @@ msgid ""
 "for you)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:104
+#: ../../../mm/process_addrs.rst:105
 msgid ""
 "This constrains the impact of writers on readers, as a writer can interact "
 "with one VMA while a reader interacts with another simultaneously."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:107
+#: ../../../mm/process_addrs.rst:108
 msgid ""
 "The primary users of VMA read locks are page fault handlers, which means "
 "that without a VMA write lock, page faults will run concurrent with whatever "
 "you are doing."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:111
+#: ../../../mm/process_addrs.rst:112
 msgid "Examining all valid lock states:"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:116
+#: ../../../mm/process_addrs.rst:117
 msgid "mmap lock"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:116
+#: ../../../mm/process_addrs.rst:117
 msgid "VMA lock"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:116
+#: ../../../mm/process_addrs.rst:117
 msgid "rmap lock"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:116
+#: ../../../mm/process_addrs.rst:117
 msgid "Stable?"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:116
+#: ../../../mm/process_addrs.rst:117
 msgid "Read?"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:116
+#: ../../../mm/process_addrs.rst:117
 msgid "Write most?"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:116
+#: ../../../mm/process_addrs.rst:117
 msgid "Write all?"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:118 ../../../mm/process_addrs.rst:119
-#: ../../../mm/process_addrs.rst:120
+#: ../../../mm/process_addrs.rst:119 ../../../mm/process_addrs.rst:120
+#: ../../../mm/process_addrs.rst:121
 msgid "\\-"
-msgstr ""
-
-#: ../../../mm/process_addrs.rst:118 ../../../mm/process_addrs.rst:119
-#: ../../../mm/process_addrs.rst:120 ../../../mm/process_addrs.rst:121
-#: ../../../mm/process_addrs.rst:122 ../../../mm/process_addrs.rst:889
-#: ../../../mm/process_addrs.rst:890 ../../../mm/process_addrs.rst:893
-msgid "N"
-msgstr ""
-
-#: ../../../mm/process_addrs.rst:119 ../../../mm/process_addrs.rst:885
-#: ../../../mm/process_addrs.rst:888
-msgid "R"
 msgstr ""
 
 #: ../../../mm/process_addrs.rst:119 ../../../mm/process_addrs.rst:120
 #: ../../../mm/process_addrs.rst:121 ../../../mm/process_addrs.rst:122
-#: ../../../mm/process_addrs.rst:123 ../../../mm/process_addrs.rst:891
-#: ../../../mm/process_addrs.rst:894 ../../../mm/process_addrs.rst:895
-#: ../../../mm/process_addrs.rst:897 ../../../mm/process_addrs.rst:898
-#: ../../../mm/process_addrs.rst:899
-msgid "Y"
+#: ../../../mm/process_addrs.rst:123 ../../../mm/process_addrs.rst:890
+#: ../../../mm/process_addrs.rst:891 ../../../mm/process_addrs.rst:894
+msgid "N"
+msgstr ""
+
+#: ../../../mm/process_addrs.rst:120 ../../../mm/process_addrs.rst:886
+#: ../../../mm/process_addrs.rst:889
+msgid "R"
 msgstr ""
 
 #: ../../../mm/process_addrs.rst:120 ../../../mm/process_addrs.rst:121
-msgid "R/W"
+#: ../../../mm/process_addrs.rst:122 ../../../mm/process_addrs.rst:123
+#: ../../../mm/process_addrs.rst:124 ../../../mm/process_addrs.rst:892
+#: ../../../mm/process_addrs.rst:895 ../../../mm/process_addrs.rst:896
+#: ../../../mm/process_addrs.rst:898 ../../../mm/process_addrs.rst:899
+#: ../../../mm/process_addrs.rst:900
+msgid "Y"
 msgstr ""
 
 #: ../../../mm/process_addrs.rst:121 ../../../mm/process_addrs.rst:122
-msgid "\\-/R"
-msgstr ""
-
-#: ../../../mm/process_addrs.rst:121
-msgid "\\-/R/W"
+msgid "R/W"
 msgstr ""
 
 #: ../../../mm/process_addrs.rst:122 ../../../mm/process_addrs.rst:123
-#: ../../../mm/process_addrs.rst:887 ../../../mm/process_addrs.rst:896
+msgid "\\-/R"
+msgstr ""
+
+#: ../../../mm/process_addrs.rst:122
+msgid "\\-/R/W"
+msgstr ""
+
+#: ../../../mm/process_addrs.rst:123 ../../../mm/process_addrs.rst:124
+#: ../../../mm/process_addrs.rst:888 ../../../mm/process_addrs.rst:897
 msgid "W"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:126
+#: ../../../mm/process_addrs.rst:127
 msgid ""
 "While it's possible to obtain a VMA lock while holding an mmap read lock, "
 "attempting to do the reverse is invalid as it can result in deadlock - if "
@@ -285,86 +286,86 @@ msgid ""
 "write lock that will deadlock on the VMA read lock."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:131
+#: ../../../mm/process_addrs.rst:132
 msgid ""
 "All of these locks behave as read/write semaphores in practice, so you can "
 "obtain either a read or a write lock for each of these."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:134
+#: ../../../mm/process_addrs.rst:135
 msgid ""
 "Generally speaking, a read/write semaphore is a class of lock which permits "
 "concurrent readers. However a write lock can only be obtained once all "
 "readers have left the critical region (and pending readers made to wait)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:139
+#: ../../../mm/process_addrs.rst:140
 msgid ""
 "This renders read locks on a read/write semaphore concurrent with other "
 "readers and write locks exclusive against all others holding the semaphore."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:143
+#: ../../../mm/process_addrs.rst:144
 msgid "VMA fields"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:145
+#: ../../../mm/process_addrs.rst:146
 msgid ""
 "We can subdivide :c:struct:`!struct vm_area_struct` fields by their purpose, "
 "which makes it easier to explore their locking characteristics:"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:148
+#: ../../../mm/process_addrs.rst:149
 msgid ""
 "We exclude VMA lock-specific fields here to avoid confusion, as these are in "
 "effect an internal implementation detail."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:151
+#: ../../../mm/process_addrs.rst:152
 msgid "Virtual layout fields"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:154 ../../../mm/process_addrs.rst:177
-#: ../../../mm/process_addrs.rst:209 ../../../mm/process_addrs.rst:246
+#: ../../../mm/process_addrs.rst:155 ../../../mm/process_addrs.rst:178
+#: ../../../mm/process_addrs.rst:210 ../../../mm/process_addrs.rst:247
 msgid "Field"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:154 ../../../mm/process_addrs.rst:177
-#: ../../../mm/process_addrs.rst:209 ../../../mm/process_addrs.rst:246
+#: ../../../mm/process_addrs.rst:155 ../../../mm/process_addrs.rst:178
+#: ../../../mm/process_addrs.rst:210 ../../../mm/process_addrs.rst:247
 msgid "Description"
 msgstr "描述"
 
-#: ../../../mm/process_addrs.rst:154 ../../../mm/process_addrs.rst:177
-#: ../../../mm/process_addrs.rst:209 ../../../mm/process_addrs.rst:246
+#: ../../../mm/process_addrs.rst:155 ../../../mm/process_addrs.rst:178
+#: ../../../mm/process_addrs.rst:210 ../../../mm/process_addrs.rst:247
 msgid "Write lock"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:156
+#: ../../../mm/process_addrs.rst:157
 msgid ":c:member:`!vm_start`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:156
+#: ../../../mm/process_addrs.rst:157
 msgid "Inclusive start virtual address of range VMA describes."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:156 ../../../mm/process_addrs.rst:159
-#: ../../../mm/process_addrs.rst:162
+#: ../../../mm/process_addrs.rst:157 ../../../mm/process_addrs.rst:160
+#: ../../../mm/process_addrs.rst:163
 msgid "mmap write, VMA write, rmap write."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:159
+#: ../../../mm/process_addrs.rst:160
 msgid ":c:member:`!vm_end`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:159
+#: ../../../mm/process_addrs.rst:160
 msgid "Exclusive end virtual address of range VMA describes."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:162
+#: ../../../mm/process_addrs.rst:163
 msgid ":c:member:`!vm_pgoff`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:162
+#: ../../../mm/process_addrs.rst:163
 msgid ""
 "Describes the page offset into the file, the original page offset within the "
 "virtual address space (prior to any :c:func:`!mremap`), or PFN if a PFN map "
@@ -372,7 +373,7 @@ msgid ""
 "CONFIG_ARCH_HAS_PTE_SPECIAL`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:170
+#: ../../../mm/process_addrs.rst:171
 msgid ""
 "These fields describes the size, start and end of the VMA, and as such "
 "cannot be modified without first being hidden from the reverse mapping since "
@@ -380,121 +381,121 @@ msgid ""
 "trees."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:174
+#: ../../../mm/process_addrs.rst:175
 msgid "Core fields"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:179
+#: ../../../mm/process_addrs.rst:180
 msgid ":c:member:`!vm_mm`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:179
+#: ../../../mm/process_addrs.rst:180
 msgid "Containing mm_struct."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:179 ../../../mm/process_addrs.rst:191
+#: ../../../mm/process_addrs.rst:180 ../../../mm/process_addrs.rst:192
 msgid "None - written once on initial map."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:181
+#: ../../../mm/process_addrs.rst:182
 msgid ":c:member:`!vm_page_prot`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:181
+#: ../../../mm/process_addrs.rst:182
 msgid ""
 "Architecture-specific page table protection bits determined from VMA flags."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:181 ../../../mm/process_addrs.rst:188
-#: ../../../mm/process_addrs.rst:211 ../../../mm/process_addrs.rst:222
-#: ../../../mm/process_addrs.rst:231
+#: ../../../mm/process_addrs.rst:182 ../../../mm/process_addrs.rst:189
+#: ../../../mm/process_addrs.rst:212 ../../../mm/process_addrs.rst:223
+#: ../../../mm/process_addrs.rst:232
 msgid "mmap write, VMA write."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:184
+#: ../../../mm/process_addrs.rst:185
 msgid ":c:member:`!vm_flags`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:184
+#: ../../../mm/process_addrs.rst:185
 msgid ""
 "Read-only access to VMA flags describing attributes of the VMA, in union "
 "with private writable :c:member:`!__vm_flags`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:184
+#: ../../../mm/process_addrs.rst:185
 msgid "N/A"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:188
+#: ../../../mm/process_addrs.rst:189
 msgid ":c:member:`!__vm_flags`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:188
+#: ../../../mm/process_addrs.rst:189
 msgid ""
 "Private, writable access to VMA flags field, updated by :c:func:`!"
 "vm_flags_*` functions."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:191
+#: ../../../mm/process_addrs.rst:192
 msgid ":c:member:`!vm_file`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:191
+#: ../../../mm/process_addrs.rst:192
 msgid ""
 "If the VMA is file-backed, points to a struct file object describing the "
 "underlying file, if anonymous then :c:macro:`!NULL`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:195
+#: ../../../mm/process_addrs.rst:196
 msgid ":c:member:`!vm_ops`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:195
+#: ../../../mm/process_addrs.rst:196
 msgid ""
 "If the VMA is file-backed, then either the driver or file-system provides a :"
 "c:struct:`!struct vm_operations_struct` object describing callbacks to be "
 "invoked on VMA lifetime events."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:195
+#: ../../../mm/process_addrs.rst:196
 msgid "None - Written once on initial map by :c:func:`!f_ops->mmap()`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:200
+#: ../../../mm/process_addrs.rst:201
 msgid ":c:member:`!vm_private_data`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:200
+#: ../../../mm/process_addrs.rst:201
 msgid "A :c:member:`!void *` field for driver-specific metadata."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:200
+#: ../../../mm/process_addrs.rst:201
 msgid "Handled by driver."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:204
+#: ../../../mm/process_addrs.rst:205
 msgid ""
 "These are the core fields which describe the MM the VMA belongs to and its "
 "attributes."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:206
+#: ../../../mm/process_addrs.rst:207
 msgid "Config-specific fields"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:209
+#: ../../../mm/process_addrs.rst:210
 msgid "Configuration option"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:211
+#: ../../../mm/process_addrs.rst:212
 msgid ":c:member:`!anon_name`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:211
+#: ../../../mm/process_addrs.rst:212
 msgid "CONFIG_ANON_VMA_NAME"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:211
+#: ../../../mm/process_addrs.rst:212
 msgid ""
 "A field for storing a :c:struct:`!struct anon_vma_name` object providing a "
 "name for anonymous mappings, or :c:macro:`!NULL` if none is set or the VMA "
@@ -502,66 +503,66 @@ msgid ""
 "across multiple VMAs for scalability."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:219
+#: ../../../mm/process_addrs.rst:220
 msgid ":c:member:`!swap_readahead_info`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:219
+#: ../../../mm/process_addrs.rst:220
 msgid "CONFIG_SWAP"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:219
+#: ../../../mm/process_addrs.rst:220
 msgid ""
 "Metadata used by the swap mechanism to perform readahead. This field is "
 "accessed atomically."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:219
+#: ../../../mm/process_addrs.rst:220
 msgid "mmap read, swap-specific lock."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:222
+#: ../../../mm/process_addrs.rst:223
 msgid ":c:member:`!vm_policy`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:222
+#: ../../../mm/process_addrs.rst:223
 msgid "CONFIG_NUMA"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:222
+#: ../../../mm/process_addrs.rst:223
 msgid ""
 ":c:type:`!mempolicy` object which describes the NUMA behaviour of the VMA. "
 "The underlying object is reference counted."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:226
+#: ../../../mm/process_addrs.rst:227
 msgid ":c:member:`!numab_state`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:226
+#: ../../../mm/process_addrs.rst:227
 msgid "CONFIG_NUMA_BALANCING"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:226
+#: ../../../mm/process_addrs.rst:227
 msgid ""
 ":c:type:`!vma_numab_state` object which describes the current state of NUMA "
 "balancing in relation to this VMA. Updated under mmap read lock by :c:func:`!"
 "task_numa_work`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:226
+#: ../../../mm/process_addrs.rst:227
 msgid "mmap read, numab-specific lock."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:231
+#: ../../../mm/process_addrs.rst:232
 msgid ":c:member:`!vm_userfaultfd_ctx`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:231
+#: ../../../mm/process_addrs.rst:232
 msgid "CONFIG_USERFAULTFD"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:231
+#: ../../../mm/process_addrs.rst:232
 msgid ""
 "Userfaultfd context wrapper object of type :c:type:`!vm_userfaultfd_ctx`, "
 "either of zero size if userfaultfd is disabled, or containing a pointer to "
@@ -569,77 +570,77 @@ msgid ""
 "metadata."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:240
+#: ../../../mm/process_addrs.rst:241
 msgid ""
 "These fields are present or not depending on whether the relevant kernel "
 "configuration option is set."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:243
+#: ../../../mm/process_addrs.rst:244
 msgid "Reverse mapping fields"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:248
+#: ../../../mm/process_addrs.rst:249
 msgid ":c:member:`!shared.rb`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:248
+#: ../../../mm/process_addrs.rst:249
 msgid ""
 "A red/black tree node used, if the mapping is file-backed, to place the VMA "
 "in the :c:member:`!struct address_space->i_mmap` red/black interval tree."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:248 ../../../mm/process_addrs.rst:253
+#: ../../../mm/process_addrs.rst:249 ../../../mm/process_addrs.rst:254
 msgid "mmap write, VMA write, i_mmap write."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:253
+#: ../../../mm/process_addrs.rst:254
 msgid ":c:member:`!shared.rb_subtree_last`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:253
+#: ../../../mm/process_addrs.rst:254
 msgid ""
 "Metadata used for management of the interval tree if the VMA is file-backed."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:255
+#: ../../../mm/process_addrs.rst:256
 msgid ":c:member:`!anon_vma_chain`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:255
+#: ../../../mm/process_addrs.rst:256
 msgid ""
 "List of pointers to both forked/CoW’d :c:type:`!anon_vma` objects and :c:"
 "member:`!vma->anon_vma` if it is non-:c:macro:`!NULL`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:255
+#: ../../../mm/process_addrs.rst:256
 msgid "mmap read, anon_vma write."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:259
+#: ../../../mm/process_addrs.rst:260
 msgid ":c:member:`!anon_vma`"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:259
+#: ../../../mm/process_addrs.rst:260
 msgid ""
 ":c:type:`!anon_vma` object used by anonymous folios mapped exclusively to "
 "this VMA. Initially set by :c:func:`!anon_vma_prepare` serialised by the :c:"
 "macro:`!page_table_lock`. This is set as soon as any page is faulted in."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:259
+#: ../../../mm/process_addrs.rst:260
 msgid ""
 "When :c:macro:`NULL` and setting non-:c:macro:`NULL`: mmap read, "
 "page_table_lock."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:263
+#: ../../../mm/process_addrs.rst:264
 msgid ""
 "When non-:c:macro:`NULL` and setting :c:macro:`NULL`: mmap write, VMA write, "
 "anon_vma write."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:269
+#: ../../../mm/process_addrs.rst:270
 msgid ""
 "These fields are used to both place the VMA within the reverse mapping, and "
 "for anonymous mappings, to be able to access both related :c:struct:`!struct "
@@ -647,18 +648,18 @@ msgid ""
 "mapped exclusively to this VMA should reside."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:274
+#: ../../../mm/process_addrs.rst:275
 msgid ""
 "If a file-backed mapping is mapped with :c:macro:`!MAP_PRIVATE` set then it "
 "can be in both the :c:type:`!anon_vma` and :c:type:`!i_mmap` trees at the "
 "same time, so all of these fields might be utilised at once."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:280
+#: ../../../mm/process_addrs.rst:281
 msgid "Page tables"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:282
+#: ../../../mm/process_addrs.rst:283
 msgid ""
 "We won't speak exhaustively on the subject but broadly speaking, page tables "
 "map virtual addresses to physical ones through a series of page tables, each "
@@ -669,14 +670,14 @@ msgid ""
 "provided by the virtual address itself."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:290
+#: ../../../mm/process_addrs.rst:291
 msgid ""
 "In Linux these are divided into five levels - PGD, P4D, PUD, PMD and PTE. "
 "Huge pages might eliminate one or two of these levels, but when this is the "
 "case we typically refer to the leaf level as the PTE level regardless."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:294
+#: ../../../mm/process_addrs.rst:295
 msgid ""
 "In instances where the architecture supports fewer page tables than five the "
 "kernel cleverly 'folds' page table levels, that is stubbing out functions "
@@ -685,11 +686,11 @@ msgid ""
 "eliminate any code relating to missing ones."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:301
+#: ../../../mm/process_addrs.rst:302
 msgid "There are four key operations typically performed on page tables:"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:303
+#: ../../../mm/process_addrs.rst:304
 msgid ""
 "**Traversing** page tables - Simply reading page tables in order to traverse "
 "them. This only requires that the VMA is kept stable, so a lock which "
@@ -699,7 +700,7 @@ msgid ""
 "consider separately below."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:309
+#: ../../../mm/process_addrs.rst:310
 msgid ""
 "**Installing** page table mappings - Whether creating a new mapping or "
 "modifying an existing one in such a way as to change its identity. This "
@@ -707,7 +708,7 @@ msgid ""
 "rmap locks)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:313
+#: ../../../mm/process_addrs.rst:314
 msgid ""
 "**Zapping/unmapping** page table entries - This is what the kernel calls "
 "clearing page table mappings at the leaf level only, whilst leaving all page "
@@ -718,7 +719,7 @@ msgid ""
 "need only be kept stable for this operation."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:320
+#: ../../../mm/process_addrs.rst:321
 msgid ""
 "**Freeing** page tables - When finally the kernel removes page tables from a "
 "userland process (typically via :c:func:`!free_pgtables`) extreme care must "
@@ -728,21 +729,21 @@ msgid ""
 "modifications within it)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:327
+#: ../../../mm/process_addrs.rst:328
 msgid ""
 "Modifying mappings for reclaim or migration is performed under rmap lock as "
 "it, like zapping, does not fundamentally modify the identity of what is "
 "being mapped."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:331
+#: ../../../mm/process_addrs.rst:332
 msgid ""
 "**Traversing** and **zapping** ranges can be performed holding any one of "
 "the locks described in the terminology section above - that is the mmap "
 "lock, the VMA lock or either of the reverse mapping locks."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:335
+#: ../../../mm/process_addrs.rst:336
 msgid ""
 "That is - as long as you keep the relevant VMA **stable** - you are good to "
 "go ahead and perform these operations on page tables (though internally, "
@@ -751,50 +752,50 @@ msgid ""
 "details)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:340
+#: ../../../mm/process_addrs.rst:341
 msgid ""
 "We free empty PTE tables on zap under the RCU lock - this does not change "
 "the aforementioned locking requirements around zapping."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:343
+#: ../../../mm/process_addrs.rst:344
 msgid ""
 "When **installing** page table entries, the mmap or VMA lock must be held to "
 "keep the VMA stable. We explore why this is in the page table locking "
 "details section below."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:347
+#: ../../../mm/process_addrs.rst:348
 msgid ""
 "**Freeing** page tables is an entirely internal memory management operation "
 "and has special requirements (see the page freeing section below for more "
 "details)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:350
+#: ../../../mm/process_addrs.rst:351
 msgid ""
 "When **freeing** page tables, it must not be possible for VMAs containing "
 "the ranges those page tables map to be accessible via the reverse mapping."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:354
+#: ../../../mm/process_addrs.rst:355
 msgid ""
 "The :c:func:`!free_pgtables` function removes the relevant VMAs from the "
 "reverse mappings, but no other VMAs can be permitted to be accessible and "
 "span the specified range."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:359
+#: ../../../mm/process_addrs.rst:360
 msgid "Traversing non-VMA page tables"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:361
+#: ../../../mm/process_addrs.rst:362
 msgid ""
 "We've focused above on traversal of page tables belonging to VMAs. It is "
 "also possible to traverse page tables which are not represented by VMAs."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:364
+#: ../../../mm/process_addrs.rst:365
 msgid ""
 "Kernel page table mappings themselves are generally managed but whatever "
 "part of the kernel established them and the aforementioned locking rules do "
@@ -802,7 +803,7 @@ msgid ""
 "for establishing and tearing down page its page tables."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:369
+#: ../../../mm/process_addrs.rst:370
 msgid ""
 "However, for convenience we provide the :c:func:`!"
 "walk_kernel_page_table_range` function which is synchronised via the mmap "
@@ -810,14 +811,14 @@ msgid ""
 "struct mm_struct` metadata object."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:373
+#: ../../../mm/process_addrs.rst:374
 msgid ""
 "If an operation requires exclusive access, a write lock is used, but if not, "
 "a read lock suffices - we assert only that at least a read lock has been "
 "acquired."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:376
+#: ../../../mm/process_addrs.rst:377
 msgid ""
 "Since, aside from vmalloc and memory hot plug, kernel page tables are not "
 "torn down all that often - this usually suffices, however any caller of this "
@@ -825,13 +826,13 @@ msgid ""
 "in advance."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:381
+#: ../../../mm/process_addrs.rst:382
 msgid ""
 "We also permit a truly unusual case is the traversal of non-VMA ranges in "
 "**userland** ranges, as provided for by :c:func:`!walk_page_range_debug`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:384
+#: ../../../mm/process_addrs.rst:385
 msgid ""
 "This has only one user - the general page table dumping logic (implemented "
 "in :c:macro:`!mm/ptdump.c`) - which seeks to expose all mappings for debug "
@@ -839,24 +840,24 @@ msgid ""
 "and are not backed by a VMA."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:389
+#: ../../../mm/process_addrs.rst:390
 msgid ""
 "We must take great care in this case, as the :c:func:`!munmap` "
 "implementation detaches VMAs under an mmap write lock before tearing down "
 "page tables under a downgraded mmap read lock."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:393
+#: ../../../mm/process_addrs.rst:394
 msgid ""
 "This means such an operation could race with this, and thus an mmap "
 "**write** lock is required."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:397
+#: ../../../mm/process_addrs.rst:398
 msgid "Lock ordering"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:399
+#: ../../../mm/process_addrs.rst:400
 msgid ""
 "As we have multiple locks across the kernel which may or may not be taken at "
 "the same time as explicit mm or VMA locks, we have to be wary of lock "
@@ -864,78 +865,78 @@ msgid ""
 "becomes very important."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:403
+#: ../../../mm/process_addrs.rst:404
 msgid ""
 "Lock inversion occurs when two threads need to acquire multiple locks, but "
 "in doing so inadvertently cause a mutual deadlock."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:406
+#: ../../../mm/process_addrs.rst:407
 msgid ""
 "For example, consider thread 1 which holds lock A and tries to acquire lock "
 "B, while thread 2 holds lock B and tries to acquire lock A."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:409
+#: ../../../mm/process_addrs.rst:410
 msgid ""
 "Both threads are now deadlocked on each other. However, had they attempted "
 "to acquire locks in the same order, one would have waited for the other to "
 "complete its work and no deadlock would have occurred."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:413
+#: ../../../mm/process_addrs.rst:414
 msgid ""
 "The opening comment in :c:macro:`!mm/rmap.c` describes in detail the "
 "required ordering of locks within memory management code:"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:439
+#: ../../../mm/process_addrs.rst:440
 msgid ""
 "There is also a file-system specific lock ordering comment located at the "
 "top of :c:macro:`!mm/filemap.c`:"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:489
+#: ../../../mm/process_addrs.rst:490
 msgid ""
 "Please check the current state of these comments which may have changed "
 "since the time of writing of this document."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:494
+#: ../../../mm/process_addrs.rst:495
 msgid "Locking Implementation Details"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:496
+#: ../../../mm/process_addrs.rst:497
 msgid ""
 "Locking rules for PTE-level page tables are very different from locking "
 "rules for page tables at other levels."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:500
+#: ../../../mm/process_addrs.rst:501
 msgid "Page table locking details"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:502
+#: ../../../mm/process_addrs.rst:503
 msgid ""
 "This section explores page table locking requirements for page tables "
 "encompassed by a VMA. See the above section on non-VMA page table traversal "
 "for details on how we handle that case."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:506
+#: ../../../mm/process_addrs.rst:507
 msgid ""
 "In addition to the locks described in the terminology section above, we have "
 "additional locks dedicated to page tables:"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:509
+#: ../../../mm/process_addrs.rst:510
 msgid ""
 "**Higher level page table locks** - Higher level page tables, that is PGD, "
 "P4D and PUD each make use of the process address space granularity :c:member:"
 "`!mm->page_table_lock` lock when modified."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:513
+#: ../../../mm/process_addrs.rst:514
 msgid ""
 "**Fine-grained page table locks** - PMDs and PTEs each have fine-grained "
 "locks either kept within the folios describing the page tables or allocated "
@@ -945,13 +946,13 @@ msgid ""
 "func:`!pte_offset_map_lock`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:520
+#: ../../../mm/process_addrs.rst:521
 msgid ""
 "These locks represent the minimum required to interact with each page table "
 "level, but there are further requirements."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:523
+#: ../../../mm/process_addrs.rst:524
 msgid ""
 "Importantly, note that on a **traversal** of page tables, sometimes no such "
 "locks are taken. However, at the PTE level, at least concurrent page table "
@@ -959,47 +960,47 @@ msgid ""
 "into high memory, see below."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:528
+#: ../../../mm/process_addrs.rst:529
 msgid ""
 "Whether care is taken on reading the page table entries depends on the "
 "architecture, see the section on atomicity below."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:532
+#: ../../../mm/process_addrs.rst:533
 msgid "Locking rules"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:534
+#: ../../../mm/process_addrs.rst:535
 msgid "We establish basic locking rules when interacting with page tables:"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:536
+#: ../../../mm/process_addrs.rst:537
 msgid ""
 "When changing a page table entry the page table lock for that page table "
 "**must** be held, except if you can safely assume nobody can access the page "
 "tables concurrently (such as on invocation of :c:func:`!free_pgtables`)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:539
+#: ../../../mm/process_addrs.rst:540
 msgid ""
 "Reads from and writes to page table entries must be *appropriately* atomic. "
 "See the section on atomicity below for details."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:541
+#: ../../../mm/process_addrs.rst:542
 msgid ""
 "Populating previously empty entries requires that the mmap or VMA locks are "
 "held (read or write), doing so with only rmap locks would be dangerous (see "
 "the warning below)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:544
+#: ../../../mm/process_addrs.rst:545
 msgid ""
 "As mentioned previously, zapping can be performed while simply keeping the "
 "VMA stable, that is holding any one of the mmap, VMA or rmap locks."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:547
+#: ../../../mm/process_addrs.rst:548
 msgid ""
 "Populating previously empty entries is dangerous as, when unmapping VMAs, :c:"
 "func:`!vms_clear_ptes` has a window of time between zapping (via :c:func:`!"
@@ -1011,25 +1012,25 @@ msgid ""
 "behaviour."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:557
+#: ../../../mm/process_addrs.rst:558
 msgid ""
 "There are additional rules applicable when moving page tables, which we "
 "discuss in the section on this topic below."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:560
+#: ../../../mm/process_addrs.rst:561
 msgid ""
 "PTE-level page tables are different from page tables at other levels, and "
 "there are extra requirements for accessing them:"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:563
+#: ../../../mm/process_addrs.rst:564
 msgid ""
 "On 32-bit architectures, they may be in high memory (meaning they need to be "
 "mapped into kernel memory to be accessible)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:565
+#: ../../../mm/process_addrs.rst:566
 msgid ""
 "When empty, they can be unlinked and RCU-freed while holding an mmap lock or "
 "rmap lock for reading in combination with the PTE and PMD page table locks. "
@@ -1047,7 +1048,7 @@ msgid ""
 "func:`!retract_page_tables` when handling :c:macro:`!MADV_COLLAPSE`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:581
+#: ../../../mm/process_addrs.rst:582
 msgid ""
 "To access PTE-level page tables, a helper like :c:func:`!"
 "pte_offset_map_lock` or :c:func:`!pte_offset_map` can be used depending on "
@@ -1056,11 +1057,11 @@ msgid ""
 "acquire the PTE lock. See the comment on :c:func:`!__pte_offset_map_lock`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:588
+#: ../../../mm/process_addrs.rst:589
 msgid "Atomicity"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:590
+#: ../../../mm/process_addrs.rst:591
 msgid ""
 "Regardless of page table locks, the MMU hardware concurrently updates "
 "accessed and dirty bits (perhaps more, depending on architecture). "
@@ -1069,14 +1070,14 @@ msgid ""
 "is reads) page tables, without even keeping the VMA stable at all."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:596
+#: ../../../mm/process_addrs.rst:597
 msgid ""
 "When performing a page table traversal and keeping the VMA stable, whether a "
 "read must be performed once and only once or not depends on the architecture "
 "(for instance x86-64 does not require any special precautions)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:600
+#: ../../../mm/process_addrs.rst:601
 msgid ""
 "If a write is being performed, or if a read informs whether a write takes "
 "place (on an installation of a page table entry say, for instance in :c:func:"
@@ -1085,7 +1086,7 @@ msgid ""
 "must retrieve page table entries once and only once."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:606
+#: ../../../mm/process_addrs.rst:607
 msgid ""
 "If we are reading page table entries, then we need only ensure that the "
 "compiler does not rearrange our loads. This is achieved via :c:func:`!"
@@ -1093,20 +1094,20 @@ msgid ""
 "pudp_get`, :c:func:`!pmdp_get`, and :c:func:`!ptep_get`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:611
+#: ../../../mm/process_addrs.rst:612
 msgid ""
 "Each of these uses :c:func:`!READ_ONCE` to guarantee that the compiler reads "
 "the page table entry only once."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:614
+#: ../../../mm/process_addrs.rst:615
 msgid ""
 "However, if we wish to manipulate an existing page table entry and care "
 "about the previously stored data, we must go further and use an hardware "
 "atomic operation as, for example, in :c:func:`!ptep_get_and_clear`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:618
+#: ../../../mm/process_addrs.rst:619
 msgid ""
 "Equally, operations that do not rely on the VMA being held stable, such as "
 "GUP-fast (see :c:func:`!gup_fast` and its various page table level handlers "
@@ -1115,14 +1116,14 @@ msgid ""
 "equivalent for higher level page table levels."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:624
+#: ../../../mm/process_addrs.rst:625
 msgid ""
 "Writes to page table entries must also be appropriately atomic, as "
 "established by :c:func:`!set_pXX` functions - :c:func:`!set_pgd`, :c:func:`!"
 "set_p4d`, :c:func:`!set_pud`, :c:func:`!set_pmd`, and :c:func:`!set_pte`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:628
+#: ../../../mm/process_addrs.rst:629
 msgid ""
 "Equally functions which clear page table entries must be appropriately "
 "atomic, as in :c:func:`!pXX_clear` functions - :c:func:`!pgd_clear`, :c:func:"
@@ -1130,18 +1131,18 @@ msgid ""
 "pte_clear`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:634
+#: ../../../mm/process_addrs.rst:635
 msgid "Page table installation"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:636
+#: ../../../mm/process_addrs.rst:637
 msgid ""
 "Page table installation is performed with the VMA held stable explicitly by "
 "an mmap or VMA lock in read or write mode (see the warning in the locking "
 "rules section for details as to why)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:640
+#: ../../../mm/process_addrs.rst:641
 msgid ""
 "When allocating a P4D, PUD or PMD and setting the relevant entry in the "
 "above PGD, P4D or PUD, the :c:member:`!mm->page_table_lock` must be held. "
@@ -1149,14 +1150,14 @@ msgid ""
 "func:`!__pmd_alloc` respectively."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:645
+#: ../../../mm/process_addrs.rst:646
 msgid ""
 ":c:func:`!__pmd_alloc` actually invokes :c:func:`!pud_lock` and :c:func:`!"
 "pud_lockptr` in turn, however at the time of writing it ultimately "
 "references the :c:member:`!mm->page_table_lock`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:649
+#: ../../../mm/process_addrs.rst:650
 msgid ""
 "Allocating a PTE will either use the :c:member:`!mm->page_table_lock` or, "
 "if :c:macro:`!USE_SPLIT_PMD_PTLOCKS` is defined, a lock embedded in the PMD "
@@ -1165,7 +1166,7 @@ msgid ""
 "func:`!__pte_alloc`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:655
+#: ../../../mm/process_addrs.rst:656
 msgid ""
 "Finally, modifying the contents of the PTE requires special treatment, as "
 "the PTE page table lock must be acquired whenever we want stable and "
@@ -1173,7 +1174,7 @@ msgid ""
 "to modify them."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:660
+#: ../../../mm/process_addrs.rst:661
 msgid ""
 "This is performed via :c:func:`!pte_offset_map_lock` which carefully checks "
 "to ensure that the PTE hasn't changed from under us, ultimately invoking :c:"
@@ -1182,14 +1183,14 @@ msgid ""
 "The lock must be released via :c:func:`!pte_unmap_unlock`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:666
+#: ../../../mm/process_addrs.rst:667
 msgid ""
 "There are some variants on this, such as :c:func:`!pte_offset_map_rw_nolock` "
 "when we know we hold the PTE stable but for brevity we do not explore this.  "
 "See the comment for :c:func:`!__pte_offset_map_lock` for more details."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:671
+#: ../../../mm/process_addrs.rst:672
 msgid ""
 "When modifying data in ranges we typically only wish to allocate higher page "
 "tables as necessary, using these locks to avoid races or overwriting "
@@ -1197,7 +1198,7 @@ msgid ""
 "page faulting or zapping)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:676
+#: ../../../mm/process_addrs.rst:677
 msgid ""
 "A typical pattern taken when traversing page table entries to install a new "
 "mapping is to optimistically determine whether the page table entry in the "
@@ -1205,13 +1206,13 @@ msgid ""
 "checking again to see if it was allocated underneath us."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:681
+#: ../../../mm/process_addrs.rst:682
 msgid ""
 "This allows for a traversal with page table locks only being taken when "
 "required. An example of this is :c:func:`!__pud_alloc`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:684
+#: ../../../mm/process_addrs.rst:685
 msgid ""
 "At the leaf page table, that is the PTE, we can't entirely rely on this "
 "pattern as we have separate PMD and PTE locks and a THP collapse for "
@@ -1219,7 +1220,7 @@ msgid ""
 "us."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:688
+#: ../../../mm/process_addrs.rst:689
 msgid ""
 "This is why :c:func:`!__pte_offset_map_lock` locklessly retrieves the PMD "
 "entry for the PTE, carefully checking it is as expected, before acquiring "
@@ -1227,29 +1228,29 @@ msgid ""
 "expected."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:692
+#: ../../../mm/process_addrs.rst:693
 msgid ""
 "If a THP collapse (or similar) were to occur then the lock on both pages "
 "would be acquired, so we can ensure this is prevented while the PTE lock is "
 "held."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:695
+#: ../../../mm/process_addrs.rst:696
 msgid "Installing entries this way ensures mutual exclusion on write."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:698
+#: ../../../mm/process_addrs.rst:699
 msgid "Page table freeing"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:700
+#: ../../../mm/process_addrs.rst:701
 msgid ""
 "Tearing down page tables themselves is something that requires significant "
 "care. There must be no way that page tables designated for removal can be "
 "traversed or referenced by concurrent tasks."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:704
+#: ../../../mm/process_addrs.rst:705
 msgid ""
 "It is insufficient to simply hold an mmap write lock and VMA lock (which "
 "will prevent racing faults, and rmap operations), as a file-backed mapping "
@@ -1257,42 +1258,42 @@ msgid ""
 "alone."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:708
+#: ../../../mm/process_addrs.rst:709
 msgid ""
 "As a result, no VMA which can be accessed via the reverse mapping (either "
 "through the :c:struct:`!struct anon_vma->rb_root` or the :c:member:`!struct "
 "address_space->i_mmap` interval trees) can have its page tables torn down."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:712
+#: ../../../mm/process_addrs.rst:713
 msgid ""
 "The operation is typically performed via :c:func:`!free_pgtables`, which "
 "assumes either the mmap write lock has been taken (as specified by its :c:"
 "member:`!mm_wr_locked` parameter), or that the VMA is already unreachable."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:716
+#: ../../../mm/process_addrs.rst:717
 msgid ""
 "It carefully removes the VMA from all reverse mappings, however it's "
 "important that no new ones overlap these or any route remain to permit "
 "access to addresses within the range whose page tables are being torn down."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:720
+#: ../../../mm/process_addrs.rst:721
 msgid ""
 "Additionally, it assumes that a zap has already been performed and steps "
 "have been taken to ensure that no further page table entries can be "
 "installed between the zap and the invocation of :c:func:`!free_pgtables`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:724
+#: ../../../mm/process_addrs.rst:725
 msgid ""
 "Since it is assumed that all such steps have been taken, page table entries "
 "are cleared without page table locks (in the :c:func:`!pgd_clear`, :c:func:`!"
 "p4d_clear`, :c:func:`!pud_clear`, and :c:func:`!pmd_clear` functions."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:728
+#: ../../../mm/process_addrs.rst:729
 msgid ""
 "It is possible for leaf page tables to be torn down independent of the page "
 "tables above it as is done by :c:func:`!retract_page_tables`, which is "
@@ -1300,24 +1301,24 @@ msgid ""
 "this level of care."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:734
+#: ../../../mm/process_addrs.rst:735
 msgid "Page table moving"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:736
+#: ../../../mm/process_addrs.rst:737
 msgid ""
 "Some functions manipulate page table levels above PMD (that is PUD, P4D and "
 "PGD page tables). Most notable of these is :c:func:`!mremap`, which is "
 "capable of moving higher level page tables."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:740
+#: ../../../mm/process_addrs.rst:741
 msgid ""
 "In these instances, it is required that **all** locks are taken, that is the "
 "mmap lock, the VMA lock and the relevant rmap locks."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:743
+#: ../../../mm/process_addrs.rst:744
 msgid ""
 "You can observe this in the :c:func:`!mremap` implementation in the "
 "functions :c:func:`!take_rmap_locks` and :c:func:`!drop_rmap_locks` which "
@@ -1325,21 +1326,21 @@ msgid ""
 "move_page_tables`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:748
+#: ../../../mm/process_addrs.rst:749
 msgid "VMA lock internals"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:751
+#: ../../../mm/process_addrs.rst:752
 msgid "Overview"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:753
+#: ../../../mm/process_addrs.rst:754
 msgid ""
 "VMA read locking is entirely optimistic - if the lock is contended or a "
 "competing write has started, then we do not obtain a read lock."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:756
+#: ../../../mm/process_addrs.rst:757
 msgid ""
 "A VMA **read** lock is obtained by :c:func:`!lock_vma_under_rcu`, which "
 "first calls :c:func:`!rcu_read_lock` to ensure that the VMA is looked up in "
@@ -1348,7 +1349,7 @@ msgid ""
 "rcu_read_unlock`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:761
+#: ../../../mm/process_addrs.rst:762
 msgid ""
 "In cases when the user already holds mmap read lock, :c:func:`!"
 "vma_start_read_locked` and :c:func:`!vma_start_read_locked_nested` can be "
@@ -1356,14 +1357,14 @@ msgid ""
 "should still check their return values in case they fail for other reasons."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:766
+#: ../../../mm/process_addrs.rst:767
 msgid ""
 "VMA read locks increment :c:member:`!vma.vm_refcnt` reference counter for "
 "their duration and the caller of :c:func:`!lock_vma_under_rcu` must drop it "
 "via :c:func:`!vma_end_read`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:770
+#: ../../../mm/process_addrs.rst:771
 msgid ""
 "VMA **write** locks are acquired via :c:func:`!vma_start_write` in instances "
 "where a VMA is about to be modified, unlike :c:func:`!vma_start_read` the "
@@ -1373,7 +1374,7 @@ msgid ""
 "function."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:776
+#: ../../../mm/process_addrs.rst:777
 msgid ""
 "Note that when write-locking a VMA lock, the :c:member:`!vma.vm_refcnt` is "
 "temporarily modified so that readers can detect the presense of a writer. "
@@ -1381,17 +1382,17 @@ msgid ""
 "serialisation is updated."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:780
+#: ../../../mm/process_addrs.rst:781
 msgid ""
 "This ensures the semantics we require - VMA write locks provide exclusive "
 "write access to the VMA."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:784
+#: ../../../mm/process_addrs.rst:785
 msgid "Implementation details"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:786
+#: ../../../mm/process_addrs.rst:787
 msgid ""
 "The VMA lock mechanism is designed to be a lightweight means of avoiding the "
 "use of the heavily contended mmap lock. It is implemented using a "
@@ -1399,7 +1400,7 @@ msgid ""
 "containing :c:struct:`!struct mm_struct` and the VMA."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:791
+#: ../../../mm/process_addrs.rst:792
 msgid ""
 "Read locks are acquired via :c:func:`!vma_start_read`, which is an "
 "optimistic operation, i.e. it tries to acquire a read lock but returns false "
@@ -1407,7 +1408,7 @@ msgid ""
 "vma_end_read` is called to release the VMA read lock."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:796
+#: ../../../mm/process_addrs.rst:797
 msgid ""
 "Invoking :c:func:`!vma_start_read` requires that :c:func:`!rcu_read_lock` "
 "has been called first, establishing that we are in an RCU critical section "
@@ -1416,7 +1417,7 @@ msgid ""
 "lock_vma_under_rcu` which is the interface a user should use."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:802
+#: ../../../mm/process_addrs.rst:803
 msgid ""
 "Writing requires the mmap to be write-locked and the VMA lock to be acquired "
 "via :c:func:`!vma_start_write`, however the write lock is released by the "
@@ -1424,21 +1425,21 @@ msgid ""
 "vma_end_write` is required."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:806
+#: ../../../mm/process_addrs.rst:807
 msgid ""
 "All this is achieved by the use of per-mm and per-VMA sequence counts, which "
 "are used in order to reduce complexity, especially for operations which "
 "write-lock multiple VMAs at once."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:810
+#: ../../../mm/process_addrs.rst:811
 msgid ""
 "If the mm sequence count, :c:member:`!mm->mm_lock_seq` is equal to the VMA "
 "sequence count :c:member:`!vma->vm_lock_seq` then the VMA is write-locked. "
 "If they differ, then it is not."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:814
+#: ../../../mm/process_addrs.rst:815
 msgid ""
 "Each time the mmap write lock is released in :c:func:`!mmap_write_unlock` "
 "or :c:func:`!mmap_write_downgrade`, :c:func:`!vma_end_write_all` is invoked "
@@ -1446,7 +1447,7 @@ msgid ""
 "mm_lock_seqcount_end`."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:819
+#: ../../../mm/process_addrs.rst:820
 msgid ""
 "This way, we ensure that, regardless of the VMA's sequence number, a write "
 "lock is never incorrectly indicated and that when we release an mmap write "
@@ -1454,7 +1455,7 @@ msgid ""
 "mmap at the same time."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:824
+#: ../../../mm/process_addrs.rst:825
 msgid ""
 "Since the mmap write lock is exclusive against others who hold it, the "
 "automatic release of any VMA locks on its release makes sense, as you would "
@@ -1462,28 +1463,28 @@ msgid ""
 "also maintains correct lock ordering."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:829
+#: ../../../mm/process_addrs.rst:830
 msgid ""
 "Each time a VMA read lock is acquired, we increment :c:member:`!vma."
 "vm_refcnt` reference counter and check that the sequence count of the VMA "
 "does not match that of the mm."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:833
+#: ../../../mm/process_addrs.rst:834
 msgid ""
 "If it does, the read lock fails and :c:member:`!vma.vm_refcnt` is dropped. "
 "If it does not, we keep the reference counter raised, excluding writers, but "
 "permitting other readers, who can also obtain this lock under RCU."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:837
+#: ../../../mm/process_addrs.rst:838
 msgid ""
 "Importantly, maple tree operations performed in :c:func:`!"
 "lock_vma_under_rcu` are also RCU safe, so the whole read lock operation is "
 "guaranteed to function correctly."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:841
+#: ../../../mm/process_addrs.rst:842
 msgid ""
 "On the write side, we set a bit in :c:member:`!vma.vm_refcnt` which can't be "
 "modified by readers and wait for all readers to drop their reference count. "
@@ -1491,13 +1492,13 @@ msgid ""
 "the mm. During this entire operation mmap write lock is held."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:846
+#: ../../../mm/process_addrs.rst:847
 msgid ""
 "This way, if any read locks are in effect, :c:func:`!vma_start_write` will "
 "sleep until these are finished and mutual exclusion is achieved."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:849
+#: ../../../mm/process_addrs.rst:850
 msgid ""
 "After setting the VMA's sequence number, the bit in :c:member:`!vma."
 "vm_refcnt` indicating a writer is cleared. From this point on, VMA's "
@@ -1505,25 +1506,25 @@ msgid ""
 "is dropped or downgraded."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:853
+#: ../../../mm/process_addrs.rst:854
 msgid ""
 "This clever combination of a reference counter and sequence count allows for "
 "fast RCU-based per-VMA lock acquisition (especially on page fault, though "
 "utilised elsewhere) with minimal complexity around lock ordering."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:858
+#: ../../../mm/process_addrs.rst:859
 msgid "mmap write lock downgrading"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:860
+#: ../../../mm/process_addrs.rst:861
 msgid ""
 "When an mmap write lock is held one has exclusive access to resources within "
 "the mmap (with the usual caveats about requiring VMA write locks to avoid "
 "races with tasks holding VMA read locks)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:864
+#: ../../../mm/process_addrs.rst:865
 msgid ""
 "It is then possible to **downgrade** from a write lock to a read lock via :c:"
 "func:`!mmap_write_downgrade` which, similar to :c:func:`!mmap_write_unlock`, "
@@ -1532,7 +1533,7 @@ msgid ""
 "therefore keeping the locked virtual address space stable."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:870
+#: ../../../mm/process_addrs.rst:871
 msgid ""
 "An interesting consequence of this is that downgraded locks are exclusive "
 "against any other task possessing a downgraded lock (since a racing task "
@@ -1541,34 +1542,82 @@ msgid ""
 "is released)."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:876
+#: ../../../mm/process_addrs.rst:877
 msgid ""
 "For clarity, we map read (R)/downgraded write (D)/write (W) locks against "
 "one another showing which locks exclude the others:"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:879
+#: ../../../mm/process_addrs.rst:880
 msgid "Lock exclusivity"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:886 ../../../mm/process_addrs.rst:892
+#: ../../../mm/process_addrs.rst:887 ../../../mm/process_addrs.rst:893
 msgid "D"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:901
+#: ../../../mm/process_addrs.rst:902
 msgid ""
 "Here a Y indicates the locks in the matching row/column are mutually "
 "exclusive, and N indicates that they are not."
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:905
+#: ../../../mm/process_addrs.rst:906
 msgid "Stack expansion"
 msgstr ""
 
-#: ../../../mm/process_addrs.rst:907
+#: ../../../mm/process_addrs.rst:908
 msgid ""
 "Stack expansion throws up additional complexities in that we cannot permit "
 "there to be racing page faults, as a result we invoke :c:func:`!"
 "vma_start_write` to prevent this in :c:func:`!expand_downwards` or :c:func:`!"
 "expand_upwards`."
+msgstr ""
+
+#: ../../../mm/process_addrs.rst:914
+msgid "Functions and structures"
+msgstr ""
+
+#: ../../../mm/process_addrs:916: ../include/linux/mmap_lock.h:217
+msgid "Begin writing to a VMA."
+msgstr ""
+
+#: ../../../mm/process_addrs:916: ../include/linux/mmap_lock.h:221
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../mm/process_addrs:916: ../include/linux/mmap_lock.h:223
+msgid "``struct vm_area_struct *vma``"
+msgstr ""
+
+#: ../../../mm/process_addrs:916: ../include/linux/mmap_lock.h:218
+msgid "The VMA we are going to modify."
+msgstr ""
+
+#: ../../../mm/process_addrs:916: ../include/linux/mmap_lock.h:220
+msgid "**Description**"
+msgstr ""
+
+#: ../../../mm/process_addrs:916: ../include/linux/mmap_lock.h:219
+msgid ""
+"Exclude concurrent readers under the per-VMA lock until the currently write-"
+"locked mmap_lock is dropped or downgraded."
+msgstr ""
+
+#: ../../../mm/process_addrs:916: ../include/linux/mmap_lock.h:222
+msgid "**Context**"
+msgstr ""
+
+#: ../../../mm/process_addrs:916: ../include/linux/mmap_lock.h:223
+msgid ""
+"May sleep while waiting for readers to drop the vma read lock. Caller must "
+"already hold the mmap_lock for write."
+msgstr ""
+
+#: ../../../mm/process_addrs:916: ../include/linux/mmap_lock.h:226
+msgid "**Return**"
+msgstr ""
+
+#: ../../../mm/process_addrs:916: ../include/linux/mmap_lock.h:226
+msgid "0 for a successful acquisition.  -EINTR if a fatal signal was received."
 msgstr ""
