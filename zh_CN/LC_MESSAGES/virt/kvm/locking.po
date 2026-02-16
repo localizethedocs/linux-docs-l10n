@@ -1,0 +1,522 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../virt/kvm/locking.rst:5
+msgid "KVM Lock Overview"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:8
+msgid "1. Acquisition Orders"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:10
+msgid "The acquisition orders for mutexes are as follows:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:12
+msgid "cpus_read_lock() is taken outside kvm_lock"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:14
+msgid "kvm_usage_lock is taken outside cpus_read_lock()"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:16
+msgid "kvm->lock is taken outside vcpu->mutex"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:18
+msgid "kvm->lock is taken outside kvm->slots_lock and kvm->irq_lock"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:20
+msgid ""
+"kvm->slots_lock is taken outside kvm->irq_lock, though acquiring them "
+"together is quite rare."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:23
+msgid ""
+"kvm->mn_active_invalidate_count ensures that pairs of "
+"invalidate_range_start() and invalidate_range_end() callbacks use the same "
+"memslots array.  kvm->slots_lock and kvm->slots_arch_lock are taken on the "
+"waiting side when modifying memslots, so MMU notifiers must not take either "
+"kvm->slots_lock or kvm->slots_arch_lock."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:29
+msgid "cpus_read_lock() vs kvm_lock:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:31
+msgid ""
+"Taking cpus_read_lock() outside of kvm_lock is problematic, despite that "
+"being the official ordering, as it is quite easy to unknowingly trigger "
+"cpus_read_lock() while holding kvm_lock.  Use caution when walking vm_list, "
+"e.g. avoid complex operations when possible."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:36
+msgid "For SRCU:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:38
+msgid ""
+"``synchronize_srcu(&kvm->srcu)`` is called inside critical sections for kvm-"
+">lock, vcpu->mutex and kvm->slots_lock.  These locks _cannot_ be taken "
+"inside a kvm->srcu read-side critical section; that is, the following is "
+"broken::"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:46
+msgid ""
+"kvm->slots_arch_lock instead is released before the call to "
+"``synchronize_srcu()``.  It _can_ therefore be taken inside a kvm->srcu read-"
+"side critical section, for example while processing a vmexit."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:51
+msgid "On x86:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:53
+msgid ""
+"vcpu->mutex is taken outside kvm->arch.hyperv.hv_lock and kvm->arch.xen."
+"xen_lock"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:55
+msgid ""
+"kvm->arch.mmu_lock is an rwlock; critical sections for kvm->arch."
+"tdp_mmu_pages_lock and kvm->arch.mmu_unsync_pages_lock must also take kvm-"
+">arch.mmu_lock"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:59
+msgid ""
+"Everything else is a leaf: no other lock is taken inside the critical "
+"sections."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:63
+msgid "2. Exception"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:65
+msgid "Fast page fault:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:67
+msgid ""
+"Fast page fault is the fast path which fixes the guest page fault out of the "
+"mmu-lock on x86. Currently, the page fault can be fast in one of the "
+"following two cases:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:71
+msgid ""
+"Access Tracking: The SPTE is not present, but it is marked for access "
+"tracking. That means we need to restore the saved R/X bits. This is "
+"described in more detail later below."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:75
+msgid ""
+"Write-Protection: The SPTE is present and the fault is caused by write-"
+"protect. That means we just need to change the W bit of the spte."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:78
+msgid ""
+"What we use to avoid all the races is the Host-writable bit and MMU-writable "
+"bit on the spte:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:81
+msgid ""
+"Host-writable means the gfn is writable in the host kernel page tables and "
+"in its KVM memslot."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:83
+msgid ""
+"MMU-writable means the gfn is writable in the guest's mmu and it is not "
+"write-protected by shadow page write-protection."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:86
+msgid ""
+"On fast page fault path, we will use cmpxchg to atomically set the spte W "
+"bit if spte.HOST_WRITEABLE = 1 and spte.WRITE_PROTECT = 1, to restore the "
+"saved R/X bits if for an access-traced spte, or both. This is safe because "
+"whenever changing these bits can be detected by cmpxchg."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:91
+msgid "But we need carefully check these cases:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:93
+msgid "The mapping from gfn to pfn"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:95
+msgid ""
+"The mapping from gfn to pfn may be changed since we can only ensure the pfn "
+"is not changed during cmpxchg. This is a ABA problem, for example, below "
+"case will happen:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:100 ../../../virt/kvm/locking.rst:158
+msgid "At the beginning::"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:107
+msgid "On fast page fault path:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:109 ../../../virt/kvm/locking.rst:163
+msgid "CPU 0:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:109 ../../../virt/kvm/locking.rst:163
+msgid "CPU 1:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:115
+msgid "pfn1 is swapped out::"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:119
+msgid "pfn1 is re-alloced for gfn2."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:121
+msgid "gpte is changed to point to gfn2 by the guest::"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:133
+msgid "We dirty-log for gfn1, that means gfn2 is lost in dirty-bitmap."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:135
+msgid ""
+"For direct sp, we can easily avoid it since the spte of direct sp is fixed "
+"to gfn.  For indirect sp, we disabled fast page fault for simplicity."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:138
+msgid ""
+"A solution for indirect sp could be to pin the gfn before the cmpxchg.  "
+"After the pinning:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:141
+msgid ""
+"We have held the refcount of pfn; that means the pfn can not be freed and be "
+"reused for another gfn."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:143
+msgid ""
+"The pfn is writable and therefore it cannot be shared between different gfns "
+"by KSM."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:146
+msgid "Then, we can ensure the dirty bitmaps is correctly set for a gfn."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:148
+msgid "Dirty bit tracking"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:150
+msgid ""
+"In the original code, the spte can be fast updated (non-atomically) if the "
+"spte is read-only and the Accessed bit has already been set since the "
+"Accessed bit and Dirty bit can not be lost."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:154
+msgid ""
+"But it is not true after fast page fault since the spte can be marked "
+"writable between reading spte and updating spte. Like below case:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:165
+msgid "In mmu_spte_update()::"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:175
+msgid "on fast page fault path::"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:179
+msgid "memory write on the spte::"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:196
+msgid "The Dirty bit is lost in this case."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:198
+msgid ""
+"In order to avoid this kind of issue, we always treat the spte as "
+"\"volatile\" if it can be updated out of mmu-lock [see "
+"spte_needs_atomic_update()]; it means the spte is always atomically updated "
+"in this case."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:202
+msgid "flush tlbs due to spte updated"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:204
+msgid ""
+"If the spte is updated from writable to read-only, we should flush all TLBs, "
+"otherwise rmap_write_protect will find a read-only spte, even though the "
+"writable spte might be cached on a CPU's TLB."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:208
+msgid ""
+"As mentioned before, the spte can be updated to writable out of mmu-lock on "
+"fast page fault path. In order to easily audit the path, we see if TLBs "
+"needing to be flushed caused this reason in mmu_spte_update() since this is "
+"a common function to update spte (present -> present)."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:213
+msgid ""
+"Since the spte is \"volatile\" if it can be updated out of mmu-lock, we "
+"always atomically update the spte and the race caused by fast page fault can "
+"be avoided. See the comments in spte_needs_atomic_update() and "
+"mmu_spte_update()."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:217
+msgid "Lockless Access Tracking:"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:219
+msgid ""
+"This is used for Intel CPUs that are using EPT but do not support the EPT A/"
+"D bits. In this case, PTEs are tagged as A/D disabled (using ignored bits), "
+"and when the KVM MMU notifier is called to track accesses to a page (via "
+"kvm_mmu_notifier_clear_flush_young), it marks the PTE not-present in "
+"hardware by clearing the RWX bits in the PTE and storing the original R & X "
+"bits in more unused/ignored bits. When the VM tries to access the page later "
+"on, a fault is generated and the fast page fault mechanism described above "
+"is used to atomically restore the PTE to a Present state. The W bit is not "
+"saved when the PTE is marked for access tracking and during restoration to "
+"the Present state, the W bit is set depending on whether or not it was a "
+"write access. If it wasn't, then the W bit will remain clear until a write "
+"access happens, at which time it will be set using the Dirty tracking "
+"mechanism described above."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:233
+msgid "3. Reference"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:236
+msgid "``kvm_lock``"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:0
+msgid "Type"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:238 ../../../virt/kvm/locking.rst:245
+#: ../../../virt/kvm/locking.rst:289 ../../../virt/kvm/locking.rst:311
+msgid "mutex"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:0
+msgid "Arch"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:239 ../../../virt/kvm/locking.rst:246
+#: ../../../virt/kvm/locking.rst:256 ../../../virt/kvm/locking.rst:271
+#: ../../../virt/kvm/locking.rst:278
+msgid "any"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:0
+msgid "Protects"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:240
+msgid "vm_list"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:243
+msgid "``kvm_usage_lock``"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:247
+msgid "kvm_usage_count"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:248
+msgid "hardware virtualization enable/disable"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:0
+msgid "Comment"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:249
+msgid ""
+"Exists to allow taking cpus_read_lock() while kvm_usage_count is protected, "
+"which simplifies the virtualization enabling logic."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:253
+msgid "``kvm->mn_invalidate_lock``"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:255 ../../../virt/kvm/locking.rst:298
+msgid "spinlock_t"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:257
+msgid "mn_active_invalidate_count, mn_memslots_update_rcuwait"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:260
+msgid "``kvm_arch::tsc_write_lock``"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:262
+msgid "raw_spinlock_t"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:263 ../../../virt/kvm/locking.rst:299
+#: ../../../virt/kvm/locking.rst:312
+msgid "x86"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:264
+msgid "kvm_arch::{last_tsc_write,last_tsc_nsec,last_tsc_offset}"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:265
+msgid "tsc offset in vmcb"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:266
+msgid "'raw' because updating the tsc offsets must not be preempted."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:269
+msgid "``kvm->mmu_lock``"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:270
+msgid "spinlock_t or rwlock_t"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:272
+msgid "-shadow page/shadow tlb entry"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:273
+msgid "it is a spinlock since it is used in mmu notifier."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:276
+msgid "``kvm->srcu``"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:277
+msgid "srcu lock"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:279
+msgid "kvm->memslots"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:280
+msgid "kvm->buses"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:281
+msgid ""
+"The srcu read lock must be held while accessing memslots (e.g. when using "
+"gfn_to_* functions) and while accessing in-kernel MMIO/PIO address->device "
+"structure mapping (kvm->buses). The srcu index can be stored in kvm_vcpu-"
+">srcu_idx per vcpu if it is needed by multiple functions."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:288
+msgid "``kvm->slots_arch_lock``"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:290
+msgid "any (only needed on x86 though)"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:291
+msgid ""
+"any arch-specific fields of memslots that have to be modified in a ``kvm-"
+">srcu`` read-side critical section."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:293
+msgid ""
+"must be held before reading the pointer to the current memslots, until after "
+"all changes to the memslots are complete"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:297
+msgid "``wakeup_vcpus_on_cpu_lock``"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:300
+msgid "wakeup_vcpus_on_cpu"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:301
+msgid ""
+"This is a per-CPU lock and it is used for VT-d posted-interrupts. When VT-d "
+"posted-interrupts are supported and the VM has assigned devices, we put the "
+"blocked vCPU on the list blocked_vcpu_on_cpu protected by "
+"blocked_vcpu_on_cpu_lock. When VT-d hardware issues wakeup notification "
+"event since external interrupts from the assigned devices happens, we will "
+"find the vCPU on the list to wakeup."
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:310
+msgid "``vendor_module_lock``"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:313
+msgid "loading a vendor module (kvm_amd or kvm_intel)"
+msgstr ""
+
+#: ../../../virt/kvm/locking.rst:314
+msgid ""
+"Exists because using kvm_lock leads to deadlock.  kvm_lock is taken in "
+"notifiers, e.g. __kvmclock_cpufreq_notifier(), that may be invoked while "
+"cpu_hotplug_lock is held, e.g. from cpufreq_boost_trigger_state(), and many "
+"operations need to take cpu_hotplug_lock when loading a vendor module, e.g. "
+"updating static calls."
+msgstr ""

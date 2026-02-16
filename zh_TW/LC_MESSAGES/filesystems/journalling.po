@@ -1,0 +1,2240 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-06 06:05+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../filesystems/journalling.rst:2
+msgid "The Linux Journalling API"
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:5
+msgid "Overview"
+msgstr "概覽"
+
+#: ../../../filesystems/journalling.rst:8
+msgid "Details"
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:10
+msgid ""
+"The journalling layer is easy to use. You need to first of all create a "
+"journal_t data structure. There are two calls to do this dependent on how "
+"you decide to allocate the physical media on which the journal resides. The "
+"jbd2_journal_init_inode() call is for journals stored in filesystem inodes, "
+"or the jbd2_journal_init_dev() call can be used for journal stored on a raw "
+"device (in a continuous range of blocks). A journal_t is a typedef for a "
+"struct pointer, so when you are finally finished make sure you call "
+"jbd2_journal_destroy() on it to free up any used kernel memory."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:20
+msgid ""
+"Once you have got your journal_t object you need to 'mount' or load the "
+"journal file. The journalling layer expects the space for the journal was "
+"already allocated and initialized properly by the userspace tools. When "
+"loading the journal you must call jbd2_journal_load() to process journal "
+"contents. If the client file system detects the journal contents does not "
+"need to be processed (or even need not have valid contents), it may call "
+"jbd2_journal_wipe() to clear the journal contents before calling "
+"jbd2_journal_load()."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:29
+msgid ""
+"Note that jbd2_journal_wipe(..,0) calls jbd2_journal_skip_recovery() for you "
+"if it detects any outstanding transactions in the journal and similarly "
+"jbd2_journal_load() will call jbd2_journal_recover() if necessary. I would "
+"advise reading ext4_load_journal() in fs/ext4/super.c for examples on this "
+"stage."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:35
+msgid ""
+"Now you can go ahead and start modifying the underlying filesystem. Almost."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:38
+msgid ""
+"You still need to actually journal your filesystem changes, this is done by "
+"wrapping them into transactions. Additionally you also need to wrap the "
+"modification of each of the buffers with calls to the journal layer, so it "
+"knows what the modifications you are actually making are. To do this use "
+"jbd2_journal_start() which returns a transaction handle."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:44
+msgid ""
+"jbd2_journal_start() and its counterpart jbd2_journal_stop(), which "
+"indicates the end of a transaction are nestable calls, so you can reenter a "
+"transaction if necessary, but remember you must call jbd2_journal_stop() the "
+"same number of times as jbd2_journal_start() before the transaction is "
+"completed (or more accurately leaves the update phase). Ext4/VFS makes use "
+"of this feature to simplify handling of inode dirtying, quota support, etc."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:52
+msgid ""
+"Inside each transaction you need to wrap the modifications to the individual "
+"buffers (blocks). Before you start to modify a buffer you need to call "
+"jbd2_journal_get_create_access() / jbd2_journal_get_write_access() / "
+"jbd2_journal_get_undo_access() as appropriate, this allows the journalling "
+"layer to copy the unmodified data if it needs to. After all the buffer may "
+"be part of a previously uncommitted transaction. At this point you are at "
+"last ready to modify a buffer, and once you are have done so you need to "
+"call jbd2_journal_dirty_metadata(). Or if you've asked for access to a "
+"buffer you now know is now longer required to be pushed back on the device "
+"you can call jbd2_journal_forget() in much the same way as you might have "
+"used bforget() in the past."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:66
+msgid ""
+"A jbd2_journal_flush() may be called at any time to commit and checkpoint "
+"all your transactions."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:69
+msgid ""
+"Then at umount time , in your put_super() you can then call "
+"jbd2_journal_destroy() to clean up your in-core journal object."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:72
+msgid ""
+"Unfortunately there a couple of ways the journal layer can cause a deadlock. "
+"The first thing to note is that each task can only have a single outstanding "
+"transaction at any one time, remember nothing commits until the outermost "
+"jbd2_journal_stop(). This means you must complete the transaction at the end "
+"of each file/inode/address etc. operation you perform, so that the "
+"journalling system isn't re-entered on another journal. Since transactions "
+"can't be nested/batched across differing journals, and another filesystem "
+"other than yours (say ext4) may be modified in a later syscall."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:82
+msgid ""
+"The second case to bear in mind is that jbd2_journal_start() can block if "
+"there isn't enough space in the journal for your transaction (based on the "
+"passed nblocks param) - when it blocks it merely(!) needs to wait for "
+"transactions to complete and be committed from other tasks, so essentially "
+"we are waiting for jbd2_journal_stop(). So to avoid deadlocks you must treat "
+"jbd2_journal_start() / jbd2_journal_stop() as if they were semaphores and "
+"include them in your semaphore ordering rules to prevent deadlocks. Note "
+"that jbd2_journal_extend() has similar blocking behaviour to "
+"jbd2_journal_start() so you can deadlock here just as easily as on "
+"jbd2_journal_start()."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:94
+msgid ""
+"Try to reserve the right number of blocks the first time. ;-). This will be "
+"the maximum number of blocks you are going to touch in this transaction. I "
+"advise having a look at at least ext4_jbd.h to see the basis on which ext4 "
+"uses to make these decisions."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:99
+msgid ""
+"Another wriggle to watch out for is your on-disk block allocation strategy. "
+"Why? Because, if you do a delete, you need to ensure you haven't reused any "
+"of the freed blocks until the transaction freeing these blocks commits. If "
+"you reused these blocks and crash happens, there is no way to restore the "
+"contents of the reallocated blocks at the end of the last fully committed "
+"transaction. One simple way of doing this is to mark blocks as free in "
+"internal in-memory block allocation structures only after the transaction "
+"freeing them commits. Ext4 uses journal commit callback for this purpose."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:109
+msgid ""
+"With journal commit callbacks you can ask the journalling layer to call a "
+"callback function when the transaction is finally committed to disk, so that "
+"you can do some of your own management. You ask the journalling layer for "
+"calling the callback by simply setting ``journal->j_commit_callback`` "
+"function pointer and that function is called after each transaction commit."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:116
+msgid ""
+"JBD2 also provides a way to block all transaction updates via "
+"jbd2_journal_lock_updates() / jbd2_journal_unlock_updates(). Ext4 uses this "
+"when it wants a window with a clean and stable fs for a moment. E.g."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:129
+msgid ""
+"The opportunities for abuse and DOS attacks with this should be obvious, if "
+"you allow unprivileged userspace to trigger codepaths containing these calls."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:134
+msgid "Fast commits"
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:136
+msgid ""
+"JBD2 to also allows you to perform file-system specific delta commits known "
+"as fast commits. In order to use fast commits, you will need to set "
+"following callbacks that perform corresponding work:"
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:140
+msgid ""
+"`journal->j_fc_cleanup_cb`: Cleanup function called after every full commit "
+"and fast commit."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:143
+msgid ""
+"`journal->j_fc_replay_cb`: Replay function called for replay of fast commit "
+"blocks."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:146
+msgid ""
+"File system is free to perform fast commits as and when it wants as long as "
+"it gets permission from JBD2 to do so by calling the function :c:func:"
+"`jbd2_fc_begin_commit()`. Once a fast commit is done, the client file  "
+"system should tell JBD2 about it by calling :c:func:`jbd2_fc_end_commit()`. "
+"If the file system wants JBD2 to perform a full commit immediately after "
+"stopping the fast commit it can do so by calling :c:func:"
+"`jbd2_fc_end_commit_fallback()`. This is useful if fast commit operation "
+"fails for some reason and the only way to guarantee consistency is for JBD2 "
+"to perform the full traditional commit."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:156
+msgid ""
+"JBD2 helper functions to manage fast commit buffers. File system can use :c:"
+"func:`jbd2_fc_get_buf()` and :c:func:`jbd2_fc_wait_bufs()` to allocate and "
+"wait on IO completion of fast commit buffers."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:160
+msgid ""
+"Currently, only Ext4 implements fast commits. For details of its "
+"implementation of fast commits, please refer to the top level comments in fs/"
+"ext4/fast_commit.c."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:165
+msgid "Summary"
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:167
+msgid ""
+"Using the journal is a matter of wrapping the different context changes, "
+"being each mount, each modification (transaction) and each changed buffer to "
+"tell the journalling layer about them."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:172
+msgid "Data Types"
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:174
+msgid ""
+"The journalling layer uses typedefs to 'hide' the concrete definitions of "
+"the structures used. As a client of the JBD2 layer you can just rely on the "
+"using the pointer as a magic cookie of some sort. Obviously the hiding is "
+"not enforced as this is 'C'."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:180
+msgid "Structures"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:75
+msgid ""
+"The handle_t type represents a single atomic update being performed by some "
+"process."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:77
+#: ../include/linux/jbd2.h:97 ../../../filesystems/journalling:194:
+#: ../fs/jbd2/journal.c:536 ../fs/jbd2/journal.c:551 ../fs/jbd2/journal.c:1638
+#: ../fs/jbd2/journal.c:1664 ../fs/jbd2/journal.c:2038
+#: ../fs/jbd2/journal.c:2061 ../fs/jbd2/journal.c:2114
+#: ../fs/jbd2/journal.c:2208 ../fs/jbd2/journal.c:2239
+#: ../fs/jbd2/journal.c:2294 ../fs/jbd2/journal.c:2412
+#: ../fs/jbd2/journal.c:2496 ../fs/jbd2/journal.c:2533
+#: ../fs/jbd2/journal.c:2622 ../fs/jbd2/journal.c:2646
+#: ../fs/jbd2/journal.c:2666 ../../../filesystems/journalling:197:
+#: ../fs/jbd2/recovery.c:274 ../fs/jbd2/recovery.c:351
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:524
+#: ../fs/jbd2/transaction.c:572 ../fs/jbd2/transaction.c:626
+#: ../fs/jbd2/transaction.c:749 ../fs/jbd2/transaction.c:853
+#: ../fs/jbd2/transaction.c:892 ../fs/jbd2/transaction.c:1208
+#: ../fs/jbd2/transaction.c:1265 ../fs/jbd2/transaction.c:1355
+#: ../fs/jbd2/transaction.c:1431 ../fs/jbd2/transaction.c:1473
+#: ../fs/jbd2/transaction.c:1652 ../fs/jbd2/transaction.c:1824
+#: ../fs/jbd2/transaction.c:2099 ../fs/jbd2/transaction.c:2424
+msgid "**Description**"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:76
+msgid ""
+"All filesystem modifications made by the process go through this handle.  "
+"Recursive operations (such as quota operations) are gathered into a single "
+"update."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:80
+msgid ""
+"The buffer credits field is used to account for journaled buffers being "
+"modified by the running process.  To ensure that there is enough log space "
+"for all outstanding operations, we need to limit the number of outstanding "
+"buffers possible at any time.  When the operation completes, any buffer "
+"credits not used are credited back to the transaction, so that at all times "
+"we know how many buffers the outstanding updates on a transaction might "
+"possibly touch."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:88
+#: ../include/linux/jbd2.h:102
+msgid "This is an opaque datatype."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:95
+msgid ""
+"The journal_t maintains all of the journaling state information for a single "
+"filesystem."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:96
+msgid "journal_t is linked to from the fs superblock structure."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:98
+msgid ""
+"We use the journal_t to keep track of all outstanding transaction activity "
+"on the filesystem, and to manage the state of the log writing process."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:394
+msgid ""
+"The jbd_inode type is the structure linking inodes in ordered mode present "
+"in a transaction so that we can sync them during commit."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:398
+#: ../include/linux/jbd2.h:455 ../include/linux/jbd2.h:743
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:410
+#: ../include/linux/jbd2.h:478 ../include/linux/jbd2.h:826
+msgid "**Members**"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:399
+msgid "``i_transaction``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:400
+msgid ""
+"Which transaction does this inode belong to? Either the running transaction "
+"or the committing one. [j_list_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:407
+msgid "``i_next_transaction``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:408
+msgid ""
+"Pointer to the running transaction modifying inode's data in case there is "
+"already a committing transaction touching it. [j_list_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:415
+msgid "``i_list``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:416
+msgid "List of inodes in the i_transaction [j_list_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:420
+msgid "``i_vfs_inode``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:421
+msgid "VFS inode this inode belongs to [constant for lifetime of structure]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:427
+msgid "``i_flags``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:428
+msgid "Flags of inode [j_list_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:432
+msgid "``i_dirty_start``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:433
+msgid ""
+"Offset in bytes where the dirty range for this inode starts. [j_list_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:440
+msgid "``i_dirty_end``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:441
+msgid ""
+"Inclusive offset in bytes where the dirty range for this inode ends. "
+"[j_list_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:451
+msgid ""
+"The jbd2_journal_handle type is the concrete type associated with handle_t."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1
+msgid "``{unnamed_union}``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:2
+msgid "anonymous"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:453
+msgid "``h_transaction``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:454
+msgid "Which compound transaction is this update a part of?"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:454
+msgid "``h_journal``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:455
+msgid "Which journal handle belongs to - used iff h_reserved set."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:455
+msgid "``h_rsv_handle``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:456
+msgid "Handle reserved for finishing the logical operation."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:456
+msgid "``h_total_credits``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:457
+msgid ""
+"Number of remaining buffers we are allowed to add to journal. These are "
+"dirty buffers and revoke descriptor blocks."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:458
+msgid "``h_revoke_credits``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:459
+msgid "Number of remaining revoke records available for handle"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:468
+msgid "``h_revoke_credits_requested``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:469
+msgid "Holds **h_revoke_credits** after handle is started."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:459
+msgid "``h_ref``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:460
+msgid "Reference count on this handle."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:460
+msgid "``h_err``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:461
+msgid "Field for caller's use to track errors through large fs operations."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:461
+msgid "``h_sync``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:462
+msgid "Flag for sync-on-close."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:462
+msgid "``h_reserved``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:463
+msgid "Flag for handle for reserved credits."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:463
+msgid "``h_aborted``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:464
+msgid "Flag indicating fatal error on handle."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:464
+msgid "``h_type``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:465
+#: ../include/linux/jbd2.h:466
+msgid "For handle statistics."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:465
+msgid "``h_line_no``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:466
+msgid "``h_start_jiffies``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:467
+msgid "Handle Start time."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:467
+msgid "``h_requested_credits``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:468
+msgid "Holds **h_total_credits** after handle is started."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:469
+msgid "``saved_alloc_context``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:470
+msgid "Saved context while transaction is open."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:739
+msgid "The journal_s type is the concrete type associated with journal_t."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:745
+msgid "``j_flags``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:746
+msgid ""
+"General journaling state flags [j_state_lock, no lock for quick racy checks]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:751
+msgid "``j_errno``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:752
+msgid ""
+"Is there an outstanding uncleared error on the journal (from a prior abort)? "
+"[j_state_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:759
+msgid "``j_abort_mutex``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:760
+msgid "Lock the whole aborting procedure."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:764
+msgid "``j_sb_buffer``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:765
+msgid "The first part of the superblock buffer."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:769
+msgid "``j_superblock``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:770
+msgid "The second part of the superblock buffer."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:774
+msgid "``j_state_lock``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:775
+msgid "Protect the various scalars in the journal."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:779
+msgid "``j_barrier_count``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:780
+msgid ""
+"Number of processes waiting to create a barrier lock [j_state_lock, no lock "
+"for quick racy checks]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:787
+msgid "``j_barrier``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:788
+msgid "The barrier lock itself."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:792
+msgid "``j_running_transaction``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:793
+msgid ""
+"Transactions: The current running transaction... [j_state_lock, no lock for "
+"quick racy checks] [caller holding open handle]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:801
+msgid "``j_committing_transaction``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:802
+msgid ""
+"the transaction we are pushing to disk [j_state_lock] [caller holding open "
+"handle]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:809
+msgid "``j_checkpoint_transactions``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:810
+msgid ""
+"... and a linked circular list of all transactions waiting for "
+"checkpointing. [j_list_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:817
+msgid "``j_wait_transaction_locked``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:818
+msgid ""
+"Wait queue for waiting for a locked transaction to start committing, or for "
+"a barrier lock to be released."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:825
+msgid "``j_wait_done_commit``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:826
+msgid "Wait queue for waiting for commit to complete."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:830
+msgid "``j_wait_commit``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:831
+msgid "Wait queue to trigger commit."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:835
+msgid "``j_wait_updates``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:836
+msgid "Wait queue to wait for updates to complete."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:840
+msgid "``j_wait_reserved``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:841
+msgid "Wait queue to wait for reserved buffer credits to drop."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:847
+msgid "``j_fc_wait``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:848
+msgid "Wait queue to wait for completion of async fast commits."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:854
+msgid "``j_checkpoint_mutex``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:855
+msgid "Semaphore for locking against concurrent checkpoints."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:861
+msgid "``j_chkpt_bhs``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:862
+msgid ""
+"List of buffer heads used by the checkpoint routine.  This was moved from "
+"jbd2_log_do_checkpoint() to reduce stack usage.  Access to this array is "
+"controlled by the **j_checkpoint_mutex**.  [j_checkpoint_mutex]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:871
+msgid "``j_shrinker``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:872
+msgid ""
+"Journal head shrinker, reclaim buffer's journal head which has been written "
+"back."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:879
+msgid "``j_checkpoint_jh_count``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:880
+msgid "Number of journal buffers on the checkpoint list. [j_list_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:886
+msgid "``j_shrink_transaction``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:887
+msgid ""
+"Record next transaction will shrink on the checkpoint list. [j_list_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:894
+msgid "``j_head``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:895
+msgid ""
+"Journal head: identifies the first unused block in the journal. "
+"[j_state_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:902
+msgid "``j_tail``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:903
+msgid ""
+"Journal tail: identifies the oldest still-used block in the journal. "
+"[j_state_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:910
+msgid "``j_free``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:911
+msgid ""
+"Journal free: how many free blocks are there in the journal? [j_state_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:918
+msgid "``j_first``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:919
+msgid ""
+"The block number of the first usable block in the journal [j_state_lock]."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:926
+msgid "``j_last``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:927
+msgid ""
+"The block number one beyond the last usable block in the journal "
+"[j_state_lock]."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:934
+msgid "``j_fc_first``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:935
+msgid ""
+"The block number of the first fast commit block in the journal "
+"[j_state_lock]."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:942
+msgid "``j_fc_off``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:943
+msgid ""
+"Number of fast commit blocks currently allocated. Accessed only during fast "
+"commit. Currently only process can do fast commit, so this field is not "
+"protected by any lock."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:951
+msgid "``j_fc_last``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:952
+msgid ""
+"The block number one beyond the last fast commit block in the journal "
+"[j_state_lock]."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:959
+msgid "``j_dev``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:960
+msgid "Device where we store the journal."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:964
+msgid "``j_blocksize``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:965
+msgid "Block size for the location where we store the journal."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:969
+msgid "``j_blk_offset``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:970
+msgid "Starting block offset into the device where we store the journal."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:976
+msgid "``j_devname``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:977
+msgid "Journal device name."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:981
+msgid "``j_fs_dev``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:982
+msgid ""
+"Device which holds the client fs.  For internal journal this will be equal "
+"to j_dev."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:989
+msgid "``j_fs_dev_wb_err``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:990
+msgid "Records the errseq of the client fs's backing block device."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:996
+msgid "``j_total_len``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:997
+msgid "Total maximum capacity of the journal region on disk."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1001
+msgid "``j_reserved_credits``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1002
+msgid "Number of buffers reserved from the running transaction."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1008
+msgid "``j_list_lock``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1009
+msgid "Protects the buffer lists and internal buffer state."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1013
+msgid "``j_inode``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1014
+msgid ""
+"Optional inode where we store the journal.  If present, all journal block "
+"numbers are mapped into this inode via bmap()."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1021
+msgid "``j_tail_sequence``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1022
+msgid "Sequence number of the oldest transaction in the log [j_state_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1028
+msgid "``j_transaction_sequence``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1029
+msgid "Sequence number of the next transaction to grant [j_state_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1035
+msgid "``j_commit_sequence``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1036
+msgid ""
+"Sequence number of the most recently committed transaction [j_state_lock, no "
+"lock for quick racy checks]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1043
+msgid "``j_commit_request``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1044
+msgid ""
+"Sequence number of the most recent transaction wanting commit [j_state_lock, "
+"no lock for quick racy checks]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1051
+msgid "``j_uuid``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1052
+msgid ""
+"Journal uuid: identifies the object (filesystem, LVM volume etc) backed by "
+"this journal.  This will eventually be replaced by an array of uuids, "
+"allowing us to index multiple devices within a single journal and to perform "
+"atomic updates across them."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1061
+msgid "``j_task``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1062
+msgid "Pointer to the current commit thread for this journal."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1066
+msgid "``j_max_transaction_buffers``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1067
+msgid ""
+"Maximum number of metadata buffers to allow in a single compound commit "
+"transaction."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1074
+msgid "``j_revoke_records_per_block``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1075
+msgid "Number of revoke records that fit in one descriptor block."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1081
+msgid "``j_transaction_overhead_buffers``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1082
+msgid "Number of blocks each transaction needs for its own bookkeeping"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1088
+msgid "``j_commit_interval``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1089
+msgid "What is the maximum transaction lifetime before we begin a commit?"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1095
+msgid "``j_commit_timer``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1096
+msgid "The timer used to wakeup the commit thread."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1100
+msgid "``j_revoke_lock``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1101
+msgid "Protect the revoke table."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1105
+msgid "``j_revoke``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1106
+msgid ""
+"The revoke table - maintains the list of revoked blocks in the current "
+"transaction."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1113
+msgid "``j_revoke_table``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1114
+msgid "Alternate revoke tables for j_revoke."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1118
+msgid "``j_wbuf``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1119
+msgid "Array of bhs for jbd2_journal_commit_transaction."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1123
+msgid "``j_fc_wbuf``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1124
+msgid ""
+"Array of fast commit bhs for fast commit. Accessed only during a fast "
+"commit. Currently only process can do fast commit, so this field is not "
+"protected by any lock."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1130
+msgid "``j_wbufsize``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1131
+msgid "Size of **j_wbuf** array."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1137
+msgid "``j_fc_wbufsize``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1138
+msgid "Size of **j_fc_wbuf** array."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1144
+msgid "``j_last_sync_writer``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1145
+msgid ""
+"The pid of the last person to run a synchronous operation through the "
+"journal."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1152
+msgid "``j_average_commit_time``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1153
+msgid ""
+"The average amount of time in nanoseconds it takes to commit a transaction "
+"to disk. [j_state_lock]"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1160
+msgid "``j_min_batch_time``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1161
+msgid ""
+"Minimum time that we should wait for additional filesystem operations to get "
+"batched into a synchronous handle in microseconds."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1168
+msgid "``j_max_batch_time``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1169
+msgid ""
+"Maximum time that we should wait for additional filesystem operations to get "
+"batched into a synchronous handle in microseconds."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1176
+msgid "``j_commit_callback``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1177
+msgid "This function is called when a transaction is closed."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1184
+msgid "``j_submit_inode_data_buffers``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1185
+msgid ""
+"This function is called for all inodes associated with the committing "
+"transaction marked with JI_WRITE_DATA flag before we start to write out the "
+"transaction to the journal."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1194
+msgid "``j_finish_inode_data_buffers``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1195
+msgid ""
+"This function is called for all inodes associated with the committing "
+"transaction marked with JI_WAIT_DATA flag after we have written the "
+"transaction to the journal but before we write out the commit block."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1209
+msgid "``j_history_lock``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1210
+msgid "Protect the transactions statistics history."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1214
+msgid "``j_proc_entry``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1215
+msgid "procfs entry for the jbd statistics directory."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1219
+msgid "``j_stats``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1220
+msgid "Overall statistics."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1224
+msgid "``j_failed_commit``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1225
+msgid "Failed journal commit ID."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1229
+msgid "``j_private``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1230
+msgid ""
+"An opaque pointer to fs-private information.  ext3 puts its superblock "
+"pointer here."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1237
+msgid "``j_csum_seed``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1238
+msgid "Precomputed journal UUID checksum for seeding other checksums."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1245
+msgid "``j_trans_commit_map``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1246
+msgid ""
+"Lockdep entity to track transaction commit dependencies. Handles hold this "
+"\"lock\" for read, when we wait for commit, we acquire the \"lock\" for "
+"writing. This matches the properties of jbd2 journalling where the running "
+"transaction has to wait for all handles to be dropped to commit that "
+"transaction and also acquiring a handle may require transaction commit to "
+"finish."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1257
+msgid "``jbd2_trans_commit_key``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1258
+msgid "\"struct lock_class_key\" for **j_trans_commit_map**"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1264
+msgid "``j_fc_cleanup_callback``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1265
+msgid ""
+"Clean-up after fast commit or full commit. JBD2 calls this function after "
+"every commit operation."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1272
+msgid "``j_fc_replay_callback``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1273
+msgid ""
+"File-system specific function that performs replay of a fast commit. JBD2 "
+"calls this function for each fast commit block found in the journal. This "
+"function should return JBD2_FC_REPLAY_CONTINUE to indicate that the block "
+"was processed correctly and more fast commit replay should continue. Return "
+"value of JBD2_FC_REPLAY_STOP indicates the end of replay (no more blocks "
+"remaining). A negative return value indicates error."
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1288
+msgid "``j_bmap``"
+msgstr ""
+
+#: ../../../filesystems/journalling:182: ../include/linux/jbd2.h:1289
+msgid ""
+"Bmap function that should be used instead of the generic VFS bmap function."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:186
+msgid "Functions"
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:188
+msgid ""
+"The functions here are split into two groups those that affect a journal as "
+"a whole, and those which are used to manage transactions"
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:192
+msgid "Journal Level"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:530
+msgid ""
+"Force and wait upon a commit if the calling process is not within "
+"transaction."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:534
+#: ../fs/jbd2/journal.c:552 ../fs/jbd2/journal.c:1633 ../fs/jbd2/journal.c:1665
+#: ../fs/jbd2/journal.c:2039 ../fs/jbd2/journal.c:2062
+#: ../fs/jbd2/journal.c:2115 ../fs/jbd2/journal.c:2206
+#: ../fs/jbd2/journal.c:2237 ../fs/jbd2/journal.c:2292
+#: ../fs/jbd2/journal.c:2412 ../fs/jbd2/journal.c:2496
+#: ../fs/jbd2/journal.c:2532 ../fs/jbd2/journal.c:2623
+#: ../fs/jbd2/journal.c:2647 ../fs/jbd2/journal.c:2667
+#: ../../../filesystems/journalling:197: ../fs/jbd2/recovery.c:275
+#: ../fs/jbd2/recovery.c:352 ../../../filesystems/journalling:203:
+#: ../fs/jbd2/transaction.c:524 ../fs/jbd2/transaction.c:571
+#: ../fs/jbd2/transaction.c:625 ../fs/jbd2/transaction.c:747
+#: ../fs/jbd2/transaction.c:854 ../fs/jbd2/transaction.c:893
+#: ../fs/jbd2/transaction.c:1205 ../fs/jbd2/transaction.c:1265
+#: ../fs/jbd2/transaction.c:1354 ../fs/jbd2/transaction.c:1431
+#: ../fs/jbd2/transaction.c:1473 ../fs/jbd2/transaction.c:1652
+#: ../fs/jbd2/transaction.c:1825 ../fs/jbd2/transaction.c:2099
+#: ../fs/jbd2/transaction.c:2422
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:536
+#: ../fs/jbd2/journal.c:554 ../fs/jbd2/journal.c:2041 ../fs/jbd2/journal.c:2064
+#: ../fs/jbd2/journal.c:2117 ../fs/jbd2/journal.c:2208
+#: ../fs/jbd2/journal.c:2239 ../fs/jbd2/journal.c:2294
+#: ../fs/jbd2/journal.c:2414 ../fs/jbd2/journal.c:2498
+#: ../fs/jbd2/journal.c:2534 ../fs/jbd2/journal.c:2625
+#: ../fs/jbd2/journal.c:2649 ../fs/jbd2/journal.c:2669
+#: ../../../filesystems/journalling:197: ../fs/jbd2/recovery.c:277
+#: ../fs/jbd2/recovery.c:354 ../../../filesystems/journalling:203:
+#: ../fs/jbd2/transaction.c:526 ../fs/jbd2/transaction.c:856
+#: ../fs/jbd2/transaction.c:895 ../fs/jbd2/transaction.c:2101
+#: ../fs/jbd2/transaction.c:2424
+msgid "``journal_t *journal``"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:533
+msgid "journal to force Returns true if progress was made."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:535
+msgid ""
+"This is used for forcing out undo-protected data which contains bitmaps, "
+"when the fs is running out of space."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:548
+msgid "force any uncommitted transactions"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:549
+msgid "journal to force"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:550
+msgid ""
+"Caller want unconditional commit. We can only force the running transaction "
+"if we don't have an active handle, otherwise, we will deadlock."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1629
+msgid "creates and initialises a journal structure"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1635
+msgid "``struct block_device *bdev``"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1630
+msgid "Block device on which to create the journal"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1632
+msgid "``struct block_device *fs_dev``"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1631
+msgid "Device which hold journalled filesystem for this journal."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1633
+msgid "``unsigned long long start``"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1632
+msgid "Block nr Start of journal."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1634
+msgid "``int len``"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1633
+msgid "Length of the journal in blocks."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1635
+msgid "``int blocksize``"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1634
+msgid "blocksize of journalling device"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1636
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1206
+msgid "**Return**"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1636
+msgid "a newly created journal_t *"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1637
+msgid ""
+"jbd2_journal_init_dev creates a journal which maps a fixed contiguous range "
+"of blocks on an arbitrary block device."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1661
+msgid "creates a journal which maps to a inode."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1667
+msgid "``struct inode *inode``"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1662
+msgid "An inode to create the journal in"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:1663
+msgid ""
+"jbd2_journal_init_inode creates a journal which maps an on-disk inode as the "
+"journal.  The inode must exist already, must support bmap() and must have "
+"all data blocks preallocated."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2035
+msgid "Update error in the journal."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2036
+msgid "The journal to update."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2037
+msgid ""
+"Update a journal's errno.  Write updated superblock to disk waiting for IO "
+"to complete."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2058
+msgid "Read journal from disk."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2059
+#: ../fs/jbd2/journal.c:2112 ../fs/jbd2/journal.c:2289
+#: ../fs/jbd2/journal.c:2409 ../fs/jbd2/journal.c:2493
+msgid "Journal to act on."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2060
+msgid ""
+"Given a journal_t structure which tells us which disk blocks contain a "
+"journal, read the journal from disk to initialise the in-memory structures."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2111
+msgid "Release a journal_t structure."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2113
+msgid ""
+"Release a journal_t structure once it is no longer in use by the journaled "
+"object. Return <0 if we couldn't clean up the journal."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2202
+msgid "Check if features specified are used."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2203
+#: ../fs/jbd2/journal.c:2234
+msgid "Journal to check."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2205
+#: ../fs/jbd2/journal.c:2236 ../fs/jbd2/journal.c:2291
+msgid "``unsigned long compat``"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2204
+#: ../fs/jbd2/journal.c:2235 ../fs/jbd2/journal.c:2290
+msgid "bitmask of compatible features"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2206
+#: ../fs/jbd2/journal.c:2237 ../fs/jbd2/journal.c:2292
+msgid "``unsigned long ro``"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2205
+#: ../fs/jbd2/journal.c:2236 ../fs/jbd2/journal.c:2291
+msgid "bitmask of features that force read-only mount"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2207
+#: ../fs/jbd2/journal.c:2238 ../fs/jbd2/journal.c:2293
+msgid "``unsigned long incompat``"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2206
+#: ../fs/jbd2/journal.c:2237 ../fs/jbd2/journal.c:2292
+msgid "bitmask of incompatible features"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2207
+msgid ""
+"Check whether the journal uses all of a given set of features.  Return true "
+"(non-zero) if it does."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2233
+msgid "Check feature set in journalling layer"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2238
+msgid ""
+"Check whether the journaling code supports the use of all of a given set of "
+"features on this journal.  Return true"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2288
+msgid "Mark a given journal feature in the superblock"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2293
+msgid ""
+"Mark a given journal feature as present on the superblock.  Returns true if "
+"the requested features could be set."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2408
+msgid "Flush journal"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2411
+msgid "``unsigned int flags``"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2410
+msgid "optional operation on the journal blocks after the flush (see below)"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2411
+msgid ""
+"Flush all data for a given journal to disk and empty the journal. "
+"Filesystems can use this when remounting readonly to ensure that recovery "
+"does not need to happen on remount. Optionally, a discard or zeroout can be "
+"issued on the journal blocks after flushing."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2416
+msgid "flags:"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2417
+msgid ""
+"JBD2_JOURNAL_FLUSH_DISCARD: issues discards for the journal blocks "
+"JBD2_JOURNAL_FLUSH_ZEROOUT: issues zeroouts for the journal blocks"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2492
+msgid "Wipe journal contents"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2495
+msgid "``int write``"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2494
+msgid "flag (see below)"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2495
+msgid ""
+"Wipe out all of the contents of a journal, safely.  This will produce a "
+"warning if the journal contains any valid recovery information. Must be "
+"called between journal_init_*() and jbd2_journal_load()."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2499
+msgid ""
+"If 'write' is non-zero, then we wipe out the journal on disk; otherwise we "
+"merely suppress recovery."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2528
+msgid "Shutdown the journal immediately."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2529
+msgid "the journal to shutdown."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2531
+msgid "``int errno``"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2530
+msgid ""
+"an error number to record in the journal indicating the reason for the "
+"shutdown."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2532
+msgid ""
+"Perform a complete, immediate shutdown of the ENTIRE journal (not of a "
+"single transaction).  This operation cannot be undone without closing and "
+"reopening the journal."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2536
+msgid ""
+"The jbd2_journal_abort function is intended to support higher level error "
+"recovery mechanisms such as the ext2/ext3 remount-readonly error mode."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2540
+msgid ""
+"Journal abort has very specific semantics.  Any existing dirty, unjournaled "
+"buffers in the main filesystem will still be written to disk by bdflush, but "
+"the journaling mechanism will be suspended immediately and no further "
+"transaction commits will be honoured."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2545
+msgid ""
+"Any dirty, journaled buffers will be written back to disk without hitting "
+"the journal.  Atomicity cannot be guaranteed on an aborted filesystem, but "
+"we _do_ attempt to leave as much data as possible behind for fsck to use for "
+"cleanup."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2550
+msgid ""
+"Any attempt to get a new transaction handle on a journal which is in ABORT "
+"state will just result in an -EROFS error return.  A jbd2_journal_stop on an "
+"existing handle will return -EIO if we have entered abort state during the "
+"update."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2555
+msgid ""
+"Recursive transactions are not disturbed by journal abort until the final "
+"jbd2_journal_stop, which will receive the -EIO error."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2558
+msgid ""
+"Finally, the jbd2_journal_abort call allows the caller to supply an errno "
+"which will be recorded (if possible) in the journal superblock.  This allows "
+"a client to record failure conditions in the middle of a transaction without "
+"having to complete the transaction to record the failure to disk.  "
+"ext3_error, for example, now uses this functionality."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2619
+msgid "returns the journal's error state."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2620
+msgid "journal to examine."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2621
+msgid ""
+"This is the errno number set with jbd2_journal_abort(), the last time the "
+"journal was mounted - if the journal was stopped without calling abort this "
+"will be 0."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2625
+msgid ""
+"If the journal has been aborted on this mount time -EROFS will be returned."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2643
+msgid "clears the journal's error state"
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2644
+#: ../fs/jbd2/journal.c:2664
+msgid "journal to act on."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2645
+#: ../fs/jbd2/journal.c:2665
+msgid "An error must be cleared or acked to take a FS out of readonly mode."
+msgstr ""
+
+#: ../../../filesystems/journalling:194: ../fs/jbd2/journal.c:2663
+msgid "Ack journal err."
+msgstr ""
+
+#: ../../../filesystems/journalling:197: ../fs/jbd2/recovery.c:271
+msgid "recovers a on-disk journal"
+msgstr ""
+
+#: ../../../filesystems/journalling:197: ../fs/jbd2/recovery.c:272
+msgid "the journal to recover"
+msgstr ""
+
+#: ../../../filesystems/journalling:197: ../fs/jbd2/recovery.c:273
+msgid ""
+"The primary function for recovering the log contents when mounting a "
+"journaled device."
+msgstr ""
+
+#: ../../../filesystems/journalling:197: ../fs/jbd2/recovery.c:276
+msgid ""
+"Recovery is done in three passes.  In the first pass, we look for the end of "
+"the log.  In the second, we assemble the list of revoke blocks.  In the "
+"third and final pass, we replay any un-revoked blocks in the log."
+msgstr ""
+
+#: ../../../filesystems/journalling:197: ../fs/jbd2/recovery.c:348
+msgid "Start journal and wipe exiting records"
+msgstr ""
+
+#: ../../../filesystems/journalling:197: ../fs/jbd2/recovery.c:349
+msgid "journal to startup"
+msgstr ""
+
+#: ../../../filesystems/journalling:197: ../fs/jbd2/recovery.c:350
+msgid ""
+"Locate any valid recovery information from the journal and set up the "
+"journal structures in memory to ignore it (presumably because the caller has "
+"evidence that it is out of date). This function doesn't appear to be "
+"exported.."
+msgstr ""
+
+#: ../../../filesystems/journalling:197: ../fs/jbd2/recovery.c:355
+msgid ""
+"We perform one pass over the journal to allow us to tell the user how much "
+"recovery information is being erased, and to let us initialise the journal "
+"transaction sequence numbers to the next unused ID."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:201
+msgid "Transaction Level"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:520
+msgid "Obtain a new handle."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:521
+msgid "Journal to start transaction on."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:523
+#: ../fs/jbd2/transaction.c:624 ../fs/jbd2/transaction.c:746
+msgid "``int nblocks``"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:522
+msgid "number of block buffer we might modify"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:523
+msgid ""
+"We make sure that the transaction can guarantee at least nblocks of modified "
+"buffers in the log.  We block until the log can guarantee that much space. "
+"Additionally, if rsv_blocks > 0, we also create another handle with "
+"rsv_blocks reserved blocks in the journal. This handle is stored in "
+"h_rsv_handle. It is not attached to any particular transaction and thus "
+"doesn't block transaction commit. If the caller uses this reserved handle, "
+"it has to set h_rsv_handle to NULL as otherwise jbd2_journal_stop() on the "
+"parent handle will dispose the reserved one. Reserved handle has to be "
+"converted to a normal handle using jbd2_journal_start_reserved() before it "
+"can be used."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:534
+msgid ""
+"Return a pointer to a newly allocated handle, or an ERR_PTR() value on "
+"failure."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:567
+msgid "start reserved handle"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:573
+#: ../fs/jbd2/transaction.c:627 ../fs/jbd2/transaction.c:749
+#: ../fs/jbd2/transaction.c:1207 ../fs/jbd2/transaction.c:1267
+#: ../fs/jbd2/transaction.c:1356 ../fs/jbd2/transaction.c:1475
+#: ../fs/jbd2/transaction.c:1654 ../fs/jbd2/transaction.c:1827
+msgid "``handle_t *handle``"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:568
+msgid "handle to start"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:570
+msgid "``unsigned int type``"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:569
+#: ../fs/jbd2/transaction.c:570
+msgid "for handle statistics"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:571
+msgid "``unsigned int line_no``"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:571
+msgid ""
+"Start handle that has been previously reserved with jbd2_journal_reserve(). "
+"This attaches **handle** to the running transaction (or creates one if "
+"there's not transaction running). Unlike jbd2_journal_start() this function "
+"cannot block on journal commit, checkpointing, or similar stuff. It can "
+"block on memory allocation or frozen journal though."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:577
+msgid "Return 0 on success, non-zero on error - handle is freed in that case."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:621
+msgid "extend buffer credits."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:622
+msgid "handle to 'extend'"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:623
+msgid "nr blocks to try to extend by."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:625
+#: ../fs/jbd2/transaction.c:747
+msgid "``int revoke_records``"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:624
+msgid "number of revoke records to try to extend by."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:625
+msgid ""
+"Some transactions, such as large extends and truncates, can be done "
+"atomically all at once or in several stages.  The operation requests a "
+"credit for a number of buffer modifications in advance, but can extend its "
+"credit if it needs more."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:630
+msgid ""
+"jbd2_journal_extend tries to give the running handle more buffer credits. It "
+"does not guarantee that allocation - this is a best-effort only. The calling "
+"process MUST be able to deal cleanly with a failure to extend here."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:635
+msgid "Return 0 on success, non-zero on failure."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:637
+msgid ""
+"return code < 0 implies an error return code > 0 implies normal transaction-"
+"full status."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:743
+msgid "restart a handle ."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:744
+msgid "handle to restart"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:745
+msgid "nr credits requested"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:746
+msgid "number of revoke record credits requested"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:748
+msgid "``gfp_t gfp_mask``"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:747
+msgid "memory allocation flags (for start_this_handle)"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:748
+msgid "Restart a handle for a multi-transaction filesystem operation."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:751
+msgid ""
+"If the jbd2_journal_extend() call above fails to grant new buffer credits to "
+"a running handle, a call to jbd2_journal_restart will commit the handle's "
+"transaction so far and reattach the handle to a new transaction capable of "
+"guaranteeing the requested number of credits. We preserve reserved handle if "
+"there's any attached to the passed in handle."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:850
+msgid "establish a transaction barrier."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:851
+msgid "Journal to establish a barrier on."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:852
+msgid ""
+"This locks out any further updates from being started, and blocks until all "
+"existing updates have completed, returning only once the journal is in a "
+"quiescent state with no updates running."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:856
+msgid "The journal lock should not be held on entry."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:889
+msgid "release barrier"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:890
+msgid "Journal to release the barrier on."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:891
+msgid ""
+"Release a transaction barrier obtained with jbd2_journal_lock_updates()."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:893
+msgid "Should be called without the journal lock held."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1201
+msgid "notify intent to modify a buffer for metadata (not data) update."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1203
+msgid "transaction to add buffer modifications to"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1205
+#: ../fs/jbd2/transaction.c:1264 ../fs/jbd2/transaction.c:1354
+#: ../fs/jbd2/transaction.c:1433 ../fs/jbd2/transaction.c:1472
+#: ../fs/jbd2/transaction.c:1651
+msgid "``struct buffer_head *bh``"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1204
+msgid "bh to be used for metadata writes"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1206
+msgid "error code or 0 on success."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1207
+msgid ""
+"In full data journalling mode the buffer may be of type BJ_AsyncData, "
+"because we're ``write()ing`` a buffer which is also part of a shared mapping."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1261
+msgid "notify intent to use newly created bh"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1262
+msgid "transaction to new buffer to"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1263
+msgid "new buffer."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1264
+msgid "Call this if you create a new bh."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1350
+msgid "Notify intent to modify metadata with non-rewindable consequences"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1352
+msgid "transaction"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1353
+msgid "buffer to undo"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1354
+msgid ""
+"Sometimes there is a need to distinguish between metadata which has been "
+"committed to disk and that which has not.  The ext3fs code uses this for "
+"freeing and allocating space, we have to make sure that we do not reuse "
+"freed space until the deallocation has been committed, since if we overwrote "
+"that space we would make the delete un-rewindable in case of a crash."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1361
+msgid ""
+"To deal with that, jbd2_journal_get_undo_access requests write access to a "
+"buffer for parts of non-rewindable operations such as delete operations on "
+"the bitmaps.  The journaling code must keep a copy of the buffer's contents "
+"prior to the undo_access call until such time as we know that the buffer has "
+"definitely been committed to disk."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1367
+msgid ""
+"We never need to know which transaction the committed data is part of, "
+"buffers touched here are guaranteed to be dirtied later and so will be "
+"committed to a new transaction in due course, at which point we can discard "
+"the old committed data pointer."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1372
+#: ../fs/jbd2/transaction.c:1482
+msgid "Returns error number or 0 on success."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1427
+msgid "Add triggers for commit writeout"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1428
+msgid "buffer to trigger on"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1430
+msgid "``struct jbd2_buffer_trigger_type *type``"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1429
+msgid "struct jbd2_buffer_trigger_type containing the trigger(s)."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1430
+msgid ""
+"Set any triggers on this journal_head.  This is always safe, because "
+"triggers for a committing buffer will be saved off, and triggers for a "
+"running transaction will match the buffer in that transaction."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1434
+msgid "Call with NULL to clear the triggers."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1469
+msgid "mark a buffer as containing dirty metadata"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1470
+msgid "transaction to add buffer to."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1471
+msgid "buffer to mark"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1472
+msgid ""
+"mark dirty metadata which needs to be journaled as part of the current "
+"transaction."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1475
+msgid ""
+"The buffer must have previously had jbd2_journal_get_write_access() called "
+"so that it has a valid journal_head attached to the buffer head."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1479
+msgid ""
+"The buffer is placed on the transaction's metadata list and is marked as "
+"belonging to the transaction."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1484
+msgid ""
+"Special care needs to be taken if the buffer already belongs to the current "
+"committing transaction (in which case we should have frozen data present for "
+"that commit).  In that case, we don't relink the buffer: that only gets done "
+"when the old transaction finally completes its commit."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1648
+msgid "bforget() for potentially-journaled buffers."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1649
+msgid "transaction handle"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1650
+msgid "bh to 'forget'"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1651
+msgid ""
+"We can only do the bforget if there are no commits pending against the "
+"buffer.  If the buffer is dirty in the current running transaction we can "
+"safely unlink it."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1655
+msgid ""
+"bh may not be a journalled buffer at all - it may be a non-JBD buffer which "
+"came off the hashtable.  Check for this."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1658
+msgid "Decrements bh->b_count by one."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1660
+msgid ""
+"Allow this call even if the handle has aborted --- it may be part of the "
+"caller's cleanup after an abort."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1821
+msgid "complete a transaction"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1822
+msgid "transaction to complete."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1823
+msgid "All done for a particular handle."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1825
+msgid ""
+"There is not much action needed here.  We just return any remaining buffer "
+"credits to the transaction and remove the handle.  The only complication is "
+"that we need to start a commit operation if the filesystem is marked for "
+"synchronous update."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:1830
+msgid ""
+"jbd2_journal_stop itself will not usually return an error, but it may do so "
+"in unusual circumstances.  In particular, expect it to return -EIO if a "
+"jbd2_journal_abort has been executed since the transaction began."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2095
+msgid "try to free page buffers."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2096
+msgid "journal for operation"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2098
+#: ../fs/jbd2/transaction.c:2421
+msgid "``struct folio *folio``"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2097
+msgid "Folio to detach data from."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2098
+msgid ""
+"For all the buffers on this page, if they are fully written out ordered "
+"data, move them onto BUF_CLEAN so try_to_free_buffers() can reap them."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2102
+msgid ""
+"This function returns non-zero if we wish try_to_free_buffers() to be "
+"called. We do this if the page is releasable by try_to_free_buffers(). We "
+"also do it if the page has locked or dirty buffers and the caller wants us "
+"to perform sync or async writeout."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2107
+msgid ""
+"This complicates JBD locking somewhat.  We aren't protected by the BKL "
+"here.  We wish to remove the buffer from its committing or running "
+"transaction's ->t_datalist via __jbd2_journal_unfile_buffer."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2111
+msgid ""
+"This may *change* the value of transaction_t->t_datalist, so anyone who "
+"looks at t_datalist needs to lock against this function."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2114
+msgid ""
+"Even worse, someone may be doing a jbd2_journal_dirty_data on this buffer.  "
+"So we need to lock against that.  jbd2_journal_dirty_data() will come out of "
+"the lock with the buffer dirty, which makes it ineligible for release here."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2119
+msgid ""
+"Who else is affected by this?  hmm...  Really the only contender is "
+"do_get_write_access() - it could be looking at the buffer while "
+"journal_try_to_free_buffer() is changing its state.  But that cannot happen "
+"because we never reallocate freed data as metadata while the data is part of "
+"a transaction.  Yes?"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2125
+msgid "Return false on failure, true on success"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2419
+msgid "journal to use for flush..."
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2420
+msgid "folio to flush"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2422
+msgid "``size_t offset``"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2421
+msgid "start of the range to invalidate"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2423
+msgid "``size_t length``"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2422
+msgid "length of the range to invalidate"
+msgstr ""
+
+#: ../../../filesystems/journalling:203: ../fs/jbd2/transaction.c:2423
+msgid ""
+"Reap page buffers containing data after in the specified range in page. Can "
+"return -EBUSY if buffers are part of the committing transaction and the page "
+"is straddling i_size. Caller then has to wait for current commit and try "
+"again."
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:206
+msgid "See also"
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:208
+msgid ""
+"`Journaling the Linux ext2fs Filesystem, LinuxExpo 98, Stephen Tweedie "
+"<http://kernel.org/pub/linux/kernel/people/sct/ext3/journal-design.ps.gz>`__"
+msgstr ""
+
+#: ../../../filesystems/journalling.rst:211
+msgid ""
+"`Ext3 Journalling FileSystem, OLS 2000, Dr. Stephen Tweedie <http://olstrans."
+"sourceforge.net/release/OLS2000-ext3/OLS2000-ext3.html>`__"
+msgstr ""

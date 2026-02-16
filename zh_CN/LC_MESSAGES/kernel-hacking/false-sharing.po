@@ -1,0 +1,309 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../kernel-hacking/false-sharing.rst:5
+msgid "False Sharing"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:8
+msgid "What is False Sharing"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:9
+msgid ""
+"False sharing is related with cache mechanism of maintaining the data "
+"coherence of one cache line stored in multiple CPU's caches; then academic "
+"definition for it is in [1]_. Consider a struct with a refcount and a "
+"string::"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:20
+msgid "Member 'refcount'(A) and 'name'(B) _share_ one cache line like below::"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:40
+msgid ""
+"'refcount' is modified frequently, but 'name' is set once at object creation "
+"time and is never modified.  When many CPUs access 'foo' at the same time, "
+"with 'refcount' being only bumped by one CPU frequently and 'name' being "
+"read by other CPUs, all those reading CPUs have to reload the whole cache "
+"line over and over due to the 'sharing', even though 'name' is never changed."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:47
+msgid ""
+"There are many real-world cases of performance regressions caused by false "
+"sharing.  One of these is a rw_semaphore 'mmap_lock' inside mm_struct "
+"struct, whose cache line layout change triggered a regression and Linus "
+"analyzed in [2]_."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:52
+msgid "There are two key factors for a harmful false sharing:"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:54
+msgid "A global datum accessed (shared) by many CPUs"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:55
+msgid ""
+"In the concurrent accesses to the data, there is at least one write "
+"operation: write/write or write/read cases."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:58
+msgid ""
+"The sharing could be from totally unrelated kernel components, or different "
+"code paths of the same kernel component."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:63
+msgid "False Sharing Pitfalls"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:64
+msgid ""
+"Back in time when one platform had only one or a few CPUs, hot data members "
+"could be purposely put in the same cache line to make them cache hot and "
+"save cacheline/TLB, like a lock and the data protected by it.  But for "
+"recent large system with hundreds of CPUs, this may not work when the lock "
+"is heavily contended, as the lock owner CPU could write to the data, while "
+"other CPUs are busy spinning the lock."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:71
+msgid ""
+"Looking at past cases, there are several frequently occurring patterns for "
+"false sharing:"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:74
+msgid ""
+"lock (spinlock/mutex/semaphore) and data protected by it are purposely put "
+"in one cache line."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:76
+msgid ""
+"global data being put together in one cache line. Some kernel subsystems "
+"have many global parameters of small size (4 bytes), which can easily be "
+"grouped together and put into one cache line."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:79
+msgid ""
+"data members of a big data structure randomly sitting together without being "
+"noticed (cache line is usually 64 bytes or more), like 'mem_cgroup' struct."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:83
+msgid "Following 'mitigation' section provides real-world examples."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:85
+msgid ""
+"False sharing could easily happen unless they are intentionally checked, and "
+"it is valuable to run specific tools for performance critical workloads to "
+"detect false sharing affecting performance case and optimize accordingly."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:92
+msgid "How to detect and analyze False Sharing"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:93
+msgid ""
+"perf record/report/stat are widely used for performance tuning, and once "
+"hotspots are detected, tools like 'perf-c2c' and 'pahole' can be further "
+"used to detect and pinpoint the possible false sharing data structures.  "
+"'addr2line' is also good at decoding instruction pointer when there are "
+"multiple layers of inline functions."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:99
+msgid ""
+"perf-c2c can capture the cache lines with most false sharing hits, decoded "
+"functions (line number of file) accessing that cache line, and in-line "
+"offset of the data. Simple commands are::"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:106
+msgid ""
+"When running above during testing will-it-scale's tlb_flush1 case, perf "
+"reports something like::"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:124
+msgid "A nice introduction for perf-c2c is [3]_."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:126
+msgid ""
+"'pahole' decodes data structure layouts delimited in cache line "
+"granularity.  Users can match the offset in perf-c2c output with pahole's "
+"decoding to locate the exact data members.  For global data, users can "
+"search the data address in System.map."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:133
+msgid "Possible Mitigations"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:134
+msgid ""
+"False sharing does not always need to be mitigated.  False sharing "
+"mitigations should balance performance gains with complexity and space "
+"consumption.  Sometimes, lower performance is OK, and it's unnecessary to "
+"hyper-optimize every rarely used data structure or a cold data path."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:140
+msgid ""
+"False sharing hurting performance cases are seen more frequently with core "
+"count increasing.  Because of these detrimental effects, many patches have "
+"been proposed across variety of subsystems (like networking and memory "
+"management) and merged.  Some common mitigations (with examples) are:"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:146
+msgid ""
+"Separate hot global data in its own dedicated cache line, even if it is just "
+"a 'short' type. The downside is more consumption of memory, cache line and "
+"TLB entries."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:150
+msgid ""
+"Commit 91b6d3256356 (\"net: cache align tcp_memory_allocated, "
+"tcp_sockets_allocated\")"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:152
+msgid ""
+"Reorganize the data structure, separate the interfering members to different "
+"cache lines.  One downside is it may introduce new false sharing of other "
+"members."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:156
+msgid ""
+"Commit 802f1d522d5f (\"mm: page_counter: re-layout structure to reduce false "
+"sharing\")"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:158
+msgid ""
+"Replace 'write' with 'read' when possible, especially in loops. Like for "
+"some global variable, use compare(read)-then-write instead of unconditional "
+"write. For example, use::"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:165
+msgid "instead of directly \"set_bit(XXX);\", similarly for atomic_t data::"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:170
+msgid ""
+"Commit 7b1002f7cfe5 (\"bcache: fixup bcache_dev_sectors_dirty_add() "
+"multithreaded CPU false sharing\")"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:171
+msgid "Commit 292648ac5cf1 (\"mm: gup: allow FOLL_PIN to scale in SMP\")"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:173
+msgid ""
+"Turn hot global data to 'per-cpu data + global data' when possible, or "
+"reasonably increase the threshold for syncing per-cpu data to global data, "
+"to reduce or postpone the 'write' to that global data."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:177
+msgid ""
+"Commit 520f897a3554 (\"ext4: use percpu_counters for extent_status cache "
+"hits/misses\")"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:178
+msgid ""
+"Commit 56f3547bfa4d (\"mm: adjust vm_committed_as_batch according to vm "
+"overcommit policy\")"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:180
+msgid ""
+"Surely, all mitigations should be carefully verified to not cause side "
+"effects.  To avoid introducing false sharing when coding, it's better to:"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:184
+msgid "Be aware of cache line boundaries"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:185
+msgid "Group mostly read-only fields together"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:186
+msgid "Group things that are written at the same time together"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:187
+msgid ""
+"Separate frequently read and frequently written fields on different cache "
+"lines."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:190
+msgid "and better add a comment stating the false sharing consideration."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:192
+msgid ""
+"One note is, sometimes even after a severe false sharing is detected and "
+"solved, the performance may still have no obvious improvement as the hotspot "
+"switches to a new place."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:198
+msgid "Miscellaneous"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:199
+msgid ""
+"One open issue is that the kernel has an optional data structure "
+"randomization mechanism, which also randomizes the situation of cache line "
+"sharing among data members."
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:204
+msgid "https://en.wikipedia.org/wiki/False_sharing"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:205
+msgid ""
+"https://lore.kernel.org/lkml/CAHk-=whoqV=cX5VC80mmR9rr+Z+yQ6fiQZm36Fb-"
+"izsanHg23w@mail.gmail.com/"
+msgstr ""
+
+#: ../../../kernel-hacking/false-sharing.rst:206
+msgid "https://joemario.github.io/blog/2016/09/01/c2c-blog/"
+msgstr ""

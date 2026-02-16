@@ -1,0 +1,584 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../driver-api/vfio.rst:3
+msgid "VFIO - \"Virtual Function I/O\" [1]_"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:5
+msgid ""
+"Many modern systems now provide DMA and interrupt remapping facilities to "
+"help ensure I/O devices behave within the boundaries they've been allotted.  "
+"This includes x86 hardware with AMD-Vi and Intel VT-d, POWER systems with "
+"Partitionable Endpoints (PEs) and embedded PowerPC systems such as Freescale "
+"PAMU.  The VFIO driver is an IOMMU/device agnostic framework for exposing "
+"direct device access to userspace, in a secure, IOMMU protected "
+"environment.  In other words, this allows safe [2]_, non-privileged, "
+"userspace drivers."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:14
+msgid ""
+"Why do we want that?  Virtual machines often make use of direct device "
+"access (\"device assignment\") when configured for the highest possible I/O "
+"performance.  From a device and host perspective, this simply turns the VM "
+"into a userspace driver, with the benefits of significantly reduced latency, "
+"higher bandwidth, and direct use of bare-metal device drivers [3]_."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:21
+msgid ""
+"Some applications, particularly in the high performance computing field, "
+"also benefit from low-overhead, direct device access from userspace.  "
+"Examples include network adapters (often non-TCP/IP based) and compute "
+"accelerators.  Prior to VFIO, these drivers had to either go through the "
+"full development cycle to become proper upstream driver, be maintained out "
+"of tree, or make use of the UIO framework, which has no notion of IOMMU "
+"protection, limited interrupt support, and requires root privileges to "
+"access things like PCI configuration space."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:31
+msgid ""
+"The VFIO driver framework intends to unify these, replacing both the KVM PCI "
+"specific device assignment code as well as provide a more secure, more "
+"featureful userspace driver environment than UIO."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:36
+msgid "Groups, Devices, and IOMMUs"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:38
+msgid ""
+"Devices are the main target of any I/O driver.  Devices typically create a "
+"programming interface made up of I/O access, interrupts, and DMA.  Without "
+"going into the details of each of these, DMA is by far the most critical "
+"aspect for maintaining a secure environment as allowing a device read-write "
+"access to system memory imposes the greatest risk to the overall system "
+"integrity."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:45
+msgid ""
+"To help mitigate this risk, many modern IOMMUs now incorporate isolation "
+"properties into what was, in many cases, an interface only meant for "
+"translation (ie. solving the addressing problems of devices with limited "
+"address spaces).  With this, devices can now be isolated from each other and "
+"from arbitrary memory access, thus allowing things like secure direct "
+"assignment of devices into virtual machines."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:52
+msgid ""
+"This isolation is not always at the granularity of a single device though.  "
+"Even when an IOMMU is capable of this, properties of devices, interconnects, "
+"and IOMMU topologies can each reduce this isolation. For instance, an "
+"individual device may be part of a larger multi- function enclosure.  While "
+"the IOMMU may be able to distinguish between devices within the enclosure, "
+"the enclosure may not require transactions between devices to reach the "
+"IOMMU.  Examples of this could be anything from a multi-function PCI device "
+"with backdoors between functions to a non-PCI-ACS (Access Control Services) "
+"capable bridge allowing redirection without reaching the IOMMU.  Topology "
+"can also play a factor in terms of hiding devices.  A PCIe-to-PCI bridge "
+"masks the devices behind it, making transaction appear as if from the bridge "
+"itself.  Obviously IOMMU design plays a major factor as well."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:67
+msgid ""
+"Therefore, while for the most part an IOMMU may have device level "
+"granularity, any system is susceptible to reduced granularity.  The IOMMU "
+"API therefore supports a notion of IOMMU groups.  A group is a set of "
+"devices which is isolatable from all other devices in the system.  Groups "
+"are therefore the unit of ownership used by VFIO."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:73
+msgid ""
+"While the group is the minimum granularity that must be used to ensure "
+"secure user access, it's not necessarily the preferred granularity.  In "
+"IOMMUs which make use of page tables, it may be possible to share a set of "
+"page tables between different groups, reducing the overhead both to the "
+"platform (reduced TLB thrashing, reduced duplicate page tables), and to the "
+"user (programming only a single set of translations).  For this reason, VFIO "
+"makes use of a container class, which may hold one or more groups.  A "
+"container is created by simply opening the /dev/vfio/vfio character device."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:83
+msgid ""
+"On its own, the container provides little functionality, with all but a "
+"couple version and extension query interfaces locked away. The user needs to "
+"add a group into the container for the next level of functionality.  To do "
+"this, the user first needs to identify the group associated with the desired "
+"device.  This can be done using the sysfs links described in the example "
+"below.  By unbinding the device from the host driver and binding it to a "
+"VFIO driver, a new VFIO group will appear for the group as /dev/vfio/$GROUP, "
+"where $GROUP is the IOMMU group number of which the device is a member. If "
+"the IOMMU group contains multiple devices, each will need to be bound to a "
+"VFIO driver before operations on the VFIO group are allowed (it's also "
+"sufficient to only unbind the device from host drivers if a VFIO driver is "
+"unavailable; this will make the group available, but not that particular "
+"device).  TBD - interface for disabling driver probing/locking a device."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:99
+msgid ""
+"Once the group is ready, it may be added to the container by opening the "
+"VFIO group character device (/dev/vfio/$GROUP) and using the "
+"VFIO_GROUP_SET_CONTAINER ioctl, passing the file descriptor of the "
+"previously opened container file.  If desired and if the IOMMU driver "
+"supports sharing the IOMMU context between groups, multiple groups may be "
+"set to the same container.  If a group fails to set to a container with "
+"existing groups, a new empty container will need to be used instead."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:108
+msgid ""
+"With a group (or groups) attached to a container, the remaining ioctls "
+"become available, enabling access to the VFIO IOMMU interfaces. "
+"Additionally, it now becomes possible to get file descriptors for each "
+"device within a group using an ioctl on the VFIO group file descriptor."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:113
+msgid ""
+"The VFIO device API includes ioctls for describing the device, the I/O "
+"regions and their read/write/mmap offsets on the device descriptor, as well "
+"as mechanisms for describing and registering interrupt notifications."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:119
+msgid "VFIO Usage Example"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:121
+msgid "Assume user wants to access PCI device 0000:06:0d.0::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:126
+msgid ""
+"This device is therefore in IOMMU group 26.  This device is on the pci bus, "
+"therefore the user will make use of vfio-pci to manage the group::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:132
+msgid ""
+"Binding this device to the vfio-pci driver creates the VFIO group character "
+"devices for this group::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:140
+msgid ""
+"Now we need to look at what other devices are in the group to free it for "
+"use by VFIO::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:152
+msgid ""
+"This device is behind a PCIe-to-PCI bridge [4]_, therefore we also need to "
+"add device 0000:06:0d.1 to the group following the same procedure as above.  "
+"Device 0000:00:1e.0 is a bridge that does not currently have a host driver, "
+"therefore it's not required to bind this device to the vfio-pci driver (vfio-"
+"pci does not currently support PCI bridges)."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:159
+msgid ""
+"The final step is to provide the user with access to the group if "
+"unprivileged operation is desired (note that /dev/vfio/vfio provides no "
+"capabilities on its own and is therefore expected to be set to mode 0666 by "
+"the system)::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:166
+msgid ""
+"The user now has full access to all the devices and the iommu for this group "
+"and can access them as follows::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:243
+msgid "IOMMUFD and vfio_iommu_type1"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:245
+msgid ""
+"IOMMUFD is the new user API to manage I/O page tables from userspace. It "
+"intends to be the portal of delivering advanced userspace DMA features "
+"(nested translation [5]_, PASID [6]_, etc.) while also providing a backwards "
+"compatibility interface for existing VFIO_TYPE1v2_IOMMU use cases.  "
+"Eventually the vfio_iommu_type1 driver, as well as the legacy vfio container "
+"and group model is intended to be deprecated."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:252
+msgid ""
+"The IOMMUFD backwards compatibility interface can be enabled two ways. In "
+"the first method, the kernel can be configured with "
+"CONFIG_IOMMUFD_VFIO_CONTAINER, in which case the IOMMUFD subsystem "
+"transparently provides the entire infrastructure for the VFIO container and "
+"IOMMU backend interfaces.  The compatibility mode can also be accessed if "
+"the VFIO container interface, ie. /dev/vfio/vfio is simply symlink'd to /dev/"
+"iommu.  Note that at the time of writing, the compatibility mode is not "
+"entirely feature complete relative to VFIO_TYPE1v2_IOMMU (ex. DMA mapping "
+"MMIO) and does not attempt to provide compatibility to the "
+"VFIO_SPAPR_TCE_IOMMU interface.  Therefore it is not generally advisable at "
+"this time to switch from native VFIO implementations to the IOMMUFD "
+"compatibility interfaces."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:265
+msgid ""
+"Long term, VFIO users should migrate to device access through the cdev "
+"interface described below, and native access through the IOMMUFD provided "
+"interfaces."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:270
+msgid "VFIO Device cdev"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:272
+msgid ""
+"Traditionally user acquires a device fd via VFIO_GROUP_GET_DEVICE_FD in a "
+"VFIO group."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:275
+msgid ""
+"With CONFIG_VFIO_DEVICE_CDEV=y the user can now acquire a device fd by "
+"directly opening a character device /dev/vfio/devices/vfioX where \"X\" is "
+"the number allocated uniquely by VFIO for registered devices. cdev interface "
+"does not support noiommu devices, so user should use the legacy group "
+"interface if noiommu is wanted."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:281
+msgid ""
+"The cdev only works with IOMMUFD.  Both VFIO drivers and applications must "
+"adapt to the new cdev security model which requires using "
+"VFIO_DEVICE_BIND_IOMMUFD to claim DMA ownership before starting to actually "
+"use the device.  Once BIND succeeds then a VFIO device can be fully accessed "
+"by the user."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:287
+msgid ""
+"VFIO device cdev doesn't rely on VFIO group/container/iommu drivers. Hence "
+"those modules can be fully compiled out in an environment where no legacy "
+"VFIO application exists."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:291
+msgid ""
+"So far SPAPR does not support IOMMUFD yet.  So it cannot support device cdev "
+"either."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:294
+msgid ""
+"vfio device cdev access is still bound by IOMMU group semantics, ie. there "
+"can be only one DMA owner for the group.  Devices belonging to the same "
+"group can not be bound to multiple iommufd_ctx or shared between native "
+"kernel and vfio bus driver or other driver supporting the driver_managed_dma "
+"flag.  A violation of this ownership requirement will fail at the "
+"VFIO_DEVICE_BIND_IOMMUFD ioctl, which gates full device access."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:302
+msgid "Device cdev Example"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:304
+msgid "Assume user wants to access PCI device 0000:6a:01.0::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:309
+msgid ""
+"This device is therefore represented as vfio0.  The user can verify its "
+"existence::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:319
+msgid ""
+"Then provide the user with access to the device if unprivileged operation is "
+"desired::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:324
+msgid "Finally the user could get cdev fd by::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:328
+msgid ""
+"An opened cdev_fd doesn't give the user any permission of accessing the "
+"device except binding the cdev_fd to an iommufd.  After that point then the "
+"device is fully accessible including attaching it to an IOMMUFD IOAS/HWPT to "
+"enable userspace DMA::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:374
+msgid "VFIO User API"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:376
+msgid "Please see include/uapi/linux/vfio.h for complete API documentation."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:379
+msgid "VFIO bus driver API"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:381
+msgid ""
+"VFIO bus drivers, such as vfio-pci make use of only a few interfaces into "
+"VFIO core.  When devices are bound and unbound to the driver, Following "
+"interfaces are called when devices are bound to and unbound from the driver::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:390
+msgid ""
+"The driver should embed the vfio_device in its own structure and use "
+"vfio_alloc_device() to allocate the structure, and can register @init/"
+"@release callbacks to manage any private state wrapping the vfio_device::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:398
+msgid ""
+"vfio_register_group_dev() indicates to the core to begin tracking the "
+"iommu_group of the specified dev and register the dev as owned by a VFIO bus "
+"driver. Once vfio_register_group_dev() returns it is possible for userspace "
+"to start accessing the driver, thus the driver should ensure it is "
+"completely ready before calling it. The driver provides an ops structure for "
+"callbacks similar to a file operations structure::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:430
+msgid ""
+"Each function is passed the vdev that was originally registered in the "
+"vfio_register_group_dev() or vfio_register_emulated_iommu_dev() call above. "
+"This allows the bus driver to obtain its private data using container_of()."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:468
+msgid "PPC64 sPAPR implementation note"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:470
+msgid "This implementation has some specifics:"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:472
+msgid ""
+"On older systems (POWER7 with P5IOC2/IODA1) only one IOMMU group per "
+"container is supported as an IOMMU table is allocated at the boot time, one "
+"table per a IOMMU group which is a Partitionable Endpoint (PE) (PE is often "
+"a PCI domain but not always)."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:477
+msgid ""
+"Newer systems (POWER8 with IODA2) have improved hardware design which allows "
+"to remove this limitation and have multiple IOMMU groups per a VFIO "
+"container."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:481
+msgid ""
+"The hardware supports so called DMA windows - the PCI address range within "
+"which DMA transfer is allowed, any attempt to access address space out of "
+"the window leads to the whole PE isolation."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:485
+msgid ""
+"PPC64 guests are paravirtualized but not fully emulated. There is an API to "
+"map/unmap pages for DMA, and it normally maps 1..32 pages per call and "
+"currently there is no way to reduce the number of calls. In order to make "
+"things faster, the map/unmap handling has been implemented in real mode "
+"which provides an excellent performance which has limitations such as "
+"inability to do locked pages accounting in real time."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:492
+msgid ""
+"According to sPAPR specification, A Partitionable Endpoint (PE) is an I/O "
+"subtree that can be treated as a unit for the purposes of partitioning and "
+"error recovery. A PE may be a single or multi-function IOA (IO Adapter), a "
+"function of a multi-function IOA, or multiple IOAs (possibly including "
+"switch and bridge structures above the multiple IOAs). PPC64 guests detect "
+"PCI errors and recover from them via EEH RTAS services, which works on the "
+"basis of additional ioctl commands."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:500
+msgid "So 4 additional ioctls have been added:"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:502
+msgid "VFIO_IOMMU_SPAPR_TCE_GET_INFO"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:503
+msgid "returns the size and the start of the DMA window on the PCI bus."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:505
+msgid "VFIO_IOMMU_ENABLE"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:506
+msgid ""
+"enables the container. The locked pages accounting is done at this point. "
+"This lets user first to know what the DMA window is and adjust rlimit before "
+"doing any real job."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:510
+msgid "VFIO_IOMMU_DISABLE"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:511
+msgid "disables the container."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:513
+msgid "VFIO_EEH_PE_OP"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:514
+msgid "provides an API for EEH setup, error detection and recovery."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:516
+msgid "The code flow from the example above should be slightly changed::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:629
+msgid ""
+"There is v2 of SPAPR TCE IOMMU. It deprecates VFIO_IOMMU_ENABLE/ "
+"VFIO_IOMMU_DISABLE and implements 2 new ioctls: "
+"VFIO_IOMMU_SPAPR_REGISTER_MEMORY and VFIO_IOMMU_SPAPR_UNREGISTER_MEMORY "
+"(which are unsupported in v1 IOMMU)."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:634
+msgid ""
+"PPC64 paravirtualized guests generate a lot of map/unmap requests, and the "
+"handling of those includes pinning/unpinning pages and updating mm::"
+"locked_vm counter to make sure we do not exceed the rlimit. The v2 IOMMU "
+"splits accounting and pinning into separate operations:"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:639
+msgid ""
+"VFIO_IOMMU_SPAPR_REGISTER_MEMORY/VFIO_IOMMU_SPAPR_UNREGISTER_MEMORY ioctls "
+"receive a user space address and size of the block to be pinned. Bisecting "
+"is not supported and VFIO_IOMMU_UNREGISTER_MEMORY is expected to be called "
+"with the exact address and size used for registering the memory block. The "
+"userspace is not expected to call these often. The ranges are stored in a "
+"linked list in a VFIO container."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:646
+msgid ""
+"VFIO_IOMMU_MAP_DMA/VFIO_IOMMU_UNMAP_DMA ioctls only update the actual IOMMU "
+"table and do not do pinning; instead these check that the userspace address "
+"is from pre-registered range."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:650
+msgid "This separation helps in optimizing DMA for guests."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:652
+msgid ""
+"sPAPR specification allows guests to have an additional DMA window(s) on a "
+"PCI bus with a variable page size. Two ioctls have been added to support "
+"this: VFIO_IOMMU_SPAPR_TCE_CREATE and VFIO_IOMMU_SPAPR_TCE_REMOVE. The "
+"platform has to support the functionality or error will be returned to the "
+"userspace. The existing hardware supports up to 2 DMA windows, one is 2GB "
+"long, uses 4K pages and called \"default 32bit window\"; the other can be as "
+"big as entire RAM, use different page size, it is optional - guests create "
+"those in run-time if the guest driver supports 64bit DMA."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:661
+msgid ""
+"VFIO_IOMMU_SPAPR_TCE_CREATE receives a page shift, a DMA window size and a "
+"number of TCE table levels (if a TCE table is going to be big enough and the "
+"kernel may not be able to allocate enough of physically contiguous memory). "
+"It creates a new window in the available slot and returns the bus address "
+"where the new window starts. Due to hardware limitation, the user space "
+"cannot choose the location of DMA windows."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:668
+msgid ""
+"VFIO_IOMMU_SPAPR_TCE_REMOVE receives the bus start address of the window and "
+"removes it."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:673
+msgid ""
+"VFIO was originally an acronym for \"Virtual Function I/O\" in its initial "
+"implementation by Tom Lyon while as Cisco.  We've since outgrown the "
+"acronym, but it's catchy."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:677
+msgid ""
+"\"safe\" also depends upon a device being \"well behaved\".  It's possible "
+"for multi-function devices to have backdoors between functions and even for "
+"single function devices to have alternative access to things like PCI config "
+"space through MMIO registers.  To guard against the former we can include "
+"additional precautions in the IOMMU driver to group multi-function PCI "
+"devices together (iommu=group_mf).  The latter we can't prevent, but the "
+"IOMMU should still provide isolation.  For PCI, SR-IOV Virtual Functions are "
+"the best indicator of \"well behaved\", as these are designed for "
+"virtualization usage models."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:688
+msgid ""
+"As always there are trade-offs to virtual machine device assignment that are "
+"beyond the scope of VFIO.  It's expected that future IOMMU technologies will "
+"reduce some, but maybe not all, of these trade-offs."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:693
+msgid ""
+"In this case the device is below a PCI bridge, so transactions from either "
+"function of the device are indistinguishable to the iommu::"
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:701
+msgid ""
+"Nested translation is an IOMMU feature which supports two stage address "
+"translations.  This improves the address translation efficiency in IOMMU "
+"virtualization."
+msgstr ""
+
+#: ../../../driver-api/vfio.rst:705
+msgid ""
+"PASID stands for Process Address Space ID, introduced by PCI Express.  It is "
+"a prerequisite for Shared Virtual Addressing (SVA) and Scalable I/O "
+"Virtualization (Scalable IOV)."
+msgstr ""

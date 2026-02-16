@@ -1,0 +1,1074 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-06 06:05+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../userspace-api/fwctl/fwctl.rst:5
+msgid "fwctl subsystem"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:0
+msgid "Author"
+msgstr "作者"
+
+#: ../../../userspace-api/fwctl/fwctl.rst:7
+msgid "Jason Gunthorpe"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:10
+msgid "Overview"
+msgstr "概覽"
+
+#: ../../../userspace-api/fwctl/fwctl.rst:12
+msgid ""
+"Modern devices contain extensive amounts of FW, and in many cases, are "
+"largely software-defined pieces of hardware. The evolution of this approach "
+"is largely a reaction to Moore's Law where a chip tape out is now highly "
+"expensive, and the chip design is extremely large. Replacing fixed HW logic "
+"with a flexible and tightly coupled FW/HW combination is an effective risk "
+"mitigation against chip respin. Problems in the HW design can be "
+"counteracted in device FW. This is especially true for devices which present "
+"a stable and backwards compatible interface to the operating system driver "
+"(such as NVMe)."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:21
+msgid ""
+"The FW layer in devices has grown to incredible size and devices frequently "
+"integrate clusters of fast processors to run it. For example, mlx5 devices "
+"have over 30MB of FW code, and big configurations operate with over 1GB of "
+"FW managed runtime state."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:26
+msgid ""
+"The availability of such a flexible layer has created quite a variety in the "
+"industry where single pieces of silicon are now configurable software-"
+"defined devices and can operate in substantially different ways depending on "
+"the need. Further, we often see cases where specific sites wish to operate "
+"devices in ways that are highly specialized and require applications that "
+"have been tailored to their unique configuration."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:33
+msgid ""
+"Further, devices have become multi-functional and integrated to the point "
+"they no longer fit neatly into the kernel's division of subsystems. Modern "
+"multi-functional devices have drivers, such as bnxt/ice/mlx5/pds, that span "
+"many subsystems while sharing the underlying hardware using the auxiliary "
+"device system."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:39
+msgid ""
+"All together this creates a challenge for the operating system, where "
+"devices have an expansive FW environment that needs robust device-specific "
+"debugging support, and FW-driven functionality that is not well suited to "
+"“generic” interfaces. fwctl seeks to allow access to the full device "
+"functionality from user space in the areas of debuggability, management, and "
+"first-boot/nth-boot provisioning."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:46
+msgid ""
+"fwctl is aimed at the common device design pattern where the OS and FW "
+"communicate via an RPC message layer constructed with a queue or mailbox "
+"scheme. In this case the driver will typically have some layer to deliver "
+"RPC messages and collect RPC responses from device FW. The in-kernel "
+"subsystem drivers that operate the device for its primary purposes will use "
+"these RPCs to build their drivers, but devices also usually have a set of "
+"ancillary RPCs that don't really fit into any specific subsystem. For "
+"example, a HW RAID controller is primarily operated by the block layer but "
+"also comes with a set of RPCs to administer the construction of drives "
+"within the HW RAID."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:56
+msgid ""
+"In the past when devices were more single function, individual subsystems "
+"would grow different approaches to solving some of these common problems. "
+"For instance, monitoring device health, manipulating its FLASH, debugging "
+"the FW, provisioning, all have various unique interfaces across the kernel."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:61
+msgid ""
+"fwctl's purpose is to define a common set of limited rules, described below, "
+"that allow user space to securely construct and execute RPCs inside device "
+"FW. The rules serve as an agreement between the operating system and FW on "
+"how to correctly design the RPC interface. As a uAPI the subsystem provides "
+"a thin layer of discovery and a generic uAPI to deliver the RPCs and collect "
+"the response. It supports a system of user space libraries and tools which "
+"will use this interface to control the device using the device native "
+"protocols."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:70
+msgid "Scope of Action"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:72
+msgid ""
+"fwctl drivers are strictly restricted to being a way to operate the device "
+"FW. It is not an avenue to access random kernel internals, or other "
+"operating system SW states."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:76
+msgid ""
+"fwctl instances must operate on a well-defined device function, and the "
+"device should have a well-defined security model for what scope within the "
+"physical device the function is permitted to access. For instance, the most "
+"complex PCIe device today may broadly have several function-level scopes:"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:81
+msgid ""
+"A privileged function with full access to the on-device global state and "
+"configuration"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:84
+msgid ""
+"Multiple hypervisor functions with control over itself and child functions "
+"used with VMs"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:87
+msgid "Multiple VM functions tightly scoped within the VM"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:89
+msgid ""
+"The device may create a logical parent/child relationship between these "
+"scopes. For instance, a child VM's FW may be within the scope of the "
+"hypervisor FW. It is quite common in the VFIO world that the hypervisor "
+"environment has a complex provisioning/profiling/configuration "
+"responsibility for the function VFIO assigns to the VM."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:95
+msgid ""
+"Further, within the function, devices often have RPC commands that fall "
+"within some general scopes of action (see enum fwctl_rpc_scope):"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:98
+msgid ""
+"Access to function & child configuration, FLASH, etc. that becomes live at a "
+"function reset. Access to function & child runtime configuration that is "
+"transparent or non-disruptive to any driver or VM."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:102
+msgid ""
+"Read-only access to function debug information that may report on FW objects "
+"in the function & child, including FW objects owned by other kernel "
+"subsystems."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:106
+msgid ""
+"Write access to function & child debug information strictly compatible with "
+"the principles of kernel lockdown and kernel integrity protection. Triggers "
+"a kernel taint."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:110
+msgid ""
+"Full debug device access. Triggers a kernel taint, requires CAP_SYS_RAWIO."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:112
+msgid ""
+"User space will provide a scope label on each RPC and the kernel must "
+"enforce the above CAPs and taints based on that scope. A combination of "
+"kernel and FW can enforce that RPCs are placed in the correct scope by user "
+"space."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:117
+msgid "Disallowed behavior"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:119
+msgid ""
+"There are many things this interface must not allow user space to do "
+"(without a taint or CAP), broadly derived from the principles of kernel "
+"lockdown. Some examples:"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:123
+msgid ""
+"DMA to/from arbitrary memory, hang the system, compromise FW integrity with "
+"untrusted code, or otherwise compromise device or system security and "
+"integrity."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:127
+msgid ""
+"Provide an abnormal “back door” to kernel drivers. No manipulation of kernel "
+"objects owned by kernel drivers."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:130
+msgid ""
+"Directly configure or otherwise control kernel drivers. A subsystem kernel "
+"driver can react to the device configuration at function reset/driver load "
+"time, but otherwise must not be coupled to fwctl."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:134
+msgid ""
+"Operate the HW in a way that overlaps with the core purpose of another "
+"primary kernel subsystem, such as read/write to LBAs, send/receive of "
+"network packets, or operate an accelerator's data plane."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:138
+msgid ""
+"fwctl is not a replacement for device direct access subsystems like uacce or "
+"VFIO."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:141
+msgid ""
+"Operations exposed through fwctl's non-tainting interfaces should be fully "
+"sharable with other users of the device. For instance, exposing a RPC "
+"through fwctl should never prevent a kernel subsystem from also concurrently "
+"using that same RPC or hardware unit down the road. In such cases fwctl will "
+"be less important than proper kernel subsystems that eventually emerge. "
+"Mistakes in this area resulting in clashes will be resolved in favour of a "
+"kernel implementation."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:149
+msgid "fwctl User API"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:3
+msgid "**General ioctl format**"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:13
+msgid ""
+"The ioctl interface follows a general format to allow for extensibility. "
+"Each ioctl is passed a structure pointer as the argument providing the size "
+"of the structure in the first u32. The kernel checks that any structure "
+"space beyond what it understands is 0. This allows userspace to use the "
+"backward compatible portion while consistently using the newer, larger, "
+"structures."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:19
+msgid "ioctls use a standard meaning for common errnos:"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:21
+msgid "ENOTTY: The IOCTL number itself is not supported at all"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:22
+msgid ""
+"E2BIG: The IOCTL number is supported, but the provided structure has non-"
+"zero in a part the kernel does not understand."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:24
+msgid ""
+"EOPNOTSUPP: The IOCTL number is supported, and the structure is understood, "
+"however a known field has a value the kernel does not understand or support."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:27
+msgid ""
+"EINVAL: Everything about the IOCTL was understood, but a field is not "
+"correct."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:29
+msgid "ENOMEM: Out of memory."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:30
+msgid "ENODEV: The underlying device has been hot-unplugged and the FD is"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:31
+msgid "orphaned."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:33
+msgid "As well as additional errnos, within specific ioctls."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:51
+msgid "ioctl(FWCTL_INFO)"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:55
+#: ../include/uapi/fwctl/fwctl.h:119 ../../../userspace-api/fwctl/fwctl:152:
+#: ../include/uapi/fwctl/mlx5.h:28 ../../../userspace-api/fwctl/fwctl:153:
+#: ../include/uapi/fwctl/pds.h:18 ../include/uapi/fwctl/pds.h:38
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:20
+#: ../include/linux/fwctl.h:65 ../include/linux/fwctl.h:126
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:65
+#: ../include/uapi/fwctl/fwctl.h:130 ../../../userspace-api/fwctl/fwctl:152:
+#: ../include/uapi/fwctl/mlx5.h:35 ../../../userspace-api/fwctl/fwctl:153:
+#: ../include/uapi/fwctl/pds.h:24 ../include/uapi/fwctl/pds.h:56
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:31
+#: ../include/linux/fwctl.h:71 ../include/linux/fwctl.h:132
+msgid "**Members**"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:52
+#: ../include/uapi/fwctl/fwctl.h:116
+msgid "``size``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:53
+msgid "sizeof(struct fwctl_info)"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:53
+msgid "``flags``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:54
+msgid "Must be 0"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:54
+msgid "``out_device_type``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:55
+msgid "Returns the type of the device from enum fwctl_device_type"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:55
+msgid "``device_data_len``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:56
+msgid ""
+"On input the length of the out_device_data memory. On output the size of the "
+"kernel's device_data which may be larger or smaller than the input. Maybe 0 "
+"on input."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:58
+msgid "``out_device_data``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:59
+msgid ""
+"Pointer to a memory of device_data_len bytes. Kernel will fill the entire "
+"memory, zeroing as required."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:63
+#: ../include/uapi/fwctl/fwctl.h:109 ../include/uapi/fwctl/fwctl.h:125
+#: ../../../userspace-api/fwctl/fwctl:152: ../include/uapi/fwctl/mlx5.h:31
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:19
+#: ../../../userspace-api/fwctl/fwctl:200: ../drivers/fwctl/main.c:347
+#: ../drivers/fwctl/main.c:360 ../../../userspace-api/fwctl/fwctl:202:
+#: ../include/linux/fwctl.h:58 ../include/linux/fwctl.h:66
+#: ../include/linux/fwctl.h:94 ../include/linux/fwctl.h:127
+msgid "**Description**"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:60
+msgid ""
+"Returns basic information about this fwctl instance, particularly what "
+"driver is being used to define the device_data format."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:74
+msgid "Scope of access for the RPC"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:78
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:28
+msgid "**Constants**"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:80
+msgid "``FWCTL_RPC_CONFIGURATION``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:81
+msgid "Device configuration access scope"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:83
+msgid ""
+"Read/write access to device configuration. When configuration is written to "
+"the device it remains in a fully supported state."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:86
+msgid "``FWCTL_RPC_DEBUG_READ_ONLY``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:87
+msgid "Read only access to debug information"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:89
+msgid ""
+"Readable debug information. Debug information is compatible with kernel "
+"lockdown, and does not disclose any sensitive information. For instance "
+"exposing any encryption secrets from this information is forbidden."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:94
+msgid "``FWCTL_RPC_DEBUG_WRITE``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:95
+msgid "Writable access to lockdown compatible debug information"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:97
+msgid ""
+"Allows write access to data in the device which may leave a fully supported "
+"state. This is intended to permit intensive and possibly invasive debugging. "
+"This scope will taint the kernel."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:101
+msgid "``FWCTL_RPC_DEBUG_WRITE_FULL``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:102
+msgid "Write access to all debug information"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:104
+msgid ""
+"Allows read/write access to everything. Requires CAP_SYS_RAW_IO, so it is "
+"not required to follow lockdown principals. If in doubt debugging should be "
+"placed in this scope. This scope will taint the kernel."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:75
+msgid "Refer to fwctl.rst for a more detailed discussion of these scopes."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:115
+msgid "ioctl(FWCTL_RPC)"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:117
+msgid "sizeof(struct fwctl_rpc)"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:117
+msgid "``scope``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:118
+msgid "One of enum fwctl_rpc_scope, required scope for the RPC"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:118
+msgid "``in_len``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:119
+msgid "Length of the in memory"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:119
+msgid "``out_len``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:120
+msgid "Length of the out memory"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:120
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:40
+msgid "``in``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:121
+msgid "Request message in device specific format"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:121
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:45
+msgid "``out``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:122
+msgid "Response message in device specific format"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:122
+msgid ""
+"Deliver a Remote Procedure Call to the device FW and return the response. "
+"The call's parameters and return are marshaled into linear buffers of "
+"memory. Any errno indicates that delivery of the RPC to the device failed. "
+"Return status originating in the device during a successful delivery must be "
+"encoded into out."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:151: ../include/uapi/fwctl/fwctl.h:128
+msgid "The format of the buffers matches the out_device_type from FWCTL_INFO."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:152: ../include/uapi/fwctl/mlx5.h:24
+msgid "ioctl(FWCTL_INFO) out_device_data"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:152: ../include/uapi/fwctl/mlx5.h:25
+msgid "``uid``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:152: ../include/uapi/fwctl/mlx5.h:26
+msgid ""
+"The FW UID this FD is bound to. Each command header will force this value."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:152: ../include/uapi/fwctl/mlx5.h:27
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:15
+msgid "``uctx_caps``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:152: ../include/uapi/fwctl/mlx5.h:28
+msgid "The FW capabilities that are enabled for the uid."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:152: ../include/uapi/fwctl/mlx5.h:28
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:16
+msgid "Return basic information about the FW interface available."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:16
+msgid "bitmap of firmware capabilities"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:30
+msgid "``PDS_FWCTL_QUERY_CAP``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:31
+msgid "firmware can be queried for information"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:33
+msgid "``PDS_FWCTL_SEND_CAP``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:34
+msgid "firmware can be sent commands"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:41
+msgid "rpc in parameters"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:35
+msgid "``in.op``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:36
+msgid "requested operation code"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:36
+msgid "``in.ep``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:37
+msgid "firmware endpoint to operate on"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:37
+msgid "``in.rsvd``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:38
+#: ../include/uapi/fwctl/pds.h:43
+msgid "reserved"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:38
+msgid "``in.len``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:39
+msgid "length of payload data"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:39
+msgid "``in.payload``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:40
+msgid "address of payload buffer"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:46
+msgid "rpc out parameters"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:41
+msgid "``out.retval``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:42
+msgid "operation result value"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:42
+msgid "``out.rsvd``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:43
+msgid "``out.len``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:44
+msgid "length of result data buffer"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:44
+msgid "``out.payload``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:153: ../include/uapi/fwctl/pds.h:45
+msgid "address of payload data buffer"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:156
+msgid "sysfs Class"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:158
+msgid ""
+"fwctl has a sysfs class (/sys/class/fwctl/fwctlNN/) and character devices (/"
+"dev/fwctl/fwctlNN) with a simple numbered scheme. The character device "
+"operates the iotcl uAPI described above."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:162
+msgid ""
+"fwctl devices can be related to driver components in other subsystems "
+"through sysfs::"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:175
+msgid "User space Community"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:177
+msgid ""
+"Drawing inspiration from nvme-cli, participating in the kernel side must "
+"come with a user space in a common TBD git tree, at a minimum to usefully "
+"operate the kernel driver. Providing such an implementation is a pre-"
+"condition to merging a kernel driver."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:182
+msgid ""
+"The goal is to build user space community around some of the shared problems "
+"we all have, and ideally develop some common user space programs with some "
+"starting themes of:"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:186
+msgid "Device in-field debugging"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:188
+msgid "HW provisioning"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:190
+msgid "VFIO child device profiling before VM boot"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:192
+msgid "Confidential Compute topics (attestation, secure provisioning)"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:194
+msgid ""
+"that stretch across all subsystems in the kernel. fwupd is a great example "
+"of how an excellent user space experience can emerge out of kernel-side "
+"diversity."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:198
+msgid "fwctl Kernel API"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:200: ../drivers/fwctl/main.c:344
+msgid "Register a new device to the subsystem"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:200: ../drivers/fwctl/main.c:348
+#: ../drivers/fwctl/main.c:361 ../../../userspace-api/fwctl/fwctl:202:
+#: ../include/linux/fwctl.h:92
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:200: ../drivers/fwctl/main.c:350
+#: ../drivers/fwctl/main.c:363
+msgid "``struct fwctl_device *fwctl``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:200: ../drivers/fwctl/main.c:345
+msgid "Previously allocated fwctl_device"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:200: ../drivers/fwctl/main.c:346
+msgid ""
+"On return the device is visible through sysfs and /dev, driver ops may be "
+"called."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:200: ../drivers/fwctl/main.c:357
+msgid "Unregister a device from the subsystem"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:200: ../drivers/fwctl/main.c:358
+msgid "Previously allocated and registered fwctl_device"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:200: ../drivers/fwctl/main.c:359
+msgid ""
+"Undoes fwctl_register(). On return no driver ops will be called. The caller "
+"must still call fwctl_put() to free the fwctl."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:200: ../drivers/fwctl/main.c:362
+msgid ""
+"Unregister will return even if userspace still has file descriptors open. "
+"This will call ops->close_uctx() on any open FDs and after return no driver "
+"op will be called. The FDs remain open but all fops will return -ENODEV."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:200: ../drivers/fwctl/main.c:366
+msgid ""
+"The design of fwctl allows this sort of disassociation of the driver from "
+"the subsystem primarily by keeping memory allocations owned by the core "
+"subsytem. The fwctl_device and fwctl_uctx can both be freed without "
+"requiring a driver callback. This allows the module to remain unlocked while "
+"FDs are open."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:16
+msgid "Driver provided operations"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:24
+msgid "``device_type``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:25
+msgid "The drivers assigned device_type number. This is uABI."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:28
+msgid "``uctx_size``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:29
+msgid ""
+"The size of the fwctl_uctx struct to allocate. The first bytes of this "
+"memory will be a fwctl_uctx. The driver can use the remaining bytes as its "
+"private memory."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:34
+msgid "``open_uctx``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:35
+msgid "Called when a file descriptor is opened before the uctx is ever used."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:39
+msgid "``close_uctx``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:40
+msgid "Called when the uctx is destroyed, usually when the FD is closed."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:44
+msgid "``info``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:45
+msgid ""
+"Implement FWCTL_INFO. Return a kmalloc() memory that is copied to "
+"out_device_data. On input length indicates the size of the user buffer on "
+"output it indicates the size of the memory. The driver can ignore length on "
+"input, the core code will handle everything."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:51
+msgid "``fw_rpc``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:52
+msgid ""
+"Implement FWCTL_RPC. Deliver rpc_in/in_len to the FW and return the response "
+"and set out_len. rpc_in can be returned as the response pointer. Otherwise "
+"the returned pointer is freed with kvfree()."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:17
+msgid ""
+"fwctl_unregister() will wait until all excuting ops are completed before it "
+"returns. Drivers should be mindful to not let their ops run for too long as "
+"it will block device hot unplug and module unloading."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:61
+msgid "Per-driver registration struct"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:62
+msgid "``dev``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:63
+msgid "The sysfs (class/fwctl/fwctlXX) device"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:63
+msgid ""
+"Each driver instance will have one of these structs with the driver private "
+"data following immediately after. This struct is refcounted, it is freed by "
+"calling fwctl_put()."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:90
+msgid "``fwctl_alloc_device (parent, ops, drv_struct, member)``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:88
+msgid "Allocate a fwctl"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:94
+msgid "``parent``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:89
+msgid "Physical device that provides the FW interface"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:91
+msgid "``ops``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:90
+msgid "Driver ops to register"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:92
+msgid "``drv_struct``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:91
+msgid "'struct driver_fwctl' that holds the struct fwctl_device"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:93
+msgid "``member``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:92
+msgid "Name of the struct fwctl_device in **drv_struct**"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:93
+msgid ""
+"This allocates and initializes the fwctl_device embedded in the drv_struct. "
+"Upon success the pointer must be freed via fwctl_put(). Returns a "
+"'drv_struct \\*' on success, NULL on error."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:122
+msgid "Per user FD context"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:123
+msgid "``fwctl``"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:124
+msgid "fwctl instance that owns the context"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl:202: ../include/linux/fwctl.h:124
+msgid ""
+"Every FD opened by userspace will get a unique context allocation. Any "
+"driver private data will follow immediately after."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:205
+msgid "fwctl Driver design"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:207
+msgid ""
+"In many cases a fwctl driver is going to be part of a larger cross-subsystem "
+"device possibly using the auxiliary_device mechanism. In that case several "
+"subsystems are going to be sharing the same device and FW interface layer so "
+"the device design must already provide for isolation and cooperation between "
+"kernel subsystems. fwctl should fit into that same model."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:213
+msgid ""
+"Part of the driver should include a description of how its scope "
+"restrictions and security model work. The driver and FW together must ensure "
+"that RPCs provided by user space are mapped to the appropriate scope. If the "
+"validation is done in the driver then the validation can read a 'command "
+"effects' report from the device, or hardwire the enforcement. If the "
+"validation is done in the FW, then the driver should pass the "
+"fwctl_rpc_scope to the FW along with the command."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:220
+msgid ""
+"The driver and FW must cooperate to ensure that either fwctl cannot allocate "
+"any FW resources, or any resources it does allocate are freed on FD "
+"closure.  A driver primarily constructed around FW RPCs may find that its "
+"core PCI function and RPC layer belongs under fwctl with auxiliary devices "
+"connecting to other subsystems."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:226
+msgid ""
+"Each device type must be mindful of Linux's philosophy for stable ABI. The "
+"FW RPC interface does not have to meet a strictly stable ABI, but it does "
+"need to meet an expectation that user space tools that are deployed and in "
+"significant use don't needlessly break. FW upgrade and kernel upgrade should "
+"keep widely deployed tooling working."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:232
+msgid ""
+"Development and debugging focused RPCs under more permissive scopes can have "
+"less stability if the tools using them are only run under exceptional "
+"circumstances and not for every day use of the device. Debugging tools may "
+"even require exact version matching as they may require something similar to "
+"DWARF debug information from the FW binary."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:239
+msgid "Security Response"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:241
+msgid ""
+"The kernel remains the gatekeeper for this interface. If violations of the "
+"scopes, security or isolation principles are found, we have options to let "
+"devices fix them with a FW update, push a kernel patch to parse and block "
+"RPC commands or push a kernel patch to block entire firmware versions/"
+"devices."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:246
+msgid ""
+"While the kernel can always directly parse and restrict RPCs, it is expected "
+"that the existing kernel pattern of allowing drivers to delegate validation "
+"to FW to be a useful design."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:251
+msgid "Existing Similar Examples"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:253
+msgid ""
+"The approach described in this document is not a new idea. Direct, or near "
+"direct device access has been offered by the kernel in different areas for "
+"decades. With more devices wanting to follow this design pattern it is "
+"becoming clear that it is not entirely well understood and, more "
+"importantly, the security considerations are not well defined or agreed upon."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:259
+msgid "Some examples:"
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:261
+msgid ""
+"HW RAID controllers. This includes RPCs to do things like compose drives "
+"into a RAID volume, configure RAID parameters, monitor the HW and more."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:264
+msgid ""
+"Baseboard managers. RPCs for configuring settings in the device and more."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:266
+msgid ""
+"NVMe vendor command capsules. nvme-cli provides access to some monitoring "
+"functions that different products have defined, but more exist."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:269
+msgid "CXL also has a NVMe-like vendor command system."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:271
+msgid ""
+"DRM allows user space drivers to send commands to the device via kernel "
+"mediation."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:274
+msgid ""
+"RDMA allows user space drivers to directly push commands to the device "
+"without kernel involvement."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:277
+msgid ""
+"Various “raw” APIs, raw HID (SDL2), raw USB, NVMe Generic Interface, etc."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:279
+msgid ""
+"The first 4 are examples of areas that fwctl intends to cover. The latter "
+"three are examples of disallowed behavior as they fully overlap with the "
+"primary purpose of a kernel subsystem."
+msgstr ""
+
+#: ../../../userspace-api/fwctl/fwctl.rst:283
+msgid ""
+"Some key lessons learned from these past efforts are the importance of "
+"having a common user space project to use as a pre-condition for obtaining a "
+"kernel driver. Developing good community around useful software in user "
+"space is key to getting companies to fund participation to enable their "
+"products."
+msgstr ""
