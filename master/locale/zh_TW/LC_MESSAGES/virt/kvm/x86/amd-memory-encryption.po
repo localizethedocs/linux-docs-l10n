@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"POT-Creation-Date: 2026-02-16 08:44+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -141,6 +141,7 @@ msgstr ""
 #: ../../../virt/kvm/x86/amd-memory-encryption.rst:467
 #: ../../../virt/kvm/x86/amd-memory-encryption.rst:478
 #: ../../../virt/kvm/x86/amd-memory-encryption.rst:555
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:584
 msgid "Returns: 0 on success, -negative on error"
 msgstr ""
 
@@ -564,31 +565,98 @@ msgid ""
 msgstr ""
 
 #: ../../../virt/kvm/x86/amd-memory-encryption.rst:576
-msgid "Device attribute API"
+msgid "21. KVM_SEV_SNP_ENABLE_REQ_CERTS"
 msgstr ""
 
 #: ../../../virt/kvm/x86/amd-memory-encryption.rst:578
+msgid ""
+"The KVM_SEV_SNP_ENABLE_REQ_CERTS command will configure KVM to exit to "
+"userspace with a ``KVM_EXIT_SNP_REQ_CERTS`` exit type as part of handling a "
+"guest attestation report, which will to allow userspace to provide a "
+"certificate corresponding to the endorsement key used by firmware to sign "
+"that attestation report."
+msgstr ""
+
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:586
+msgid ""
+"NOTE: The endorsement key used by firmware may change as a result of "
+"management activities like updating SEV-SNP firmware or loading new "
+"endorsement keys, so some care should be taken to keep the returned "
+"certificate data in sync with the actual endorsement key in use by firmware "
+"at the time the attestation request is sent to SNP firmware. The recommended "
+"scheme to do this is to use file locking (e.g. via fcntl()'s F_OFD_SETLK) in "
+"the following manner:"
+msgstr ""
+
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:594
+msgid ""
+"Prior to obtaining/providing certificate data as part of servicing an exit "
+"type of ``KVM_EXIT_SNP_REQ_CERTS``, the VMM should obtain a shared/read or "
+"exclusive/write lock on the certificate blob file before reading it and "
+"returning it to KVM, and continue to hold the lock until the attestation "
+"request is actually sent to firmware. To facilitate this, the VMM can set "
+"the ``immediate_exit`` flag of kvm_run just after supplying the certificate "
+"data, and just before resuming the vCPU. This will ensure the vCPU will exit "
+"again to userspace with ``-EINTR`` after it finishes fetching the "
+"attestation request from firmware, at which point the VMM can safely drop "
+"the file lock."
+msgstr ""
+
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:605
+msgid ""
+"Tools/libraries that perform updates to SNP firmware TCB values or "
+"endorsement keys (e.g. via /dev/sev interfaces such as ``SNP_COMMIT``, "
+"``SNP_SET_CONFIG``, or ``SNP_VLEK_LOAD``, see Documentation/virt/coco/sev-"
+"guest.rst for more details) in such a way that the certificate blob needs to "
+"be updated, should similarly take an exclusive lock on the certificate blob "
+"for the duration of any updates to endorsement keys or the certificate blob "
+"contents to ensure that VMMs using the above scheme will not return "
+"certificate blob data that is out of sync with the endorsement key used by "
+"firmware at the time the attestation request is actually issued."
+msgstr ""
+
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:616
+msgid ""
+"This scheme is recommended so that tools can use a fairly generic/natural "
+"approach to synchronizing firmware/certificate updates via file-locking, "
+"which should make it easier to maintain interoperability across tools/VMMs/"
+"vendors."
+msgstr ""
+
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:622
+msgid "Device attribute API"
+msgstr ""
+
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:624
 msgid ""
 "Attributes of the SEV implementation can be retrieved through the "
 "``KVM_HAS_DEVICE_ATTR`` and ``KVM_GET_DEVICE_ATTR`` ioctls on the ``/dev/"
 "kvm`` device node, using group ``KVM_X86_GRP_SEV``."
 msgstr ""
 
-#: ../../../virt/kvm/x86/amd-memory-encryption.rst:582
-msgid "Currently only one attribute is implemented:"
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:628
+msgid "The following attributes are currently implemented:"
 msgstr ""
 
-#: ../../../virt/kvm/x86/amd-memory-encryption.rst:584
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:630
 msgid ""
 "``KVM_X86_SEV_VMSA_FEATURES``: return the set of all bits that are accepted "
 "in the ``vmsa_features`` of ``KVM_SEV_INIT2``."
 msgstr ""
 
-#: ../../../virt/kvm/x86/amd-memory-encryption.rst:588
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:633
+msgid ""
+"``KVM_X86_SEV_SNP_REQ_CERTS``: return a value of 1 if the kernel supports "
+"the ``KVM_EXIT_SNP_REQ_CERTS`` exit, which allows for fetching endorsement "
+"key certificates from userspace for each SNP attestation request the guest "
+"issues."
+msgstr ""
+
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:638
 msgid "Firmware Management"
 msgstr ""
 
-#: ../../../virt/kvm/x86/amd-memory-encryption.rst:590
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:640
 msgid ""
 "The SEV guest key management is handled by a separate processor called the "
 "AMD Secure Processor (AMD-SP). Firmware running inside the AMD-SP provides a "
@@ -597,7 +665,7 @@ msgid ""
 "For more information, see the SEV Key Management spec [api-spec]_"
 msgstr ""
 
-#: ../../../virt/kvm/x86/amd-memory-encryption.rst:596
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:646
 msgid ""
 "The AMD-SP firmware can be initialized either by using its own non-volatile "
 "storage or the OS can manage the NV storage for the firmware using parameter "
@@ -606,36 +674,36 @@ msgid ""
 "override the file with PSP non-volatile storage."
 msgstr ""
 
-#: ../../../virt/kvm/x86/amd-memory-encryption.rst:603
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:653
 msgid "References"
 msgstr ""
 
-#: ../../../virt/kvm/x86/amd-memory-encryption.rst:606
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:656
 msgid ""
 "See [white-paper]_, [api-spec]_, [amd-apm]_, [kvm-forum]_, and [snp-fw-abi]_ "
 "for more info."
 msgstr ""
 
-#: ../../../virt/kvm/x86/amd-memory-encryption.rst:609
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:659
 msgid ""
 "https://developer.amd.com/wordpress/media/2013/12/"
 "AMD_Memory_Encryption_Whitepaper_v7-Public.pdf"
 msgstr ""
 
-#: ../../../virt/kvm/x86/amd-memory-encryption.rst:610
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:660
 msgid "https://support.amd.com/TechDocs/55766_SEV-KM_API_Specification.pdf"
 msgstr ""
 
-#: ../../../virt/kvm/x86/amd-memory-encryption.rst:611
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:661
 msgid "https://support.amd.com/TechDocs/24593.pdf (section 15.34)"
 msgstr ""
 
-#: ../../../virt/kvm/x86/amd-memory-encryption.rst:612
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:662
 msgid ""
 "https://www.linux-kvm.org/images/7/74/02x08A-Thomas_Lendacky-"
 "AMDs_Virtualizatoin_Memory_Encryption_Technology.pdf"
 msgstr ""
 
-#: ../../../virt/kvm/x86/amd-memory-encryption.rst:613
+#: ../../../virt/kvm/x86/amd-memory-encryption.rst:663
 msgid "https://www.amd.com/system/files/TechDocs/56860.pdf"
 msgstr ""
