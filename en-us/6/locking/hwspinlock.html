@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Hardware Spinlock Framework &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/locking/hwspinlock.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Percpu rw semaphores" href="percpu-rw-semaphore.html" />
+    <link rel="prev" title="Futex Requeue PI" href="futex-requeue-pi.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Locking</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="locktypes.html">Lock types and their rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockdep-design.html">Runtime locking correctness validator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockstat.html">Lock Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="locktorture.html">Kernel Lock Torture Test Operation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mutex-design.html">Generic Mutex Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex-design.html">RT-mutex implementation design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex.html">RT-mutex subsystem with PI support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seqlock.html">Sequence counters and sequential locks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spinlocks.html">Locking lessons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ww-mutex-design.html">Wound/Wait Deadlock-Proof Mutex Design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="preempt-locking.html">Proper Locking Under a Preemptible Kernel: Keeping Kernel Code Preempt-Safe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pi-futex.html">Lightweight PI-futexes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="futex-requeue-pi.html">Futex Requeue PI</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Hardware Spinlock Framework</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#user-api">User API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#typical-usage">Typical usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#api-for-implementors">API for implementors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#important-structs">Important structs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#implementation-callbacks">Implementation callbacks</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="percpu-rw-semaphore.html">Percpu rw semaphores</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futexes.html">A description of what robust futexes are</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futex-ABI.html">The robust futex ABI</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/locking/hwspinlock.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="hardware-spinlock-framework">
+<h1>Hardware Spinlock Framework<a class="headerlink" href="#hardware-spinlock-framework" title="Link to this heading">¶</a></h1>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading">¶</a></h2>
+<p>Hardware spinlock modules provide hardware assistance for synchronization
+and mutual exclusion between heterogeneous processors and those not operating
+under a single, shared operating system.</p>
+<p>For example, OMAP4 has dual Cortex-A9, dual Cortex-M3 and a C64x+ DSP,
+each of which is running a different Operating System (the master, A9,
+is usually running Linux and the slave processors, the M3 and the DSP,
+are running some flavor of RTOS).</p>
+<p>A generic hwspinlock framework allows platform-independent drivers to use
+the hwspinlock device in order to access data structures that are shared
+between remote processors, that otherwise have no alternative mechanism
+to accomplish synchronization and mutual exclusion operations.</p>
+<p>This is necessary, for example, for Inter-processor communications:
+on OMAP4, cpu-intensive multimedia tasks are offloaded by the host to the
+remote M3 and/or C64x+ slave processors (by an IPC subsystem called Syslink).</p>
+<p>To achieve fast message-based communications, a minimal kernel support
+is needed to deliver messages arriving from a remote processor to the
+appropriate user process.</p>
+<p>This communication is based on simple data structures that is shared between
+the remote processors, and access to it is synchronized using the hwspinlock
+module (remote processor directly places new messages in this shared data
+structure).</p>
+<p>A common hwspinlock interface makes it possible to have generic, platform-
+independent, drivers.</p>
+</section>
+<section id="user-api">
+<h2>User API<a class="headerlink" href="#user-api" title="Link to this heading">¶</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct hwspinlock *hwspin_lock_request_specific(unsigned int id);
+</pre></div>
+</div>
+<p>Assign a specific hwspinlock id and return its address, or NULL
+if that hwspinlock is already in use. Usually board code will
+be calling this function in order to reserve specific hwspinlock
+ids for predefined purposes.</p>
+<p>Should be called from a process context (might sleep).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int of_hwspin_lock_get_id(struct device_node *np, int index);
+</pre></div>
+</div>
+<p>Retrieve the global lock id for an OF phandle-based specific lock.
+This function provides a means for DT users of a hwspinlock module
+to get the global lock id of a specific hwspinlock, so that it can
+be requested using the normal <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">hwspin_lock_request_specific()</span></code> API.</p>
+<p>The function returns a lock id number on success, -EPROBE_DEFER if
+the hwspinlock device is not yet registered with the core, or other
+error values.</p>
+<p>Should be called from a process context (might sleep).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_lock_free(struct hwspinlock *hwlock);
+</pre></div>
+</div>
+<p>Free a previously-assigned hwspinlock; returns 0 on success, or an
+appropriate error code on failure (e.g. -EINVAL if the hwspinlock
+is already free).</p>
+<p>Should be called from a process context (might sleep).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_lock_bust(struct hwspinlock *hwlock, unsigned int id);
+</pre></div>
+</div>
+<p>After verifying the owner of the hwspinlock, release a previously acquired
+hwspinlock; returns 0 on success, or an appropriate error code on failure
+(e.g. -EOPNOTSUPP if the bust operation is not defined for the specific
+hwspinlock).</p>
+<p>Should be called from a process context (might sleep).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_lock_timeout(struct hwspinlock *hwlock, unsigned int timeout);
+</pre></div>
+</div>
+<p>Lock a previously-assigned hwspinlock with a timeout limit (specified in
+msecs). If the hwspinlock is already taken, the function will busy loop
+waiting for it to be released, but give up when the timeout elapses.
+Upon a successful return from this function, preemption is disabled so
+the caller must not sleep, and is advised to release the hwspinlock as
+soon as possible, in order to minimize remote cores polling on the
+hardware interconnect.</p>
+<p>Returns 0 when successful and an appropriate error code otherwise (most
+notably -ETIMEDOUT if the hwspinlock is still busy after timeout msecs).
+The function will never sleep.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_lock_timeout_irq(struct hwspinlock *hwlock, unsigned int timeout);
+</pre></div>
+</div>
+<p>Lock a previously-assigned hwspinlock with a timeout limit (specified in
+msecs). If the hwspinlock is already taken, the function will busy loop
+waiting for it to be released, but give up when the timeout elapses.
+Upon a successful return from this function, preemption and the local
+interrupts are disabled, so the caller must not sleep, and is advised to
+release the hwspinlock as soon as possible.</p>
+<p>Returns 0 when successful and an appropriate error code otherwise (most
+notably -ETIMEDOUT if the hwspinlock is still busy after timeout msecs).
+The function will never sleep.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_lock_timeout_irqsave(struct hwspinlock *hwlock, unsigned int to,
+                                unsigned long *flags);
+</pre></div>
+</div>
+<p>Lock a previously-assigned hwspinlock with a timeout limit (specified in
+msecs). If the hwspinlock is already taken, the function will busy loop
+waiting for it to be released, but give up when the timeout elapses.
+Upon a successful return from this function, preemption is disabled,
+local interrupts are disabled and their previous state is saved at the
+given flags placeholder. The caller must not sleep, and is advised to
+release the hwspinlock as soon as possible.</p>
+<p>Returns 0 when successful and an appropriate error code otherwise (most
+notably -ETIMEDOUT if the hwspinlock is still busy after timeout msecs).</p>
+<p>The function will never sleep.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_lock_timeout_raw(struct hwspinlock *hwlock, unsigned int timeout);
+</pre></div>
+</div>
+<p>Lock a previously-assigned hwspinlock with a timeout limit (specified in
+msecs). If the hwspinlock is already taken, the function will busy loop
+waiting for it to be released, but give up when the timeout elapses.</p>
+<p>Caution: User must protect the routine of getting hardware lock with mutex
+or spinlock to avoid dead-lock, that will let user can do some time-consuming
+or sleepable operations under the hardware lock.</p>
+<p>Returns 0 when successful and an appropriate error code otherwise (most
+notably -ETIMEDOUT if the hwspinlock is still busy after timeout msecs).</p>
+<p>The function will never sleep.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_lock_timeout_in_atomic(struct hwspinlock *hwlock, unsigned int to);
+</pre></div>
+</div>
+<p>Lock a previously-assigned hwspinlock with a timeout limit (specified in
+msecs). If the hwspinlock is already taken, the function will busy loop
+waiting for it to be released, but give up when the timeout elapses.</p>
+<p>This function shall be called only from an atomic context and the timeout
+value shall not exceed a few msecs.</p>
+<p>Returns 0 when successful and an appropriate error code otherwise (most
+notably -ETIMEDOUT if the hwspinlock is still busy after timeout msecs).</p>
+<p>The function will never sleep.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_trylock(struct hwspinlock *hwlock);
+</pre></div>
+</div>
+<p>Attempt to lock a previously-assigned hwspinlock, but immediately fail if
+it is already taken.</p>
+<p>Upon a successful return from this function, preemption is disabled so
+caller must not sleep, and is advised to release the hwspinlock as soon as
+possible, in order to minimize remote cores polling on the hardware
+interconnect.</p>
+<p>Returns 0 on success and an appropriate error code otherwise (most
+notably -EBUSY if the hwspinlock was already taken).
+The function will never sleep.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_trylock_irq(struct hwspinlock *hwlock);
+</pre></div>
+</div>
+<p>Attempt to lock a previously-assigned hwspinlock, but immediately fail if
+it is already taken.</p>
+<p>Upon a successful return from this function, preemption and the local
+interrupts are disabled so caller must not sleep, and is advised to
+release the hwspinlock as soon as possible.</p>
+<p>Returns 0 on success and an appropriate error code otherwise (most
+notably -EBUSY if the hwspinlock was already taken).</p>
+<p>The function will never sleep.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_trylock_irqsave(struct hwspinlock *hwlock, unsigned long *flags);
+</pre></div>
+</div>
+<p>Attempt to lock a previously-assigned hwspinlock, but immediately fail if
+it is already taken.</p>
+<p>Upon a successful return from this function, preemption is disabled,
+the local interrupts are disabled and their previous state is saved
+at the given flags placeholder. The caller must not sleep, and is advised
+to release the hwspinlock as soon as possible.</p>
+<p>Returns 0 on success and an appropriate error code otherwise (most
+notably -EBUSY if the hwspinlock was already taken).
+The function will never sleep.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_trylock_raw(struct hwspinlock *hwlock);
+</pre></div>
+</div>
+<p>Attempt to lock a previously-assigned hwspinlock, but immediately fail if
+it is already taken.</p>
+<p>Caution: User must protect the routine of getting hardware lock with mutex
+or spinlock to avoid dead-lock, that will let user can do some time-consuming
+or sleepable operations under the hardware lock.</p>
+<p>Returns 0 on success and an appropriate error code otherwise (most
+notably -EBUSY if the hwspinlock was already taken).
+The function will never sleep.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_trylock_in_atomic(struct hwspinlock *hwlock);
+</pre></div>
+</div>
+<p>Attempt to lock a previously-assigned hwspinlock, but immediately fail if
+it is already taken.</p>
+<p>This function shall be called only from an atomic context.</p>
+<p>Returns 0 on success and an appropriate error code otherwise (most
+notably -EBUSY if the hwspinlock was already taken).
+The function will never sleep.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void hwspin_unlock(struct hwspinlock *hwlock);
+</pre></div>
+</div>
+<p>Unlock a previously-locked hwspinlock. Always succeed, and can be called
+from any context (the function never sleeps).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>code should <strong>never</strong> unlock an hwspinlock which is already unlocked
+(there is no protection against this).</p>
+</div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void hwspin_unlock_irq(struct hwspinlock *hwlock);
+</pre></div>
+</div>
+<p>Unlock a previously-locked hwspinlock and enable local interrupts.
+The caller should <strong>never</strong> unlock an hwspinlock which is already unlocked.</p>
+<p>Doing so is considered a bug (there is no protection against this).
+Upon a successful return from this function, preemption and local
+interrupts are enabled. This function will never sleep.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void
+hwspin_unlock_irqrestore(struct hwspinlock *hwlock, unsigned long *flags);
+</pre></div>
+</div>
+<p>Unlock a previously-locked hwspinlock.</p>
+<p>The caller should <strong>never</strong> unlock an hwspinlock which is already unlocked.
+Doing so is considered a bug (there is no protection against this).
+Upon a successful return from this function, preemption is reenabled,
+and the state of the local interrupts is restored to the state saved at
+the given flags. This function will never sleep.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void hwspin_unlock_raw(struct hwspinlock *hwlock);
+</pre></div>
+</div>
+<p>Unlock a previously-locked hwspinlock.</p>
+<p>The caller should <strong>never</strong> unlock an hwspinlock which is already unlocked.
+Doing so is considered a bug (there is no protection against this).
+This function will never sleep.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void hwspin_unlock_in_atomic(struct hwspinlock *hwlock);
+</pre></div>
+</div>
+<p>Unlock a previously-locked hwspinlock.</p>
+<p>The caller should <strong>never</strong> unlock an hwspinlock which is already unlocked.
+Doing so is considered a bug (there is no protection against this).
+This function will never sleep.</p>
+</section>
+<section id="typical-usage">
+<h2>Typical usage<a class="headerlink" href="#typical-usage" title="Link to this heading">¶</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/hwspinlock.h&gt;
+#include &lt;linux/err.h&gt;
+
+int hwspinlock_example(void)
+{
+        struct hwspinlock *hwlock;
+        int ret;
+
+        /*
+        * assign a specific hwspinlock id - this should be called early
+        * by board init code.
+        */
+        hwlock = hwspin_lock_request_specific(PREDEFINED_LOCK_ID);
+        if (!hwlock)
+                ...
+
+        /* try to take it, but don&#39;t spin on it */
+        ret = hwspin_trylock(hwlock);
+        if (!ret) {
+                pr_info(&quot;lock is already taken\n&quot;);
+                return -EBUSY;
+        }
+
+        /*
+        * we took the lock, do our thing now, but do NOT sleep
+        */
+
+        /* release the lock */
+        hwspin_unlock(hwlock);
+
+        /* free the lock */
+        ret = hwspin_lock_free(hwlock);
+        if (ret)
+                ...
+
+        return ret;
+}
+</pre></div>
+</div>
+</section>
+<section id="api-for-implementors">
+<h2>API for implementors<a class="headerlink" href="#api-for-implementors" title="Link to this heading">¶</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_lock_register(struct hwspinlock_device *bank, struct device *dev,
+              const struct hwspinlock_ops *ops, int base_id, int num_locks);
+</pre></div>
+</div>
+<p>To be called from the underlying platform-specific implementation, in
+order to register a new hwspinlock device (which is usually a bank of
+numerous locks). Should be called from a process context (this function
+might sleep).</p>
+<p>Returns 0 on success, or appropriate error code on failure.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hwspin_lock_unregister(struct hwspinlock_device *bank);
+</pre></div>
+</div>
+<p>To be called from the underlying vendor-specific implementation, in order
+to unregister an hwspinlock device (which is usually a bank of numerous
+locks).</p>
+<p>Should be called from a process context (this function might sleep).</p>
+<p>Returns the address of hwspinlock on success, or NULL on error (e.g.
+if the hwspinlock is still in use).</p>
+</section>
+<section id="important-structs">
+<h2>Important structs<a class="headerlink" href="#important-structs" title="Link to this heading">¶</a></h2>
+<p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">hwspinlock_device</span></code> is a device which usually contains a bank
+of hardware locks. It is registered by the underlying hwspinlock
+implementation using the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">hwspin_lock_register()</span></code> API.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/**
+* struct hwspinlock_device - a device which usually spans numerous hwspinlocks
+* @dev: underlying device, will be used to invoke runtime PM api
+* @ops: platform-specific hwspinlock handlers
+* @base_id: id index of the first lock in this device
+* @num_locks: number of locks in this device
+* @lock: dynamically allocated array of &#39;struct hwspinlock&#39;
+*/
+struct hwspinlock_device {
+        struct device *dev;
+        const struct hwspinlock_ops *ops;
+        int base_id;
+        int num_locks;
+        struct hwspinlock lock[0];
+};
+</pre></div>
+</div>
+<p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">hwspinlock_device</span></code> contains an array of hwspinlock structs, each
+of which represents a single hardware lock:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/**
+* struct hwspinlock - this struct represents a single hwspinlock instance
+* @bank: the hwspinlock_device structure which owns this lock
+* @lock: initialized and used by hwspinlock core
+* @priv: private data, owned by the underlying platform-specific hwspinlock drv
+*/
+struct hwspinlock {
+        struct hwspinlock_device *bank;
+        spinlock_t lock;
+        void *priv;
+};
+</pre></div>
+</div>
+<p>When registering a bank of locks, the hwspinlock driver only needs to
+set the priv members of the locks. The rest of the members are set and
+initialized by the hwspinlock core itself.</p>
+</section>
+<section id="implementation-callbacks">
+<h2>Implementation callbacks<a class="headerlink" href="#implementation-callbacks" title="Link to this heading">¶</a></h2>
+<p>There are three possible callbacks defined in ‘<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">hwspinlock_ops</span></code>’:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct hwspinlock_ops {
+        int (*trylock)(struct hwspinlock *lock);
+        void (*unlock)(struct hwspinlock *lock);
+        void (*relax)(struct hwspinlock *lock);
+};
+</pre></div>
+</div>
+<p>The first two callbacks are mandatory:</p>
+<p>The -&gt;<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">trylock()</span></code> callback should make a single attempt to take the lock, and
+return 0 on failure and 1 on success. This callback may <strong>not</strong> sleep.</p>
+<p>The -&gt;<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">unlock()</span></code> callback releases the lock. It always succeed, and it, too,
+may <strong>not</strong> sleep.</p>
+<p>The -&gt;<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">relax()</span></code> callback is optional. It is called by hwspinlock core while
+spinning on a lock, and can be used by the underlying implementation to force
+a delay between two successive invocations of -&gt;<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">trylock()</span></code>. It may <strong>not</strong> sleep.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/locking/hwspinlock.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

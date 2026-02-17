@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Bisecting a regression &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/bug-bisect.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="Tainted kernels" href="tainted-kernels.html" />
+    <link rel="prev" title="Bug hunting" href="bug-hunting.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reporting-regressions.html">Reporting regressions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quickly-build-trimmed-linux.html">How to quickly build a trimmed Linux kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="verify-bugs-and-bisect-regressions.html">How to verify bugs and bisect regressions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bug-hunting.html">Bug hunting</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Bisecting a regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tainted-kernels.html">Tainted kernels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ramoops.html">Ramoops oops/panic logger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dynamic-debug-howto.html">Dynamic debug</a></li>
+<li class="toctree-l3"><a class="reference internal" href="init.html">Explaining the &quot;No working init found.&quot; boot hang message</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kdump/index.html">Documentation for Kdump - The kexec-based Crash Dumping Solution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="perf/index.html">Performance monitor support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pstore-blk.html">pstore block oops/panic logger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="clearing-warn-once.html">Clearing WARN_ONCE</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kernel-per-CPU-kthreads.html">Reducing OS jitter due to per-cpu kthreads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="lockup-watchdogs.html">Softlockup detector and hardlockup detector (aka nmi_watchdog)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RAS/main.html">Reliability, Availability and Serviceability (RAS)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RAS/error-decoding.html">Error decoding</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RAS/address-translation.html">Address translation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sysrq.html">Linux Magic System Request Key Hacks</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-kernel-subsystems">Core-kernel subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/admin-guide/bug-bisect.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="bisecting-a-regression">
+<h1>Bisecting a regression<a class="headerlink" href="#bisecting-a-regression" title="Link to this heading">¶</a></h1>
+<p>This document describes how to use a <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">bisect</span></code> to find the source code
+change that broke something -- for example when some functionality stopped
+working after upgrading from Linux 6.0 to 6.1.</p>
+<p>The text focuses on the gist of the process. If you are new to bisecting the
+kernel, better follow <a class="reference internal" href="verify-bugs-and-bisect-regressions.html"><span class="doc">How to verify bugs and bisect regressions</span></a>
+instead: it depicts everything from start to finish while covering multiple
+aspects even kernel developers occasionally forget. This includes detecting
+situations early where a bisection would be a waste of time, as nobody would
+care about the result -- for example, because the problem happens after the
+kernel marked itself as 'tainted', occurs in an abandoned version, was already
+fixed, or is caused by a .config change you or your Linux distributor performed.</p>
+<section id="finding-the-change-causing-a-kernel-issue-using-a-bisection">
+<h2>Finding the change causing a kernel issue using a bisection<a class="headerlink" href="#finding-the-change-causing-a-kernel-issue-using-a-bisection" title="Link to this heading">¶</a></h2>
+<p><em>Note: the following process assumes you prepared everything for a bisection.
+This includes having a Git clone with the appropriate sources, installing the
+software required to build and install kernels, as well as a .config file stored
+in a safe place (the following example assumes '~/prepared_kernel_.config') to
+use as pristine base at each bisection step; ideally, you have also worked out
+a fully reliable and straight-forward way to reproduce the regression, too.</em></p>
+<ul>
+<li><p>Preparation: start the bisection and tell Git about the points in the history
+you consider to be working and broken, which Git calls 'good' and 'bad':</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git bisect start
+git bisect good v6.0
+git bisect bad v6.1
+</pre></div>
+</div>
+<p>Instead of Git tags like 'v6.0' and 'v6.1' you can specify commit-ids, too.</p>
+</li>
+</ul>
+<ol class="arabic">
+<li><p>Copy your prepared .config into the build directory and adjust it to the
+needs of the codebase Git checked out for testing:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cp ~/prepared_kernel_.config .config
+make olddefconfig
+</pre></div>
+</div>
+</li>
+<li><p>Now build, install, and boot a kernel. This might fail for unrelated reasons,
+for example, when a compile error happens at the current stage of the
+bisection a later change resolves. In such cases run <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">bisect</span> <span class="pre">skip</span></code> and
+go back to step 1.</p></li>
+<li><p>Check if the functionality that regressed works in the kernel you just built.</p>
+<p>If it works, execute:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git bisect good
+</pre></div>
+</div>
+<p>If it is broken, run:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git bisect bad
+</pre></div>
+</div>
+<p>Note, getting this wrong just once will send the rest of the bisection
+totally off course. To prevent having to start anew later you thus want to
+ensure what you tell Git is correct; it is thus often wise to spend a few
+minutes more on testing in case your reproducer is unreliable.</p>
+<p>After issuing one of these two commands, Git will usually check out another
+bisection point and print something like 'Bisecting: 675 revisions left to
+test after this (roughly 10 steps)'. In that case go back to step 1.</p>
+<p>If Git instead prints something like 'cafecaca0c0dacafecaca0c0dacafecaca0c0da
+is the first bad commit', then you have finished the bisection. In that case
+move to the next point below. Note, right after displaying that line Git will
+show some details about the culprit including its patch description; this can
+easily fill your terminal, so you might need to scroll up to see the message
+mentioning the culprit's commit-id.</p>
+<p>In case you missed Git's output, you can always run <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">bisect</span> <span class="pre">log</span></code> to
+print the status: it will show how many steps remain or mention the result of
+the bisection.</p>
+</li>
+</ol>
+<ul>
+<li><p>Recommended complementary task: put the bisection log and the current .config
+file aside for the bug report; furthermore tell Git to reset the sources to
+the state before the bisection:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git bisect log &gt; ~/bisection-log
+cp .config ~/bisection-config-culprit
+git bisect reset
+</pre></div>
+</div>
+</li>
+<li><p>Recommended optional task: try reverting the culprit on top of the latest
+codebase and check if that fixes your bug; if that is the case, it validates
+the bisection and enables developers to resolve the regression through a
+revert.</p>
+<p>To try this, update your clone and check out latest mainline. Then tell Git
+to revert the change by specifying its commit-id:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git revert --no-edit cafec0cacaca0
+</pre></div>
+</div>
+<p>Git might reject this, for example when the bisection landed on a merge
+commit. In that case, abandon the attempt. Do the same, if Git fails to revert
+the culprit on its own because later changes depend on it -- at least unless
+you bisected a stable or longterm kernel series, in which case you want to
+check out its latest codebase and try a revert there.</p>
+<p>If a revert succeeds, build and test another kernel to check if reverting
+resolved your regression.</p>
+</li>
+</ul>
+<p>With that the process is complete. Now report the regression as described by
+<a class="reference internal" href="reporting-issues.html"><span class="doc">Reporting issues</span></a>.</p>
+<section id="bisecting-linux-next">
+<h3>Bisecting linux-next<a class="headerlink" href="#bisecting-linux-next" title="Link to this heading">¶</a></h3>
+<p>If you face a problem only happening in linux-next, bisect between the
+linux-next branches 'stable' and 'master'. The following commands will start
+the process for a linux-next tree you added as a remote called 'next':</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git bisect start
+git bisect good next/stable
+git bisect bad next/master
+</pre></div>
+</div>
+<p>The 'stable' branch refers to the state of linux-mainline that the current
+linux-next release (found in the 'master' branch) is based on -- the former
+thus should be free of any problems that show up in -next, but not in Linus'
+tree.</p>
+<p>This will bisect across a wide range of changes, some of which you might have
+used in earlier linux-next releases without problems. Sadly there is no simple
+way to avoid checking them: bisecting from one linux-next release to a later
+one (say between 'next-20241020' and 'next-20241021') is impossible, as they
+share no common history.</p>
+</section>
+<section id="additional-reading-material">
+<h3>Additional reading material<a class="headerlink" href="#additional-reading-material" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>The <a class="reference external" href="https://git-scm.com/docs/git-bisect">man page for 'git bisect'</a> and
+<a class="reference external" href="https://git-scm.com/docs/git-bisect-lk2009.html">fighting regressions with 'git bisect'</a>
+in the Git documentation.</p></li>
+<li><p><a class="reference external" href="https://nathanchance.dev/posts/working-with-git-bisect/">Working with git bisect</a>
+from kernel developer Nathan Chancellor.</p></li>
+<li><p><a class="reference external" href="http://webchick.net/node/99">Using Git bisect to figure out when brokenness was introduced</a>.</p></li>
+<li><p><a class="reference external" href="https://lwn.net/Articles/317154">Fully automated bisecting with 'git bisect run'</a>.</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/admin-guide/bug-bisect.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

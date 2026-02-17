@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>LC-trie implementation notes &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/networking/fib_trie.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Linux Socket Filtering aka Berkeley Packet Filter (BPF)" href="filter.html" />
+    <link rel="prev" title="EQL Driver: Serial IP Load Balancing HOWTO" href="eql.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Networking</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../netlabel/index.html">NetLabel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../infiniband/index.html">InfiniBand</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../isdn/index.html">ISDN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mhi/index.html">MHI</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/networking/fib_trie.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="lc-trie-implementation-notes">
+<h1>LC-trie implementation notes<a class="headerlink" href="#lc-trie-implementation-notes" title="連結到這個標頭">¶</a></h1>
+<section id="node-types">
+<h2>Node types<a class="headerlink" href="#node-types" title="連結到這個標頭">¶</a></h2>
+<dl class="simple">
+<dt>leaf</dt><dd><p>An end node with data. This has a copy of the relevant key, along
+with 'hlist' with routing table entries sorted by prefix length.
+See <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">leaf</span></code> and <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">leaf_info</span></code>.</p>
+</dd>
+<dt>trie node or tnode</dt><dd><p>An internal node, holding an array of child (leaf or tnode) pointers,
+indexed through a subset of the key. See Level Compression.</p>
+</dd>
+</dl>
+</section>
+<section id="a-few-concepts-explained">
+<h2>A few concepts explained<a class="headerlink" href="#a-few-concepts-explained" title="連結到這個標頭">¶</a></h2>
+<dl>
+<dt>Bits (tnode)</dt><dd><p>The number of bits in the key segment used for indexing into the
+child array - the &quot;child index&quot;. See Level Compression.</p>
+</dd>
+<dt>Pos (tnode)</dt><dd><p>The position (in the key) of the key segment used for indexing into
+the child array. See Path Compression.</p>
+</dd>
+<dt>Path Compression / skipped bits</dt><dd><p>Any given tnode is linked to from the child array of its parent, using
+a segment of the key specified by the parent's &quot;pos&quot; and &quot;bits&quot;
+In certain cases, this tnode's own &quot;pos&quot; will not be immediately
+adjacent to the parent (pos+bits), but there will be some bits
+in the key skipped over because they represent a single path with no
+deviations. These &quot;skipped bits&quot; constitute Path Compression.
+Note that the search algorithm will simply skip over these bits when
+searching, making it necessary to save the keys in the leaves to
+verify that they actually do match the key we are searching for.</p>
+</dd>
+<dt>Level Compression / child arrays</dt><dd><p>the trie is kept level balanced moving, under certain conditions, the
+children of a full child (see &quot;full_children&quot;) up one level, so that
+instead of a pure binary tree, each internal node (&quot;tnode&quot;) may
+contain an arbitrarily large array of links to several children.
+Conversely, a tnode with a mostly empty child array (see empty_children)
+may be &quot;halved&quot;, having some of its children moved downwards one level,
+in order to avoid ever-increasing child arrays.</p>
+</dd>
+<dt>empty_children</dt><dd><p>the number of positions in the child array of a given tnode that are
+NULL.</p>
+</dd>
+<dt>full_children</dt><dd><p>the number of children of a given tnode that aren't path compressed.
+(in other words, they aren't NULL or leaves and their &quot;pos&quot; is equal
+to this tnode's &quot;pos&quot;+&quot;bits&quot;).</p>
+<p>(The word &quot;full&quot; here is used more in the sense of &quot;complete&quot; than
+as the opposite of &quot;empty&quot;, which might be a tad confusing.)</p>
+</dd>
+</dl>
+</section>
+<section id="comments">
+<h2>Comments<a class="headerlink" href="#comments" title="連結到這個標頭">¶</a></h2>
+<p>We have tried to keep the structure of the code as close to fib_hash as
+possible to allow verification and help up reviewing.</p>
+<dl class="simple">
+<dt>fib_find_node()</dt><dd><p>A good start for understanding this code. This function implements a
+straightforward trie lookup.</p>
+</dd>
+<dt>fib_insert_node()</dt><dd><p>Inserts a new leaf node in the trie. This is bit more complicated than
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">fib_find_node()</span></code>. Inserting a new node means we might have to run the
+level compression algorithm on part of the trie.</p>
+</dd>
+<dt>trie_leaf_remove()</dt><dd><p>Looks up a key, deletes it and runs the level compression algorithm.</p>
+</dd>
+<dt>trie_rebalance()</dt><dd><p>The key function for the dynamic trie after any change in the trie
+it is run to optimize and reorganize. It will walk the trie upwards
+towards the root from a given tnode, doing a <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">resize()</span></code> at each step
+to implement level compression.</p>
+</dd>
+<dt>resize()</dt><dd><p>Analyzes a tnode and optimizes the child array size by either inflating
+or shrinking it repeatedly until it fulfills the criteria for optimal
+level compression. This part follows the original paper pretty closely
+and there may be some room for experimentation here.</p>
+</dd>
+<dt>inflate()</dt><dd><p>Doubles the size of the child array within a tnode. Used by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">resize()</span></code>.</p>
+</dd>
+<dt>halve()</dt><dd><p>Halves the size of the child array within a tnode - the inverse of
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">inflate()</span></code>. Used by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">resize()</span></code>;</p>
+</dd>
+<dt>fn_trie_insert(), fn_trie_delete(), fn_trie_select_default()</dt><dd><p>The route manipulation functions. Should conform pretty closely to the
+corresponding functions in fib_hash.</p>
+</dd>
+<dt>fn_trie_flush()</dt><dd><p>This walks the full trie (using <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">nextleaf()</span></code>) and searches for empty
+leaves which have to be removed.</p>
+</dd>
+<dt>fn_trie_dump()</dt><dd><p>Dumps the routing table ordered by prefix length. This is somewhat
+slower than the corresponding fib_hash function, as we have to walk the
+entire trie for each prefix length. In comparison, fib_hash is organized
+as one &quot;zone&quot;/hash per prefix length.</p>
+</dd>
+</dl>
+</section>
+<section id="locking">
+<h2>Locking<a class="headerlink" href="#locking" title="連結到這個標頭">¶</a></h2>
+<p>fib_lock is used for an RW-lock in the same way that this is done in fib_hash.
+However, the functions are somewhat separated for other possible locking
+scenarios. It might conceivably be possible to run trie_rebalance via RCU
+to avoid read_lock in the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">fn_trie_lookup()</span></code> function.</p>
+</section>
+<section id="main-lookup-mechanism">
+<h2>Main lookup mechanism<a class="headerlink" href="#main-lookup-mechanism" title="連結到這個標頭">¶</a></h2>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">fn_trie_lookup()</span></code> is the main lookup function.</p>
+<p>The lookup is in its simplest form just like <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">fib_find_node()</span></code>. We descend the
+trie, key segment by key segment, until we find a leaf. <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">check_leaf()</span></code> does
+the fib_semantic_match in the leaf's sorted prefix hlist.</p>
+<p>If we find a match, we are done.</p>
+<p>If we don't find a match, we enter prefix matching mode. The prefix length,
+starting out at the same as the key length, is reduced one step at a time,
+and we backtrack upwards through the trie trying to find a longest matching
+prefix. The goal is always to reach a leaf and get a positive result from the
+fib_semantic_match mechanism.</p>
+<p>Inside each tnode, the search for longest matching prefix consists of searching
+through the child array, chopping off (zeroing) the least significant &quot;1&quot; of
+the child index until we find a match or the child index consists of nothing but
+zeros.</p>
+<p>At this point we backtrack (t-&gt;stats.backtrack++) up the trie, continuing to
+chop off part of the key in order to find the longest matching prefix.</p>
+<p>At this point we will repeatedly descend subtries to look for a match, and there
+are some optimizations available that can provide us with &quot;shortcuts&quot; to avoid
+descending into dead ends. Look for &quot;HL_OPTIMIZE&quot; sections in the code.</p>
+<p>To alleviate any doubts about the correctness of the route selection process,
+a new netlink operation has been added. Look for NETLINK_FIB_LOOKUP, which
+gives userland access to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">fib_lookup()</span></code>.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/networking/fib_trie.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

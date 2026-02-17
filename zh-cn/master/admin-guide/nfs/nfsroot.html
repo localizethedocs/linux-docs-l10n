@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Mounting the root filesystem via NFS (nfsroot) &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/nfs/nfsroot.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜索" href="../../search.html" />
+    <link rel="next" title="Setting up NFS/RDMA" href="nfs-rdma.html" />
+    <link rel="prev" title="NFS Client" href="nfs-client.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#core-kernel-subsystems">Core-kernel subsystems</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../bcache.html">A block layer cache (bcache)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../binderfs.html">The Android binderfs Filesystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../blockdev/index.html">Block Devices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cifs/index.html">CIFS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../device-mapper/index.html">Device Mapper</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ext4.html">ext4 General Information</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../filesystem-monitoring.html">File system Monitoring with fanotify</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">NFS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../iostats.html">I/O statistics fields</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../jfs.html">IBM's Journaled File System (JFS) for Linux</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../md.html">RAID arrays</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ufs.html">Using UFS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../xfs.html">The SGI XFS Filesystem</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/admin-guide/nfs/nfsroot.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="mounting-the-root-filesystem-via-nfs-nfsroot">
+<h1>Mounting the root filesystem via NFS (nfsroot)<a class="headerlink" href="#mounting-the-root-filesystem-via-nfs-nfsroot" title="Link to this heading">¶</a></h1>
+<dl class="field-list">
+<dt class="field-odd">Authors<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Written 1996 by Gero Kuhlmann &lt;<a class="reference external" href="mailto:gero&#37;&#52;&#48;gkminix&#46;han&#46;de">gero<span>&#64;</span>gkminix<span>&#46;</span>han<span>&#46;</span>de</a>&gt;</p>
+<p>Updated 1997 by Martin Mares &lt;<a class="reference external" href="mailto:mj&#37;&#52;&#48;atrey&#46;karlin&#46;mff&#46;cuni&#46;cz">mj<span>&#64;</span>atrey<span>&#46;</span>karlin<span>&#46;</span>mff<span>&#46;</span>cuni<span>&#46;</span>cz</a>&gt;</p>
+<p>Updated 2006 by Nico Schottelius &lt;<a class="reference external" href="mailto:nico-kernel-nfsroot&#37;&#52;&#48;schottelius&#46;org">nico-kernel-nfsroot<span>&#64;</span>schottelius<span>&#46;</span>org</a>&gt;</p>
+<p>Updated 2006 by Horms &lt;<a class="reference external" href="mailto:horms&#37;&#52;&#48;verge&#46;net&#46;au">horms<span>&#64;</span>verge<span>&#46;</span>net<span>&#46;</span>au</a>&gt;</p>
+<p>Updated 2018 by Chris Novakovic &lt;<a class="reference external" href="mailto:chris&#37;&#52;&#48;chrisn&#46;me&#46;uk">chris<span>&#64;</span>chrisn<span>&#46;</span>me<span>&#46;</span>uk</a>&gt;</p>
+</dd>
+</dl>
+<p>In order to use a diskless system, such as an X-terminal or printer server for
+example, it is necessary for the root filesystem to be present on a non-disk
+device. This may be an initramfs (see
+<a class="reference internal" href="../../filesystems/ramfs-rootfs-initramfs.html"><span class="doc">Ramfs, rootfs and initramfs</span></a>), a ramdisk (see
+<a class="reference internal" href="../initrd.html"><span class="doc">Using the initial RAM disk (initrd)</span></a>) or a filesystem mounted via NFS. The
+following text describes on how to use NFS for the root filesystem. For the rest
+of this text 'client' means the diskless system, and 'server' means the NFS
+server.</p>
+<section id="enabling-nfsroot-capabilities">
+<h2>Enabling nfsroot capabilities<a class="headerlink" href="#enabling-nfsroot-capabilities" title="Link to this heading">¶</a></h2>
+<p>In order to use nfsroot, NFS client support needs to be selected as
+built-in during configuration. Once this has been selected, the nfsroot
+option will become available, which should also be selected.</p>
+<p>In the networking options, kernel level autoconfiguration can be selected,
+along with the types of autoconfiguration to support. Selecting all of
+DHCP, BOOTP and RARP is safe.</p>
+</section>
+<section id="kernel-command-line">
+<h2>Kernel command line<a class="headerlink" href="#kernel-command-line" title="Link to this heading">¶</a></h2>
+<p>When the kernel has been loaded by a boot loader (see below) it needs to be
+told what root fs device to use. And in the case of nfsroot, where to find
+both the server and the name of the directory on the server to mount as root.
+This can be established using the following kernel command line parameters:</p>
+<dl>
+<dt>root=/dev/nfs</dt><dd><p>This is necessary to enable the pseudo-NFS-device. Note that it's not a
+real device but just a synonym to tell the kernel to use NFS instead of
+a real device.</p>
+</dd>
+<dt>nfsroot=[&lt;server-ip&gt;:]&lt;root-dir&gt;[,&lt;nfs-options&gt;]</dt><dd><p>If the <cite>nfsroot' parameter is NOT given on the command line,
+the default `</cite>&quot;/tftpboot/%s&quot;`` will be used.</p>
+<dl>
+<dt>&lt;server-ip&gt;   Specifies the IP address of the NFS server.</dt><dd><p>The default address is determined by the ip parameter
+(see below). This parameter allows the use of different
+servers for IP autoconfiguration and NFS.</p>
+</dd>
+<dt>&lt;root-dir&gt;    Name of the directory on the server to mount as root.</dt><dd><p>If there is a &quot;%s&quot; token in the string, it will be
+replaced by the ASCII-representation of the client's
+IP address.</p>
+</dd>
+<dt>&lt;nfs-options&gt; Standard NFS options. All options are separated by commas.</dt><dd><p>The following defaults are used:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>port            = as given by server portmap daemon
+rsize           = 4096
+wsize           = 4096
+timeo           = 7
+retrans         = 3
+acregmin        = 3
+acregmax        = 60
+acdirmin        = 30
+acdirmax        = 60
+flags           = hard, nointr, noposix, cto, ac
+</pre></div>
+</div>
+</dd>
+</dl>
+</dd>
+<dt>ip=&lt;client-ip&gt;:&lt;server-ip&gt;:&lt;gw-ip&gt;:&lt;netmask&gt;:&lt;hostname&gt;:&lt;device&gt;:&lt;autoconf&gt;:&lt;dns0-ip&gt;:&lt;dns1-ip&gt;:&lt;ntp0-ip&gt;</dt><dd><p>This parameter tells the kernel how to configure IP addresses of devices
+and also how to set up the IP routing table. It was originally called
+nfsaddrs, but now the boot-time IP configuration works independently of
+NFS, so it was renamed to ip and the old name remained as an alias for
+compatibility reasons.</p>
+<p>If this parameter is missing from the kernel command line, all fields are
+assumed to be empty, and the defaults mentioned below apply. In general
+this means that the kernel tries to configure everything using
+autoconfiguration.</p>
+<p>The &lt;autoconf&gt; parameter can appear alone as the value to the ip
+parameter (without all the ':' characters before).  If the value is
+&quot;ip=off&quot; or &quot;ip=none&quot;, no autoconfiguration will take place, otherwise
+autoconfiguration will take place.  The most common way to use this
+is &quot;ip=dhcp&quot;.</p>
+<dl>
+<dt>&lt;client-ip&gt;   IP address of the client.</dt><dd><p>Default:  Determined using autoconfiguration.</p>
+</dd>
+<dt>&lt;server-ip&gt;   IP address of the NFS server.</dt><dd><p>If RARP is used to determine
+the client address and this parameter is NOT empty only
+replies from the specified server are accepted.</p>
+<p>Only required for NFS root. That is autoconfiguration
+will not be triggered if it is missing and NFS root is not
+in operation.</p>
+<p>Value is exported to /proc/net/pnp with the prefix &quot;bootserver &quot;
+(see below).</p>
+<p>Default: Determined using autoconfiguration.
+The address of the autoconfiguration server is used.</p>
+</dd>
+<dt>&lt;gw-ip&gt;       IP address of a gateway if the server is on a different subnet.</dt><dd><p>Default: Determined using autoconfiguration.</p>
+</dd>
+<dt>&lt;netmask&gt;     Netmask for local network interface.</dt><dd><p>If unspecified the netmask is derived from the client IP address
+assuming classful addressing.</p>
+<p>Default:  Determined using autoconfiguration.</p>
+</dd>
+<dt>&lt;hostname&gt;    Name of the client.</dt><dd><p>If a '.' character is present, anything
+before the first '.' is used as the client's hostname, and anything
+after it is used as its NIS domain name. May be supplied by
+autoconfiguration, but its absence will not trigger autoconfiguration.
+If specified and DHCP is used, the user-provided hostname (and NIS
+domain name, if present) will be carried in the DHCP request; this
+may cause a DNS record to be created or updated for the client.</p>
+<p>Default: Client IP address is used in ASCII notation.</p>
+</dd>
+<dt>&lt;device&gt;      Name of network device to use.</dt><dd><p>Default: If the host only has one device, it is used.
+Otherwise the device is determined using
+autoconfiguration. This is done by sending
+autoconfiguration requests out of all devices,
+and using the device that received the first reply.</p>
+</dd>
+<dt>&lt;autoconf&gt;    Method to use for autoconfiguration.</dt><dd><p>In the case of options
+which specify multiple autoconfiguration protocols,
+requests are sent using all protocols, and the first one
+to reply is used.</p>
+<p>Only autoconfiguration protocols that have been compiled
+into the kernel will be used, regardless of the value of
+this option:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>off or none: don&#39;t use autoconfiguration
+              (do static IP assignment instead)
+on or any:   use any protocol available in the kernel
+             (default)
+dhcp:        use DHCP
+bootp:       use BOOTP
+rarp:        use RARP
+both:        use both BOOTP and RARP but not DHCP
+             (old option kept for backwards compatibility)
+</pre></div>
+</div>
+<p>if dhcp is used, the client identifier can be used by following
+format &quot;ip=dhcp,client-id-type,client-id-value&quot;</p>
+<p>Default: any</p>
+</dd>
+<dt>&lt;dns0-ip&gt;     IP address of primary nameserver.</dt><dd><p>Value is exported to /proc/net/pnp with the prefix &quot;nameserver &quot;
+(see below).</p>
+<p>Default: None if not using autoconfiguration; determined
+automatically if using autoconfiguration.</p>
+</dd>
+<dt>&lt;dns1-ip&gt;     IP address of secondary nameserver.</dt><dd><p>See &lt;dns0-ip&gt;.</p>
+</dd>
+<dt>&lt;ntp0-ip&gt;     IP address of a Network Time Protocol (NTP) server.</dt><dd><p>Value is exported to /proc/net/ipconfig/ntp_servers, but is
+otherwise unused (see below).</p>
+<p>Default: None if not using autoconfiguration; determined
+automatically if using autoconfiguration.</p>
+</dd>
+</dl>
+<p>After configuration (whether manual or automatic) is complete, two files
+are created in the following format; lines are omitted if their respective
+value is empty following configuration:</p>
+<ul>
+<li><p>/proc/net/pnp:</p>
+<blockquote>
+<div><p>#PROTO: &lt;DHCP|BOOTP|RARP|MANUAL&gt;        (depending on configuration method)
+domain &lt;dns-domain&gt;                     (if autoconfigured, the DNS domain)
+nameserver &lt;dns0-ip&gt;                    (primary name server IP)
+nameserver &lt;dns1-ip&gt;                    (secondary name server IP)
+nameserver &lt;dns2-ip&gt;                    (tertiary name server IP)
+bootserver &lt;server-ip&gt;                  (NFS server IP)</p>
+</div></blockquote>
+</li>
+<li><p>/proc/net/ipconfig/ntp_servers:</p>
+<blockquote>
+<div><p>&lt;ntp0-ip&gt;                               (NTP server IP)
+&lt;ntp1-ip&gt;                               (NTP server IP)
+&lt;ntp2-ip&gt;                               (NTP server IP)</p>
+</div></blockquote>
+</li>
+</ul>
+<p>&lt;dns-domain&gt; and &lt;dns2-ip&gt; (in /proc/net/pnp) and &lt;ntp1-ip&gt; and &lt;ntp2-ip&gt;
+(in /proc/net/ipconfig/ntp_servers) are requested during autoconfiguration;
+they cannot be specified as part of the &quot;ip=&quot; kernel command line parameter.</p>
+<p>Because the &quot;domain&quot; and &quot;nameserver&quot; options are recognised by DNS
+resolvers, /etc/resolv.conf is often linked to /proc/net/pnp on systems
+that use an NFS root filesystem.</p>
+<p>Note that the kernel will not synchronise the system time with any NTP
+servers it discovers; this is the responsibility of a user space process
+(e.g. an initrd/initramfs script that passes the IP addresses listed in
+/proc/net/ipconfig/ntp_servers to an NTP client before mounting the real
+root filesystem if it is on NFS).</p>
+</dd>
+<dt>nfsrootdebug</dt><dd><p>This parameter enables debugging messages to appear in the kernel
+log at boot time so that administrators can verify that the correct
+NFS mount options, server address, and root path are passed to the
+NFS client.</p>
+</dd>
+<dt>rdinit=&lt;executable file&gt;</dt><dd><p>To specify which file contains the program that starts system
+initialization, administrators can use this command line parameter.
+The default value of this parameter is &quot;/init&quot;.  If the specified
+file exists and the kernel can execute it, root filesystem related
+kernel command line parameters, including 'nfsroot=', are ignored.</p>
+<p>A description of the process of mounting the root file system can be
+found in <a class="reference internal" href="../../driver-api/early-userspace/early_userspace_support.html"><span class="doc">Early userspace support</span></a></p>
+</dd>
+</dl>
+</section>
+<section id="boot-loader">
+<h2>Boot Loader<a class="headerlink" href="#boot-loader" title="Link to this heading">¶</a></h2>
+<p>To get the kernel into memory different approaches can be used.
+They depend on various facilities being available:</p>
+<ul>
+<li><p>Booting from a floppy using syslinux</p>
+<blockquote>
+<div><p>When building kernels, an easy way to create a boot floppy that uses
+syslinux is to use the zdisk or bzdisk make targets which use zimage
+and bzimage images respectively. Both targets accept the
+FDARGS parameter which can be used to set the kernel command line.</p>
+<p>e.g:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>make bzdisk FDARGS=&quot;root=/dev/nfs&quot;
+</pre></div>
+</div>
+<p>Note that the user running this command will need to have
+access to the floppy drive device, /dev/fd0</p>
+<p>For more information on syslinux, including how to create bootdisks
+for prebuilt kernels, see <a class="reference external" href="https://syslinux.zytor.com/">https://syslinux.zytor.com/</a></p>
+<div class="admonition note">
+<p class="admonition-title">备注</p>
+<p>Previously it was possible to write a kernel directly to
+a floppy using dd, configure the boot device using rdev, and
+boot using the resulting floppy. Linux no longer supports this
+method of booting.</p>
+</div>
+</div></blockquote>
+</li>
+<li><p>Booting from a cdrom using isolinux</p>
+<blockquote>
+<div><p>When building kernels, an easy way to create a bootable cdrom that
+uses isolinux is to use the isoimage target which uses a bzimage
+image. Like zdisk and bzdisk, this target accepts the FDARGS
+parameter which can be used to set the kernel command line.</p>
+<p>e.g:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>make isoimage FDARGS=&quot;root=/dev/nfs&quot;
+</pre></div>
+</div>
+<p>The resulting iso image will be arch/&lt;ARCH&gt;/boot/image.iso
+This can be written to a cdrom using a variety of tools including
+cdrecord.</p>
+<p>e.g:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cdrecord dev=ATAPI:1,0,0 arch/x86/boot/image.iso
+</pre></div>
+</div>
+<p>For more information on isolinux, including how to create bootdisks
+for prebuilt kernels, see <a class="reference external" href="https://syslinux.zytor.com/">https://syslinux.zytor.com/</a></p>
+</div></blockquote>
+</li>
+<li><p>Using LILO</p>
+<blockquote>
+<div><p>When using LILO all the necessary command line parameters may be
+specified using the 'append=' directive in the LILO configuration
+file.</p>
+<p>However, to use the 'root=' directive you also need to create
+a dummy root device, which may be removed after LILO is run.</p>
+<p>e.g:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>mknod /dev/boot255 c 0 255
+</pre></div>
+</div>
+<p>For information on configuring LILO, please refer to its documentation.</p>
+</div></blockquote>
+</li>
+<li><p>Using GRUB</p>
+<blockquote>
+<div><p>When using GRUB, kernel parameter are simply appended after the kernel
+specification: kernel &lt;kernel&gt; &lt;parameters&gt;</p>
+</div></blockquote>
+</li>
+<li><p>Using loadlin</p>
+<blockquote>
+<div><p>loadlin may be used to boot Linux from a DOS command prompt without
+requiring a local hard disk to mount as root. This has not been
+thoroughly tested by the authors of this document, but in general
+it should be possible configure the kernel command line similarly
+to the configuration of LILO.</p>
+<p>Please refer to the loadlin documentation for further information.</p>
+</div></blockquote>
+</li>
+<li><p>Using a boot ROM</p>
+<blockquote>
+<div><p>This is probably the most elegant way of booting a diskless client.
+With a boot ROM the kernel is loaded using the TFTP protocol. The
+authors of this document are not aware of any no commercial boot
+ROMs that support booting Linux over the network. However, there
+are two free implementations of a boot ROM, netboot-nfs and
+etherboot, both of which are available on sunsite.unc.edu, and both
+of which contain everything you need to boot a diskless Linux client.</p>
+</div></blockquote>
+</li>
+<li><p>Using pxelinux</p>
+<blockquote>
+<div><p>Pxelinux may be used to boot linux using the PXE boot loader
+which is present on many modern network cards.</p>
+<p>When using pxelinux, the kernel image is specified using
+&quot;kernel &lt;relative-path-below /tftpboot&gt;&quot;. The nfsroot parameters
+are passed to the kernel by adding them to the &quot;append&quot; line.
+It is common to use serial console in conjunction with pxelinux,
+see <a class="reference internal" href="../serial-console.html"><span class="doc">Linux Serial Console</span></a> for more information.</p>
+<p>For more information on isolinux, including how to create bootdisks
+for prebuilt kernels, see <a class="reference external" href="https://syslinux.zytor.com/">https://syslinux.zytor.com/</a></p>
+</div></blockquote>
+</li>
+</ul>
+</section>
+<section id="credits">
+<h2>Credits<a class="headerlink" href="#credits" title="Link to this heading">¶</a></h2>
+<blockquote>
+<div><p>The nfsroot code in the kernel and the RARP support have been written
+by Gero Kuhlmann &lt;<a class="reference external" href="mailto:gero&#37;&#52;&#48;gkminix&#46;han&#46;de">gero<span>&#64;</span>gkminix<span>&#46;</span>han<span>&#46;</span>de</a>&gt;.</p>
+<p>The rest of the IP layer autoconfiguration code has been written
+by Martin Mares &lt;<a class="reference external" href="mailto:mj&#37;&#52;&#48;atrey&#46;karlin&#46;mff&#46;cuni&#46;cz">mj<span>&#64;</span>atrey<span>&#46;</span>karlin<span>&#46;</span>mff<span>&#46;</span>cuni<span>&#46;</span>cz</a>&gt;.</p>
+<p>In order to write the initial version of nfsroot I would like to thank
+Jens-Uwe Mager &lt;<a class="reference external" href="mailto:jum&#37;&#52;&#48;anubis&#46;han&#46;de">jum<span>&#64;</span>anubis<span>&#46;</span>han<span>&#46;</span>de</a>&gt; for his help.</p>
+</div></blockquote>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/admin-guide/nfs/nfsroot.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

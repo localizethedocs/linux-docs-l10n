@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Entry/exit handling for exceptions, interrupts, syscalls and KVM &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/core-api/entry.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="refcount_t API compared to atomic_t" href="refcount-vs-atomic.html" />
+    <link rel="prev" title="Linked Lists in Linux" href="list.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">核心 API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#low-level-entry-and-exit">低階進入與退出</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Entry/exit handling for exceptions, interrupts, syscalls and KVM</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#concurrency-primitives">Concurrency primitives</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#memory-management">記憶體管理</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/core-api/entry.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="entry-exit-handling-for-exceptions-interrupts-syscalls-and-kvm">
+<h1>Entry/exit handling for exceptions, interrupts, syscalls and KVM<a class="headerlink" href="#entry-exit-handling-for-exceptions-interrupts-syscalls-and-kvm" title="連結到這個標頭">¶</a></h1>
+<p>All transitions between execution domains require state updates which are
+subject to strict ordering constraints. State updates are required for the
+following:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Lockdep</p></li>
+<li><p>RCU / Context tracking</p></li>
+<li><p>Preemption counter</p></li>
+<li><p>Tracing</p></li>
+<li><p>Time accounting</p></li>
+</ul>
+</div></blockquote>
+<p>The update order depends on the transition type and is explained below in
+the transition type sections: <a class="reference internal" href="#syscalls">Syscalls</a>, <a class="reference internal" href="#kvm">KVM</a>, <a class="reference internal" href="#interrupts-and-regular-exceptions">Interrupts and regular
+exceptions</a>, <a class="reference internal" href="#nmi-and-nmi-like-exceptions">NMI and NMI-like exceptions</a>.</p>
+<section id="non-instrumentable-code-noinstr">
+<h2>Non-instrumentable code - noinstr<a class="headerlink" href="#non-instrumentable-code-noinstr" title="連結到這個標頭">¶</a></h2>
+<p>Most instrumentation facilities depend on RCU, so instrumentation is prohibited
+for entry code before RCU starts watching and exit code after RCU stops
+watching. In addition, many architectures must save and restore register state,
+which means that (for example) a breakpoint in the breakpoint entry code would
+overwrite the debug registers of the initial breakpoint.</p>
+<p>Such code must be marked with the 'noinstr' attribute, placing that code into a
+special section inaccessible to instrumentation and debug facilities. Some
+functions are partially instrumentable, which is handled by marking them
+noinstr and using <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">instrumentation_begin()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">instrumentation_end()</span></code> to flag the
+instrumentable ranges of code:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">noinstr</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">entry</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">      </span><span class="n">handle_entry</span><span class="p">();</span><span class="w">     </span><span class="c1">// &lt;-- must be &#39;noinstr&#39; or &#39;__always_inline&#39;</span>
+<span class="w">      </span><span class="p">...</span>
+
+<span class="w">      </span><span class="n">instrumentation_begin</span><span class="p">();</span>
+<span class="w">      </span><span class="n">handle_context</span><span class="p">();</span><span class="w">   </span><span class="c1">// &lt;-- instrumentable code</span>
+<span class="w">      </span><span class="n">instrumentation_end</span><span class="p">();</span>
+
+<span class="w">      </span><span class="p">...</span>
+<span class="w">      </span><span class="n">handle_exit</span><span class="p">();</span><span class="w">      </span><span class="c1">// &lt;-- must be &#39;noinstr&#39; or &#39;__always_inline&#39;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This allows verification of the 'noinstr' restrictions via objtool on
+supported architectures.</p>
+<p>Invoking non-instrumentable functions from instrumentable context has no
+restrictions and is useful to protect e.g. state switching which would
+cause malfunction if instrumented.</p>
+<p>All non-instrumentable entry/exit code sections before and after the RCU
+state transitions must run with interrupts disabled.</p>
+</section>
+<section id="syscalls">
+<h2>Syscalls<a class="headerlink" href="#syscalls" title="連結到這個標頭">¶</a></h2>
+<p>Syscall-entry code starts in assembly code and calls out into low-level C code
+after establishing low-level architecture-specific state and stack frames. This
+low-level C code must not be instrumented. A typical syscall handling function
+invoked from low-level assembly code looks like this:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">noinstr</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">syscall</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">pt_regs</span><span class="w"> </span><span class="o">*</span><span class="n">regs</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">nr</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">      </span><span class="n">arch_syscall_enter</span><span class="p">(</span><span class="n">regs</span><span class="p">);</span>
+<span class="w">      </span><span class="n">nr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">syscall_enter_from_user_mode</span><span class="p">(</span><span class="n">regs</span><span class="p">,</span><span class="w"> </span><span class="n">nr</span><span class="p">);</span>
+
+<span class="w">      </span><span class="n">instrumentation_begin</span><span class="p">();</span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">invoke_syscall</span><span class="p">(</span><span class="n">regs</span><span class="p">,</span><span class="w"> </span><span class="n">nr</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">nr</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">-1</span><span class="p">)</span>
+<span class="w">              </span><span class="n">result_reg</span><span class="p">(</span><span class="n">regs</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__sys_ni_syscall</span><span class="p">(</span><span class="n">regs</span><span class="p">);</span>
+<span class="w">      </span><span class="n">instrumentation_end</span><span class="p">();</span>
+
+<span class="w">      </span><span class="n">syscall_exit_to_user_mode</span><span class="p">(</span><span class="n">regs</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">syscall_enter_from_user_mode()</span></code> first invokes <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">enter_from_user_mode()</span></code> which
+establishes state in the following order:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Lockdep</p></li>
+<li><p>RCU / Context tracking</p></li>
+<li><p>Tracing</p></li>
+</ul>
+</div></blockquote>
+<p>and then invokes the various entry work functions like ptrace, seccomp, audit,
+syscall tracing, etc. After all that is done, the instrumentable invoke_syscall
+function can be invoked. The instrumentable code section then ends, after which
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">syscall_exit_to_user_mode()</span></code> is invoked.</p>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">syscall_exit_to_user_mode()</span></code> handles all work which needs to be done before
+returning to user space like tracing, audit, signals, task work etc. After
+that it invokes <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">exit_to_user_mode()</span></code> which again handles the state
+transition in the reverse order:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Tracing</p></li>
+<li><p>RCU / Context tracking</p></li>
+<li><p>Lockdep</p></li>
+</ul>
+</div></blockquote>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">syscall_enter_from_user_mode()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">syscall_exit_to_user_mode()</span></code> are also
+available as fine grained subfunctions in cases where the architecture code
+has to do extra work between the various steps. In such cases it has to
+ensure that <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">enter_from_user_mode()</span></code> is called first on entry and
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">exit_to_user_mode()</span></code> is called last on exit.</p>
+<p>Do not nest syscalls. Nested syscalls will cause RCU and/or context tracking
+to print a warning.</p>
+</section>
+<section id="kvm">
+<h2>KVM<a class="headerlink" href="#kvm" title="連結到這個標頭">¶</a></h2>
+<p>Entering or exiting guest mode is very similar to syscalls. From the host
+kernel point of view the CPU goes off into user space when entering the
+guest and returns to the kernel on exit.</p>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">guest_state_enter_irqoff()</span></code> is a KVM-specific variant of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">exit_to_user_mode()</span></code>
+and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">guest_state_exit_irqoff()</span></code> is the KVM variant of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">enter_from_user_mode()</span></code>.
+The state operations have the same ordering.</p>
+<p>Task work handling is done separately for guest at the boundary of the
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">vcpu_run()</span></code> loop via <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">xfer_to_guest_mode_handle_work()</span></code> which is a subset of
+the work handled on return to user space.</p>
+<p>Do not nest KVM entry/exit transitions because doing so is nonsensical.</p>
+</section>
+<section id="interrupts-and-regular-exceptions">
+<h2>Interrupts and regular exceptions<a class="headerlink" href="#interrupts-and-regular-exceptions" title="連結到這個標頭">¶</a></h2>
+<p>Interrupts entry and exit handling is slightly more complex than syscalls
+and KVM transitions.</p>
+<p>If an interrupt is raised while the CPU executes in user space, the entry
+and exit handling is exactly the same as for syscalls.</p>
+<p>If the interrupt is raised while the CPU executes in kernel space the entry and
+exit handling is slightly different. RCU state is only updated when the
+interrupt is raised in the context of the CPU's idle task. Otherwise, RCU will
+already be watching. Lockdep and tracing have to be updated unconditionally.</p>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irqentry_enter()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irqentry_exit()</span></code> provide the implementation for this.</p>
+<p>The architecture-specific part looks similar to syscall handling:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">noinstr</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">interrupt</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">pt_regs</span><span class="w"> </span><span class="o">*</span><span class="n">regs</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">nr</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">      </span><span class="n">arch_interrupt_enter</span><span class="p">(</span><span class="n">regs</span><span class="p">);</span>
+<span class="w">      </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">irqentry_enter</span><span class="p">(</span><span class="n">regs</span><span class="p">);</span>
+
+<span class="w">      </span><span class="n">instrumentation_begin</span><span class="p">();</span>
+
+<span class="w">      </span><span class="n">irq_enter_rcu</span><span class="p">();</span>
+<span class="w">      </span><span class="n">invoke_irq_handler</span><span class="p">(</span><span class="n">regs</span><span class="p">,</span><span class="w"> </span><span class="n">nr</span><span class="p">);</span>
+<span class="w">      </span><span class="n">irq_exit_rcu</span><span class="p">();</span>
+
+<span class="w">      </span><span class="n">instrumentation_end</span><span class="p">();</span>
+
+<span class="w">      </span><span class="n">irqentry_exit</span><span class="p">(</span><span class="n">regs</span><span class="p">,</span><span class="w"> </span><span class="n">state</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Note that the invocation of the actual interrupt handler is within a
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irq_enter_rcu()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irq_exit_rcu()</span></code> pair.</p>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irq_enter_rcu()</span></code> updates the preemption count which makes <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">in_hardirq()</span></code>
+return true, handles NOHZ tick state and interrupt time accounting. This
+means that up to the point where <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irq_enter_rcu()</span></code> is invoked <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">in_hardirq()</span></code>
+returns false.</p>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irq_exit_rcu()</span></code> handles interrupt time accounting, undoes the preemption
+count update and eventually handles soft interrupts and NOHZ tick state.</p>
+<p>In theory, the preemption count could be updated in <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irqentry_enter()</span></code>. In
+practice, deferring this update to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irq_enter_rcu()</span></code> allows the preemption-count
+code to be traced, while also maintaining symmetry with <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irq_exit_rcu()</span></code> and
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irqentry_exit()</span></code>, which are described in the next paragraph. The only downside
+is that the early entry code up to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irq_enter_rcu()</span></code> must be aware that the
+preemption count has not yet been updated with the HARDIRQ_OFFSET state.</p>
+<p>Note that <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irq_exit_rcu()</span></code> must remove HARDIRQ_OFFSET from the preemption count
+before it handles soft interrupts, whose handlers must run in BH context rather
+than irq-disabled context. In addition, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irqentry_exit()</span></code> might schedule, which
+also requires that HARDIRQ_OFFSET has been removed from the preemption count.</p>
+<p>Even though interrupt handlers are expected to run with local interrupts
+disabled, interrupt nesting is common from an entry/exit perspective. For
+example, softirq handling happens within an irqentry_{enter,exit}() block with
+local interrupts enabled. Also, although uncommon, nothing prevents an
+interrupt handler from re-enabling interrupts.</p>
+<p>Interrupt entry/exit code doesn't strictly need to handle reentrancy, since it
+runs with local interrupts disabled. But NMIs can happen anytime, and a lot of
+the entry code is shared between the two.</p>
+</section>
+<section id="nmi-and-nmi-like-exceptions">
+<h2>NMI and NMI-like exceptions<a class="headerlink" href="#nmi-and-nmi-like-exceptions" title="連結到這個標頭">¶</a></h2>
+<p>NMIs and NMI-like exceptions (machine checks, double faults, debug
+interrupts, etc.) can hit any context and must be extra careful with
+the state.</p>
+<p>State changes for debug exceptions and machine-check exceptions depend on
+whether these exceptions happened in user-space (breakpoints or watchpoints) or
+in kernel mode (code patching). From user-space, they are treated like
+interrupts, while from kernel mode they are treated like NMIs.</p>
+<p>NMIs and other NMI-like exceptions handle state transitions without
+distinguishing between user-mode and kernel-mode origin.</p>
+<p>The state update on entry is handled in <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irqentry_nmi_enter()</span></code> which updates
+state in the following order:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Preemption counter</p></li>
+<li><p>Lockdep</p></li>
+<li><p>RCU / Context tracking</p></li>
+<li><p>Tracing</p></li>
+</ul>
+</div></blockquote>
+<p>The exit counterpart <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irqentry_nmi_exit()</span></code> does the reverse operation in the
+reverse order.</p>
+<p>Note that the update of the preemption counter has to be the first
+operation on enter and the last operation on exit. The reason is that both
+lockdep and RCU rely on <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">in_nmi()</span></code> returning true in this case. The
+preemption count modification in the NMI entry/exit case must not be
+traced.</p>
+<p>Architecture-specific code looks like this:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">noinstr</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">nmi</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">pt_regs</span><span class="w"> </span><span class="o">*</span><span class="n">regs</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">      </span><span class="n">arch_nmi_enter</span><span class="p">(</span><span class="n">regs</span><span class="p">);</span>
+<span class="w">      </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">irqentry_nmi_enter</span><span class="p">(</span><span class="n">regs</span><span class="p">);</span>
+
+<span class="w">      </span><span class="n">instrumentation_begin</span><span class="p">();</span>
+<span class="w">      </span><span class="n">nmi_handler</span><span class="p">(</span><span class="n">regs</span><span class="p">);</span>
+<span class="w">      </span><span class="n">instrumentation_end</span><span class="p">();</span>
+
+<span class="w">      </span><span class="n">irqentry_nmi_exit</span><span class="p">(</span><span class="n">regs</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>and for e.g. a debug exception it can look like this:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">noinstr</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">debug</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">pt_regs</span><span class="w"> </span><span class="o">*</span><span class="n">regs</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">      </span><span class="n">arch_nmi_enter</span><span class="p">(</span><span class="n">regs</span><span class="p">);</span>
+
+<span class="w">      </span><span class="n">debug_regs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">save_debug_regs</span><span class="p">();</span>
+
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">user_mode</span><span class="p">(</span><span class="n">regs</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">              </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">irqentry_enter</span><span class="p">(</span><span class="n">regs</span><span class="p">);</span>
+
+<span class="w">              </span><span class="n">instrumentation_begin</span><span class="p">();</span>
+<span class="w">              </span><span class="n">user_mode_debug_handler</span><span class="p">(</span><span class="n">regs</span><span class="p">,</span><span class="w"> </span><span class="n">debug_regs</span><span class="p">);</span>
+<span class="w">              </span><span class="n">instrumentation_end</span><span class="p">();</span>
+
+<span class="w">              </span><span class="n">irqentry_exit</span><span class="p">(</span><span class="n">regs</span><span class="p">,</span><span class="w"> </span><span class="n">state</span><span class="p">);</span>
+<span class="w">      </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">              </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">irqentry_nmi_enter</span><span class="p">(</span><span class="n">regs</span><span class="p">);</span>
+
+<span class="w">              </span><span class="n">instrumentation_begin</span><span class="p">();</span>
+<span class="w">              </span><span class="n">kernel_mode_debug_handler</span><span class="p">(</span><span class="n">regs</span><span class="p">,</span><span class="w"> </span><span class="n">debug_regs</span><span class="p">);</span>
+<span class="w">              </span><span class="n">instrumentation_end</span><span class="p">();</span>
+
+<span class="w">              </span><span class="n">irqentry_nmi_exit</span><span class="p">(</span><span class="n">regs</span><span class="p">,</span><span class="w"> </span><span class="n">state</span><span class="p">);</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>There is no combined <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">irqentry_nmi_if_kernel()</span></code> function available as the
+above cannot be handled in an exception-agnostic way.</p>
+<p>NMIs can happen in any context. For example, an NMI-like exception triggered
+while handling an NMI. So NMI entry code has to be reentrant and state updates
+need to handle nesting.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/core-api/entry.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

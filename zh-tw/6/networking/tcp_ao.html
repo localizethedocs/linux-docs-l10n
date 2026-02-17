@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>TCP Authentication Option Linux implementation (RFC5925) &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/networking/tcp_ao.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Thin-streams and TCP" href="tcp-thin.html" />
+    <link rel="prev" title="TC queue based filtering" href="tc-queue-filters.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Networking</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../netlabel/index.html">NetLabel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../infiniband/index.html">InfiniBand</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../isdn/index.html">ISDN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mhi/index.html">MHI</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/networking/tcp_ao.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="tcp-authentication-option-linux-implementation-rfc5925">
+<h1>TCP Authentication Option Linux implementation (RFC5925)<a class="headerlink" href="#tcp-authentication-option-linux-implementation-rfc5925" title="連結到這個標頭">¶</a></h1>
+<p>TCP Authentication Option (TCP-AO) provides a TCP extension aimed at verifying
+segments between trusted peers. It adds a new TCP header option with
+a Message Authentication Code (MAC). MACs are produced from the content
+of a TCP segment using a hashing function with a password known to both peers.
+The intent of TCP-AO is to deprecate TCP-MD5 providing better security,
+key rotation and support for a variety of hashing algorithms.</p>
+<section id="introduction">
+<h2>1. Introduction<a class="headerlink" href="#introduction" title="連結到這個標頭">¶</a></h2>
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">Short and Limited Comparison of TCP-AO and TCP-MD5</span><a class="headerlink" href="#id1" title="連結到這個表格">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"></th>
+<th class="head"><p>TCP-MD5</p></th>
+<th class="head"><p>TCP-AO</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Supported hashing
+algorithms</p></td>
+<td><p>MD5
+(cryptographically weak)</p></td>
+<td><p>Must support HMAC-SHA1
+(chosen-prefix attacks)
+and CMAC-AES-128 (only
+side-channel attacks).
+May support any hashing
+algorithm.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Length of MACs (bytes)</p></td>
+<td><p>16</p></td>
+<td><p>Typically 12-16.
+Other variants that fit
+TCP header permitted.</p></td>
+</tr>
+<tr class="row-even"><td><p>Number of keys per
+TCP connection</p></td>
+<td><p>1</p></td>
+<td><p>Many</p></td>
+</tr>
+<tr class="row-odd"><td><p>Possibility to change
+an active key</p></td>
+<td><p>Non-practical (both
+peers have to change
+them during MSL)</p></td>
+<td><p>Supported by protocol</p></td>
+</tr>
+<tr class="row-even"><td><p>Protection against
+ICMP 'hard errors'</p></td>
+<td><p>No</p></td>
+<td><p>Yes: ignoring them
+by default on
+established connections</p></td>
+</tr>
+<tr class="row-odd"><td><p>Protection against
+traffic-crossing
+attack</p></td>
+<td><p>No</p></td>
+<td><p>Yes: pseudo-header
+includes TCP ports.</p></td>
+</tr>
+<tr class="row-even"><td><p>Protection against
+replayed TCP segments</p></td>
+<td><p>No</p></td>
+<td><p>Sequence Number
+Extension (SNE) and
+Initial Sequence
+Numbers (ISNs)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Supports
+Connectionless Resets</p></td>
+<td><p>Yes</p></td>
+<td><p>No. ISNs+SNE are needed
+to correctly sign RST.</p></td>
+</tr>
+<tr class="row-even"><td><p>Standards</p></td>
+<td><p>RFC 2385</p></td>
+<td><p>RFC 5925, RFC 5926</p></td>
+</tr>
+</tbody>
+</table>
+<section id="frequently-asked-questions-faq-with-references-to-rfc-5925">
+<h3>1.1 Frequently Asked Questions (FAQ) with references to RFC 5925<a class="headerlink" href="#frequently-asked-questions-faq-with-references-to-rfc-5925" title="連結到這個標頭">¶</a></h3>
+<p>Q: Can either SendID or RecvID be non-unique for the same 4-tuple
+(srcaddr, srcport, dstaddr, dstport)?</p>
+<p>A: No [3.1]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>&gt;&gt; The IDs of MKTs MUST NOT overlap where their TCP connection
+identifiers overlap.
+</pre></div>
+</div>
+<p>Q: Can Master Key Tuple (MKT) for an active connection be removed?</p>
+<p>A: No, unless it's copied to Transport Control Block (TCB) [3.1]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>It is presumed that an MKT affecting a particular connection cannot
+be destroyed during an active connection -- or, equivalently, that
+its parameters are copied to an area local to the connection (i.e.,
+instantiated) and so changes would affect only new connections.
+</pre></div>
+</div>
+<p>Q: If an old MKT needs to be deleted, how should it be done in order
+to not remove it for an active connection? (As it can be still in use
+at any moment later)</p>
+<p>A: Not specified by RFC 5925, seems to be a problem for key management
+to ensure that no one uses such MKT before trying to remove it.</p>
+<p>Q: Can an old MKT exist forever and be used by another peer?</p>
+<p>A: It can, it's a key management task to decide when to remove an old key [6.1]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Deciding when to start using a key is a performance issue. Deciding
+when to remove an MKT is a security issue. Invalid MKTs are expected
+to be removed. TCP-AO provides no mechanism to coordinate their removal,
+as we consider this a key management operation.
+</pre></div>
+</div>
+<p>also [6.1]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>The only way to avoid reuse of previously used MKTs is to remove the MKT
+when it is no longer considered permitted.
+</pre></div>
+</div>
+<p>Linux TCP-AO will try its best to prevent you from removing a key that's
+being used, considering it a key management failure. But since keeping
+an outdated key may become a security issue and as a peer may
+unintentionally prevent the removal of an old key by always setting
+it as RNextKeyID - a forced key removal mechanism is provided, where
+userspace has to supply KeyID to use instead of the one that's being removed
+and the kernel will atomically delete the old key, even if the peer is
+still requesting it. There are no guarantees for force-delete as the peer
+may yet not have the new key - the TCP connection may just break.
+Alternatively, one may choose to shut down the socket.</p>
+<p>Q: What happens when a packet is received on a new connection with no known
+MKT's RecvID?</p>
+<p>A: RFC 5925 specifies that by default it is accepted with a warning logged, but
+the behaviour can be configured by the user [7.5.1.a]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>If the segment is a SYN, then this is the first segment of a new
+connection. Find the matching MKT for this segment, using the segment&#39;s
+socket pair and its TCP-AO KeyID, matched against the MKT&#39;s TCP connection
+identifier and the MKT&#39;s RecvID.
+
+   i. If there is no matching MKT, remove TCP-AO from the segment.
+      Proceed with further TCP handling of the segment.
+      NOTE: this presumes that connections that do not match any MKT
+      should be silently accepted, as noted in Section 7.3.
+</pre></div>
+</div>
+<p>[7.3]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>&gt;&gt; A TCP-AO implementation MUST allow for configuration of the behavior
+of segments with TCP-AO but that do not match an MKT. The initial default
+of this configuration SHOULD be to silently accept such connections.
+If this is not the desired case, an MKT can be included to match such
+connections, or the connection can indicate that TCP-AO is required.
+Alternately, the configuration can be changed to discard segments with
+the AO option not matching an MKT.
+</pre></div>
+</div>
+<p>[10.2.b]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Connections not matching any MKT do not require TCP-AO. Further, incoming
+segments with TCP-AO are not discarded solely because they include
+the option, provided they do not match any MKT.
+</pre></div>
+</div>
+<p>Note that Linux TCP-AO implementation differs in this aspect. Currently, TCP-AO
+segments with unknown key signatures are discarded with warnings logged.</p>
+<p>Q: Does the RFC imply centralized kernel key management in any way?
+(i.e. that a key on all connections MUST be rotated at the same time?)</p>
+<p>A: Not specified. MKTs can be managed in userspace, the only relevant part to
+key changes is [7.3]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>&gt;&gt; All TCP segments MUST be checked against the set of MKTs for matching
+TCP connection identifiers.
+</pre></div>
+</div>
+<p>Q: What happens when RNextKeyID requested by a peer is unknown? Should
+the connection be reset?</p>
+<p>A: It should not, no action needs to be performed [7.5.2.e]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ii. If they differ, determine whether the RNextKeyID MKT is ready.
+
+    1. If the MKT corresponding to the segment’s socket pair and RNextKeyID
+    is not available, no action is required (RNextKeyID of a received
+    segment needs to match the MKT’s SendID).
+</pre></div>
+</div>
+<p>Q: How is current_key set, and when does it change? Is it a user-triggered
+change, or is it triggered by a request from the remote peer? Is it set by the
+user explicitly, or by a matching rule?</p>
+<p>A: current_key is set by RNextKeyID [6.1]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Rnext_key is changed only by manual user intervention or MKT management
+protocol operation. It is not manipulated by TCP-AO. Current_key is updated
+by TCP-AO when processing received TCP segments as discussed in the segment
+processing description in Section 7.5. Note that the algorithm allows
+the current_key to change to a new MKT, then change back to a previously
+used MKT (known as &quot;backing up&quot;). This can occur during an MKT change when
+segments are received out of order, and is considered a feature of TCP-AO,
+because reordering does not result in drops.
+</pre></div>
+</div>
+<p>[7.5.2.e.ii]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>2. If the matching MKT corresponding to the segment’s socket pair and
+RNextKeyID is available:
+
+   a. Set current_key to the RNextKeyID MKT.
+</pre></div>
+</div>
+<p>Q: If both peers have multiple MKTs matching the connection's socket pair
+(with different KeyIDs), how should the sender/receiver pick KeyID to use?</p>
+<p>A: Some mechanism should pick the &quot;desired&quot; MKT [3.3]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Multiple MKTs may match a single outgoing segment, e.g., when MKTs
+are being changed. Those MKTs cannot have conflicting IDs (as noted
+elsewhere), and some mechanism must determine which MKT to use for each
+given outgoing segment.
+
+&gt;&gt; An outgoing TCP segment MUST match at most one desired MKT, indicated
+by the segment’s socket pair. The segment MAY match multiple MKTs, provided
+that exactly one MKT is indicated as desired. Other information in
+the segment MAY be used to determine the desired MKT when multiple MKTs
+match; such information MUST NOT include values in any TCP option fields.
+</pre></div>
+</div>
+<p>Q: Can TCP-MD5 connection migrate to TCP-AO (and vice-versa):</p>
+<p>A: No [1]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>TCP MD5-protected connections cannot be migrated to TCP-AO because TCP MD5
+does not support any changes to a connection’s security algorithm
+once established.
+</pre></div>
+</div>
+<p>Q: If all MKTs are removed on a connection, can it become a non-TCP-AO signed
+connection?</p>
+<p>A: [7.5.2] doesn't have the same choice as SYN packet handling in [7.5.1.i]
+that would allow accepting segments without a sign (which would be insecure).
+While switching to non-TCP-AO connection is not prohibited directly, it seems
+what the RFC means. Also, there's a requirement for TCP-AO connections to
+always have one current_key [3.3]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>TCP-AO requires that every protected TCP segment match exactly one MKT.
+</pre></div>
+</div>
+<p>[3.3]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>&gt;&gt; An incoming TCP segment including TCP-AO MUST match exactly one MKT,
+indicated solely by the segment’s socket pair and its TCP-AO KeyID.
+</pre></div>
+</div>
+<p>[4.4]:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>One or more MKTs. These are the MKTs that match this connection’s
+socket pair.
+</pre></div>
+</div>
+<p>Q: Can a non-TCP-AO connection become a TCP-AO-enabled one?</p>
+<p>A: No: for an already established non-TCP-AO connection it would be impossible
+to switch to using TCP-AO, as the traffic key generation requires the initial
+sequence numbers. Paraphrasing, starting using TCP-AO would require
+re-establishing the TCP connection.</p>
+</section>
+</section>
+<section id="in-kernel-mkts-database-vs-database-in-userspace">
+<h2>2. In-kernel MKTs database vs database in userspace<a class="headerlink" href="#in-kernel-mkts-database-vs-database-in-userspace" title="連結到這個標頭">¶</a></h2>
+<p>Linux TCP-AO support is implemented using <code class="docutils literal notranslate"><span class="pre">setsockopt()s</span></code>, in a similar way
+to TCP-MD5. It means that a userspace application that wants to use TCP-AO
+should perform <code class="docutils literal notranslate"><span class="pre">setsockopt()</span></code> on a TCP socket when it wants to add,
+remove or rotate MKTs. This approach moves the key management responsibility
+to userspace as well as decisions on corner cases, i.e. what to do if
+the peer doesn't respect RNextKeyID; moving more code to userspace, especially
+responsible for the policy decisions. Besides, it's flexible and scales well
+(with less locking needed than in the case of an in-kernel database). One also
+should keep in mind that mainly intended users are BGP processes, not any
+random applications, which means that compared to IPsec tunnels,
+no transparency is really needed and modern BGP daemons already have
+<code class="docutils literal notranslate"><span class="pre">setsockopt()s</span></code> for TCP-MD5 support.</p>
+<table class="docutils align-default" id="id2">
+<caption><span class="caption-text">Considered pros and cons of the approaches</span><a class="headerlink" href="#id2" title="連結到這個表格">¶</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">setsockopt()</span></code></p></th>
+<th class="head"><p>in-kernel DB</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Extendability</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">setsockopt()</span></code>
+commands should be
+extendable syscalls</p></td>
+<td><p>Netlink messages are
+simple and extendable</p></td>
+</tr>
+<tr class="row-odd"><td><p>Required userspace
+changes</p></td>
+<td><p>BGP or any application
+that wants TCP-AO needs
+to perform
+<code class="docutils literal notranslate"><span class="pre">setsockopt()s</span></code>
+and do key management</p></td>
+<td><p>could be transparent
+as tunnels, providing
+something like
+<code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">tcpao</span> <span class="pre">add</span> <span class="pre">key</span></code>
+(delete/show/rotate)</p></td>
+</tr>
+<tr class="row-even"><td><p>MKTs removal or adding</p></td>
+<td><p>harder for userspace</p></td>
+<td><p>harder for kernel</p></td>
+</tr>
+<tr class="row-odd"><td><p>Dump-ability</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">getsockopt()</span></code></p></td>
+<td><p>Netlink .<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dump()</span></code>
+callback</p></td>
+</tr>
+<tr class="row-even"><td><p>Limits on kernel
+resources/memory</p></td>
+<td colspan="2"><p>equal</p></td>
+</tr>
+<tr class="row-odd"><td><p>Scalability</p></td>
+<td><p>contention on
+<code class="docutils literal notranslate"><span class="pre">TCP_LISTEN</span></code> sockets</p></td>
+<td><p>contention on
+the whole database</p></td>
+</tr>
+<tr class="row-even"><td><p>Monitoring &amp; warnings</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">TCP_DIAG</span></code></p></td>
+<td><p>same Netlink socket</p></td>
+</tr>
+<tr class="row-odd"><td><p>Matching of MKTs</p></td>
+<td><p>half-problem: only
+listen sockets</p></td>
+<td><p>hard</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="uapi">
+<h2>3. uAPI<a class="headerlink" href="#uapi" title="連結到這個標頭">¶</a></h2>
+<p>Linux provides a set of <code class="docutils literal notranslate"><span class="pre">setsockopt()s</span></code> and <code class="docutils literal notranslate"><span class="pre">getsockopt()s</span></code> that let
+userspace manage TCP-AO on a per-socket basis. In order to add/delete MKTs
+<code class="docutils literal notranslate"><span class="pre">TCP_AO_ADD_KEY</span></code> and <code class="docutils literal notranslate"><span class="pre">TCP_AO_DEL_KEY</span></code> TCP socket options must be used.
+It is not allowed to add a key on an established non-TCP-AO connection
+as well as to remove the last key from TCP-AO connection.</p>
+<p><code class="docutils literal notranslate"><span class="pre">setsockopt(TCP_AO_DEL_KEY)</span></code> command may specify <code class="docutils literal notranslate"><span class="pre">tcp_ao_del::current_key</span></code>
++ <code class="docutils literal notranslate"><span class="pre">tcp_ao_del::set_current</span></code> and/or <code class="docutils literal notranslate"><span class="pre">tcp_ao_del::rnext</span></code>
++ <code class="docutils literal notranslate"><span class="pre">tcp_ao_del::set_rnext</span></code> which makes such delete &quot;forced&quot;: it
+provides userspace a way to delete a key that's being used and atomically set
+another one instead. This is not intended for normal use and should be used
+only when the peer ignores RNextKeyID and keeps requesting/using an old key.
+It provides a way to force-delete a key that's not trusted but may break
+the TCP-AO connection.</p>
+<p>The usual/normal key-rotation can be performed with <code class="docutils literal notranslate"><span class="pre">setsockopt(TCP_AO_INFO)</span></code>.
+It also provides a uAPI to change per-socket TCP-AO settings, such as
+ignoring ICMPs, as well as clear per-socket TCP-AO packet counters.
+The corresponding <code class="docutils literal notranslate"><span class="pre">getsockopt(TCP_AO_INFO)</span></code> can be used to get those
+per-socket TCP-AO settings.</p>
+<p>Another useful command is <code class="docutils literal notranslate"><span class="pre">getsockopt(TCP_AO_GET_KEYS)</span></code>. One can use it
+to list all MKTs on a TCP socket or use a filter to get keys for a specific
+peer and/or sndid/rcvid, VRF L3 interface or get current_key/rnext_key.</p>
+<p>To repair TCP-AO connections <code class="docutils literal notranslate"><span class="pre">setsockopt(TCP_AO_REPAIR)</span></code> is available,
+provided that the user previously has checkpointed/dumped the socket with
+<code class="docutils literal notranslate"><span class="pre">getsockopt(TCP_AO_REPAIR)</span></code>.</p>
+<p>A tip here for scaled TCP_LISTEN sockets, that may have some thousands TCP-AO
+keys, is: use filters in <code class="docutils literal notranslate"><span class="pre">getsockopt(TCP_AO_GET_KEYS)</span></code> and asynchronous
+delete with <code class="docutils literal notranslate"><span class="pre">setsockopt(TCP_AO_DEL_KEY)</span></code>.</p>
+<p>Linux TCP-AO also provides a bunch of segment counters that can be helpful
+with troubleshooting/debugging issues. Every MKT has good/bad counters
+that reflect how many packets passed/failed verification.
+Each TCP-AO socket has the following counters:
+- for good segments (properly signed)
+- for bad segments (failed TCP-AO verification)
+- for segments with unknown keys
+- for segments where an AO signature was expected, but wasn't found
+- for the number of ignored ICMPs</p>
+<p>TCP-AO per-socket counters are also duplicated with per-netns counters,
+exposed with SNMP. Those are <code class="docutils literal notranslate"><span class="pre">TCPAOGood</span></code>, <code class="docutils literal notranslate"><span class="pre">TCPAOBad</span></code>, <code class="docutils literal notranslate"><span class="pre">TCPAOKeyNotFound</span></code>,
+<code class="docutils literal notranslate"><span class="pre">TCPAORequired</span></code> and <code class="docutils literal notranslate"><span class="pre">TCPAODroppedIcmps</span></code>.</p>
+<p>For monitoring purposes, there are following TCP-AO trace events:
+<code class="docutils literal notranslate"><span class="pre">tcp_hash_bad_header</span></code>, <code class="docutils literal notranslate"><span class="pre">tcp_hash_ao_required</span></code>, <code class="docutils literal notranslate"><span class="pre">tcp_ao_handshake_failure</span></code>,
+<code class="docutils literal notranslate"><span class="pre">tcp_ao_wrong_maclen</span></code>, <code class="docutils literal notranslate"><span class="pre">tcp_ao_wrong_maclen</span></code>, <code class="docutils literal notranslate"><span class="pre">tcp_ao_key_not_found</span></code>,
+<code class="docutils literal notranslate"><span class="pre">tcp_ao_rnext_request</span></code>, <code class="docutils literal notranslate"><span class="pre">tcp_ao_synack_no_key</span></code>, <code class="docutils literal notranslate"><span class="pre">tcp_ao_snd_sne_update</span></code>,
+<code class="docutils literal notranslate"><span class="pre">tcp_ao_rcv_sne_update</span></code>. It's possible to separately enable any of them and
+one can filter them by net-namespace, 4-tuple, family, L3 index, and TCP header
+flags. If a segment has a TCP-AO header, the filters may also include
+keyid, rnext, and maclen. SNE updates include the rolled-over numbers.</p>
+<p>RFC 5925 very permissively specifies how TCP port matching can be done for
+MKTs:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>TCP connection identifier. A TCP socket pair, i.e., a local IP
+address, a remote IP address, a TCP local port, and a TCP remote port.
+Values can be partially specified using ranges (e.g., 2-30), masks
+(e.g., 0xF0), wildcards (e.g., &quot;*&quot;), or any other suitable indication.
+</pre></div>
+</div>
+<p>Currently Linux TCP-AO implementation doesn't provide any TCP port matching.
+Probably, port ranges are the most flexible for uAPI, but so far
+not implemented.</p>
+</section>
+<section id="setsockopt-vs-accept-race">
+<h2>4. <code class="docutils literal notranslate"><span class="pre">setsockopt()</span></code> vs <code class="docutils literal notranslate"><span class="pre">accept()</span></code> race<a class="headerlink" href="#setsockopt-vs-accept-race" title="連結到這個標頭">¶</a></h2>
+<p>In contrast with an established TCP-MD5 connection which has just one key,
+TCP-AO connections may have many keys, which means that accepted connections
+on a listen socket may have any amount of keys as well. As copying all those
+keys on a first properly signed SYN would make the request socket bigger, that
+would be undesirable. Currently, the implementation doesn't copy keys
+to request sockets, but rather look them up on the &quot;parent&quot; listener socket.</p>
+<p>The result is that when userspace removes TCP-AO keys, that may break
+not-yet-established connections on request sockets as well as not removing
+keys from sockets that were already established, but not yet <code class="docutils literal notranslate"><span class="pre">accept()</span></code>'ed,
+hanging in the accept queue.</p>
+<p>The reverse is valid as well: if userspace adds a new key for a peer on
+a listener socket, the established sockets in the accept queue won't
+have the new keys.</p>
+<p>At this moment, the resolution for the two races:
+<code class="docutils literal notranslate"><span class="pre">setsockopt(TCP_AO_ADD_KEY)</span></code> vs <code class="docutils literal notranslate"><span class="pre">accept()</span></code>
+and <code class="docutils literal notranslate"><span class="pre">setsockopt(TCP_AO_DEL_KEY)</span></code> vs <code class="docutils literal notranslate"><span class="pre">accept()</span></code> is delegated to userspace.
+This means that it's expected that userspace would check the MKTs on the socket
+that was returned by <code class="docutils literal notranslate"><span class="pre">accept()</span></code> to verify that any key rotation that
+happened on the listen socket is reflected on the newly established connection.</p>
+<p>This is a similar &quot;do-nothing&quot; approach to TCP-MD5 from the kernel side and
+may be changed later by introducing new flags to <code class="docutils literal notranslate"><span class="pre">tcp_ao_add</span></code>
+and <code class="docutils literal notranslate"><span class="pre">tcp_ao_del</span></code>.</p>
+<p>Note that this race is rare for it needs TCP-AO key rotation to happen
+during the 3-way handshake for the new TCP connection.</p>
+</section>
+<section id="interaction-with-tcp-md5">
+<h2>5. Interaction with TCP-MD5<a class="headerlink" href="#interaction-with-tcp-md5" title="連結到這個標頭">¶</a></h2>
+<p>A TCP connection can not migrate between TCP-AO and TCP-MD5 options. The
+established sockets that have either AO or MD5 keys are restricted for
+adding keys of the other option.</p>
+<p>For listening sockets the picture is different: BGP server may want to receive
+both TCP-AO and (deprecated) TCP-MD5 clients. As a result, both types of keys
+may be added to TCP_CLOSED or TCP_LISTEN sockets. It's not allowed to add
+different types of keys for the same peer.</p>
+</section>
+<section id="sne-linux-implementation">
+<h2>6. SNE Linux implementation<a class="headerlink" href="#sne-linux-implementation" title="連結到這個標頭">¶</a></h2>
+<p>RFC 5925 [6.2] describes the algorithm of how to extend TCP sequence numbers
+with SNE.  In short: TCP has to track the previous sequence numbers and set
+sne_flag when the current SEQ number rolls over. The flag is cleared when
+both current and previous SEQ numbers cross 0x7fff, which is 32Kb.</p>
+<p>In times when sne_flag is set, the algorithm compares SEQ for each packet with
+0x7fff and if it's higher than 32Kb, it assumes that the packet should be
+verified with SNE before the increment. As a result, there's
+this [0; 32Kb] window, when packets with (SNE - 1) can be accepted.</p>
+<p>Linux implementation simplifies this a bit: as the network stack already tracks
+the first SEQ byte that ACK is wanted for (snd_una) and the next SEQ byte that
+is wanted (rcv_nxt) - that's enough information for a rough estimation
+on where in the 4GB SEQ number space both sender and receiver are.
+When they roll over to zero, the corresponding SNE gets incremented.</p>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">tcp_ao_compute_sne()</span></code> is called for each TCP-AO segment. It compares SEQ numbers
+from the segment with snd_una or rcv_nxt and fits the result into a 2GB window around them,
+detecting SEQ numbers rolling over. That simplifies the code a lot and only
+requires SNE numbers to be stored on every TCP-AO socket.</p>
+<p>The 2GB window at first glance seems much more permissive compared to
+RFC 5926. But that is only used to pick the correct SNE before/after
+a rollover. It allows more TCP segment replays, but yet all regular
+TCP checks in <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">tcp_sequence()</span></code> are applied on the verified segment.
+So, it trades a bit more permissive acceptance of replayed/retransmitted
+segments for the simplicity of the algorithm and what seems better behaviour
+for large TCP windows.</p>
+</section>
+<section id="links">
+<h2>7. Links<a class="headerlink" href="#links" title="連結到這個標頭">¶</a></h2>
+<dl class="simple">
+<dt>RFC 5925 The TCP Authentication Option</dt><dd><p><a class="reference external" href="https://www.rfc-editor.org/rfc/pdfrfc/rfc5925.txt.pdf">https://www.rfc-editor.org/rfc/pdfrfc/rfc5925.txt.pdf</a></p>
+</dd>
+<dt>RFC 5926 Cryptographic Algorithms for the TCP Authentication Option (TCP-AO)</dt><dd><p><a class="reference external" href="https://www.rfc-editor.org/rfc/pdfrfc/rfc5926.txt.pdf">https://www.rfc-editor.org/rfc/pdfrfc/rfc5926.txt.pdf</a></p>
+</dd>
+<dt>Draft &quot;SHA-2 Algorithm for the TCP Authentication Option (TCP-AO)&quot;</dt><dd><p><a class="reference external" href="https://datatracker.ietf.org/doc/html/draft-nayak-tcp-sha2-03">https://datatracker.ietf.org/doc/html/draft-nayak-tcp-sha2-03</a></p>
+</dd>
+<dt>RFC 2385 Protection of BGP Sessions via the TCP MD5 Signature Option</dt><dd><p><a class="reference external" href="https://www.rfc-editor.org/rfc/pdfrfc/rfc2385.txt.pdf">https://www.rfc-editor.org/rfc/pdfrfc/rfc2385.txt.pdf</a></p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">作者<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dmitry Safonov &lt;<a class="reference external" href="mailto:dima&#37;&#52;&#48;arista&#46;com">dima<span>&#64;</span>arista<span>&#46;</span>com</a>&gt;</p>
+</dd>
+</dl>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/networking/tcp_ao.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

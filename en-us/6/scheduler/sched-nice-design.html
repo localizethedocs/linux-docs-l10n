@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Scheduler Nice Design &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/scheduler/sched-nice-design.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Real-Time group scheduling" href="sched-rt-group.html" />
+    <link rel="prev" title="Utilization Clamping" href="sched-util-clamp.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/scheduler/sched-nice-design.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="scheduler-nice-design">
+<h1>Scheduler Nice Design<a class="headerlink" href="#scheduler-nice-design" title="Link to this heading">¶</a></h1>
+<p>This document explains the thinking about the revamped and streamlined
+nice-levels implementation in the new Linux scheduler.</p>
+<p>Nice levels were always pretty weak under Linux and people continuously
+pestered us to make nice +19 tasks use up much less CPU time.</p>
+<p>Unfortunately that was not that easy to implement under the old
+scheduler, (otherwise we’d have done it long ago) because nice level
+support was historically coupled to timeslice length, and timeslice
+units were driven by the HZ tick, so the smallest timeslice was 1/HZ.</p>
+<p>In the O(1) scheduler (in 2003) we changed negative nice levels to be
+much stronger than they were before in 2.4 (and people were happy about
+that change), and we also intentionally calibrated the linear timeslice
+rule so that nice +19 level would be _exactly_ 1 jiffy. To better
+understand it, the timeslice graph went like this (cheesy ASCII art
+alert!):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>                  A
+            \     | [timeslice length]
+             \    |
+              \   |
+               \  |
+                \ |
+                 \|___100msecs
+                  |^ . _
+                  |      ^ . _
+                  |            ^ . _
+-*----------------------------------*-----&gt; [nice level]
+-20               |                +19
+                  |
+                  |
+</pre></div>
+</div>
+<p>So that if someone wanted to really renice tasks, +19 would give a much
+bigger hit than the normal linear rule would do. (The solution of
+changing the ABI to extend priorities was discarded early on.)</p>
+<p>This approach worked to some degree for some time, but later on with
+HZ=1000 it caused 1 jiffy to be 1 msec, which meant 0.1% CPU usage which
+we felt to be a bit excessive. Excessive _not_ because it’s too small of
+a CPU utilization, but because it causes too frequent (once per
+millisec) rescheduling. (and would thus trash the cache, etc. Remember,
+this was long ago when hardware was weaker and caches were smaller, and
+people were running number crunching apps at nice +19.)</p>
+<p>So for HZ=1000 we changed nice +19 to 5msecs, because that felt like the
+right minimal granularity - and this translates to 5% CPU utilization.
+But the fundamental HZ-sensitive property for nice+19 still remained,
+and we never got a single complaint about nice +19 being too _weak_ in
+terms of CPU utilization, we only got complaints about it (still) being
+too _strong_ :-)</p>
+<p>To sum it up: we always wanted to make nice levels more consistent, but
+within the constraints of HZ and jiffies and their nasty design level
+coupling to timeslices and granularity it was not really viable.</p>
+<p>The second (less frequent but still periodically occurring) complaint
+about Linux’s nice level support was its asymmetry around the origin
+(which you can see demonstrated in the picture above), or more
+accurately: the fact that nice level behavior depended on the _absolute_
+nice level as well, while the nice API itself is fundamentally
+“relative”:</p>
+<blockquote>
+<div><p>int nice(int inc);</p>
+<p>asmlinkage long sys_nice(int increment)</p>
+</div></blockquote>
+<p>(the first one is the glibc API, the second one is the syscall API.)
+Note that the ‘inc’ is relative to the current nice level. Tools like
+bash’s “nice” command mirror this relative API.</p>
+<p>With the old scheduler, if you for example started a niced task with +1
+and another task with +2, the CPU split between the two tasks would
+depend on the nice level of the parent shell - if it was at nice -10 the
+CPU split was different than if it was at +5 or +10.</p>
+<p>A third complaint against Linux’s nice level support was that negative
+nice levels were not ‘punchy enough’, so lots of people had to resort to
+run audio (and other multimedia) apps under RT priorities such as
+SCHED_FIFO. But this caused other problems: SCHED_FIFO is not starvation
+proof, and a buggy SCHED_FIFO app can also lock up the system for good.</p>
+<p>The new scheduler in v2.6.23 addresses all three types of complaints:</p>
+<p>To address the first complaint (of nice levels being not “punchy”
+enough), the scheduler was decoupled from ‘time slice’ and HZ concepts
+(and granularity was made a separate concept from nice levels) and thus
+it was possible to implement better and more consistent nice +19
+support: with the new scheduler nice +19 tasks get a HZ-independent
+1.5%, instead of the variable 3%-5%-9% range they got in the old
+scheduler.</p>
+<p>To address the second complaint (of nice levels not being consistent),
+the new scheduler makes nice(1) have the same CPU utilization effect on
+tasks, regardless of their absolute nice levels. So on the new
+scheduler, running a nice +10 and a nice 11 task has the same CPU
+utilization “split” between them as running a nice -5 and a nice -4
+task. (one will get 55% of the CPU, the other 45%.) That is why nice
+levels were changed to be “multiplicative” (or exponential) - that way
+it does not matter which nice level you start out from, the ‘relative
+result’ will always be the same.</p>
+<p>The third complaint (of negative nice levels not being “punchy” enough
+and forcing audio apps to run under the more dangerous SCHED_FIFO
+scheduling policy) is addressed by the new scheduler almost
+automatically: stronger negative nice levels are an automatic
+side-effect of the recalibrated dynamic range of nice levels.</p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/scheduler/sched-nice-design.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

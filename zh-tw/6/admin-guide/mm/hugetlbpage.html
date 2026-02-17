@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>HugeTLB Pages &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/mm/hugetlbpage.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜尋" href="../../search.html" />
+    <link rel="next" title="Idle Page Tracking" href="idle_page_tracking.html" />
+    <link rel="prev" title="Data Access Monitoring Results Stat" href="damon/stat.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#core-kernel-subsystems">Core-kernel subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v2.html">Control Group v2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v1/index.html">Control Groups version 1</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cpu-load.html">CPU load</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">記憶體管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../module-signing.html">Kernel module signing facility</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../namespaces/index.html">Namespaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../numastat.html">Numa policy hit/miss statistics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pm/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../syscall-user-dispatch.html">Syscall User Dispatch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../binfmt-misc.html">Kernel Support for miscellaneous Binary Formats (binfmt_misc)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../java.html">Java(tm) Binary Kernel Support for Linux v1.03</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mono.html">Mono(tm) Binary Kernel Support for Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/admin-guide/mm/hugetlbpage.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="hugetlb-pages">
+<h1>HugeTLB Pages<a class="headerlink" href="#hugetlb-pages" title="連結到這個標頭">¶</a></h1>
+<section id="overview">
+<h2>概覽<a class="headerlink" href="#overview" title="連結到這個標頭">¶</a></h2>
+<p>The intent of this file is to give a brief summary of hugetlbpage support in
+the Linux kernel.  This support is built on top of multiple page size support
+that is provided by most modern architectures.  For example, x86 CPUs normally
+support 4K and 2M (1G if architecturally supported) page sizes, ia64
+architecture supports multiple page sizes 4K, 8K, 64K, 256K, 1M, 4M, 16M,
+256M and ppc64 supports 4K and 16M.  A TLB is a cache of virtual-to-physical
+translations.  Typically this is a very scarce resource on processor.
+Operating systems try to make best use of limited number of TLB resources.
+This optimization is more critical now as bigger and bigger physical memories
+(several GBs) are more readily available.</p>
+<p>Users can use the huge page support in Linux kernel by either using the mmap
+system call or standard SYSV shared memory system calls (shmget, shmat).</p>
+<p>First the Linux kernel needs to be built with the CONFIG_HUGETLBFS
+(present under &quot;File systems&quot;) and CONFIG_HUGETLB_PAGE (selected
+automatically when CONFIG_HUGETLBFS is selected) configuration
+options.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">/proc/meminfo</span></code> file provides information about the total number of
+persistent hugetlb pages in the kernel's huge page pool.  It also displays
+default huge page size and information about the number of free, reserved
+and surplus huge pages in the pool of huge pages of default size.
+The huge page size is needed for generating the proper alignment and
+size of the arguments to system calls that map huge page regions.</p>
+<p>The output of <code class="docutils literal notranslate"><span class="pre">cat</span> <span class="pre">/proc/meminfo</span></code> will include lines like:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>HugePages_Total: uuu
+HugePages_Free:  vvv
+HugePages_Rsvd:  www
+HugePages_Surp:  xxx
+Hugepagesize:    yyy kB
+Hugetlb:         zzz kB
+</pre></div>
+</div>
+<p>where:</p>
+<dl class="simple">
+<dt>HugePages_Total</dt><dd><p>is the size of the pool of huge pages.</p>
+</dd>
+<dt>HugePages_Free</dt><dd><p>is the number of huge pages in the pool that are not yet
+allocated.</p>
+</dd>
+<dt>HugePages_Rsvd</dt><dd><p>is short for &quot;reserved,&quot; and is the number of huge pages for
+which a commitment to allocate from the pool has been made,
+but no allocation has yet been made.  Reserved huge pages
+guarantee that an application will be able to allocate a
+huge page from the pool of huge pages at fault time.</p>
+</dd>
+<dt>HugePages_Surp</dt><dd><p>is short for &quot;surplus,&quot; and is the number of huge pages in
+the pool above the value in <code class="docutils literal notranslate"><span class="pre">/proc/sys/vm/nr_hugepages</span></code>. The
+maximum number of surplus huge pages is controlled by
+<code class="docutils literal notranslate"><span class="pre">/proc/sys/vm/nr_overcommit_hugepages</span></code>.
+Note: When the feature of freeing unused vmemmap pages associated
+with each hugetlb page is enabled, the number of surplus huge pages
+may be temporarily larger than the maximum number of surplus huge
+pages when the system is under memory pressure.</p>
+</dd>
+<dt>Hugepagesize</dt><dd><p>is the default hugepage size (in kB).</p>
+</dd>
+<dt>Hugetlb</dt><dd><p>is the total amount of memory (in kB), consumed by huge
+pages of all sizes.
+If huge pages of different sizes are in use, this number
+will exceed HugePages_Total * Hugepagesize. To get more
+detailed information, please, refer to
+<code class="docutils literal notranslate"><span class="pre">/sys/kernel/mm/hugepages</span></code> (described below).</p>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">/proc/filesystems</span></code> should also show a filesystem of type &quot;hugetlbfs&quot;
+configured in the kernel.</p>
+<p><code class="docutils literal notranslate"><span class="pre">/proc/sys/vm/nr_hugepages</span></code> indicates the current number of &quot;persistent&quot; huge
+pages in the kernel's huge page pool.  &quot;Persistent&quot; huge pages will be
+returned to the huge page pool when freed by a task.  A user with root
+privileges can dynamically allocate more or free some persistent huge pages
+by increasing or decreasing the value of <code class="docutils literal notranslate"><span class="pre">nr_hugepages</span></code>.</p>
+<p>Note: When the feature of freeing unused vmemmap pages associated with each
+hugetlb page is enabled, we can fail to free the huge pages triggered by
+the user when the system is under memory pressure.  Please try again later.</p>
+<p>Pages that are used as huge pages are reserved inside the kernel and cannot
+be used for other purposes.  Huge pages cannot be swapped out under
+memory pressure.</p>
+<p>Once a number of huge pages have been pre-allocated to the kernel huge page
+pool, a user with appropriate privilege can use either the mmap system call
+or shared memory system calls to use the huge pages.  See the discussion of
+<a class="reference internal" href="#using-huge-pages"><span class="std std-ref">Using Huge Pages</span></a>, below.</p>
+<p>The administrator can allocate persistent huge pages on the kernel boot
+command line by specifying the &quot;hugepages=N&quot; parameter, where 'N' = the
+number of huge pages requested.  This is the most reliable method of
+allocating huge pages as memory has not yet become fragmented.</p>
+<p>Some platforms support multiple huge page sizes.  To allocate huge pages
+of a specific size, one must precede the huge pages boot command parameters
+with a huge page size selection parameter &quot;hugepagesz=&lt;size&gt;&quot;.  &lt;size&gt; must
+be specified in bytes with optional scale suffix [kKmMgG].  The default huge
+page size may be selected with the &quot;default_hugepagesz=&lt;size&gt;&quot; boot parameter.</p>
+<p>Hugetlb boot command line parameter semantics</p>
+<dl>
+<dt>hugepagesz</dt><dd><p>Specify a huge page size.  Used in conjunction with hugepages
+parameter to preallocate a number of huge pages of the specified
+size.  Hence, hugepagesz and hugepages are typically specified in
+pairs such as:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>hugepagesz=2M hugepages=512
+</pre></div>
+</div>
+<p>hugepagesz can only be specified once on the command line for a
+specific huge page size.  Valid huge page sizes are architecture
+dependent.</p>
+</dd>
+<dt>hugepages</dt><dd><p>Specify the number of huge pages to preallocate.  This typically
+follows a valid hugepagesz or default_hugepagesz parameter.  However,
+if hugepages is the first or only hugetlb command line parameter it
+implicitly specifies the number of huge pages of default size to
+allocate.  If the number of huge pages of default size is implicitly
+specified, it can not be overwritten by a hugepagesz,hugepages
+parameter pair for the default size.  This parameter also has a
+node format.  The node format specifies the number of huge pages
+to allocate on specific nodes.</p>
+<p>For example, on an architecture with 2M default huge page size:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>hugepages=256 hugepagesz=2M hugepages=512
+</pre></div>
+</div>
+<p>will result in 256 2M huge pages being allocated and a warning message
+indicating that the hugepages=512 parameter is ignored.  If a hugepages
+parameter is preceded by an invalid hugepagesz parameter, it will
+be ignored.</p>
+<p>Node format example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>hugepagesz=2M hugepages=0:1,1:2
+</pre></div>
+</div>
+<p>It will allocate 1 2M hugepage on node0 and 2 2M hugepages on node1.
+If the node number is invalid,  the parameter will be ignored.</p>
+</dd>
+<dt>hugepage_alloc_threads</dt><dd><p>Specify the number of threads that should be used to allocate hugepages
+during boot. This parameter can be used to improve system bootup time
+when allocating a large amount of huge pages.</p>
+<p>The default value is 25% of the available hardware threads.
+Example to use 8 allocation threads:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>hugepage_alloc_threads=8
+</pre></div>
+</div>
+<p>Note that this parameter only applies to non-gigantic huge pages.</p>
+</dd>
+<dt>default_hugepagesz</dt><dd><p>Specify the default huge page size.  This parameter can
+only be specified once on the command line.  default_hugepagesz can
+optionally be followed by the hugepages parameter to preallocate a
+specific number of huge pages of default size.  The number of default
+sized huge pages to preallocate can also be implicitly specified as
+mentioned in the hugepages section above.  Therefore, on an
+architecture with 2M default huge page size:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>hugepages=256
+default_hugepagesz=2M hugepages=256
+hugepages=256 default_hugepagesz=2M
+</pre></div>
+</div>
+<p>will all result in 256 2M huge pages being allocated.  Valid default
+huge page size is architecture dependent.</p>
+</dd>
+<dt>hugetlb_free_vmemmap</dt><dd><p>When CONFIG_HUGETLB_PAGE_OPTIMIZE_VMEMMAP is set, this enables HugeTLB
+Vmemmap Optimization (HVO).</p>
+</dd>
+</dl>
+<p>When multiple huge page sizes are supported, <code class="docutils literal notranslate"><span class="pre">/proc/sys/vm/nr_hugepages</span></code>
+indicates the current number of pre-allocated huge pages of the default size.
+Thus, one can use the following command to dynamically allocate/deallocate
+default sized persistent huge pages:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>echo 20 &gt; /proc/sys/vm/nr_hugepages
+</pre></div>
+</div>
+<p>This command will try to adjust the number of default sized huge pages in the
+huge page pool to 20, allocating or freeing huge pages, as required.</p>
+<p>On a NUMA platform, the kernel will attempt to distribute the huge page pool
+over all the set of allowed nodes specified by the NUMA memory policy of the
+task that modifies <code class="docutils literal notranslate"><span class="pre">nr_hugepages</span></code>. The default for the allowed nodes--when the
+task has default memory policy--is all on-line nodes with memory.  Allowed
+nodes with insufficient available, contiguous memory for a huge page will be
+silently skipped when allocating persistent huge pages.  See the
+<a class="reference internal" href="#mem-policy-and-hp-alloc"><span class="std std-ref">discussion below</span></a>
+of the interaction of task memory policy, cpusets and per node attributes
+with the allocation and freeing of persistent huge pages.</p>
+<p>The success or failure of huge page allocation depends on the amount of
+physically contiguous memory that is present in system at the time of the
+allocation attempt.  If the kernel is unable to allocate huge pages from
+some nodes in a NUMA system, it will attempt to make up the difference by
+allocating extra pages on other nodes with sufficient available contiguous
+memory, if any.</p>
+<p>System administrators may want to put this command in one of the local rc
+init files.  This will enable the kernel to allocate huge pages early in
+the boot process when the possibility of getting physical contiguous pages
+is still very high.  Administrators can verify the number of huge pages
+actually allocated by checking the sysctl or meminfo.  To check the per node
+distribution of huge pages in a NUMA system, use:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cat /sys/devices/system/node/node*/meminfo | fgrep Huge
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">/proc/sys/vm/nr_overcommit_hugepages</span></code> specifies how large the pool of
+huge pages can grow, if more huge pages than <code class="docutils literal notranslate"><span class="pre">/proc/sys/vm/nr_hugepages</span></code> are
+requested by applications.  Writing any non-zero value into this file
+indicates that the hugetlb subsystem is allowed to try to obtain that
+number of &quot;surplus&quot; huge pages from the kernel's normal page pool, when the
+persistent huge page pool is exhausted. As these surplus huge pages become
+unused, they are freed back to the kernel's normal page pool.</p>
+<p>When increasing the huge page pool size via <code class="docutils literal notranslate"><span class="pre">nr_hugepages</span></code>, any existing
+surplus pages will first be promoted to persistent huge pages.  Then, additional
+huge pages will be allocated, if necessary and if possible, to fulfill
+the new persistent huge page pool size.</p>
+<p>The administrator may shrink the pool of persistent huge pages for
+the default huge page size by setting the <code class="docutils literal notranslate"><span class="pre">nr_hugepages</span></code> sysctl to a
+smaller value.  The kernel will attempt to balance the freeing of huge pages
+across all nodes in the memory policy of the task modifying <code class="docutils literal notranslate"><span class="pre">nr_hugepages</span></code>.
+Any free huge pages on the selected nodes will be freed back to the kernel's
+normal page pool.</p>
+<p>Caveat: Shrinking the persistent huge page pool via <code class="docutils literal notranslate"><span class="pre">nr_hugepages</span></code> such that
+it becomes less than the number of huge pages in use will convert the balance
+of the in-use huge pages to surplus huge pages.  This will occur even if
+the number of surplus pages would exceed the overcommit value.  As long as
+this condition holds--that is, until <code class="docutils literal notranslate"><span class="pre">nr_hugepages+nr_overcommit_hugepages</span></code> is
+increased sufficiently, or the surplus huge pages go out of use and are freed--
+no more surplus huge pages will be allowed to be allocated.</p>
+<p>With support for multiple huge page pools at run-time available, much of
+the huge page userspace interface in <code class="docutils literal notranslate"><span class="pre">/proc/sys/vm</span></code> has been duplicated in
+sysfs.
+The <code class="docutils literal notranslate"><span class="pre">/proc</span></code> interfaces discussed above have been retained for backwards
+compatibility. The root huge page control directory in sysfs is:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/sys/kernel/mm/hugepages
+</pre></div>
+</div>
+<p>For each huge page size supported by the running kernel, a subdirectory
+will exist, of the form:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>hugepages-${size}kB
+</pre></div>
+</div>
+<p>Inside each of these directories, the set of files contained in <code class="docutils literal notranslate"><span class="pre">/proc</span></code>
+will exist.  In addition, two additional interfaces for demoting huge
+pages may exist:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>demote
+demote_size
+nr_hugepages
+nr_hugepages_mempolicy
+nr_overcommit_hugepages
+free_hugepages
+resv_hugepages
+surplus_hugepages
+</pre></div>
+</div>
+<p>The demote interfaces provide the ability to split a huge page into
+smaller huge pages.  For example, the x86 architecture supports both
+1GB and 2MB huge pages sizes.  A 1GB huge page can be split into 512
+2MB huge pages.  Demote interfaces are not available for the smallest
+huge page size.  The demote interfaces are:</p>
+<dl class="simple">
+<dt>demote_size</dt><dd><p>is the size of demoted pages.  When a page is demoted a corresponding
+number of huge pages of demote_size will be created.  By default,
+demote_size is set to the next smaller huge page size.  If there are
+multiple smaller huge page sizes, demote_size can be set to any of
+these smaller sizes.  Only huge page sizes less than the current huge
+pages size are allowed.</p>
+</dd>
+<dt>demote</dt><dd><p>is used to demote a number of huge pages.  A user with root privileges
+can write to this file.  It may not be possible to demote the
+requested number of huge pages.  To determine how many pages were
+actually demoted, compare the value of nr_hugepages before and after
+writing to the demote interface.  demote is a write only interface.</p>
+</dd>
+</dl>
+<p>The interfaces which are the same as in <code class="docutils literal notranslate"><span class="pre">/proc</span></code> (all except demote and
+demote_size) function as described above for the default huge page-sized case.</p>
+</section>
+<section id="interaction-of-task-memory-policy-with-huge-page-allocation-freeing">
+<span id="mem-policy-and-hp-alloc"></span><h2>Interaction of Task Memory Policy with Huge Page Allocation/Freeing<a class="headerlink" href="#interaction-of-task-memory-policy-with-huge-page-allocation-freeing" title="連結到這個標頭">¶</a></h2>
+<p>Whether huge pages are allocated and freed via the <code class="docutils literal notranslate"><span class="pre">/proc</span></code> interface or
+the <code class="docutils literal notranslate"><span class="pre">/sysfs</span></code> interface using the <code class="docutils literal notranslate"><span class="pre">nr_hugepages_mempolicy</span></code> attribute, the
+NUMA nodes from which huge pages are allocated or freed are controlled by the
+NUMA memory policy of the task that modifies the <code class="docutils literal notranslate"><span class="pre">nr_hugepages_mempolicy</span></code>
+sysctl or attribute.  When the <code class="docutils literal notranslate"><span class="pre">nr_hugepages</span></code> attribute is used, mempolicy
+is ignored.</p>
+<p>The recommended method to allocate or free huge pages to/from the kernel
+huge page pool, using the <code class="docutils literal notranslate"><span class="pre">nr_hugepages</span></code> example above, is:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>numactl --interleave &lt;node-list&gt; echo 20 \
+                            &gt;/proc/sys/vm/nr_hugepages_mempolicy
+</pre></div>
+</div>
+<p>or, more succinctly:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>numactl -m &lt;node-list&gt; echo 20 &gt;/proc/sys/vm/nr_hugepages_mempolicy
+</pre></div>
+</div>
+<p>This will allocate or free <code class="docutils literal notranslate"><span class="pre">abs(20</span> <span class="pre">-</span> <span class="pre">nr_hugepages)</span></code> to or from the nodes
+specified in &lt;node-list&gt;, depending on whether number of persistent huge pages
+is initially less than or greater than 20, respectively.  No huge pages will be
+allocated nor freed on any node not included in the specified &lt;node-list&gt;.</p>
+<p>When adjusting the persistent hugepage count via <code class="docutils literal notranslate"><span class="pre">nr_hugepages_mempolicy</span></code>, any
+memory policy mode--bind, preferred, local or interleave--may be used.  The
+resulting effect on persistent huge page allocation is as follows:</p>
+<ol class="arabic simple">
+<li><p>Regardless of mempolicy mode [see
+<a class="reference internal" href="numa_memory_policy.html"><span class="doc">NUMA Memory Policy</span></a>],
+persistent huge pages will be distributed across the node or nodes
+specified in the mempolicy as if &quot;interleave&quot; had been specified.
+However, if a node in the policy does not contain sufficient contiguous
+memory for a huge page, the allocation will not &quot;fallback&quot; to the nearest
+neighbor node with sufficient contiguous memory.  To do this would cause
+undesirable imbalance in the distribution of the huge page pool, or
+possibly, allocation of persistent huge pages on nodes not allowed by
+the task's memory policy.</p></li>
+<li><p>One or more nodes may be specified with the bind or interleave policy.
+If more than one node is specified with the preferred policy, only the
+lowest numeric id will be used.  Local policy will select the node where
+the task is running at the time the nodes_allowed mask is constructed.
+For local policy to be deterministic, the task must be bound to a cpu or
+cpus in a single node.  Otherwise, the task could be migrated to some
+other node at any time after launch and the resulting node will be
+indeterminate.  Thus, local policy is not very useful for this purpose.
+Any of the other mempolicy modes may be used to specify a single node.</p></li>
+<li><p>The nodes allowed mask will be derived from any non-default task mempolicy,
+whether this policy was set explicitly by the task itself or one of its
+ancestors, such as numactl.  This means that if the task is invoked from a
+shell with non-default policy, that policy will be used.  One can specify a
+node list of &quot;all&quot; with numactl --interleave or --membind [-m] to achieve
+interleaving over all nodes in the system or cpuset.</p></li>
+<li><p>Any task mempolicy specified--e.g., using numactl--will be constrained by
+the resource limits of any cpuset in which the task runs.  Thus, there will
+be no way for a task with non-default policy running in a cpuset with a
+subset of the system nodes to allocate huge pages outside the cpuset
+without first moving to a cpuset that contains all of the desired nodes.</p></li>
+<li><p>Boot-time huge page allocation attempts to distribute the requested number
+of huge pages over all on-lines nodes with memory.</p></li>
+</ol>
+</section>
+<section id="per-node-hugepages-attributes">
+<h2>Per Node Hugepages Attributes<a class="headerlink" href="#per-node-hugepages-attributes" title="連結到這個標頭">¶</a></h2>
+<p>A subset of the contents of the root huge page control directory in sysfs,
+described above, will be replicated under each the system device of each
+NUMA node with memory in:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/sys/devices/system/node/node[0-9]*/hugepages/
+</pre></div>
+</div>
+<p>Under this directory, the subdirectory for each supported huge page size
+contains the following attribute files:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>nr_hugepages
+free_hugepages
+surplus_hugepages
+</pre></div>
+</div>
+<p>The free_' and surplus_' attribute files are read-only.  They return the number
+of free and surplus [overcommitted] huge pages, respectively, on the parent
+node.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">nr_hugepages</span></code> attribute returns the total number of huge pages on the
+specified node.  When this attribute is written, the number of persistent huge
+pages on the parent node will be adjusted to the specified value, if sufficient
+resources exist, regardless of the task's mempolicy or cpuset constraints.</p>
+<p>Note that the number of overcommit and reserve pages remain global quantities,
+as we don't know until fault time, when the faulting task's mempolicy is
+applied, from which node the huge page allocation will be attempted.</p>
+<p>The hugetlb may be migrated between the per-node hugepages pool in the following
+scenarios: memory offline, memory failure, longterm pinning, syscalls(mbind,
+migrate_pages and move_pages), <a class="reference internal" href="../../core-api/mm-api.html#c.alloc_contig_range" title="alloc_contig_range"><code class="xref c c-func docutils literal notranslate"><span class="pre">alloc_contig_range()</span></code></a> and <a class="reference internal" href="../../core-api/mm-api.html#c.alloc_contig_pages" title="alloc_contig_pages"><code class="xref c c-func docutils literal notranslate"><span class="pre">alloc_contig_pages()</span></code></a>.
+Now only memory offline, memory failure and syscalls allow fallbacking to allocate
+a new hugetlb on a different node if the current node is unable to allocate during
+hugetlb migration, that means these 3 cases can break the per-node hugepages pool.</p>
+</section>
+<section id="using-huge-pages">
+<span id="id1"></span><h2>Using Huge Pages<a class="headerlink" href="#using-huge-pages" title="連結到這個標頭">¶</a></h2>
+<p>If the user applications are going to request huge pages using mmap system
+call, then it is required that system administrator mount a file system of
+type hugetlbfs:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>mount -t hugetlbfs \
+      -o uid=&lt;value&gt;,gid=&lt;value&gt;,mode=&lt;value&gt;,pagesize=&lt;value&gt;,size=&lt;value&gt;,\
+      min_size=&lt;value&gt;,nr_inodes=&lt;value&gt; none /mnt/huge
+</pre></div>
+</div>
+<p>This command mounts a (pseudo) filesystem of type hugetlbfs on the directory
+<code class="docutils literal notranslate"><span class="pre">/mnt/huge</span></code>.  Any file created on <code class="docutils literal notranslate"><span class="pre">/mnt/huge</span></code> uses huge pages.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">uid</span></code> and <code class="docutils literal notranslate"><span class="pre">gid</span></code> options sets the owner and group of the root of the
+file system.  By default the <code class="docutils literal notranslate"><span class="pre">uid</span></code> and <code class="docutils literal notranslate"><span class="pre">gid</span></code> of the current process
+are taken.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">mode</span></code> option sets the mode of root of file system to value &amp; 01777.
+This value is given in octal. By default the value 0755 is picked.</p>
+<p>If the platform supports multiple huge page sizes, the <code class="docutils literal notranslate"><span class="pre">pagesize</span></code> option can
+be used to specify the huge page size and associated pool. <code class="docutils literal notranslate"><span class="pre">pagesize</span></code>
+is specified in bytes. If <code class="docutils literal notranslate"><span class="pre">pagesize</span></code> is not specified the platform's
+default huge page size and associated pool will be used.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">size</span></code> option sets the maximum value of memory (huge pages) allowed
+for that filesystem (<code class="docutils literal notranslate"><span class="pre">/mnt/huge</span></code>). The <code class="docutils literal notranslate"><span class="pre">size</span></code> option can be specified
+in bytes, or as a percentage of the specified huge page pool (<code class="docutils literal notranslate"><span class="pre">nr_hugepages</span></code>).
+The size is rounded down to HPAGE_SIZE boundary.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">min_size</span></code> option sets the minimum value of memory (huge pages) allowed
+for the filesystem. <code class="docutils literal notranslate"><span class="pre">min_size</span></code> can be specified in the same way as <code class="docutils literal notranslate"><span class="pre">size</span></code>,
+either bytes or a percentage of the huge page pool.
+At mount time, the number of huge pages specified by <code class="docutils literal notranslate"><span class="pre">min_size</span></code> are reserved
+for use by the filesystem.
+If there are not enough free huge pages available, the mount will fail.
+As huge pages are allocated to the filesystem and freed, the reserve count
+is adjusted so that the sum of allocated and reserved huge pages is always
+at least <code class="docutils literal notranslate"><span class="pre">min_size</span></code>.</p>
+<p>The option <code class="docutils literal notranslate"><span class="pre">nr_inodes</span></code> sets the maximum number of inodes that <code class="docutils literal notranslate"><span class="pre">/mnt/huge</span></code>
+can use.</p>
+<p>If the <code class="docutils literal notranslate"><span class="pre">size</span></code>, <code class="docutils literal notranslate"><span class="pre">min_size</span></code> or <code class="docutils literal notranslate"><span class="pre">nr_inodes</span></code> option is not provided on
+command line then no limits are set.</p>
+<p>For <code class="docutils literal notranslate"><span class="pre">pagesize</span></code>, <code class="docutils literal notranslate"><span class="pre">size</span></code>, <code class="docutils literal notranslate"><span class="pre">min_size</span></code> and <code class="docutils literal notranslate"><span class="pre">nr_inodes</span></code> options, you can
+use [G|g]/[M|m]/[K|k] to represent giga/mega/kilo.
+For example, size=2K has the same meaning as size=2048.</p>
+<p>While read system calls are supported on files that reside on hugetlb
+file systems, write system calls are not.</p>
+<p>Regular chown, chgrp, and chmod commands (with right permissions) could be
+used to change the file attributes on hugetlbfs.</p>
+<p>Also, it is important to note that no such mount command is required if
+applications are going to use only shmat/shmget system calls or mmap with
+MAP_HUGETLB.  For an example of how to use mmap with MAP_HUGETLB see
+<a class="reference internal" href="#map-hugetlb"><span class="std std-ref">map_hugetlb</span></a> below.</p>
+<p>Users who wish to use hugetlb memory via shared memory segment should be
+members of a supplementary group and system admin needs to configure that gid
+into <code class="docutils literal notranslate"><span class="pre">/proc/sys/vm/hugetlb_shm_group</span></code>.  It is possible for same or different
+applications to use any combination of mmaps and shm* calls, though the mount of
+filesystem will be required for using mmap calls without MAP_HUGETLB.</p>
+<p>Syscalls that operate on memory backed by hugetlb pages only have their lengths
+aligned to the native page size of the processor; they will normally fail with
+errno set to EINVAL or exclude hugetlb pages that extend beyond the length if
+not hugepage aligned.  For example, munmap(2) will fail if memory is backed by
+a hugetlb page and the length is smaller than the hugepage size.</p>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="連結到這個標頭">¶</a></h2>
+<dl class="simple" id="map-hugetlb">
+<dt><code class="docutils literal notranslate"><span class="pre">map_hugetlb</span></code></dt><dd><p>see tools/testing/selftests/mm/map_hugetlb.c</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">hugepage-shm</span></code></dt><dd><p>see tools/testing/selftests/mm/hugepage-shm.c</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">hugepage-mmap</span></code></dt><dd><p>see tools/testing/selftests/mm/hugepage-mmap.c</p>
+</dd>
+</dl>
+<p>The <a class="reference external" href="https://github.com/libhugetlbfs/libhugetlbfs">libhugetlbfs</a>  library provides a wide range of userspace tools
+to help with huge page usability, environment setup, and control.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/admin-guide/mm/hugetlbpage.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

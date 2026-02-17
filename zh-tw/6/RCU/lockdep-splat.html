@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Lockdep-RCU Splat &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/RCU/lockdep-splat.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="RCU and Unloadable Modules" href="rcubarrier.html" />
+    <link rel="prev" title="RCU and lockdep checking" href="lockdep.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core-api/index.html">核心 API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-entry-and-exit">低階進入與退出</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../core-api/index.html#concurrency-primitives">Concurrency primitives</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/refcount-vs-atomic.html">refcount_t API compared to atomic_t</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/irq/index.html">IRQs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/local_ops.html">Semantics and Behavior of Local Atomic Operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/padata.html">The padata parallel execution mechanism</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">RCU Handbook</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/wrappers/memory-barriers.html">Linux kernel memory barriers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#memory-management">記憶體管理</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../core-api/index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/RCU/lockdep-splat.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="lockdep-rcu-splat">
+<h1>Lockdep-RCU Splat<a class="headerlink" href="#lockdep-rcu-splat" title="連結到這個標頭">¶</a></h1>
+<p>Lockdep-RCU was added to the Linux kernel in early 2010
+(<a class="reference external" href="http://lwn.net/Articles/371986/">http://lwn.net/Articles/371986/</a>).  This facility checks for some common
+misuses of the RCU API, most notably using one of the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>
+family to access an RCU-protected pointer without the proper protection.
+When such misuse is detected, an lockdep-RCU splat is emitted.</p>
+<p>The usual cause of a lockdep-RCU splat is someone accessing an
+RCU-protected data structure without either (1) being in the right kind of
+RCU read-side critical section or (2) holding the right update-side lock.
+This problem can therefore be serious: it might result in random memory
+overwriting or worse.  There can of course be false positives, this
+being the real world and all that.</p>
+<p>So let's look at an example RCU lockdep splat from 3.0-rc5, one that
+has long since been fixed:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>=============================
+WARNING: suspicious RCU usage
+-----------------------------
+block/cfq-iosched.c:2776 suspicious rcu_dereference_protected() usage!
+</pre></div>
+</div>
+<p>other info that might help us debug this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>rcu_scheduler_active = 1, debug_locks = 0
+3 locks held by scsi_scan_6/1552:
+#0:  (&amp;shost-&gt;scan_mutex){+.+.}, at: [&lt;ffffffff8145efca&gt;]
+scsi_scan_host_selected+0x5a/0x150
+#1:  (&amp;eq-&gt;sysfs_lock){+.+.}, at: [&lt;ffffffff812a5032&gt;]
+elevator_exit+0x22/0x60
+#2:  (&amp;(&amp;q-&gt;__queue_lock)-&gt;rlock){-.-.}, at: [&lt;ffffffff812b6233&gt;]
+cfq_exit_queue+0x43/0x190
+
+stack backtrace:
+Pid: 1552, comm: scsi_scan_6 Not tainted 3.0.0-rc5 #17
+Call Trace:
+[&lt;ffffffff810abb9b&gt;] lockdep_rcu_dereference+0xbb/0xc0
+[&lt;ffffffff812b6139&gt;] __cfq_exit_single_io_context+0xe9/0x120
+[&lt;ffffffff812b626c&gt;] cfq_exit_queue+0x7c/0x190
+[&lt;ffffffff812a5046&gt;] elevator_exit+0x36/0x60
+[&lt;ffffffff812a802a&gt;] blk_cleanup_queue+0x4a/0x60
+[&lt;ffffffff8145cc09&gt;] scsi_free_queue+0x9/0x10
+[&lt;ffffffff81460944&gt;] __scsi_remove_device+0x84/0xd0
+[&lt;ffffffff8145dca3&gt;] scsi_probe_and_add_lun+0x353/0xb10
+[&lt;ffffffff817da069&gt;] ? error_exit+0x29/0xb0
+[&lt;ffffffff817d98ed&gt;] ? _raw_spin_unlock_irqrestore+0x3d/0x80
+[&lt;ffffffff8145e722&gt;] __scsi_scan_target+0x112/0x680
+[&lt;ffffffff812c690d&gt;] ? trace_hardirqs_off_thunk+0x3a/0x3c
+[&lt;ffffffff817da069&gt;] ? error_exit+0x29/0xb0
+[&lt;ffffffff812bcc60&gt;] ? kobject_del+0x40/0x40
+[&lt;ffffffff8145ed16&gt;] scsi_scan_channel+0x86/0xb0
+[&lt;ffffffff8145f0b0&gt;] scsi_scan_host_selected+0x140/0x150
+[&lt;ffffffff8145f149&gt;] do_scsi_scan_host+0x89/0x90
+[&lt;ffffffff8145f170&gt;] do_scan_async+0x20/0x160
+[&lt;ffffffff8145f150&gt;] ? do_scsi_scan_host+0x90/0x90
+[&lt;ffffffff810975b6&gt;] kthread+0xa6/0xb0
+[&lt;ffffffff817db154&gt;] kernel_thread_helper+0x4/0x10
+[&lt;ffffffff81066430&gt;] ? finish_task_switch+0x80/0x110
+[&lt;ffffffff817d9c04&gt;] ? retint_restore_args+0xe/0xe
+[&lt;ffffffff81097510&gt;] ? __kthread_init_worker+0x70/0x70
+[&lt;ffffffff817db150&gt;] ? gs_change+0xb/0xb
+</pre></div>
+</div>
+<p>Line 2776 of block/cfq-iosched.c in v3.0-rc5 is as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>if (rcu_dereference(ioc-&gt;ioc_data) == cic) {
+</pre></div>
+</div>
+<p>This form says that it must be in a plain vanilla RCU read-side critical
+section, but the &quot;other info&quot; list above shows that this is not the
+case.  Instead, we hold three locks, one of which might be RCU related.
+And maybe that lock really does protect this reference.  If so, the fix
+is to inform RCU, perhaps by changing <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">__cfq_exit_single_io_context()</span></code> to
+take the <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">request_queue</span></code> &quot;q&quot; from <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">cfq_exit_queue()</span></code> as an argument,
+which would permit us to invoke rcu_dereference_protected as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>if (rcu_dereference_protected(ioc-&gt;ioc_data,
+                              lockdep_is_held(&amp;q-&gt;queue_lock)) == cic) {
+</pre></div>
+</div>
+<p>With this change, there would be no lockdep-RCU splat emitted if this
+code was invoked either from within an RCU read-side critical section
+or with the -&gt;queue_lock held.  In particular, this would have suppressed
+the above lockdep-RCU splat because -&gt;queue_lock is held (see #2 in the
+list above).</p>
+<p>On the other hand, perhaps we really do need an RCU read-side critical
+section.  In this case, the critical section must span the use of the
+return value from <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>, or at least until there is some
+reference count incremented or some such.  One way to handle this is to
+add <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_read_lock" title="rcu_read_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_read_lock()</span></code></a> and <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_read_unlock" title="rcu_read_unlock"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_read_unlock()</span></code></a> as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>rcu_read_lock();
+if (rcu_dereference(ioc-&gt;ioc_data) == cic) {
+        spin_lock(&amp;ioc-&gt;lock);
+        rcu_assign_pointer(ioc-&gt;ioc_data, NULL);
+        spin_unlock(&amp;ioc-&gt;lock);
+}
+rcu_read_unlock();
+</pre></div>
+</div>
+<p>With this change, the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> is always within an RCU
+read-side critical section, which again would have suppressed the
+above lockdep-RCU splat.</p>
+<p>But in this particular case, we don't actually dereference the pointer
+returned from <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>.  Instead, that pointer is just compared
+to the cic pointer, which means that the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> can be replaced
+by <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_access_pointer" title="rcu_access_pointer"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_access_pointer()</span></code></a> as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>if (rcu_access_pointer(ioc-&gt;ioc_data) == cic) {
+</pre></div>
+</div>
+<p>Because it is legal to invoke <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_access_pointer" title="rcu_access_pointer"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_access_pointer()</span></code></a> without protection,
+this change would also suppress the above lockdep-RCU splat.</p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/RCU/lockdep-splat.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

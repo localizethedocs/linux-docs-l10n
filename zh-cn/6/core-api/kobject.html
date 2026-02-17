@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Everything you never wanted to know about kobjects, ksets, and ktypes &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/core-api/kobject.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="Adding reference counters (krefs) to kernel objects" href="kref.html" />
+    <link rel="prev" title="Porting an architecture to support PREEMPT_RT" href="real-time/architecture-porting.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Core API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Everything you never wanted to know about kobjects, ksets, and ktypes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kref.html">Adding reference counters (krefs) to kernel objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cleanup.html">Scope-based Cleanup Helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="assoc_array.html">Generic Associative Array Implementation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="folio_queue.html">Folio Queue</a></li>
+<li class="toctree-l3"><a class="reference internal" href="xarray.html">XArray</a></li>
+<li class="toctree-l3"><a class="reference internal" href="maple_tree.html">Maple Tree</a></li>
+<li class="toctree-l3"><a class="reference internal" href="idr.html">ID Allocation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="circular-buffers.html">Circular Buffers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rbtree.html">Red-black Trees (rbtree) in Linux</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generic-radix-tree.html">Generic radix trees/sparse arrays</a></li>
+<li class="toctree-l3"><a class="reference internal" href="packing.html">Generic bitfield packing and unpacking functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="this_cpu_ops.html">this_cpu operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="timekeeping.html">ktime accessors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="errseq.html">The errseq_t datatype</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wrappers/atomic_t.html">Atomic types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wrappers/atomic_bitops.html">Atomic bitops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="floating-point.html">Floating-point API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="union_find.html">Union-Find in Linux</a></li>
+<li class="toctree-l3"><a class="reference internal" href="min_heap.html">Min Heap API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="parser.html">Generic parser</a></li>
+<li class="toctree-l3"><a class="reference internal" href="list.html">Linked Lists in Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#low-level-entry-and-exit">Low level entry and exit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#concurrency-primitives">Concurrency primitives</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#memory-management">Memory management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/core-api/kobject.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="everything-you-never-wanted-to-know-about-kobjects-ksets-and-ktypes">
+<h1>Everything you never wanted to know about kobjects, ksets, and ktypes<a class="headerlink" href="#everything-you-never-wanted-to-know-about-kobjects-ksets-and-ktypes" title="Link to this heading">¶</a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">Author<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Greg Kroah-Hartman &lt;<a class="reference external" href="mailto:gregkh&#37;&#52;&#48;linuxfoundation&#46;org">gregkh<span>&#64;</span>linuxfoundation<span>&#46;</span>org</a>&gt;</p>
+</dd>
+<dt class="field-even">Last updated<span class="colon">:</span></dt>
+<dd class="field-even"><p>December 19, 2007</p>
+</dd>
+</dl>
+<p>Based on an original article by Jon Corbet for lwn.net written October 1,
+2003 and located at <a class="reference external" href="https://lwn.net/Articles/51437/">https://lwn.net/Articles/51437/</a></p>
+<p>Part of the difficulty in understanding the driver model - and the kobject
+abstraction upon which it is built - is that there is no obvious starting
+place. Dealing with kobjects requires understanding a few different types,
+all of which make reference to each other. In an attempt to make things
+easier, we'll take a multi-pass approach, starting with vague terms and
+adding detail as we go. To that end, here are some quick definitions of
+some terms we will be working with.</p>
+<blockquote>
+<div><ul>
+<li><p>A kobject is an object of type <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kobject</span></code>.  Kobjects have a name
+and a reference count.  A kobject also has a parent pointer (allowing
+objects to be arranged into hierarchies), a specific type, and,
+usually, a representation in the sysfs virtual filesystem.</p>
+<p>Kobjects are generally not interesting on their own; instead, they are
+usually embedded within some other structure which contains the stuff
+the code is really interested in.</p>
+<p>No structure should <strong>EVER</strong> have more than one kobject embedded within it.
+If it does, the reference counting for the object is sure to be messed
+up and incorrect, and your code will be buggy.  So do not do this.</p>
+</li>
+<li><p>A ktype is the type of object that embeds a kobject.  Every structure
+that embeds a kobject needs a corresponding ktype.  The ktype controls
+what happens to the kobject when it is created and destroyed.</p></li>
+<li><p>A kset is a group of kobjects.  These kobjects can be of the same ktype
+or belong to different ktypes.  The kset is the basic container type for
+collections of kobjects. Ksets contain their own kobjects, but you can
+safely ignore that implementation detail as the kset core code handles
+this kobject automatically.</p>
+<p>When you see a sysfs directory full of other directories, generally each
+of those directories corresponds to a kobject in the same kset.</p>
+</li>
+</ul>
+</div></blockquote>
+<p>We'll look at how to create and manipulate all of these types. A bottom-up
+approach will be taken, so we'll go back to kobjects.</p>
+<section id="embedding-kobjects">
+<h2>Embedding kobjects<a class="headerlink" href="#embedding-kobjects" title="Link to this heading">¶</a></h2>
+<p>It is rare for kernel code to create a standalone kobject, with one major
+exception explained below.  Instead, kobjects are used to control access to
+a larger, domain-specific object.  To this end, kobjects will be found
+embedded in other structures.  If you are used to thinking of things in
+object-oriented terms, kobjects can be seen as a top-level, abstract class
+from which other classes are derived.  A kobject implements a set of
+capabilities which are not particularly useful by themselves, but are
+nice to have in other objects.  The C language does not allow for the
+direct expression of inheritance, so other techniques - such as structure
+embedding - must be used.</p>
+<p>(As an aside, for those familiar with the kernel linked list implementation,
+this is analogous as to how &quot;list_head&quot; structs are rarely useful on
+their own, but are invariably found embedded in the larger objects of
+interest.)</p>
+<p>So, for example, the UIO code in <code class="docutils literal notranslate"><span class="pre">drivers/uio/uio.c</span></code> has a structure that
+defines the memory region associated with a uio device:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct uio_map {
+        struct kobject kobj;
+        struct uio_mem *mem;
+};
+</pre></div>
+</div>
+<p>If you have a <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">uio_map</span></code> structure, finding its embedded kobject is
+just a matter of using the kobj member.  Code that works with kobjects will
+often have the opposite problem, however: given a <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kobject</span></code> pointer,
+what is the pointer to the containing structure?  You must avoid tricks
+(such as assuming that the kobject is at the beginning of the structure)
+and, instead, use the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">container_of()</span></code> macro, found in <code class="docutils literal notranslate"><span class="pre">&lt;linux/kernel.h&gt;</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>container_of(ptr, type, member)
+</pre></div>
+</div>
+<p>where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ptr</span></code> is the pointer to the embedded kobject,</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">type</span></code> is the type of the containing structure, and</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">member</span></code> is the name of the structure field to which <code class="docutils literal notranslate"><span class="pre">pointer</span></code> points.</p></li>
+</ul>
+</div></blockquote>
+<p>The return value from <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">container_of()</span></code> is a pointer to the corresponding
+container type. So, for example, a pointer <code class="docutils literal notranslate"><span class="pre">kp</span></code> to a <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kobject</span></code>
+embedded <strong>within</strong> a <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">uio_map</span></code> could be converted to a pointer to the
+<strong>containing</strong> uio_map structure with:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct uio_map *u_map = container_of(kp, struct uio_map, kobj);
+</pre></div>
+</div>
+<p>For convenience, programmers often define a simple macro for <strong>back-casting</strong>
+kobject pointers to the containing type.  Exactly this happens in the
+earlier <code class="docutils literal notranslate"><span class="pre">drivers/uio/uio.c</span></code>, as you can see here:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct uio_map {
+        struct kobject kobj;
+        struct uio_mem *mem;
+};
+
+#define to_map(map) container_of(map, struct uio_map, kobj)
+</pre></div>
+</div>
+<p>where the macro argument &quot;map&quot; is a pointer to the <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kobject</span></code> in
+question.  That macro is subsequently invoked with:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct uio_map *map = to_map(kobj);
+</pre></div>
+</div>
+</section>
+<section id="initialization-of-kobjects">
+<h2>Initialization of kobjects<a class="headerlink" href="#initialization-of-kobjects" title="Link to this heading">¶</a></h2>
+<p>Code which creates a kobject must, of course, initialize that object. Some
+of the internal fields are setup with a (mandatory) call to <a class="reference internal" href="../driver-api/basics.html#c.kobject_init" title="kobject_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_init()</span></code></a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void kobject_init(struct kobject *kobj, const struct kobj_type *ktype);
+</pre></div>
+</div>
+<p>The ktype is required for a kobject to be created properly, as every kobject
+must have an associated kobj_type.  After calling <a class="reference internal" href="../driver-api/basics.html#c.kobject_init" title="kobject_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_init()</span></code></a>, to
+register the kobject with sysfs, the function <a class="reference internal" href="../driver-api/basics.html#c.kobject_add" title="kobject_add"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_add()</span></code></a> must be called:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int kobject_add(struct kobject *kobj, struct kobject *parent,
+                const char *fmt, ...);
+</pre></div>
+</div>
+<p>This sets up the parent of the kobject and the name for the kobject
+properly.  If the kobject is to be associated with a specific kset,
+kobj-&gt;kset must be assigned before calling <a class="reference internal" href="../driver-api/basics.html#c.kobject_add" title="kobject_add"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_add()</span></code></a>.  If a kset is
+associated with a kobject, then the parent for the kobject can be set to
+NULL in the call to <a class="reference internal" href="../driver-api/basics.html#c.kobject_add" title="kobject_add"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_add()</span></code></a> and then the kobject's parent will be the
+kset itself.</p>
+<p>As the name of the kobject is set when it is added to the kernel, the name
+of the kobject should never be manipulated directly.  If you must change
+the name of the kobject, call <a class="reference internal" href="../driver-api/basics.html#c.kobject_rename" title="kobject_rename"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_rename()</span></code></a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int kobject_rename(struct kobject *kobj, const char *new_name);
+</pre></div>
+</div>
+<p><a class="reference internal" href="../driver-api/basics.html#c.kobject_rename" title="kobject_rename"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_rename()</span></code></a> does not perform any locking or have a solid notion of
+what names are valid so the caller must provide their own sanity checking
+and serialization.</p>
+<p>There is a function called <a class="reference internal" href="../driver-api/basics.html#c.kobject_set_name" title="kobject_set_name"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_set_name()</span></code></a> but that is legacy cruft and
+is being removed.  If your code needs to call this function, it is
+incorrect and needs to be fixed.</p>
+<p>To properly access the name of the kobject, use the function
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">kobject_name()</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>const char *kobject_name(const struct kobject * kobj);
+</pre></div>
+</div>
+<p>There is a helper function to both initialize and add the kobject to the
+kernel at the same time, called surprisingly enough <a class="reference internal" href="../driver-api/basics.html#c.kobject_init_and_add" title="kobject_init_and_add"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_init_and_add()</span></code></a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int kobject_init_and_add(struct kobject *kobj, const struct kobj_type *ktype,
+                         struct kobject *parent, const char *fmt, ...);
+</pre></div>
+</div>
+<p>The arguments are the same as the individual <a class="reference internal" href="../driver-api/basics.html#c.kobject_init" title="kobject_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_init()</span></code></a> and
+<a class="reference internal" href="../driver-api/basics.html#c.kobject_add" title="kobject_add"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_add()</span></code></a> functions described above.</p>
+</section>
+<section id="uevents">
+<h2>Uevents<a class="headerlink" href="#uevents" title="Link to this heading">¶</a></h2>
+<p>After a kobject has been registered with the kobject core, you need to
+announce to the world that it has been created.  This can be done with a
+call to <a class="reference internal" href="../driver-api/basics.html#c.kobject_uevent" title="kobject_uevent"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_uevent()</span></code></a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int kobject_uevent(struct kobject *kobj, enum kobject_action action);
+</pre></div>
+</div>
+<p>Use the <strong>KOBJ_ADD</strong> action for when the kobject is first added to the kernel.
+This should be done only after any attributes or children of the kobject
+have been initialized properly, as userspace will instantly start to look
+for them when this call happens.</p>
+<p>When the kobject is removed from the kernel (details on how to do that are
+below), the uevent for <strong>KOBJ_REMOVE</strong> will be automatically created by the
+kobject core, so the caller does not have to worry about doing that by
+hand.</p>
+</section>
+<section id="reference-counts">
+<h2>Reference counts<a class="headerlink" href="#reference-counts" title="Link to this heading">¶</a></h2>
+<p>One of the key functions of a kobject is to serve as a reference counter
+for the object in which it is embedded. As long as references to the object
+exist, the object (and the code which supports it) must continue to exist.
+The low-level functions for manipulating a kobject's reference counts are:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct kobject *kobject_get(struct kobject *kobj);
+void kobject_put(struct kobject *kobj);
+</pre></div>
+</div>
+<p>A successful call to <a class="reference internal" href="../driver-api/basics.html#c.kobject_get" title="kobject_get"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_get()</span></code></a> will increment the kobject's reference
+counter and return the pointer to the kobject.</p>
+<p>When a reference is released, the call to <a class="reference internal" href="../driver-api/basics.html#c.kobject_put" title="kobject_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_put()</span></code></a> will decrement the
+reference count and, possibly, free the object. Note that <a class="reference internal" href="../driver-api/basics.html#c.kobject_init" title="kobject_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_init()</span></code></a>
+sets the reference count to one, so the code which sets up the kobject will
+need to do a <a class="reference internal" href="../driver-api/basics.html#c.kobject_put" title="kobject_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_put()</span></code></a> eventually to release that reference.</p>
+<p>Because kobjects are dynamic, they must not be declared statically or on
+the stack, but instead, always allocated dynamically.  Future versions of
+the kernel will contain a run-time check for kobjects that are created
+statically and will warn the developer of this improper usage.</p>
+<p>If all that you want to use a kobject for is to provide a reference counter
+for your structure, please use the <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kref</span></code> instead; a kobject would be
+overkill.  For more information on how to use <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kref</span></code>, please see the
+file <a class="reference internal" href="kref.html"><span class="doc">Adding reference counters (krefs) to kernel objects</span></a> in the Linux kernel source tree.</p>
+</section>
+<section id="creating-simple-kobjects">
+<h2>Creating &quot;simple&quot; kobjects<a class="headerlink" href="#creating-simple-kobjects" title="Link to this heading">¶</a></h2>
+<p>Sometimes all that a developer wants is a way to create a simple directory
+in the sysfs hierarchy, and not have to mess with the whole complication of
+ksets, show and store functions, and other details.  This is the one
+exception where a single kobject should be created.  To create such an
+entry, use the function:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct kobject *kobject_create_and_add(const char *name, struct kobject *parent);
+</pre></div>
+</div>
+<p>This function will create a kobject and place it in sysfs in the location
+underneath the specified parent kobject.  To create simple attributes
+associated with this kobject, use:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int sysfs_create_file(struct kobject *kobj, const struct attribute *attr);
+</pre></div>
+</div>
+<p>或者：</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int sysfs_create_group(struct kobject *kobj, const struct attribute_group *grp);
+</pre></div>
+</div>
+<p>Both types of attributes used here, with a kobject that has been created
+with the <a class="reference internal" href="../driver-api/basics.html#c.kobject_create_and_add" title="kobject_create_and_add"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_create_and_add()</span></code></a>, can be of type kobj_attribute, so no
+special custom attribute is needed to be created.</p>
+<p>See the example module, <code class="docutils literal notranslate"><span class="pre">samples/kobject/kobject-example.c</span></code> for an
+implementation of a simple kobject and attributes.</p>
+</section>
+<section id="ktypes-and-release-methods">
+<h2>ktypes and release methods<a class="headerlink" href="#ktypes-and-release-methods" title="Link to this heading">¶</a></h2>
+<p>One important thing still missing from the discussion is what happens to a
+kobject when its reference count reaches zero. The code which created the
+kobject generally does not know when that will happen; if it did, there
+would be little point in using a kobject in the first place. Even
+predictable object lifecycles become more complicated when sysfs is brought
+in as other portions of the kernel can get a reference on any kobject that
+is registered in the system.</p>
+<p>The end result is that a structure protected by a kobject cannot be freed
+before its reference count goes to zero. The reference count is not under
+the direct control of the code which created the kobject. So that code must
+be notified asynchronously whenever the last reference to one of its
+kobjects goes away.</p>
+<p>Once you registered your kobject via <a class="reference internal" href="../driver-api/basics.html#c.kobject_add" title="kobject_add"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_add()</span></code></a>, you must never use
+<a class="reference internal" href="mm-api.html#c.kfree" title="kfree"><code class="xref c c-func docutils literal notranslate"><span class="pre">kfree()</span></code></a> to free it directly. The only safe way is to use <a class="reference internal" href="../driver-api/basics.html#c.kobject_put" title="kobject_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_put()</span></code></a>. It
+is good practice to always use <a class="reference internal" href="../driver-api/basics.html#c.kobject_put" title="kobject_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_put()</span></code></a> after <a class="reference internal" href="../driver-api/basics.html#c.kobject_init" title="kobject_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_init()</span></code></a> to avoid
+errors creeping in.</p>
+<p>This notification is done through a kobject's <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">release()</span></code> method. Usually
+such a method has a form like:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void my_object_release(struct kobject *kobj)
+{
+        struct my_object *mine = container_of(kobj, struct my_object, kobj);
+
+        /* Perform any additional cleanup on this object, then... */
+        kfree(mine);
+}
+</pre></div>
+</div>
+<p>One important point cannot be overstated: every kobject must have a
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">release()</span></code> method, and the kobject must persist (in a consistent state)
+until that method is called. If these constraints are not met, the code is
+flawed. Note that the kernel will warn you if you forget to provide a
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">release()</span></code> method.  Do not try to get rid of this warning by providing an
+&quot;empty&quot; release function.</p>
+<p>If all your cleanup function needs to do is call <a class="reference internal" href="mm-api.html#c.kfree" title="kfree"><code class="xref c c-func docutils literal notranslate"><span class="pre">kfree()</span></code></a>, then you must
+create a wrapper function which uses <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">container_of()</span></code> to upcast to the correct
+type (as shown in the example above) and then calls <a class="reference internal" href="mm-api.html#c.kfree" title="kfree"><code class="xref c c-func docutils literal notranslate"><span class="pre">kfree()</span></code></a> on the overall
+structure.</p>
+<p>Note, the name of the kobject is available in the release function, but it
+must NOT be changed within this callback.  Otherwise there will be a memory
+leak in the kobject core, which makes people unhappy.</p>
+<p>Interestingly, the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">release()</span></code> method is not stored in the kobject itself;
+instead, it is associated with the ktype. So let us introduce <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span>
+<span class="pre">kobj_type</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct kobj_type {
+        void (*release)(struct kobject *kobj);
+        const struct sysfs_ops *sysfs_ops;
+        const struct attribute_group **default_groups;
+        const struct kobj_ns_type_operations *(*child_ns_type)(struct kobject *kobj);
+        const void *(*namespace)(struct kobject *kobj);
+        void (*get_ownership)(struct kobject *kobj, kuid_t *uid, kgid_t *gid);
+};
+</pre></div>
+</div>
+<p>This structure is used to describe a particular type of kobject (or, more
+correctly, of containing object). Every kobject needs to have an associated
+kobj_type structure; a pointer to that structure must be specified when you
+call <a class="reference internal" href="../driver-api/basics.html#c.kobject_init" title="kobject_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_init()</span></code></a> or <a class="reference internal" href="../driver-api/basics.html#c.kobject_init_and_add" title="kobject_init_and_add"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_init_and_add()</span></code></a>.</p>
+<p>The release field in <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kobj_type</span></code> is, of course, a pointer to the
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">release()</span></code> method for this type of kobject. The other two fields (sysfs_ops
+and default_groups) control how objects of this type are represented in
+sysfs; they are beyond the scope of this document.</p>
+<p>The default_groups pointer is a list of default attributes that will be
+automatically created for any kobject that is registered with this ktype.</p>
+</section>
+<section id="ksets">
+<h2>ksets<a class="headerlink" href="#ksets" title="Link to this heading">¶</a></h2>
+<p>A kset is merely a collection of kobjects that want to be associated with
+each other.  There is no restriction that they be of the same ktype, but be
+very careful if they are not.</p>
+<p>A kset serves these functions:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>It serves as a bag containing a group of objects. A kset can be used by
+the kernel to track &quot;all block devices&quot; or &quot;all PCI device drivers.&quot;</p></li>
+<li><p>A kset is also a subdirectory in sysfs, where the associated kobjects
+with the kset can show up.  Every kset contains a kobject which can be
+set up to be the parent of other kobjects; the top-level directories of
+the sysfs hierarchy are constructed in this way.</p></li>
+<li><p>Ksets can support the &quot;hotplugging&quot; of kobjects and influence how
+uevent events are reported to user space.</p></li>
+</ul>
+</div></blockquote>
+<p>In object-oriented terms, &quot;kset&quot; is the top-level container class; ksets
+contain their own kobject, but that kobject is managed by the kset code and
+should not be manipulated by any other user.</p>
+<p>A kset keeps its children in a standard kernel linked list.  Kobjects point
+back to their containing kset via their kset field. In almost all cases,
+the kobjects belonging to a kset have that kset (or, strictly, its embedded
+kobject) in their parent.</p>
+<p>As a kset contains a kobject within it, it should always be dynamically
+created and never declared statically or on the stack.  To create a new
+kset use:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct kset *kset_create_and_add(const char *name,
+                                 const struct kset_uevent_ops *uevent_ops,
+                                 struct kobject *parent_kobj);
+</pre></div>
+</div>
+<p>When you are finished with the kset, call:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void kset_unregister(struct kset *k);
+</pre></div>
+</div>
+<p>to destroy it.  This removes the kset from sysfs and decrements its reference
+count.  When the reference count goes to zero, the kset will be released.
+Because other references to the kset may still exist, the release may happen
+after <a class="reference internal" href="../driver-api/basics.html#c.kset_unregister" title="kset_unregister"><code class="xref c c-func docutils literal notranslate"><span class="pre">kset_unregister()</span></code></a> returns.</p>
+<p>An example of using a kset can be seen in the
+<code class="docutils literal notranslate"><span class="pre">samples/kobject/kset-example.c</span></code> file in the kernel tree.</p>
+<p>If a kset wishes to control the uevent operations of the kobjects
+associated with it, it can use the <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kset_uevent_ops</span></code> to handle it:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct kset_uevent_ops {
+        int (* const filter)(struct kobject *kobj);
+        const char *(* const name)(struct kobject *kobj);
+        int (* const uevent)(struct kobject *kobj, struct kobj_uevent_env *env);
+};
+</pre></div>
+</div>
+<p>The filter function allows a kset to prevent a uevent from being emitted to
+userspace for a specific kobject.  If the function returns 0, the uevent
+will not be emitted.</p>
+<p>The name function will be called to override the default name of the kset
+that the uevent sends to userspace.  By default, the name will be the same
+as the kset itself, but this function, if present, can override that name.</p>
+<p>The uevent function will be called when the uevent is about to be sent to
+userspace to allow more environment variables to be added to the uevent.</p>
+<p>One might ask how, exactly, a kobject is added to a kset, given that no
+functions which perform that function have been presented.  The answer is
+that this task is handled by <a class="reference internal" href="../driver-api/basics.html#c.kobject_add" title="kobject_add"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_add()</span></code></a>.  When a kobject is passed to
+<a class="reference internal" href="../driver-api/basics.html#c.kobject_add" title="kobject_add"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_add()</span></code></a>, its kset member should point to the kset to which the
+kobject will belong.  <a class="reference internal" href="../driver-api/basics.html#c.kobject_add" title="kobject_add"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_add()</span></code></a> will handle the rest.</p>
+<p>If the kobject belonging to a kset has no parent kobject set, it will be
+added to the kset's directory.  Not all members of a kset do necessarily
+live in the kset directory.  If an explicit parent kobject is assigned
+before the kobject is added, the kobject is registered with the kset, but
+added below the parent kobject.</p>
+</section>
+<section id="kobject-removal">
+<h2>Kobject removal<a class="headerlink" href="#kobject-removal" title="Link to this heading">¶</a></h2>
+<p>After a kobject has been registered with the kobject core successfully, it
+must be cleaned up when the code is finished with it.  To do that, call
+<a class="reference internal" href="../driver-api/basics.html#c.kobject_put" title="kobject_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_put()</span></code></a>.  By doing this, the kobject core will automatically clean up
+all of the memory allocated by this kobject.  If a <code class="docutils literal notranslate"><span class="pre">KOBJ_ADD</span></code> uevent has been
+sent for the object, a corresponding <code class="docutils literal notranslate"><span class="pre">KOBJ_REMOVE</span></code> uevent will be sent, and
+any other sysfs housekeeping will be handled for the caller properly.</p>
+<p>If you need to do a two-stage delete of the kobject (say you are not
+allowed to sleep when you need to destroy the object), then call
+<a class="reference internal" href="../driver-api/basics.html#c.kobject_del" title="kobject_del"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_del()</span></code></a> which will unregister the kobject from sysfs.  This makes the
+kobject &quot;invisible&quot;, but it is not cleaned up, and the reference count of
+the object is still the same.  At a later time call <a class="reference internal" href="../driver-api/basics.html#c.kobject_put" title="kobject_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_put()</span></code></a> to finish
+the cleanup of the memory associated with the kobject.</p>
+<p><a class="reference internal" href="../driver-api/basics.html#c.kobject_del" title="kobject_del"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_del()</span></code></a> can be used to drop the reference to the parent object, if
+circular references are constructed.  It is valid in some cases, that a
+parent objects references a child.  Circular references _must_ be broken
+with an explicit call to <a class="reference internal" href="../driver-api/basics.html#c.kobject_del" title="kobject_del"><code class="xref c c-func docutils literal notranslate"><span class="pre">kobject_del()</span></code></a>, so that a release functions will be
+called, and the objects in the former circle release each other.</p>
+</section>
+<section id="example-code-to-copy-from">
+<h2>Example code to copy from<a class="headerlink" href="#example-code-to-copy-from" title="Link to this heading">¶</a></h2>
+<p>For a more complete example of using ksets and kobjects properly, see the
+example programs <code class="docutils literal notranslate"><span class="pre">samples/kobject/{kobject-example.c,kset-example.c}</span></code>,
+which will be built as loadable modules if you select <code class="docutils literal notranslate"><span class="pre">CONFIG_SAMPLE_KOBJECT</span></code>.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/core-api/kobject.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

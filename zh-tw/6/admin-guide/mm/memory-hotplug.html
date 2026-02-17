@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Memory Hot(Un)Plug &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/mm/memory-hotplug.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜尋" href="../../search.html" />
+    <link rel="next" title="Multi-Gen LRU" href="multigen_lru.html" />
+    <link rel="prev" title="Kernel Samepage Merging" href="ksm.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#core-kernel-subsystems">Core-kernel subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v2.html">Control Group v2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v1/index.html">Control Groups version 1</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cpu-load.html">CPU load</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">記憶體管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../module-signing.html">Kernel module signing facility</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../namespaces/index.html">Namespaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../numastat.html">Numa policy hit/miss statistics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pm/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../syscall-user-dispatch.html">Syscall User Dispatch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../binfmt-misc.html">Kernel Support for miscellaneous Binary Formats (binfmt_misc)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../java.html">Java(tm) Binary Kernel Support for Linux v1.03</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mono.html">Mono(tm) Binary Kernel Support for Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/admin-guide/mm/memory-hotplug.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="memory-hot-un-plug">
+<h1>Memory Hot(Un)Plug<a class="headerlink" href="#memory-hot-un-plug" title="連結到這個標頭">¶</a></h1>
+<p>This document describes generic Linux support for memory hot(un)plug with
+a focus on System RAM, including ZONE_MOVABLE support.</p>
+<nav class="contents local" id="id1">
+<ul class="simple">
+<li><p><a class="reference internal" href="#introduction" id="id2">介紹</a></p>
+<ul>
+<li><p><a class="reference internal" href="#memory-hot-un-plug-granularity" id="id3">Memory Hot(Un)Plug Granularity</a></p></li>
+<li><p><a class="reference internal" href="#phases-of-memory-hotplug" id="id4">Phases of Memory Hotplug</a></p></li>
+<li><p><a class="reference internal" href="#phases-of-memory-hotunplug" id="id5">Phases of Memory Hotunplug</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#memory-hotplug-notifications" id="id6">Memory Hotplug Notifications</a></p>
+<ul>
+<li><p><a class="reference internal" href="#acpi-notifications" id="id7">ACPI Notifications</a></p></li>
+<li><p><a class="reference internal" href="#manual-probing" id="id8">Manual Probing</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#onlining-and-offlining-memory-blocks" id="id9">Onlining and Offlining Memory Blocks</a></p>
+<ul>
+<li><p><a class="reference internal" href="#onlining-memory-blocks-manually" id="id10">Onlining Memory Blocks Manually</a></p></li>
+<li><p><a class="reference internal" href="#onlining-memory-blocks-automatically" id="id11">Onlining Memory Blocks Automatically</a></p></li>
+<li><p><a class="reference internal" href="#offlining-memory-blocks" id="id12">Offlining Memory Blocks</a></p></li>
+<li><p><a class="reference internal" href="#observing-the-state-of-memory-blocks" id="id13">Observing the State of Memory Blocks</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#configuring-memory-hot-un-plug" id="id14">Configuring Memory Hot(Un)Plug</a></p>
+<ul>
+<li><p><a class="reference internal" href="#memory-hot-un-plug-configuration-via-sysfs" id="id15">Memory Hot(Un)Plug Configuration via Sysfs</a></p></li>
+<li><p><a class="reference internal" href="#memory-block-configuration-via-sysfs" id="id16">Memory Block Configuration via Sysfs</a></p></li>
+<li><p><a class="reference internal" href="#command-line-parameters" id="id17">Command Line Parameters</a></p></li>
+<li><p><a class="reference internal" href="#module-parameters" id="id18">Module Parameters</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#zone-movable" id="id19">ZONE_MOVABLE</a></p>
+<ul>
+<li><p><a class="reference internal" href="#zone-imbalances" id="id20">Zone Imbalances</a></p></li>
+<li><p><a class="reference internal" href="#zone-movable-sizing-considerations" id="id21">ZONE_MOVABLE Sizing Considerations</a></p></li>
+<li><p><a class="reference internal" href="#memory-offlining-and-zone-movable" id="id22">Memory Offlining and ZONE_MOVABLE</a></p></li>
+</ul>
+</li>
+</ul>
+</nav>
+<section id="introduction">
+<h2><a class="toc-backref" href="#id2" role="doc-backlink">介紹</a><a class="headerlink" href="#introduction" title="連結到這個標頭">¶</a></h2>
+<p>Memory hot(un)plug allows for increasing and decreasing the size of physical
+memory available to a machine at runtime. In the simplest case, it consists of
+physically plugging or unplugging a DIMM at runtime, coordinated with the
+operating system.</p>
+<p>Memory hot(un)plug is used for various purposes:</p>
+<ul class="simple">
+<li><p>The physical memory available to a machine can be adjusted at runtime, up- or
+downgrading the memory capacity. This dynamic memory resizing, sometimes
+referred to as &quot;capacity on demand&quot;, is frequently used with virtual machines
+and logical partitions.</p></li>
+<li><p>Replacing hardware, such as DIMMs or whole NUMA nodes, without downtime. One
+example is replacing failing memory modules.</p></li>
+<li><p>Reducing energy consumption either by physically unplugging memory modules or
+by logically unplugging (parts of) memory modules from Linux.</p></li>
+</ul>
+<p>Further, the basic memory hot(un)plug infrastructure in Linux is nowadays also
+used to expose persistent memory, other performance-differentiated memory and
+reserved memory regions as ordinary system RAM to Linux.</p>
+<p>Linux only supports memory hot(un)plug on selected 64 bit architectures, such as
+x86_64, arm64, ppc64 and s390x.</p>
+<section id="memory-hot-un-plug-granularity">
+<h3><a class="toc-backref" href="#id3" role="doc-backlink">Memory Hot(Un)Plug Granularity</a><a class="headerlink" href="#memory-hot-un-plug-granularity" title="連結到這個標頭">¶</a></h3>
+<p>Memory hot(un)plug in Linux uses the SPARSEMEM memory model, which divides the
+physical memory address space into chunks of the same size: memory sections. The
+size of a memory section is architecture dependent. For example, x86_64 uses
+128 MiB and ppc64 uses 16 MiB.</p>
+<p>Memory sections are combined into chunks referred to as &quot;memory blocks&quot;. The
+size of a memory block is architecture dependent and corresponds to the smallest
+granularity that can be hot(un)plugged. The default size of a memory block is
+the same as memory section size, unless an architecture specifies otherwise.</p>
+<p>All memory blocks have the same size.</p>
+</section>
+<section id="phases-of-memory-hotplug">
+<h3><a class="toc-backref" href="#id4" role="doc-backlink">Phases of Memory Hotplug</a><a class="headerlink" href="#phases-of-memory-hotplug" title="連結到這個標頭">¶</a></h3>
+<p>Memory hotplug consists of two phases:</p>
+<ol class="arabic simple">
+<li><p>Adding the memory to Linux</p></li>
+<li><p>Onlining memory blocks</p></li>
+</ol>
+<p>In the first phase, metadata, such as the memory map (&quot;memmap&quot;) and page tables
+for the direct mapping, is allocated and initialized, and memory blocks are
+created; the latter also creates sysfs files for managing newly created memory
+blocks.</p>
+<p>In the second phase, added memory is exposed to the page allocator. After this
+phase, the memory is visible in memory statistics, such as free and total
+memory, of the system.</p>
+</section>
+<section id="phases-of-memory-hotunplug">
+<h3><a class="toc-backref" href="#id5" role="doc-backlink">Phases of Memory Hotunplug</a><a class="headerlink" href="#phases-of-memory-hotunplug" title="連結到這個標頭">¶</a></h3>
+<p>Memory hotunplug consists of two phases:</p>
+<ol class="arabic simple">
+<li><p>Offlining memory blocks</p></li>
+<li><p>Removing the memory from Linux</p></li>
+</ol>
+<p>In the first phase, memory is &quot;hidden&quot; from the page allocator again, for
+example, by migrating busy memory to other memory locations and removing all
+relevant free pages from the page allocator After this phase, the memory is no
+longer visible in memory statistics of the system.</p>
+<p>In the second phase, the memory blocks are removed and metadata is freed.</p>
+</section>
+</section>
+<section id="memory-hotplug-notifications">
+<h2><a class="toc-backref" href="#id6" role="doc-backlink">Memory Hotplug Notifications</a><a class="headerlink" href="#memory-hotplug-notifications" title="連結到這個標頭">¶</a></h2>
+<p>There are various ways how Linux is notified about memory hotplug events such
+that it can start adding hotplugged memory. This description is limited to
+systems that support ACPI; mechanisms specific to other firmware interfaces or
+virtual machines are not described.</p>
+<section id="acpi-notifications">
+<h3><a class="toc-backref" href="#id7" role="doc-backlink">ACPI Notifications</a><a class="headerlink" href="#acpi-notifications" title="連結到這個標頭">¶</a></h3>
+<p>Platforms that support ACPI, such as x86_64, can support memory hotplug
+notifications via ACPI.</p>
+<p>In general, a firmware supporting memory hotplug defines a memory class object
+HID &quot;PNP0C80&quot;. When notified about hotplug of a new memory device, the ACPI
+driver will hotplug the memory to Linux.</p>
+<p>If the firmware supports hotplug of NUMA nodes, it defines an object _HID
+&quot;ACPI0004&quot;, &quot;PNP0A05&quot;, or &quot;PNP0A06&quot;. When notified about an hotplug event, all
+assigned memory devices are added to Linux by the ACPI driver.</p>
+<p>Similarly, Linux can be notified about requests to hotunplug a memory device or
+a NUMA node via ACPI. The ACPI driver will try offlining all relevant memory
+blocks, and, if successful, hotunplug the memory from Linux.</p>
+</section>
+<section id="manual-probing">
+<h3><a class="toc-backref" href="#id8" role="doc-backlink">Manual Probing</a><a class="headerlink" href="#manual-probing" title="連結到這個標頭">¶</a></h3>
+<p>On some architectures, the firmware may not be able to notify the operating
+system about a memory hotplug event. Instead, the memory has to be manually
+probed from user space.</p>
+<p>The probe interface is located at:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/sys/devices/system/memory/probe
+</pre></div>
+</div>
+<p>Only complete memory blocks can be probed. Individual memory blocks are probed
+by providing the physical start address of the memory block:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>% echo addr &gt; /sys/devices/system/memory/probe
+</pre></div>
+</div>
+<p>Which results in a memory block for the range [addr, addr + memory_block_size)
+being created.</p>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>Using the probe interface is discouraged as it is easy to crash the kernel,
+because Linux cannot validate user input; this interface might be removed in
+the future.</p>
+</div>
+</section>
+</section>
+<section id="onlining-and-offlining-memory-blocks">
+<h2><a class="toc-backref" href="#id9" role="doc-backlink">Onlining and Offlining Memory Blocks</a><a class="headerlink" href="#onlining-and-offlining-memory-blocks" title="連結到這個標頭">¶</a></h2>
+<p>After a memory block has been created, Linux has to be instructed to actually
+make use of that memory: the memory block has to be &quot;online&quot;.</p>
+<p>Before a memory block can be removed, Linux has to stop using any memory part of
+the memory block: the memory block has to be &quot;offlined&quot;.</p>
+<p>The Linux kernel can be configured to automatically online added memory blocks
+and drivers automatically trigger offlining of memory blocks when trying
+hotunplug of memory. Memory blocks can only be removed once offlining succeeded
+and drivers may trigger offlining of memory blocks when attempting hotunplug of
+memory.</p>
+<section id="onlining-memory-blocks-manually">
+<h3><a class="toc-backref" href="#id10" role="doc-backlink">Onlining Memory Blocks Manually</a><a class="headerlink" href="#onlining-memory-blocks-manually" title="連結到這個標頭">¶</a></h3>
+<p>If auto-onlining of memory blocks isn't enabled, user-space has to manually
+trigger onlining of memory blocks. Often, udev rules are used to automate this
+task in user space.</p>
+<p>Onlining of a memory block can be triggered via:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>% echo online &gt; /sys/devices/system/memory/memoryXXX/state
+</pre></div>
+</div>
+<p>Or alternatively:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>% echo 1 &gt; /sys/devices/system/memory/memoryXXX/online
+</pre></div>
+</div>
+<p>The kernel will select the target zone automatically, depending on the
+configured <code class="docutils literal notranslate"><span class="pre">online_policy</span></code>.</p>
+<p>One can explicitly request to associate an offline memory block with
+ZONE_MOVABLE by:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>% echo online_movable &gt; /sys/devices/system/memory/memoryXXX/state
+</pre></div>
+</div>
+<p>Or one can explicitly request a kernel zone (usually ZONE_NORMAL) by:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>% echo online_kernel &gt; /sys/devices/system/memory/memoryXXX/state
+</pre></div>
+</div>
+<p>In any case, if onlining succeeds, the state of the memory block is changed to
+be &quot;online&quot;. If it fails, the state of the memory block will remain unchanged
+and the above commands will fail.</p>
+</section>
+<section id="onlining-memory-blocks-automatically">
+<h3><a class="toc-backref" href="#id11" role="doc-backlink">Onlining Memory Blocks Automatically</a><a class="headerlink" href="#onlining-memory-blocks-automatically" title="連結到這個標頭">¶</a></h3>
+<p>The kernel can be configured to try auto-onlining of newly added memory blocks.
+If this feature is disabled, the memory blocks will stay offline until
+explicitly onlined from user space.</p>
+<p>The configured auto-online behavior can be observed via:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>% cat /sys/devices/system/memory/auto_online_blocks
+</pre></div>
+</div>
+<p>Auto-onlining can be enabled by writing <code class="docutils literal notranslate"><span class="pre">online</span></code>, <code class="docutils literal notranslate"><span class="pre">online_kernel</span></code> or
+<code class="docutils literal notranslate"><span class="pre">online_movable</span></code> to that file, like:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>% echo online &gt; /sys/devices/system/memory/auto_online_blocks
+</pre></div>
+</div>
+<p>Similarly to manual onlining, with <code class="docutils literal notranslate"><span class="pre">online</span></code> the kernel will select the
+target zone automatically, depending on the configured <code class="docutils literal notranslate"><span class="pre">online_policy</span></code>.</p>
+<p>Modifying the auto-online behavior will only affect all subsequently added
+memory blocks only.</p>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>In corner cases, auto-onlining can fail. The kernel won't retry. Note that
+auto-onlining is not expected to fail in default configurations.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>DLPAR on ppc64 ignores the <code class="docutils literal notranslate"><span class="pre">offline</span></code> setting and will still online added
+memory blocks; if onlining fails, memory blocks are removed again.</p>
+</div>
+</section>
+<section id="offlining-memory-blocks">
+<h3><a class="toc-backref" href="#id12" role="doc-backlink">Offlining Memory Blocks</a><a class="headerlink" href="#offlining-memory-blocks" title="連結到這個標頭">¶</a></h3>
+<p>In the current implementation, Linux's memory offlining will try migrating all
+movable pages off the affected memory block. As most kernel allocations, such as
+page tables, are unmovable, page migration can fail and, therefore, inhibit
+memory offlining from succeeding.</p>
+<p>Having the memory provided by memory block managed by ZONE_MOVABLE significantly
+increases memory offlining reliability; still, memory offlining can fail in
+some corner cases.</p>
+<p>Further, memory offlining might retry for a long time (or even forever), until
+aborted by the user.</p>
+<p>Offlining of a memory block can be triggered via:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>% echo offline &gt; /sys/devices/system/memory/memoryXXX/state
+</pre></div>
+</div>
+<p>Or alternatively:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>% echo 0 &gt; /sys/devices/system/memory/memoryXXX/online
+</pre></div>
+</div>
+<p>If offlining succeeds, the state of the memory block is changed to be &quot;offline&quot;.
+If it fails, the state of the memory block will remain unchanged and the above
+commands will fail, for example, via:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bash: echo: write error: Device or resource busy
+</pre></div>
+</div>
+<p>or via:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bash: echo: write error: Invalid argument
+</pre></div>
+</div>
+</section>
+<section id="observing-the-state-of-memory-blocks">
+<h3><a class="toc-backref" href="#id13" role="doc-backlink">Observing the State of Memory Blocks</a><a class="headerlink" href="#observing-the-state-of-memory-blocks" title="連結到這個標頭">¶</a></h3>
+<p>The state (online/offline/going-offline) of a memory block can be observed
+either via:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>% cat /sys/devices/system/memory/memoryXXX/state
+</pre></div>
+</div>
+<p>Or alternatively (1/0) via:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>% cat /sys/devices/system/memory/memoryXXX/online
+</pre></div>
+</div>
+<p>For an online memory block, the managing zone can be observed via:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>% cat /sys/devices/system/memory/memoryXXX/valid_zones
+</pre></div>
+</div>
+</section>
+</section>
+<section id="configuring-memory-hot-un-plug">
+<h2><a class="toc-backref" href="#id14" role="doc-backlink">Configuring Memory Hot(Un)Plug</a><a class="headerlink" href="#configuring-memory-hot-un-plug" title="連結到這個標頭">¶</a></h2>
+<p>There are various ways how system administrators can configure memory
+hot(un)plug and interact with memory blocks, especially, to online them.</p>
+<section id="memory-hot-un-plug-configuration-via-sysfs">
+<h3><a class="toc-backref" href="#id15" role="doc-backlink">Memory Hot(Un)Plug Configuration via Sysfs</a><a class="headerlink" href="#memory-hot-un-plug-configuration-via-sysfs" title="連結到這個標頭">¶</a></h3>
+<p>Some memory hot(un)plug properties can be configured or inspected via sysfs in:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/sys/devices/system/memory/
+</pre></div>
+</div>
+<p>The following files are currently defined:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">auto_online_blocks</span></code></p></td>
+<td><p>read-write: set or get the default state of new memory
+blocks; configure auto-onlining.</p>
+<p>The default value depends on the
+CONFIG_MHP_DEFAULT_ONLINE_TYPE kernel configuration
+options.</p>
+<p>See the <code class="docutils literal notranslate"><span class="pre">state</span></code> property of memory blocks for details.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">block_size_bytes</span></code></p></td>
+<td><p>read-only: the size in bytes of a memory block.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">probe</span></code></p></td>
+<td><p>write-only: add (probe) selected memory blocks manually
+from user space by supplying the physical start address.</p>
+<p>Availability depends on the CONFIG_ARCH_MEMORY_PROBE
+kernel configuration option.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">uevent</span></code></p></td>
+<td><p>read-write: generic udev file for device subsystems.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">crash_hotplug</span></code></p></td>
+<td><p>read-only: when changes to the system memory map
+occur due to hot un/plug of memory, this file contains
+'1' if the kernel updates the kdump capture kernel memory
+map itself (via elfcorehdr and other relevant kexec
+segments), or '0' if userspace must update the kdump
+capture kernel memory map.</p>
+<p>Availability depends on the CONFIG_MEMORY_HOTPLUG kernel
+configuration option.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>When the CONFIG_MEMORY_FAILURE kernel configuration option is enabled, two
+additional files <code class="docutils literal notranslate"><span class="pre">hard_offline_page</span></code> and <code class="docutils literal notranslate"><span class="pre">soft_offline_page</span></code> are available
+to trigger hwpoisoning of pages, for example, for testing purposes. Note that
+this functionality is not really related to memory hot(un)plug or actual
+offlining of memory blocks.</p>
+</div>
+</section>
+<section id="memory-block-configuration-via-sysfs">
+<h3><a class="toc-backref" href="#id16" role="doc-backlink">Memory Block Configuration via Sysfs</a><a class="headerlink" href="#memory-block-configuration-via-sysfs" title="連結到這個標頭">¶</a></h3>
+<p>Each memory block is represented as a memory block device that can be
+onlined or offlined. All memory blocks have their device information located in
+sysfs. Each present memory block is listed under
+<code class="docutils literal notranslate"><span class="pre">/sys/devices/system/memory</span></code> as:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/sys/devices/system/memory/memoryXXX
+</pre></div>
+</div>
+<p>where XXX is the memory block id; the number of digits is variable.</p>
+<p>A present memory block indicates that some memory in the range is present;
+however, a memory block might span memory holes. A memory block spanning memory
+holes cannot be offlined.</p>
+<p>For example, assume 1 GiB memory block size. A device for a memory starting at
+0x100000000 is <code class="docutils literal notranslate"><span class="pre">/sys/devices/system/memory/memory4</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(0x100000000 / 1Gib = 4)
+</pre></div>
+</div>
+<p>This device covers address range [0x100000000 ... 0x140000000)</p>
+<p>The following files are currently defined:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">online</span></code></p></td>
+<td><p>read-write: simplified interface to trigger onlining /
+offlining and to observe the state of a memory block.
+When onlining, the zone is selected automatically.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">phys_device</span></code></p></td>
+<td><p>read-only: legacy interface only ever used on s390x to
+expose the covered storage increment.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">phys_index</span></code></p></td>
+<td><p>read-only: the memory block id (XXX).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">removable</span></code></p></td>
+<td><p>read-only: legacy interface that indicated whether a memory
+block was likely to be offlineable or not. Nowadays, the
+kernel return <code class="docutils literal notranslate"><span class="pre">1</span></code> if and only if it supports memory
+offlining.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">state</span></code></p></td>
+<td><p>read-write: advanced interface to trigger onlining /
+offlining and to observe the state of a memory block.</p>
+<p>When writing, <code class="docutils literal notranslate"><span class="pre">online</span></code>, <code class="docutils literal notranslate"><span class="pre">offline</span></code>, <code class="docutils literal notranslate"><span class="pre">online_kernel</span></code> and
+<code class="docutils literal notranslate"><span class="pre">online_movable</span></code> are supported.</p>
+<p><code class="docutils literal notranslate"><span class="pre">online_movable</span></code> specifies onlining to ZONE_MOVABLE.
+<code class="docutils literal notranslate"><span class="pre">online_kernel</span></code> specifies onlining to the default kernel
+zone for the memory block, such as ZONE_NORMAL.
+<code class="docutils literal notranslate"><span class="pre">online</span></code> let's the kernel select the zone automatically.</p>
+<p>When reading, <code class="docutils literal notranslate"><span class="pre">online</span></code>, <code class="docutils literal notranslate"><span class="pre">offline</span></code> and <code class="docutils literal notranslate"><span class="pre">going-offline</span></code>
+may be returned.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">uevent</span></code></p></td>
+<td><p>read-write: generic uevent file for devices.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">valid_zones</span></code></p></td>
+<td><p>read-only: when a block is online, shows the zone it
+belongs to; when a block is offline, shows what zone will
+manage it when the block will be onlined.</p>
+<p>For online memory blocks, <code class="docutils literal notranslate"><span class="pre">DMA</span></code>, <code class="docutils literal notranslate"><span class="pre">DMA32</span></code>, <code class="docutils literal notranslate"><span class="pre">Normal</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Movable</span></code> and <code class="docutils literal notranslate"><span class="pre">none</span></code> may be returned. <code class="docutils literal notranslate"><span class="pre">none</span></code> indicates
+that memory provided by a memory block is managed by
+multiple zones or spans multiple nodes; such memory blocks
+cannot be offlined. <code class="docutils literal notranslate"><span class="pre">Movable</span></code> indicates ZONE_MOVABLE.
+Other values indicate a kernel zone.</p>
+<p>For offline memory blocks, the first column shows the
+zone the kernel would select when onlining the memory block
+right now without further specifying a zone.</p>
+<p>Availability depends on the CONFIG_MEMORY_HOTREMOVE
+kernel configuration option.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>If the CONFIG_NUMA kernel configuration option is enabled, the memoryXXX/
+directories can also be accessed via symbolic links located in the
+<code class="docutils literal notranslate"><span class="pre">/sys/devices/system/node/node*</span></code> directories.</p>
+<p>For example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/sys/devices/system/node/node0/memory9 -&gt; ../../memory/memory9
+</pre></div>
+</div>
+<p>A backlink will also be created:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/sys/devices/system/memory/memory9/node0 -&gt; ../../node/node0
+</pre></div>
+</div>
+</div>
+</section>
+<section id="command-line-parameters">
+<h3><a class="toc-backref" href="#id17" role="doc-backlink">Command Line Parameters</a><a class="headerlink" href="#command-line-parameters" title="連結到這個標頭">¶</a></h3>
+<p>Some command line parameters affect memory hot(un)plug handling. The following
+command line parameters are relevant:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">memhp_default_state</span></code></p></td>
+<td><p>configure auto-onlining by essentially setting
+<code class="docutils literal notranslate"><span class="pre">/sys/devices/system/memory/auto_online_blocks</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">movable_node</span></code></p></td>
+<td><p>configure automatic zone selection in the kernel when
+using the <code class="docutils literal notranslate"><span class="pre">contig-zones</span></code> online policy. When
+set, the kernel will default to ZONE_MOVABLE when
+onlining a memory block, unless other zones can be kept
+contiguous.</p></td>
+</tr>
+</tbody>
+</table>
+<p>See <a class="reference internal" href="../kernel-parameters.html"><span class="doc">The kernel's command-line parameters</span></a> for a more generic
+description of these command line parameters.</p>
+</section>
+<section id="module-parameters">
+<h3><a class="toc-backref" href="#id18" role="doc-backlink">Module Parameters</a><a class="headerlink" href="#module-parameters" title="連結到這個標頭">¶</a></h3>
+<p>Instead of additional command line parameters or sysfs files, the
+<code class="docutils literal notranslate"><span class="pre">memory_hotplug</span></code> subsystem now provides a dedicated namespace for module
+parameters. Module parameters can be set via the command line by predicating
+them with <code class="docutils literal notranslate"><span class="pre">memory_hotplug.</span></code> such as:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>memory_hotplug.memmap_on_memory=1
+</pre></div>
+</div>
+<p>and they can be observed (and some even modified at runtime) via:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/sys/module/memory_hotplug/parameters/
+</pre></div>
+</div>
+<p>The following module parameters are currently defined:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">memmap_on_memory</span></code></p></td>
+<td><p>read-write: Allocate memory for the memmap from
+the added memory block itself. Even if enabled,
+actual support depends on various other system
+properties and should only be regarded as a
+hint whether the behavior would be desired.</p>
+<p>While allocating the memmap from the memory
+block itself makes memory hotplug less likely
+to fail and keeps the memmap on the same NUMA
+node in any case, it can fragment physical
+memory in a way that huge pages in bigger
+granularity cannot be formed on hotplugged
+memory.</p>
+<p>With value &quot;force&quot; it could result in memory
+wastage due to memmap size limitations. For
+example, if the memmap for a memory block
+requires 1 MiB, but the pageblock size is 2
+MiB, 1 MiB of hotplugged memory will be wasted.
+Note that there are still cases where the
+feature cannot be enforced: for example, if the
+memmap is smaller than a single page, or if the
+architecture does not support the forced mode
+in all configurations.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">online_policy</span></code></p></td>
+<td><p>read-write: Set the basic policy used for
+automatic zone selection when onlining memory
+blocks without specifying a target zone.
+<code class="docutils literal notranslate"><span class="pre">contig-zones</span></code> has been the kernel default
+before this parameter was added. After an
+online policy was configured and memory was
+online, the policy should not be changed
+anymore.</p>
+<p>When set to <code class="docutils literal notranslate"><span class="pre">contig-zones</span></code>, the kernel will
+try keeping zones contiguous. If a memory block
+intersects multiple zones or no zone, the
+behavior depends on the <code class="docutils literal notranslate"><span class="pre">movable_node</span></code> kernel
+command line parameter: default to ZONE_MOVABLE
+if set, default to the applicable kernel zone
+(usually ZONE_NORMAL) if not set.</p>
+<p>When set to <code class="docutils literal notranslate"><span class="pre">auto-movable</span></code>, the kernel will
+try onlining memory blocks to ZONE_MOVABLE if
+possible according to the configuration and
+memory device details. With this policy, one
+can avoid zone imbalances when eventually
+hotplugging a lot of memory later and still
+wanting to be able to hotunplug as much as
+possible reliably, very desirable in
+virtualized environments. This policy ignores
+the <code class="docutils literal notranslate"><span class="pre">movable_node</span></code> kernel command line
+parameter and isn't really applicable in
+environments that require it (e.g., bare metal
+with hotunpluggable nodes) where hotplugged
+memory might be exposed via the
+firmware-provided memory map early during boot
+to the system instead of getting detected,
+added and onlined  later during boot (such as
+done by virtio-mem or by some hypervisors
+implementing emulated DIMMs). As one example, a
+hotplugged DIMM will be onlined either
+completely to ZONE_MOVABLE or completely to
+ZONE_NORMAL, not a mixture.
+As another example, as many memory blocks
+belonging to a virtio-mem device will be
+onlined to ZONE_MOVABLE as possible,
+special-casing units of memory blocks that can
+only get hotunplugged together. <em>This policy
+does not protect from setups that are
+problematic with ZONE_MOVABLE and does not
+change the zone of memory blocks dynamically
+after they were onlined.</em></p>
+</td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">auto_movable_ratio</span></code></p></td>
+<td><p>read-write: Set the maximum MOVABLE:KERNEL
+memory ratio in % for the <code class="docutils literal notranslate"><span class="pre">auto-movable</span></code>
+online policy. Whether the ratio applies only
+for the system across all NUMA nodes or also
+per NUMA nodes depends on the
+<code class="docutils literal notranslate"><span class="pre">auto_movable_numa_aware</span></code> configuration.</p>
+<p>All accounting is based on present memory pages
+in the zones combined with accounting per
+memory device. Memory dedicated to the CMA
+allocator is accounted as MOVABLE, although
+residing on one of the kernel zones. The
+possible ratio depends on the actual workload.
+The kernel default is &quot;301&quot; %, for example,
+allowing for hotplugging 24 GiB to a 8 GiB VM
+and automatically onlining all hotplugged
+memory to ZONE_MOVABLE in many setups. The
+additional 1% deals with some pages being not
+present, for example, because of some firmware
+allocations.</p>
+<p>Note that ZONE_NORMAL memory provided by one
+memory device does not allow for more
+ZONE_MOVABLE memory for a different memory
+device. As one example, onlining memory of a
+hotplugged DIMM to ZONE_NORMAL will not allow
+for another hotplugged DIMM to get onlined to
+ZONE_MOVABLE automatically. In contrast, memory
+hotplugged by a virtio-mem device that got
+onlined to ZONE_NORMAL will allow for more
+ZONE_MOVABLE memory within <em>the same</em>
+virtio-mem device.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">auto_movable_numa_aware</span></code></p></td>
+<td><p>read-write: Configure whether the
+<code class="docutils literal notranslate"><span class="pre">auto_movable_ratio</span></code> in the <code class="docutils literal notranslate"><span class="pre">auto-movable</span></code>
+online policy also applies per NUMA
+node in addition to the whole system across all
+NUMA nodes. The kernel default is &quot;Y&quot;.</p>
+<p>Disabling NUMA awareness can be helpful when
+dealing with NUMA nodes that should be
+completely hotunpluggable, onlining the memory
+completely to ZONE_MOVABLE automatically if
+possible.</p>
+<p>Parameter availability depends on CONFIG_NUMA.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="zone-movable">
+<h2><a class="toc-backref" href="#id19" role="doc-backlink">ZONE_MOVABLE</a><a class="headerlink" href="#zone-movable" title="連結到這個標頭">¶</a></h2>
+<p>ZONE_MOVABLE is an important mechanism for more reliable memory offlining.
+Further, having system RAM managed by ZONE_MOVABLE instead of one of the
+kernel zones can increase the number of possible transparent huge pages and
+dynamically allocated huge pages.</p>
+<p>Most kernel allocations are unmovable. Important examples include the memory
+map (usually 1/64ths of memory), page tables, and <a class="reference internal" href="../../core-api/mm-api.html#c.kmalloc" title="kmalloc"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmalloc()</span></code></a>. Such allocations
+can only be served from the kernel zones.</p>
+<p>Most user space pages, such as anonymous memory, and page cache pages are
+movable. Such allocations can be served from ZONE_MOVABLE and the kernel zones.</p>
+<p>Only movable allocations are served from ZONE_MOVABLE, resulting in unmovable
+allocations being limited to the kernel zones. Without ZONE_MOVABLE, there is
+absolutely no guarantee whether a memory block can be offlined successfully.</p>
+<section id="zone-imbalances">
+<h3><a class="toc-backref" href="#id20" role="doc-backlink">Zone Imbalances</a><a class="headerlink" href="#zone-imbalances" title="連結到這個標頭">¶</a></h3>
+<p>Having too much system RAM managed by ZONE_MOVABLE is called a zone imbalance,
+which can harm the system or degrade performance. As one example, the kernel
+might crash because it runs out of free memory for unmovable allocations,
+although there is still plenty of free memory left in ZONE_MOVABLE.</p>
+<p>Usually, MOVABLE:KERNEL ratios of up to 3:1 or even 4:1 are fine. Ratios of 63:1
+are definitely impossible due to the overhead for the memory map.</p>
+<p>Actual safe zone ratios depend on the workload. Extreme cases, like excessive
+long-term pinning of pages, might not be able to deal with ZONE_MOVABLE at all.</p>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>CMA memory part of a kernel zone essentially behaves like memory in
+ZONE_MOVABLE and similar considerations apply, especially when combining
+CMA with ZONE_MOVABLE.</p>
+</div>
+</section>
+<section id="zone-movable-sizing-considerations">
+<h3><a class="toc-backref" href="#id21" role="doc-backlink">ZONE_MOVABLE Sizing Considerations</a><a class="headerlink" href="#zone-movable-sizing-considerations" title="連結到這個標頭">¶</a></h3>
+<p>We usually expect that a large portion of available system RAM will actually
+be consumed by user space, either directly or indirectly via the page cache. In
+the normal case, ZONE_MOVABLE can be used when allocating such pages just fine.</p>
+<p>With that in mind, it makes sense that we can have a big portion of system RAM
+managed by ZONE_MOVABLE. However, there are some things to consider when using
+ZONE_MOVABLE, especially when fine-tuning zone ratios:</p>
+<ul>
+<li><p>Having a lot of offline memory blocks. Even offline memory blocks consume
+memory for metadata and page tables in the direct map; having a lot of offline
+memory blocks is not a typical case, though.</p></li>
+<li><p>Memory ballooning without balloon compaction is incompatible with
+ZONE_MOVABLE. Only some implementations, such as virtio-balloon and
+pseries CMM, fully support balloon compaction.</p>
+<p>Further, the CONFIG_BALLOON_COMPACTION kernel configuration option might be
+disabled. In that case, balloon inflation will only perform unmovable
+allocations and silently create a zone imbalance, usually triggered by
+inflation requests from the hypervisor.</p>
+</li>
+<li><p>Gigantic pages are unmovable, resulting in user space consuming a
+lot of unmovable memory.</p></li>
+<li><p>Huge pages are unmovable when an architectures does not support huge
+page migration, resulting in a similar issue as with gigantic pages.</p></li>
+<li><p>Page tables are unmovable. Excessive swapping, mapping extremely large
+files or ZONE_DEVICE memory can be problematic, although only really relevant
+in corner cases. When we manage a lot of user space memory that has been
+swapped out or is served from a file/persistent memory/... we still need a lot
+of page tables to manage that memory once user space accessed that memory.</p></li>
+<li><p>In certain DAX configurations the memory map for the device memory will be
+allocated from the kernel zones.</p></li>
+<li><p>KASAN can have a significant memory overhead, for example, consuming 1/8th of
+the total system memory size as (unmovable) tracking metadata.</p></li>
+<li><p>Long-term pinning of pages. Techniques that rely on long-term pinnings
+(especially, RDMA and vfio/mdev) are fundamentally problematic with
+ZONE_MOVABLE, and therefore, memory offlining. Pinned pages cannot reside
+on ZONE_MOVABLE as that would turn these pages unmovable. Therefore, they
+have to be migrated off that zone while pinning. Pinning a page can fail
+even if there is plenty of free memory in ZONE_MOVABLE.</p>
+<p>In addition, using ZONE_MOVABLE might make page pinning more expensive,
+because of the page migration overhead.</p>
+</li>
+</ul>
+<p>By default, all the memory configured at boot time is managed by the kernel
+zones and ZONE_MOVABLE is not used.</p>
+<p>To enable ZONE_MOVABLE to include the memory present at boot and to control the
+ratio between movable and kernel zones there are two command line options:
+<code class="docutils literal notranslate"><span class="pre">kernelcore=</span></code> and <code class="docutils literal notranslate"><span class="pre">movablecore=</span></code>. See
+<a class="reference internal" href="../kernel-parameters.html"><span class="doc">The kernel's command-line parameters</span></a> for their description.</p>
+</section>
+<section id="memory-offlining-and-zone-movable">
+<h3><a class="toc-backref" href="#id22" role="doc-backlink">Memory Offlining and ZONE_MOVABLE</a><a class="headerlink" href="#memory-offlining-and-zone-movable" title="連結到這個標頭">¶</a></h3>
+<p>Even with ZONE_MOVABLE, there are some corner cases where offlining a memory
+block might fail:</p>
+<ul>
+<li><p>Memory blocks with memory holes; this applies to memory blocks present during
+boot and can apply to memory blocks hotplugged via the XEN balloon and the
+Hyper-V balloon.</p></li>
+<li><p>Mixed NUMA nodes and mixed zones within a single memory block prevent memory
+offlining; this applies to memory blocks present during boot only.</p></li>
+<li><p>Special memory blocks prevented by the system from getting offlined. Examples
+include any memory available during boot on arm64 or memory blocks spanning
+the crashkernel area on s390x; this usually applies to memory blocks present
+during boot only.</p></li>
+<li><p>Memory blocks overlapping with CMA areas cannot be offlined, this applies to
+memory blocks present during boot only.</p></li>
+<li><p>Concurrent activity that operates on the same physical memory area, such as
+allocating gigantic pages, can result in temporary offlining failures.</p></li>
+<li><p>Out of memory when dissolving huge pages, especially when HugeTLB Vmemmap
+Optimization (HVO) is enabled.</p>
+<p>Offlining code may be able to migrate huge page contents, but may not be able
+to dissolve the source huge page because it fails allocating (unmovable) pages
+for the vmemmap, because the system might not have free memory in the kernel
+zones left.</p>
+<p>Users that depend on memory offlining to succeed for movable zones should
+carefully consider whether the memory savings gained from this feature are
+worth the risk of possibly not being able to offline memory in certain
+situations.</p>
+</li>
+</ul>
+<p>Further, when running into out of memory situations while migrating pages, or
+when still encountering permanently unmovable pages within ZONE_MOVABLE
+(-&gt; BUG), memory offlining will keep retrying until it eventually succeeds.</p>
+<p>When offlining is triggered from user space, the offlining context can be
+terminated by sending a signal. A timeout based offlining can easily be
+implemented via:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>% timeout $TIMEOUT offline_block | failure_handling
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/admin-guide/mm/memory-hotplug.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

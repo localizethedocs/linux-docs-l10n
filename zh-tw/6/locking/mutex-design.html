@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Generic Mutex Subsystem &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/locking/mutex-design.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="RT-mutex implementation design" href="rt-mutex-design.html" />
+    <link rel="prev" title="Kernel Lock Torture Test Operation" href="locktorture.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Locking</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="locktypes.html">Lock types and their rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockdep-design.html">Runtime locking correctness validator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockstat.html">Lock Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="locktorture.html">Kernel Lock Torture Test Operation</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Generic Mutex Subsystem</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#what-are-mutexes">What are mutexes?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#implementation">Implementation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#semantics">Semantics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#interfaces">Interfaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#disadvantages">Disadvantages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#when-to-use-mutexes">When to use mutexes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex-design.html">RT-mutex implementation design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex.html">RT-mutex subsystem with PI support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seqlock.html">Sequence counters and sequential locks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spinlocks.html">Locking lessons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ww-mutex-design.html">Wound/Wait Deadlock-Proof Mutex Design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="preempt-locking.html">Proper Locking Under a Preemptible Kernel: Keeping Kernel Code Preempt-Safe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pi-futex.html">Lightweight PI-futexes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="futex-requeue-pi.html">Futex Requeue PI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hwspinlock.html">Hardware Spinlock Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="percpu-rw-semaphore.html">Percpu rw semaphores</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futexes.html">A description of what robust futexes are</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futex-ABI.html">The robust futex ABI</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/locking/mutex-design.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="generic-mutex-subsystem">
+<h1>Generic Mutex Subsystem<a class="headerlink" href="#generic-mutex-subsystem" title="連結到這個標頭">¶</a></h1>
+<p>started by Ingo Molnar &lt;<a class="reference external" href="mailto:mingo&#37;&#52;&#48;redhat&#46;com">mingo<span>&#64;</span>redhat<span>&#46;</span>com</a>&gt;</p>
+<p>updated by Davidlohr Bueso &lt;<a class="reference external" href="mailto:davidlohr&#37;&#52;&#48;hp&#46;com">davidlohr<span>&#64;</span>hp<span>&#46;</span>com</a>&gt;</p>
+<section id="what-are-mutexes">
+<h2>What are mutexes?<a class="headerlink" href="#what-are-mutexes" title="連結到這個標頭">¶</a></h2>
+<p>In the Linux kernel, mutexes refer to a particular locking primitive
+that enforces serialization on shared memory systems, and not only to
+the generic term referring to 'mutual exclusion' found in academia
+or similar theoretical text books. Mutexes are sleeping locks which
+behave similarly to binary semaphores, and were introduced in 2006[1]
+as an alternative to these. This new data structure provided a number
+of advantages, including simpler interfaces, and at that time smaller
+code (see Disadvantages).</p>
+<p>[1] <a class="reference external" href="https://lwn.net/Articles/164802/">https://lwn.net/Articles/164802/</a></p>
+</section>
+<section id="implementation">
+<h2>Implementation<a class="headerlink" href="#implementation" title="連結到這個標頭">¶</a></h2>
+<p>Mutexes are represented by '<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">mutex</span></code>', defined in include/linux/mutex.h
+and implemented in kernel/locking/mutex.c. These locks use an atomic variable
+(-&gt;owner) to keep track of the lock state during its lifetime.  Field owner
+actually contains <cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">task_struct</span></code> *</cite> to the current lock owner and it is
+therefore NULL if not currently owned. Since task_struct pointers are aligned
+to at least L1_CACHE_BYTES, low bits (3) are used to store extra state (e.g.,
+if waiter list is non-empty).  In its most basic form it also includes a
+wait-queue and a spinlock that serializes access to it. Furthermore,
+CONFIG_MUTEX_SPIN_ON_OWNER=y systems use a spinner MCS lock (-&gt;osq), described
+below in (ii).</p>
+<p>When acquiring a mutex, there are three possible paths that can be
+taken, depending on the state of the lock:</p>
+<ol class="lowerroman">
+<li><p>fastpath: tries to atomically acquire the lock by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">cmpxchg()</span></code>ing the owner with
+the current task. This only works in the uncontended case (<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">cmpxchg()</span></code> checks
+against 0UL, so all 3 state bits above have to be 0). If the lock is
+contended it goes to the next possible path.</p></li>
+<li><p>midpath: aka optimistic spinning, tries to spin for acquisition
+while the lock owner is running and there are no other tasks ready
+to run that have higher priority (need_resched). The rationale is
+that if the lock owner is running, it is likely to release the lock
+soon. The mutex spinners are queued up using MCS lock so that only
+one spinner can compete for the mutex.</p>
+<p>The MCS lock (proposed by Mellor-Crummey and Scott) is a simple spinlock
+with the desirable properties of being fair and with each cpu trying
+to acquire the lock spinning on a local variable. It avoids expensive
+cacheline bouncing that common test-and-set spinlock implementations
+incur. An MCS-like lock is specially tailored for optimistic spinning
+for sleeping lock implementation. An important feature of the customized
+MCS lock is that it has the extra property that spinners are able to exit
+the MCS spinlock queue when they need to reschedule. This further helps
+avoid situations where MCS spinners that need to reschedule would continue
+waiting to spin on mutex owner, only to go directly to slowpath upon
+obtaining the MCS lock.</p>
+</li>
+<li><p>slowpath: last resort, if the lock is still unable to be acquired,
+the task is added to the wait-queue and sleeps until woken up by the
+unlock path. Under normal circumstances it blocks as TASK_UNINTERRUPTIBLE.</p></li>
+</ol>
+<p>While formally kernel mutexes are sleepable locks, it is path (ii) that
+makes them more practically a hybrid type. By simply not interrupting a
+task and busy-waiting for a few cycles instead of immediately sleeping,
+the performance of this lock has been seen to significantly improve a
+number of workloads. Note that this technique is also used for rw-semaphores.</p>
+</section>
+<section id="semantics">
+<h2>Semantics<a class="headerlink" href="#semantics" title="連結到這個標頭">¶</a></h2>
+<p>The mutex subsystem checks and enforces the following rules:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Only one task can hold the mutex at a time.</p></li>
+<li><p>Only the owner can unlock the mutex.</p></li>
+<li><p>Multiple unlocks are not permitted.</p></li>
+<li><p>Recursive locking/unlocking is not permitted.</p></li>
+<li><p>A mutex must only be initialized via the API (see below).</p></li>
+<li><p>A task may not exit with a mutex held.</p></li>
+<li><p>Memory areas where held locks reside must not be freed.</p></li>
+<li><p>Held mutexes must not be reinitialized.</p></li>
+<li><p>Mutexes may not be used in hardware or software interrupt
+contexts such as tasklets and timers.</p></li>
+</ul>
+</div></blockquote>
+<p>These semantics are fully enforced when CONFIG DEBUG_MUTEXES is enabled.
+In addition, the mutex debugging code also implements a number of other
+features that make lock debugging easier and faster:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Uses symbolic names of mutexes, whenever they are printed
+in debug output.</p></li>
+<li><p>Point-of-acquire tracking, symbolic lookup of function names,
+list of all locks held in the system, printout of them.</p></li>
+<li><p>Owner tracking.</p></li>
+<li><p>Detects self-recursing locks and prints out all relevant info.</p></li>
+<li><p>Detects multi-task circular deadlocks and prints out all affected
+locks and tasks (and only those tasks).</p></li>
+</ul>
+</div></blockquote>
+<p>Mutexes - and most other sleeping locks like rwsems - do not provide an
+implicit reference for the memory they occupy, which reference is released
+with <a class="reference internal" href="../kernel-hacking/locking.html#c.mutex_unlock" title="mutex_unlock"><code class="xref c c-func docutils literal notranslate"><span class="pre">mutex_unlock()</span></code></a>.</p>
+<dl class="simple">
+<dt>[ This is in contrast with spin_unlock() [or completion_done()], which</dt><dd><p>APIs can be used to guarantee that the memory is not touched by the
+lock implementation after <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">spin_unlock()</span></code>/<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">completion_done()</span></code> releases
+the lock. ]</p>
+</dd>
+</dl>
+<p><a class="reference internal" href="../kernel-hacking/locking.html#c.mutex_unlock" title="mutex_unlock"><code class="xref c c-func docutils literal notranslate"><span class="pre">mutex_unlock()</span></code></a> may access the mutex structure even after it has internally
+released the lock already - so it's not safe for another context to
+acquire the mutex and assume that the <a class="reference internal" href="../kernel-hacking/locking.html#c.mutex_unlock" title="mutex_unlock"><code class="xref c c-func docutils literal notranslate"><span class="pre">mutex_unlock()</span></code></a> context is not using
+the structure anymore.</p>
+<p>The mutex user must ensure that the mutex is not destroyed while a
+release operation is still in progress - in other words, callers of
+<a class="reference internal" href="../kernel-hacking/locking.html#c.mutex_unlock" title="mutex_unlock"><code class="xref c c-func docutils literal notranslate"><span class="pre">mutex_unlock()</span></code></a> must ensure that the mutex stays alive until <a class="reference internal" href="../kernel-hacking/locking.html#c.mutex_unlock" title="mutex_unlock"><code class="xref c c-func docutils literal notranslate"><span class="pre">mutex_unlock()</span></code></a>
+has returned.</p>
+</section>
+<section id="interfaces">
+<h2>Interfaces<a class="headerlink" href="#interfaces" title="連結到這個標頭">¶</a></h2>
+<p>Statically define the mutex:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>DEFINE_MUTEX(name);
+</pre></div>
+</div>
+<p>Dynamically initialize the mutex:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>mutex_init(mutex);
+</pre></div>
+</div>
+<p>Acquire the mutex, uninterruptible:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void mutex_lock(struct mutex *lock);
+void mutex_lock_nested(struct mutex *lock, unsigned int subclass);
+int  mutex_trylock(struct mutex *lock);
+</pre></div>
+</div>
+<p>Acquire the mutex, interruptible:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int mutex_lock_interruptible_nested(struct mutex *lock,
+                                    unsigned int subclass);
+int mutex_lock_interruptible(struct mutex *lock);
+</pre></div>
+</div>
+<p>Acquire the mutex, interruptible, if dec to 0:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int atomic_dec_and_mutex_lock(atomic_t *cnt, struct mutex *lock);
+</pre></div>
+</div>
+<p>Unlock the mutex:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void mutex_unlock(struct mutex *lock);
+</pre></div>
+</div>
+<p>Test if the mutex is taken:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int mutex_is_locked(struct mutex *lock);
+</pre></div>
+</div>
+</section>
+<section id="disadvantages">
+<h2>Disadvantages<a class="headerlink" href="#disadvantages" title="連結到這個標頭">¶</a></h2>
+<p>Unlike its original design and purpose, '<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">mutex</span></code>' is among the largest
+locks in the kernel. E.g: on x86-64 it is 32 bytes, where '<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">semaphore</span></code>'
+is 24 bytes and rw_semaphore is 40 bytes. Larger structure sizes mean more CPU
+cache and memory footprint.</p>
+</section>
+<section id="when-to-use-mutexes">
+<h2>When to use mutexes<a class="headerlink" href="#when-to-use-mutexes" title="連結到這個標頭">¶</a></h2>
+<p>Unless the strict semantics of mutexes are unsuitable and/or the critical
+region prevents the lock from being shared, always prefer them to any other
+locking primitive.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/locking/mutex-design.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

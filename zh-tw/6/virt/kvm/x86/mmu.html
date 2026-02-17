@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>The x86 kvm shadow mmu &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/virt/kvm/x86/mmu.html" />
+    <link rel="index" title="索引" href="../../../genindex.html" />
+    <link rel="search" title="搜尋" href="../../../search.html" />
+    <link rel="next" title="KVM-specific MSRs" href="msr.html" />
+    <link rel="prev" title="Intel Trust Domain Extensions (TDX)" href="intel-tdx.html" />
+
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../../subsystem-apis.html#core-subsystems">Core subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../../../subsystem-apis.html#other-subsystems">其他子系統</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../../accounting/index.html">Accounting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../cpu-freq/index.html">CPUFreq - CPU frequency and voltage scaling code in the Linux(TM) kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../edac/index.html">EDAC 子系統</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../fpga/index.html">FPGA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../i2c/index.html">I2C/SMBus Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../iio/index.html">Industrial I/O</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../pcmcia/index.html">PCMCIA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../spi/index.html">Serial Peripheral Interface (SPI)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../w1/index.html">1-Wire Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../watchdog/index.html">Watchdog 支援</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../../index.html">Virtualization Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../hwmon/index.html">Hardware Monitoring</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../accel/index.html">Compute Accelerators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../security/index.html">Security Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../crypto/index.html">Crypto API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../bpf/index.html">BPF 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../usb/index.html">USB support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../PCI/index.html">PCI Bus Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../misc-devices/index.html">Assorted Miscellaneous Devices Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../peci/index.html">PECI 子系統</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../wmi/index.html">WMI 子系統</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../tee/index.html">TEE Subsystem</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../_sources/virt/kvm/x86/mmu.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="the-x86-kvm-shadow-mmu">
+<h1>The x86 kvm shadow mmu<a class="headerlink" href="#the-x86-kvm-shadow-mmu" title="連結到這個標頭">¶</a></h1>
+<p>The mmu (in arch/x86/kvm, files mmu.[ch] and paging_tmpl.h) is responsible
+for presenting a standard x86 mmu to the guest, while translating guest
+physical addresses to host physical addresses.</p>
+<p>The mmu code attempts to satisfy the following requirements:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>correctness:</dt><dd><p>the guest should not be able to determine that it is running
+on an emulated mmu except for timing (we attempt to comply
+with the specification, not emulate the characteristics of
+a particular implementation such as tlb size)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>security:</dt><dd><p>the guest must not be able to touch host memory not assigned
+to it</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>performance:</dt><dd><p>minimize the performance penalty imposed by the mmu</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>scaling:</dt><dd><p>need to scale to large memory and large vcpu guests</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>hardware:</dt><dd><p>support the full range of x86 virtualization hardware</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>integration:</dt><dd><p>Linux memory management code must be in control of guest memory
+so that swapping, page migration, page merging, transparent
+hugepages, and similar features work without change</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>dirty tracking:</dt><dd><p>report writes to guest memory to enable live migration
+and framebuffer-based displays</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>footprint:</dt><dd><p>keep the amount of pinned kernel memory low (most memory
+should be shrinkable)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>reliability:</dt><dd><p>avoid multipage or GFP_ATOMIC allocations</p>
+</dd>
+</dl>
+</li>
+</ul>
+<section id="acronyms">
+<h2>Acronyms<a class="headerlink" href="#acronyms" title="連結到這個標頭">¶</a></h2>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>pfn</p></td>
+<td><p>host page frame number</p></td>
+</tr>
+<tr class="row-even"><td><p>hpa</p></td>
+<td><p>host physical address</p></td>
+</tr>
+<tr class="row-odd"><td><p>hva</p></td>
+<td><p>host virtual address</p></td>
+</tr>
+<tr class="row-even"><td><p>gfn</p></td>
+<td><p>guest frame number</p></td>
+</tr>
+<tr class="row-odd"><td><p>gpa</p></td>
+<td><p>guest physical address</p></td>
+</tr>
+<tr class="row-even"><td><p>gva</p></td>
+<td><p>guest virtual address</p></td>
+</tr>
+<tr class="row-odd"><td><p>ngpa</p></td>
+<td><p>nested guest physical address</p></td>
+</tr>
+<tr class="row-even"><td><p>ngva</p></td>
+<td><p>nested guest virtual address</p></td>
+</tr>
+<tr class="row-odd"><td><p>pte</p></td>
+<td><p>page table entry (used also to refer generically to paging structure
+entries)</p></td>
+</tr>
+<tr class="row-even"><td><p>gpte</p></td>
+<td><p>guest pte (referring to gfns)</p></td>
+</tr>
+<tr class="row-odd"><td><p>spte</p></td>
+<td><p>shadow pte (referring to pfns)</p></td>
+</tr>
+<tr class="row-even"><td><p>tdp</p></td>
+<td><p>two dimensional paging (vendor neutral term for NPT and EPT)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="virtual-and-real-hardware-supported">
+<h2>Virtual and real hardware supported<a class="headerlink" href="#virtual-and-real-hardware-supported" title="連結到這個標頭">¶</a></h2>
+<p>The mmu supports first-generation mmu hardware, which allows an atomic switch
+of the current paging mode and cr3 during guest entry, as well as
+two-dimensional paging (AMD's NPT and Intel's EPT).  The emulated hardware
+it exposes is the traditional 2/3/4 level x86 mmu, with support for global
+pages, pae, pse, pse36, cr0.wp, and 1GB pages. Emulated hardware also
+able to expose NPT capable hardware on NPT capable hosts.</p>
+</section>
+<section id="translation">
+<h2>Translation<a class="headerlink" href="#translation" title="連結到這個標頭">¶</a></h2>
+<p>The primary job of the mmu is to program the processor's mmu to translate
+addresses for the guest.  Different translations are required at different
+times:</p>
+<ul class="simple">
+<li><p>when guest paging is disabled, we translate guest physical addresses to
+host physical addresses (gpa-&gt;hpa)</p></li>
+<li><p>when guest paging is enabled, we translate guest virtual addresses, to
+guest physical addresses, to host physical addresses (gva-&gt;gpa-&gt;hpa)</p></li>
+<li><p>when the guest launches a guest of its own, we translate nested guest
+virtual addresses, to nested guest physical addresses, to guest physical
+addresses, to host physical addresses (ngva-&gt;ngpa-&gt;gpa-&gt;hpa)</p></li>
+</ul>
+<p>The primary challenge is to encode between 1 and 3 translations into hardware
+that support only 1 (traditional) and 2 (tdp) translations.  When the
+number of required translations matches the hardware, the mmu operates in
+direct mode; otherwise it operates in shadow mode (see below).</p>
+</section>
+<section id="memory">
+<h2>Memory<a class="headerlink" href="#memory" title="連結到這個標頭">¶</a></h2>
+<p>Guest memory (gpa) is part of the user address space of the process that is
+using kvm.  Userspace defines the translation between guest addresses and user
+addresses (gpa-&gt;hva); note that two gpas may alias to the same hva, but not
+vice versa.</p>
+<p>These hvas may be backed using any method available to the host: anonymous
+memory, file backed memory, and device memory.  Memory might be paged by the
+host at any time.</p>
+</section>
+<section id="events">
+<h2>Events<a class="headerlink" href="#events" title="連結到這個標頭">¶</a></h2>
+<p>The mmu is driven by events, some from the guest, some from the host.</p>
+<p>Guest generated events:</p>
+<ul class="simple">
+<li><p>writes to control registers (especially cr3)</p></li>
+<li><p>invlpg/invlpga instruction execution</p></li>
+<li><p>access to missing or protected translations</p></li>
+</ul>
+<p>Host generated events:</p>
+<ul class="simple">
+<li><p>changes in the gpa-&gt;hpa translation (either through gpa-&gt;hva changes or
+through hva-&gt;hpa changes)</p></li>
+<li><p>memory pressure (the shrinker)</p></li>
+</ul>
+</section>
+<section id="shadow-pages">
+<h2>Shadow pages<a class="headerlink" href="#shadow-pages" title="連結到這個標頭">¶</a></h2>
+<p>The principal data structure is the shadow page, '<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kvm_mmu_page</span></code>'.  A
+shadow page contains 512 sptes, which can be either leaf or nonleaf sptes.  A
+shadow page may contain a mix of leaf and nonleaf sptes.</p>
+<p>A nonleaf spte allows the hardware mmu to reach the leaf pages and
+is not related to a translation directly.  It points to other shadow pages.</p>
+<p>A leaf spte corresponds to either one or two translations encoded into
+one paging structure entry.  These are always the lowest level of the
+translation stack, with optional higher level translations left to NPT/EPT.
+Leaf ptes point at guest pages.</p>
+<p>The following table shows translations encoded by leaf ptes, with higher-level
+translations in parentheses:</p>
+<blockquote>
+<div><p>Non-nested guests:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>nonpaging:     gpa-&gt;hpa
+paging:        gva-&gt;gpa-&gt;hpa
+paging, tdp:   (gva-&gt;)gpa-&gt;hpa
+</pre></div>
+</div>
+<p>Nested guests:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>non-tdp:       ngva-&gt;gpa-&gt;hpa  (*)
+tdp:           (ngva-&gt;)ngpa-&gt;gpa-&gt;hpa
+
+(*) the guest hypervisor will encode the ngva-&gt;gpa translation into its page
+    tables if npt is not present
+</pre></div>
+</div>
+</div></blockquote>
+<dl class="simple">
+<dt>Shadow pages contain the following information:</dt><dd><dl class="simple">
+<dt>role.level:</dt><dd><p>The level in the shadow paging hierarchy that this shadow page belongs to.
+1=4k sptes, 2=2M sptes, 3=1G sptes, etc.</p>
+</dd>
+<dt>role.direct:</dt><dd><p>If set, leaf sptes reachable from this page are for a linear range.
+Examples include real mode translation, large guest pages backed by small
+host pages, and gpa-&gt;hpa translations when NPT or EPT is active.
+The linear range starts at (gfn &lt;&lt; PAGE_SHIFT) and its size is determined
+by role.level (2MB for first level, 1GB for second level, 0.5TB for third
+level, 256TB for fourth level)
+If clear, this page corresponds to a guest page table denoted by the gfn
+field.</p>
+</dd>
+<dt>role.quadrant:</dt><dd><p>When role.has_4_byte_gpte=1, the guest uses 32-bit gptes while the host uses 64-bit
+sptes.  That means a guest page table contains more ptes than the host,
+so multiple shadow pages are needed to shadow one guest page.
+For first-level shadow pages, role.quadrant can be 0 or 1 and denotes the
+first or second 512-gpte block in the guest page table.  For second-level
+page tables, each 32-bit gpte is converted to two 64-bit sptes
+(since each first-level guest page is shadowed by two first-level
+shadow pages) so role.quadrant takes values in the range 0..3.  Each
+quadrant maps 1GB virtual address space.</p>
+</dd>
+<dt>role.access:</dt><dd><p>Inherited guest access permissions from the parent ptes in the form uwx.
+Note execute permission is positive, not negative.</p>
+</dd>
+<dt>role.invalid:</dt><dd><p>The page is invalid and should not be used.  It is a root page that is
+currently pinned (by a cpu hardware register pointing to it); once it is
+unpinned it will be destroyed.</p>
+</dd>
+<dt>role.has_4_byte_gpte:</dt><dd><p>Reflects the size of the guest PTE for which the page is valid, i.e. '0'
+if direct map or 64-bit gptes are in use, '1' if 32-bit gptes are in use.</p>
+</dd>
+<dt>role.efer_nx:</dt><dd><p>Contains the value of efer.nx for which the page is valid.</p>
+</dd>
+<dt>role.cr0_wp:</dt><dd><p>Contains the value of cr0.wp for which the page is valid.</p>
+</dd>
+<dt>role.smep_andnot_wp:</dt><dd><p>Contains the value of cr4.smep &amp;&amp; !cr0.wp for which the page is valid
+(pages for which this is true are different from other pages; see the
+treatment of cr0.wp=0 below).</p>
+</dd>
+<dt>role.smap_andnot_wp:</dt><dd><p>Contains the value of cr4.smap &amp;&amp; !cr0.wp for which the page is valid
+(pages for which this is true are different from other pages; see the
+treatment of cr0.wp=0 below).</p>
+</dd>
+<dt>role.smm:</dt><dd><p>Is 1 if the page is valid in system management mode.  This field
+determines which of the kvm_memslots array was used to build this
+shadow page; it is also used to go back from a <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kvm_mmu_page</span></code>
+to a memslot, through the kvm_memslots_for_spte_role macro and
+__gfn_to_memslot.</p>
+</dd>
+<dt>role.ad_disabled:</dt><dd><p>Is 1 if the MMU instance cannot use A/D bits.  EPT did not have A/D
+bits before Haswell; shadow EPT page tables also cannot use A/D bits
+if the L1 hypervisor does not enable them.</p>
+</dd>
+<dt>role.guest_mode:</dt><dd><p>Indicates the shadow page is created for a nested guest.</p>
+</dd>
+<dt>role.passthrough:</dt><dd><p>The page is not backed by a guest page table, but its first entry
+points to one.  This is set if NPT uses 5-level page tables (host
+CR4.LA57=1) and is shadowing L1's 4-level NPT (L1 CR4.LA57=0).</p>
+</dd>
+<dt>mmu_valid_gen:</dt><dd><p>The MMU generation of this page, used to fast zap of all MMU pages within a
+VM without blocking vCPUs too long. Specifically, KVM updates the per-VM
+valid MMU generation which causes the mismatch of mmu_valid_gen for each mmu
+page. This makes all existing MMU pages obsolete. Obsolete pages can't be
+used. Therefore, vCPUs must load a new, valid root before re-entering the
+guest. The MMU generation is only ever '0' or '1'. Note, the TDP MMU doesn't
+use this field as non-root TDP MMU pages are reachable only from their
+owning root. Thus it suffices for TDP MMU to use role.invalid in root pages
+to invalidate all MMU pages.</p>
+</dd>
+<dt>gfn:</dt><dd><p>Either the guest page table containing the translations shadowed by this
+page, or the base page frame for linear translations.  See role.direct.</p>
+</dd>
+<dt>spt:</dt><dd><p>A pageful of 64-bit sptes containing the translations for this page.
+Accessed by both kvm and hardware.
+The page pointed to by spt will have its page-&gt;private pointing back
+at the shadow page structure.
+sptes in spt point either at guest pages, or at lower-level shadow pages.
+Specifically, if sp1 and sp2 are shadow pages, then sp1-&gt;spt[n] may point
+at __pa(sp2-&gt;spt).  sp2 will point back at sp1 through parent_pte.
+The spt array forms a DAG structure with the shadow page as a node, and
+guest pages as leaves.</p>
+</dd>
+<dt>shadowed_translation:</dt><dd><p>An array of 512 shadow translation entries, one for each present pte. Used
+to perform a reverse map from a pte to a gfn as well as its access
+permission. When role.direct is set, the shadow_translation array is not
+allocated. This is because the gfn contained in any element of this array
+can be calculated from the gfn field when used.  In addition, when
+role.direct is set, KVM does not track access permission for each of the
+gfn. See role.direct and gfn.</p>
+</dd>
+<dt>root_count / tdp_mmu_root_count:</dt><dd><p>root_count is a reference counter for root shadow pages in Shadow MMU.
+vCPUs elevate the refcount when getting a shadow page that will be used as
+a root page, i.e. page that will be loaded into hardware directly (CR3,
+PDPTRs, nCR3 EPTP). Root pages cannot be destroyed while their refcount is
+non-zero. See role.invalid. tdp_mmu_root_count is similar but exclusively
+used in TDP MMU as an atomic refcount.</p>
+</dd>
+<dt>parent_ptes:</dt><dd><p>The reverse mapping for the pte/ptes pointing at this page's spt. If
+parent_ptes bit 0 is zero, only one spte points at this page and
+parent_ptes points at this single spte, otherwise, there exists multiple
+sptes pointing at this page and (parent_ptes &amp; ~0x1) points at a data
+structure with a list of parent sptes.</p>
+</dd>
+<dt>ptep:</dt><dd><p>The kernel virtual address of the SPTE that points at this shadow page.
+Used exclusively by the TDP MMU, this field is a <code class="xref c c-union broken_xref docutils literal notranslate"><span class="pre">union</span> <span class="pre">with</span></code> parent_ptes.</p>
+</dd>
+<dt>unsync:</dt><dd><p>If true, then the translations in this page may not match the guest's
+translation.  This is equivalent to the state of the tlb when a pte is
+changed but before the tlb entry is flushed.  Accordingly, unsync ptes
+are synchronized when the guest executes invlpg or flushes its tlb by
+other means.  Valid for leaf pages.</p>
+</dd>
+<dt>unsync_children:</dt><dd><p>How many sptes in the page point at pages that are unsync (or have
+unsynchronized children).</p>
+</dd>
+<dt>unsync_child_bitmap:</dt><dd><p>A bitmap indicating which sptes in spt point (directly or indirectly) at
+pages that may be unsynchronized.  Used to quickly locate all unsynchronized
+pages reachable from a given page.</p>
+</dd>
+<dt>clear_spte_count:</dt><dd><p>Only present on 32-bit hosts, where a 64-bit spte cannot be written
+atomically.  The reader uses this while running out of the MMU lock
+to detect in-progress updates and retry them until the writer has
+finished the write.</p>
+</dd>
+<dt>write_flooding_count:</dt><dd><p>A guest may write to a page table many times, causing a lot of
+emulations if the page needs to be write-protected (see &quot;Synchronized
+and unsynchronized pages&quot; below).  Leaf pages can be unsynchronized
+so that they do not trigger frequent emulation, but this is not
+possible for non-leafs.  This field counts the number of emulations
+since the last time the page table was actually used; if emulation
+is triggered too frequently on this page, KVM will unmap the page
+to avoid emulation in the future.</p>
+</dd>
+<dt>tdp_mmu_page:</dt><dd><p>Is 1 if the shadow page is a TDP MMU page. This variable is used to
+bifurcate the control flows for KVM when walking any data structure that
+may contain pages from both TDP MMU and shadow MMU.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+<section id="reverse-map">
+<h2>Reverse map<a class="headerlink" href="#reverse-map" title="連結到這個標頭">¶</a></h2>
+<p>The mmu maintains a reverse mapping whereby all ptes mapping a page can be
+reached given its gfn.  This is used, for example, when swapping out a page.</p>
+</section>
+<section id="synchronized-and-unsynchronized-pages">
+<h2>Synchronized and unsynchronized pages<a class="headerlink" href="#synchronized-and-unsynchronized-pages" title="連結到這個標頭">¶</a></h2>
+<p>The guest uses two events to synchronize its tlb and page tables: tlb flushes
+and page invalidations (invlpg).</p>
+<p>A tlb flush means that we need to synchronize all sptes reachable from the
+guest's cr3.  This is expensive, so we keep all guest page tables write
+protected, and synchronize sptes to gptes when a gpte is written.</p>
+<p>A special case is when a guest page table is reachable from the current
+guest cr3.  In this case, the guest is obliged to issue an invlpg instruction
+before using the translation.  We take advantage of that by removing write
+protection from the guest page, and allowing the guest to modify it freely.
+We synchronize modified gptes when the guest invokes invlpg.  This reduces
+the amount of emulation we have to do when the guest modifies multiple gptes,
+or when the a guest page is no longer used as a page table and is used for
+random guest data.</p>
+<p>As a side effect we have to resynchronize all reachable unsynchronized shadow
+pages on a tlb flush.</p>
+</section>
+<section id="reaction-to-events">
+<h2>Reaction to events<a class="headerlink" href="#reaction-to-events" title="連結到這個標頭">¶</a></h2>
+<ul class="simple">
+<li><p>guest page fault (or npt page fault, or ept violation)</p></li>
+</ul>
+<p>This is the most complicated event.  The cause of a page fault can be:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>a true guest fault (the guest translation won't allow the access) (*)</p></li>
+<li><p>access to a missing translation</p></li>
+<li><p>access to a protected translation
+- when logging dirty pages, memory is write protected
+- synchronized shadow pages are write protected (*)</p></li>
+<li><p>access to untranslatable memory (mmio)</p></li>
+</ul>
+<p>(*) not applicable in direct mode</p>
+</div></blockquote>
+<p>Handling a page fault is performed as follows:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>if the RSV bit of the error code is set, the page fault is caused by guest
+accessing MMIO and cached MMIO information is available.</p>
+<ul>
+<li><p>walk shadow page table</p></li>
+<li><p>check for valid generation number in the spte (see &quot;Fast invalidation of
+MMIO sptes&quot; below)</p></li>
+<li><p>cache the information to vcpu-&gt;arch.mmio_gva, vcpu-&gt;arch.mmio_access and
+vcpu-&gt;arch.mmio_gfn, and call the emulator</p></li>
+</ul>
+</li>
+<li><p>If both P bit and R/W bit of error code are set, this could possibly
+be handled as a &quot;fast page fault&quot; (fixed without taking the MMU lock).  See
+the description in <a class="reference internal" href="../locking.html"><span class="doc">KVM Lock Overview</span></a>.</p></li>
+<li><p>if needed, walk the guest page tables to determine the guest translation
+(gva-&gt;gpa or ngpa-&gt;gpa)</p>
+<ul>
+<li><p>if permissions are insufficient, reflect the fault back to the guest</p></li>
+</ul>
+</li>
+<li><p>determine the host page</p>
+<ul>
+<li><p>if this is an mmio request, there is no host page; cache the info to
+vcpu-&gt;arch.mmio_gva, vcpu-&gt;arch.mmio_access and vcpu-&gt;arch.mmio_gfn</p></li>
+</ul>
+</li>
+<li><p>walk the shadow page table to find the spte for the translation,
+instantiating missing intermediate page tables as necessary</p>
+<ul>
+<li><p>If this is an mmio request, cache the mmio info to the spte and set some
+reserved bit on the spte (see callers of kvm_mmu_set_mmio_spte_mask)</p></li>
+</ul>
+</li>
+<li><p>try to unsynchronize the page</p>
+<ul>
+<li><p>if successful, we can let the guest continue and modify the gpte</p></li>
+</ul>
+</li>
+<li><p>emulate the instruction</p>
+<ul>
+<li><p>if failed, unshadow the page and let the guest continue</p></li>
+</ul>
+</li>
+<li><p>update any translations that were modified by the instruction</p></li>
+</ul>
+</div></blockquote>
+<p>invlpg handling:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>walk the shadow page hierarchy and drop affected translations</p></li>
+<li><p>try to reinstantiate the indicated translation in the hope that the
+guest will use it in the near future</p></li>
+</ul>
+</div></blockquote>
+<p>Guest control register updates:</p>
+<ul class="simple">
+<li><p>mov to cr3</p>
+<ul>
+<li><p>look up new shadow roots</p></li>
+<li><p>synchronize newly reachable shadow pages</p></li>
+</ul>
+</li>
+<li><p>mov to cr0/cr4/efer</p>
+<ul>
+<li><p>set up mmu context for new paging mode</p></li>
+<li><p>look up new shadow roots</p></li>
+<li><p>synchronize newly reachable shadow pages</p></li>
+</ul>
+</li>
+</ul>
+<p>Host translation updates:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>mmu notifier called with updated hva</p></li>
+<li><p>look up affected sptes through reverse map</p></li>
+<li><p>drop (or update) translations</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="emulating-cr0-wp">
+<h2>Emulating cr0.wp<a class="headerlink" href="#emulating-cr0-wp" title="連結到這個標頭">¶</a></h2>
+<p>If tdp is not enabled, the host must keep cr0.wp=1 so page write protection
+works for the guest kernel, not guest userspace.  When the guest
+cr0.wp=1, this does not present a problem.  However when the guest cr0.wp=0,
+we cannot map the permissions for gpte.u=1, gpte.w=0 to any spte (the
+semantics require allowing any guest kernel access plus user read access).</p>
+<p>We handle this by mapping the permissions to two possible sptes, depending
+on fault type:</p>
+<ul class="simple">
+<li><p>kernel write fault: spte.u=0, spte.w=1 (allows full kernel access,
+disallows user access)</p></li>
+<li><p>read fault: spte.u=1, spte.w=0 (allows full read access, disallows kernel
+write access)</p></li>
+</ul>
+<p>(user write faults generate a #PF)</p>
+<p>In the first case there are two additional complications:</p>
+<ul class="simple">
+<li><p>if CR4.SMEP is enabled: since we've turned the page into a kernel page,
+the kernel may now execute it.  We handle this by also setting spte.nx.
+If we get a user fetch or read fault, we'll change spte.u=1 and
+spte.nx=gpte.nx back.  For this to work, KVM forces EFER.NX to 1 when
+shadow paging is in use.</p></li>
+<li><p>if CR4.SMAP is disabled: since the page has been changed to a kernel
+page, it can not be reused when CR4.SMAP is enabled. We set
+CR4.SMAP &amp;&amp; !CR0.WP into shadow page's role to avoid this case. Note,
+here we do not care the case that CR4.SMAP is enabled since KVM will
+directly inject #PF to guest due to failed permission check.</p></li>
+</ul>
+<p>To prevent an spte that was converted into a kernel page with cr0.wp=0
+from being written by the kernel after cr0.wp has changed to 1, we make
+the value of cr0.wp part of the page role.  This means that an spte created
+with one value of cr0.wp cannot be used when cr0.wp has a different value -
+it will simply be missed by the shadow page lookup code.  A similar issue
+exists when an spte created with cr0.wp=0 and cr4.smep=0 is used after
+changing cr4.smep to 1.  To avoid this, the value of !cr0.wp &amp;&amp; cr4.smep
+is also made a part of the page role.</p>
+</section>
+<section id="large-pages">
+<h2>Large pages<a class="headerlink" href="#large-pages" title="連結到這個標頭">¶</a></h2>
+<p>The mmu supports all combinations of large and small guest and host pages.
+Supported page sizes include 4k, 2M, 4M, and 1G.  4M pages are treated as
+two separate 2M pages, on both guest and host, since the mmu always uses PAE
+paging.</p>
+<p>To instantiate a large spte, four constraints must be satisfied:</p>
+<ul class="simple">
+<li><p>the spte must point to a large host page</p></li>
+<li><p>the guest pte must be a large pte of at least equivalent size (if tdp is
+enabled, there is no guest pte and this condition is satisfied)</p></li>
+<li><p>if the spte will be writeable, the large page frame may not overlap any
+write-protected pages</p></li>
+<li><p>the guest page must be wholly contained by a single memory slot</p></li>
+</ul>
+<p>To check the last two conditions, the mmu maintains a -&gt;disallow_lpage set of
+arrays for each memory slot and large page size.  Every write protected page
+causes its disallow_lpage to be incremented, thus preventing instantiation of
+a large spte.  The frames at the end of an unaligned memory slot have
+artificially inflated -&gt;disallow_lpages so they can never be instantiated.</p>
+</section>
+<section id="fast-invalidation-of-mmio-sptes">
+<h2>Fast invalidation of MMIO sptes<a class="headerlink" href="#fast-invalidation-of-mmio-sptes" title="連結到這個標頭">¶</a></h2>
+<p>As mentioned in &quot;Reaction to events&quot; above, kvm will cache MMIO
+information in leaf sptes.  When a new memslot is added or an existing
+memslot is changed, this information may become stale and needs to be
+invalidated.  This also needs to hold the MMU lock while walking all
+shadow pages, and is made more scalable with a similar technique.</p>
+<p>MMIO sptes have a few spare bits, which are used to store a
+generation number.  The global generation number is stored in
+kvm_memslots(kvm)-&gt;generation, and increased whenever guest memory info
+changes.</p>
+<p>When KVM finds an MMIO spte, it checks the generation number of the spte.
+If the generation number of the spte does not equal the global generation
+number, it will ignore the cached MMIO information and handle the page
+fault through the slow path.</p>
+<p>Since only 18 bits are used to store generation-number on mmio spte, all
+pages are zapped when there is an overflow.</p>
+<p>Unfortunately, a single memory access might access kvm_memslots(kvm) multiple
+times, the last one happening when the generation number is retrieved and
+stored into the MMIO spte.  Thus, the MMIO spte might be created based on
+out-of-date information, but with an up-to-date generation number.</p>
+<p>To avoid this, the generation number is incremented again after synchronize_srcu
+returns; thus, bit 63 of kvm_memslots(kvm)-&gt;generation set to 1 only during a
+memslot update, while some SRCU readers might be using the old copy.  We do not
+want to use an MMIO sptes created with an odd generation number, and we can do
+this without losing a bit in the MMIO spte.  The &quot;update in-progress&quot; bit of the
+generation is not stored in MMIO spte, and is so is implicitly zero when the
+generation is extracted out of the spte.  If KVM is unlucky and creates an MMIO
+spte while an update is in-progress, the next access to the spte will always be
+a cache miss.  For example, a subsequent access during the update window will
+miss due to the in-progress flag diverging, while an access after the update
+window closes will have a higher generation number (as compared to the spte).</p>
+</section>
+<section id="further-reading">
+<h2>延伸閱讀<a class="headerlink" href="#further-reading" title="連結到這個標頭">¶</a></h2>
+<ul class="simple">
+<li><p>NPT presentation from KVM Forum 2008
+<a class="reference external" href="https://www.linux-kvm.org/images/c/c8/KvmForum2008%24kdf2008_21.pdf">https://www.linux-kvm.org/images/c/c8/KvmForum2008%24kdf2008_21.pdf</a></p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../../_sources/virt/kvm/x86/mmu.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

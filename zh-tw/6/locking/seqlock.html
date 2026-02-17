@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Sequence counters and sequential locks &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/locking/seqlock.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Locking lessons" href="spinlocks.html" />
+    <link rel="prev" title="RT-mutex subsystem with PI support" href="rt-mutex.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Locking</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="locktypes.html">Lock types and their rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockdep-design.html">Runtime locking correctness validator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockstat.html">Lock Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="locktorture.html">Kernel Lock Torture Test Operation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mutex-design.html">Generic Mutex Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex-design.html">RT-mutex implementation design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex.html">RT-mutex subsystem with PI support</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Sequence counters and sequential locks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#introduction">介紹</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sequence-counters-seqcount-t">Sequence counters (<code class="docutils literal notranslate"><span class="pre">seqcount_t</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sequential-locks-seqlock-t">Sequential locks (<code class="docutils literal notranslate"><span class="pre">seqlock_t</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#api-documentation">API documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="spinlocks.html">Locking lessons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ww-mutex-design.html">Wound/Wait Deadlock-Proof Mutex Design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="preempt-locking.html">Proper Locking Under a Preemptible Kernel: Keeping Kernel Code Preempt-Safe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pi-futex.html">Lightweight PI-futexes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="futex-requeue-pi.html">Futex Requeue PI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hwspinlock.html">Hardware Spinlock Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="percpu-rw-semaphore.html">Percpu rw semaphores</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futexes.html">A description of what robust futexes are</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futex-ABI.html">The robust futex ABI</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/locking/seqlock.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="sequence-counters-and-sequential-locks">
+<h1>Sequence counters and sequential locks<a class="headerlink" href="#sequence-counters-and-sequential-locks" title="連結到這個標頭">¶</a></h1>
+<section id="introduction">
+<h2>介紹<a class="headerlink" href="#introduction" title="連結到這個標頭">¶</a></h2>
+<p>Sequence counters are a reader-writer consistency mechanism with
+lockless readers (read-only retry loops), and no writer starvation. They
+are used for data that's rarely written to (e.g. system time), where the
+reader wants a consistent set of information and is willing to retry if
+that information changes.</p>
+<p>A data set is consistent when the sequence count at the beginning of the
+read side critical section is even and the same sequence count value is
+read again at the end of the critical section. The data in the set must
+be copied out inside the read side critical section. If the sequence
+count has changed between the start and the end of the critical section,
+the reader must retry.</p>
+<p>Writers increment the sequence count at the start and the end of their
+critical section. After starting the critical section the sequence count
+is odd and indicates to the readers that an update is in progress. At
+the end of the write side critical section the sequence count becomes
+even again which lets readers make progress.</p>
+<p>A sequence counter write side critical section must never be preempted
+or interrupted by read side sections. Otherwise the reader will spin for
+the entire scheduler tick due to the odd sequence count value and the
+interrupted writer. If that reader belongs to a real-time scheduling
+class, it can spin forever and the kernel will livelock.</p>
+<p>This mechanism cannot be used if the protected data contains pointers,
+as the writer can invalidate a pointer that the reader is following.</p>
+</section>
+<section id="sequence-counters-seqcount-t">
+<span id="seqcount-t"></span><h2>Sequence counters (<code class="docutils literal notranslate"><span class="pre">seqcount_t</span></code>)<a class="headerlink" href="#sequence-counters-seqcount-t" title="連結到這個標頭">¶</a></h2>
+<p>This is the raw counting mechanism, which does not protect against
+multiple writers.  Write side critical sections must thus be serialized
+by an external lock.</p>
+<p>If the write serialization primitive is not implicitly disabling
+preemption, preemption must be explicitly disabled before entering the
+write side section. If the read section can be invoked from hardirq or
+softirq contexts, interrupts or bottom halves must also be respectively
+disabled before entering the write section.</p>
+<p>If it's desired to automatically handle the sequence counter
+requirements of writer serialization and non-preemptibility, use
+<a class="reference internal" href="#seqlock-t"><span class="std std-ref">Sequential locks (seqlock_t)</span></a> instead.</p>
+<p>Initialization:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/* dynamic */
+seqcount_t foo_seqcount;
+seqcount_init(&amp;foo_seqcount);
+
+/* static */
+static seqcount_t foo_seqcount = SEQCNT_ZERO(foo_seqcount);
+
+/* C99 struct init */
+struct {
+        .seq   = SEQCNT_ZERO(foo.seq),
+} foo;
+</pre></div>
+</div>
+<p>Write path:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/* Serialized context with disabled preemption */
+
+write_seqcount_begin(&amp;foo_seqcount);
+
+/* ... [[write-side critical section]] ... */
+
+write_seqcount_end(&amp;foo_seqcount);
+</pre></div>
+</div>
+<p>Read path:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>do {
+        seq = read_seqcount_begin(&amp;foo_seqcount);
+
+        /* ... [[read-side critical section]] ... */
+
+} while (read_seqcount_retry(&amp;foo_seqcount, seq));
+</pre></div>
+</div>
+<section id="sequence-counters-with-associated-locks-seqcount-lockname-t">
+<span id="seqcount-locktype-t"></span><h3>Sequence counters with associated locks (<code class="docutils literal notranslate"><span class="pre">seqcount_LOCKNAME_t</span></code>)<a class="headerlink" href="#sequence-counters-with-associated-locks-seqcount-lockname-t" title="連結到這個標頭">¶</a></h3>
+<p>As discussed at <a class="reference internal" href="#seqcount-t"><span class="std std-ref">Sequence counters (seqcount_t)</span></a>, sequence count write side critical
+sections must be serialized and non-preemptible. This variant of
+sequence counters associate the lock used for writer serialization at
+initialization time, which enables lockdep to validate that the write
+side critical sections are properly serialized.</p>
+<p>This lock association is a NOOP if lockdep is disabled and has neither
+storage nor runtime overhead. If lockdep is enabled, the lock pointer is
+stored in <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">seqcount</span></code> and lockdep's &quot;lock is held&quot; assertions are
+injected at the beginning of the write side critical section to validate
+that it is properly protected.</p>
+<p>For lock types which do not implicitly disable preemption, preemption
+protection is enforced in the write side function.</p>
+<p>The following sequence counters with associated locks are defined:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">seqcount_spinlock_t</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seqcount_raw_spinlock_t</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seqcount_rwlock_t</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seqcount_mutex_t</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seqcount_ww_mutex_t</span></code></p></li>
+</ul>
+</div></blockquote>
+<p>The sequence counter read and write APIs can take either a plain
+seqcount_t or any of the seqcount_LOCKNAME_t variants above.</p>
+<p>Initialization (replace &quot;LOCKNAME&quot; with one of the supported locks):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/* dynamic */
+seqcount_LOCKNAME_t foo_seqcount;
+seqcount_LOCKNAME_init(&amp;foo_seqcount, &amp;lock);
+
+/* static */
+static seqcount_LOCKNAME_t foo_seqcount =
+        SEQCNT_LOCKNAME_ZERO(foo_seqcount, &amp;lock);
+
+/* C99 struct init */
+struct {
+        .seq   = SEQCNT_LOCKNAME_ZERO(foo.seq, &amp;lock),
+} foo;
+</pre></div>
+</div>
+<p>Write path: same as in <a class="reference internal" href="#seqcount-t"><span class="std std-ref">Sequence counters (seqcount_t)</span></a>, while running from a context
+with the associated write serialization lock acquired.</p>
+<p>Read path: same as in <a class="reference internal" href="#seqcount-t"><span class="std std-ref">Sequence counters (seqcount_t)</span></a>.</p>
+</section>
+<section id="latch-sequence-counters-seqcount-latch-t">
+<span id="seqcount-latch-t"></span><h3>Latch sequence counters (<code class="docutils literal notranslate"><span class="pre">seqcount_latch_t</span></code>)<a class="headerlink" href="#latch-sequence-counters-seqcount-latch-t" title="連結到這個標頭">¶</a></h3>
+<p>Latch sequence counters are a multiversion concurrency control mechanism
+where the embedded seqcount_t counter even/odd value is used to switch
+between two copies of protected data. This allows the sequence counter
+read path to safely interrupt its own write side critical section.</p>
+<p>Use seqcount_latch_t when the write side sections cannot be protected
+from interruption by readers. This is typically the case when the read
+side can be invoked from NMI handlers.</p>
+<p>Check <cite><a class="reference internal" href="#c.write_seqcount_latch" title="write_seqcount_latch"><code class="xref c c-func docutils literal notranslate"><span class="pre">write_seqcount_latch()</span></code></a></cite> for more information.</p>
+</section>
+</section>
+<section id="sequential-locks-seqlock-t">
+<span id="seqlock-t"></span><h2>Sequential locks (<code class="docutils literal notranslate"><span class="pre">seqlock_t</span></code>)<a class="headerlink" href="#sequential-locks-seqlock-t" title="連結到這個標頭">¶</a></h2>
+<p>This contains the <a class="reference internal" href="#seqcount-t"><span class="std std-ref">Sequence counters (seqcount_t)</span></a> mechanism earlier discussed, plus an
+embedded spinlock for writer serialization and non-preemptibility.</p>
+<p>If the read side section can be invoked from hardirq or softirq context,
+use the write side function variants which disable interrupts or bottom
+halves respectively.</p>
+<p>Initialization:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/* dynamic */
+seqlock_t foo_seqlock;
+seqlock_init(&amp;foo_seqlock);
+
+/* static */
+static DEFINE_SEQLOCK(foo_seqlock);
+
+/* C99 struct init */
+struct {
+        .seql   = __SEQLOCK_UNLOCKED(foo.seql)
+} foo;
+</pre></div>
+</div>
+<p>Write path:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>write_seqlock(&amp;foo_seqlock);
+
+/* ... [[write-side critical section]] ... */
+
+write_sequnlock(&amp;foo_seqlock);
+</pre></div>
+</div>
+<p>Read path, three categories:</p>
+<ol class="arabic">
+<li><p>Normal Sequence readers which never block a writer but they must
+retry if a writer is in progress by detecting change in the sequence
+number.  Writers do not wait for a sequence reader:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>do {
+        seq = read_seqbegin(&amp;foo_seqlock);
+
+        /* ... [[read-side critical section]] ... */
+
+} while (read_seqretry(&amp;foo_seqlock, seq));
+</pre></div>
+</div>
+</li>
+<li><p>Locking readers which will wait if a writer or another locking reader
+is in progress. A locking reader in progress will also block a writer
+from entering its critical section. This read lock is
+exclusive. Unlike rwlock_t, only one locking reader can acquire it:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>read_seqlock_excl(&amp;foo_seqlock);
+
+/* ... [[read-side critical section]] ... */
+
+read_sequnlock_excl(&amp;foo_seqlock);
+</pre></div>
+</div>
+</li>
+<li><p>Conditional lockless reader (as in 1), or locking reader (as in 2),
+according to a passed marker. This is used to avoid lockless readers
+starvation (too much retry loops) in case of a sharp spike in write
+activity. First, a lockless read is tried (even marker passed). If
+that trial fails (sequence counter doesn't match), make the marker
+odd for the next iteration, the lockless read is transformed to a
+full locking read and no retry loop is necessary, for example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/* marker; even initialization */
+int seq = 1;
+do {
+        seq++; /* 2 on the 1st/lockless path, otherwise odd */
+        read_seqbegin_or_lock(&amp;foo_seqlock, &amp;seq);
+
+        /* ... [[read-side critical section]] ... */
+
+} while (need_seqretry(&amp;foo_seqlock, seq));
+done_seqretry(&amp;foo_seqlock, seq);
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="api-documentation">
+<h2>API documentation<a class="headerlink" href="#api-documentation" title="連結到這個標頭">¶</a></h2>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.seqcount_init">
+<span class="sig-name descname"><span class="n"><span class="pre">seqcount_init</span></span></span><a class="headerlink" href="#c.seqcount_init" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">seqcount_init</span> <span class="pre">(s)</span></code></p>
+<blockquote>
+<div><p>runtime initializer for seqcount_t</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to the seqcount_t instance</p>
+</dd>
+</dl>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.SEQCNT_ZERO">
+<span class="sig-name descname"><span class="n"><span class="pre">SEQCNT_ZERO</span></span></span><a class="headerlink" href="#c.SEQCNT_ZERO" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">SEQCNT_ZERO</span> <span class="pre">(name)</span></code></p>
+<blockquote>
+<div><p>static initializer for seqcount_t</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">name</span></code></dt><dd><p>Name of the seqcount_t instance</p>
+</dd>
+</dl>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__read_seqcount_begin">
+<span class="sig-name descname"><span class="n"><span class="pre">__read_seqcount_begin</span></span></span><a class="headerlink" href="#c.__read_seqcount_begin" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__read_seqcount_begin</span> <span class="pre">(s)</span></code></p>
+<blockquote>
+<div><p>begin a seqcount_t read section</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>count to be passed to <a class="reference internal" href="#c.read_seqcount_retry" title="read_seqcount_retry"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqcount_retry()</span></code></a></p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.raw_read_seqcount_begin">
+<span class="sig-name descname"><span class="n"><span class="pre">raw_read_seqcount_begin</span></span></span><a class="headerlink" href="#c.raw_read_seqcount_begin" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">raw_read_seqcount_begin</span> <span class="pre">(s)</span></code></p>
+<blockquote>
+<div><p>begin a seqcount_t read section w/o lockdep</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>count to be passed to <a class="reference internal" href="#c.read_seqcount_retry" title="read_seqcount_retry"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqcount_retry()</span></code></a></p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.read_seqcount_begin">
+<span class="sig-name descname"><span class="n"><span class="pre">read_seqcount_begin</span></span></span><a class="headerlink" href="#c.read_seqcount_begin" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">read_seqcount_begin</span> <span class="pre">(s)</span></code></p>
+<blockquote>
+<div><p>begin a seqcount_t read critical section</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>count to be passed to <a class="reference internal" href="#c.read_seqcount_retry" title="read_seqcount_retry"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqcount_retry()</span></code></a></p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.raw_read_seqcount">
+<span class="sig-name descname"><span class="n"><span class="pre">raw_read_seqcount</span></span></span><a class="headerlink" href="#c.raw_read_seqcount" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">raw_read_seqcount</span> <span class="pre">(s)</span></code></p>
+<blockquote>
+<div><p>read the raw seqcount_t counter value</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>raw_read_seqcount opens a read critical section of the given
+seqcount_t, without any lockdep checking, and without checking or
+masking the sequence counter LSB. Calling code is responsible for
+handling that.</p>
+<p><strong>Return</strong></p>
+<p>count to be passed to <a class="reference internal" href="#c.read_seqcount_retry" title="read_seqcount_retry"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqcount_retry()</span></code></a></p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.raw_seqcount_try_begin">
+<span class="sig-name descname"><span class="n"><span class="pre">raw_seqcount_try_begin</span></span></span><a class="headerlink" href="#c.raw_seqcount_try_begin" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">raw_seqcount_try_begin</span> <span class="pre">(s,</span> <span class="pre">start)</span></code></p>
+<blockquote>
+<div><p>begin a seqcount_t read critical section w/o lockdep and w/o counter stabilization</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">start</span></code></dt><dd><p>count to be passed to <a class="reference internal" href="#c.read_seqcount_retry" title="read_seqcount_retry"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqcount_retry()</span></code></a></p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Similar to <a class="reference internal" href="#c.raw_seqcount_begin" title="raw_seqcount_begin"><code class="xref c c-func docutils literal notranslate"><span class="pre">raw_seqcount_begin()</span></code></a>, except it enables eliding the critical
+section entirely if odd, instead of doing the speculation knowing it will
+fail.</p>
+<p>Useful when counter stabilization is more or less equivalent to taking
+the lock and there is a slowpath that does that.</p>
+<p>If true, start will be set to the (even) sequence count read.</p>
+<p><strong>Return</strong></p>
+<p>true when a read critical section is started.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.raw_seqcount_begin">
+<span class="sig-name descname"><span class="n"><span class="pre">raw_seqcount_begin</span></span></span><a class="headerlink" href="#c.raw_seqcount_begin" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">raw_seqcount_begin</span> <span class="pre">(s)</span></code></p>
+<blockquote>
+<div><p>begin a seqcount_t read critical section w/o lockdep and w/o counter stabilization</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>raw_seqcount_begin opens a read critical section of the given
+seqcount_t. Unlike <a class="reference internal" href="#c.read_seqcount_begin" title="read_seqcount_begin"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqcount_begin()</span></code></a>, this function will not wait
+for the count to stabilize. If a writer is active when it begins, it
+will fail the <a class="reference internal" href="#c.read_seqcount_retry" title="read_seqcount_retry"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqcount_retry()</span></code></a> at the end of the read critical
+section instead of stabilizing at the beginning of it.</p>
+<p>Use this only in special kernel hot paths where the read section is
+small and has a high probability of success through other external
+means. It will save a single branching instruction.</p>
+<p><strong>Return</strong></p>
+<p>count to be passed to <a class="reference internal" href="#c.read_seqcount_retry" title="read_seqcount_retry"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqcount_retry()</span></code></a></p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__read_seqcount_retry">
+<span class="sig-name descname"><span class="n"><span class="pre">__read_seqcount_retry</span></span></span><a class="headerlink" href="#c.__read_seqcount_retry" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__read_seqcount_retry</span> <span class="pre">(s,</span> <span class="pre">start)</span></code></p>
+<blockquote>
+<div><p>end a seqcount_t read section w/o barrier</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">start</span></code></dt><dd><p>count, from <a class="reference internal" href="#c.read_seqcount_begin" title="read_seqcount_begin"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqcount_begin()</span></code></a></p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>__read_seqcount_retry is like read_seqcount_retry, but has no <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">smp_rmb()</span></code>
+barrier. Callers should ensure that <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">smp_rmb()</span></code> or equivalent ordering is
+provided before actually loading any of the variables that are to be
+protected in this critical section.</p>
+<p>Use carefully, only in critical code, and comment how the barrier is
+provided.</p>
+<p><strong>Return</strong></p>
+<p>true if a read section retry is required, else false</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.read_seqcount_retry">
+<span class="sig-name descname"><span class="n"><span class="pre">read_seqcount_retry</span></span></span><a class="headerlink" href="#c.read_seqcount_retry" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">read_seqcount_retry</span> <span class="pre">(s,</span> <span class="pre">start)</span></code></p>
+<blockquote>
+<div><p>end a seqcount_t read critical section</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">start</span></code></dt><dd><p>count, from <a class="reference internal" href="#c.read_seqcount_begin" title="read_seqcount_begin"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqcount_begin()</span></code></a></p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>read_seqcount_retry closes the read critical section of given
+seqcount_t.  If the critical section was invalid, it must be ignored
+(and typically retried).</p>
+<p><strong>Return</strong></p>
+<p>true if a read section retry is required, else false</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.raw_write_seqcount_begin">
+<span class="sig-name descname"><span class="n"><span class="pre">raw_write_seqcount_begin</span></span></span><a class="headerlink" href="#c.raw_write_seqcount_begin" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">raw_write_seqcount_begin</span> <span class="pre">(s)</span></code></p>
+<blockquote>
+<div><p>start a seqcount_t write section w/o lockdep</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+</dl>
+<p><strong>Context</strong></p>
+<p>check <a class="reference internal" href="#c.write_seqcount_begin" title="write_seqcount_begin"><code class="xref c c-func docutils literal notranslate"><span class="pre">write_seqcount_begin()</span></code></a></p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.raw_write_seqcount_end">
+<span class="sig-name descname"><span class="n"><span class="pre">raw_write_seqcount_end</span></span></span><a class="headerlink" href="#c.raw_write_seqcount_end" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">raw_write_seqcount_end</span> <span class="pre">(s)</span></code></p>
+<blockquote>
+<div><p>end a seqcount_t write section w/o lockdep</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+</dl>
+<p><strong>Context</strong></p>
+<p>check <a class="reference internal" href="#c.write_seqcount_end" title="write_seqcount_end"><code class="xref c c-func docutils literal notranslate"><span class="pre">write_seqcount_end()</span></code></a></p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.write_seqcount_begin_nested">
+<span class="sig-name descname"><span class="n"><span class="pre">write_seqcount_begin_nested</span></span></span><a class="headerlink" href="#c.write_seqcount_begin_nested" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">write_seqcount_begin_nested</span> <span class="pre">(s,</span> <span class="pre">subclass)</span></code></p>
+<blockquote>
+<div><p>start a seqcount_t write section with custom lockdep nesting level</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">subclass</span></code></dt><dd><p>lockdep nesting level</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>See <a class="reference internal" href="lockdep-design.html"><span class="doc">Runtime locking correctness validator</span></a></p>
+<p><strong>Context</strong></p>
+<p>check <a class="reference internal" href="#c.write_seqcount_begin" title="write_seqcount_begin"><code class="xref c c-func docutils literal notranslate"><span class="pre">write_seqcount_begin()</span></code></a></p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.write_seqcount_begin">
+<span class="sig-name descname"><span class="n"><span class="pre">write_seqcount_begin</span></span></span><a class="headerlink" href="#c.write_seqcount_begin" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">write_seqcount_begin</span> <span class="pre">(s)</span></code></p>
+<blockquote>
+<div><p>start a seqcount_t write side critical section</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+</dl>
+<p><strong>Context</strong></p>
+<p>sequence counter write side sections must be serialized and
+non-preemptible. Preemption will be automatically disabled if and
+only if the seqcount write serialization lock is associated, and
+preemptible.  If readers can be invoked from hardirq or softirq
+context, interrupts or bottom halves must be respectively disabled.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.write_seqcount_end">
+<span class="sig-name descname"><span class="n"><span class="pre">write_seqcount_end</span></span></span><a class="headerlink" href="#c.write_seqcount_end" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">write_seqcount_end</span> <span class="pre">(s)</span></code></p>
+<blockquote>
+<div><p>end a seqcount_t write side critical section</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+</dl>
+<p><strong>Context</strong></p>
+<p>Preemption will be automatically re-enabled if and only if
+the seqcount write serialization lock is associated, and preemptible.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.raw_write_seqcount_barrier">
+<span class="sig-name descname"><span class="n"><span class="pre">raw_write_seqcount_barrier</span></span></span><a class="headerlink" href="#c.raw_write_seqcount_barrier" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">raw_write_seqcount_barrier</span> <span class="pre">(s)</span></code></p>
+<blockquote>
+<div><p>do a seqcount_t write barrier</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>This can be used to provide an ordering guarantee instead of the usual
+consistency guarantee. It is one wmb cheaper, because it can collapse
+the two back-to-back <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">wmb()</span></code>s.</p>
+<p>Note that writes surrounding the barrier should be declared atomic (e.g.
+via WRITE_ONCE): a) to ensure the writes become visible to other threads
+atomically, avoiding compiler optimizations; b) to document which writes are
+meant to propagate to the reader critical section. This is necessary because
+neither writes before nor after the barrier are enclosed in a seq-writer
+critical section that would ensure readers are aware of ongoing writes:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>seqcount_t seq;
+bool X = true, Y = false;
+
+void read(void)
+{
+        bool x, y;
+
+        do {
+                int s = read_seqcount_begin(&amp;seq);
+
+                x = X; y = Y;
+
+        } while (read_seqcount_retry(&amp;seq, s));
+
+        BUG_ON(!x &amp;&amp; !y);
+}
+
+void write(void)
+{
+        WRITE_ONCE(Y, true);
+
+        raw_write_seqcount_barrier(seq);
+
+        WRITE_ONCE(X, false);
+}
+</pre></div>
+</div>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.write_seqcount_invalidate">
+<span class="sig-name descname"><span class="n"><span class="pre">write_seqcount_invalidate</span></span></span><a class="headerlink" href="#c.write_seqcount_invalidate" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">write_seqcount_invalidate</span> <span class="pre">(s)</span></code></p>
+<blockquote>
+<div><p>invalidate in-progress seqcount_t read side operations</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to seqcount_t or any of the seqcount_LOCKNAME_t variants</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>After write_seqcount_invalidate, no seqcount_t read side operations
+will complete successfully and see data older than this.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.SEQCNT_LATCH_ZERO">
+<span class="sig-name descname"><span class="n"><span class="pre">SEQCNT_LATCH_ZERO</span></span></span><a class="headerlink" href="#c.SEQCNT_LATCH_ZERO" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">SEQCNT_LATCH_ZERO</span> <span class="pre">(seq_name)</span></code></p>
+<blockquote>
+<div><p>static initializer for seqcount_latch_t</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seq_name</span></code></dt><dd><p>Name of the seqcount_latch_t instance</p>
+</dd>
+</dl>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.seqcount_latch_init">
+<span class="sig-name descname"><span class="n"><span class="pre">seqcount_latch_init</span></span></span><a class="headerlink" href="#c.seqcount_latch_init" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">seqcount_latch_init</span> <span class="pre">(s)</span></code></p>
+<blockquote>
+<div><p>runtime initializer for seqcount_latch_t</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">s</span></code></dt><dd><p>Pointer to the seqcount_latch_t instance</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.raw_read_seqcount_latch">
+<span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">raw_read_seqcount_latch</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">seqcount_latch_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">s</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.raw_read_seqcount_latch" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>pick even/odd latch data copy</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">seqcount_latch_t</span> <span class="pre">*s</span></code></dt><dd><p>Pointer to seqcount_latch_t</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>See <a class="reference internal" href="#c.raw_write_seqcount_latch" title="raw_write_seqcount_latch"><code class="xref c c-func docutils literal notranslate"><span class="pre">raw_write_seqcount_latch()</span></code></a> for details and a full reader/writer
+usage example.</p>
+<p><strong>Return</strong></p>
+<p>sequence counter raw value. Use the lowest bit as an index for
+picking which data copy to read. The full counter must then be checked
+with <a class="reference internal" href="#c.raw_read_seqcount_latch_retry" title="raw_read_seqcount_latch_retry"><code class="xref c c-func docutils literal notranslate"><span class="pre">raw_read_seqcount_latch_retry()</span></code></a>.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.read_seqcount_latch">
+<span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_seqcount_latch</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">seqcount_latch_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">s</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.read_seqcount_latch" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>pick even/odd latch data copy</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">seqcount_latch_t</span> <span class="pre">*s</span></code></dt><dd><p>Pointer to seqcount_latch_t</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>See <a class="reference internal" href="#c.write_seqcount_latch" title="write_seqcount_latch"><code class="xref c c-func docutils literal notranslate"><span class="pre">write_seqcount_latch()</span></code></a> for details and a full reader/writer usage
+example.</p>
+<p><strong>Return</strong></p>
+<p>sequence counter raw value. Use the lowest bit as an index for
+picking which data copy to read. The full counter must then be checked
+with <a class="reference internal" href="#c.read_seqcount_latch_retry" title="read_seqcount_latch_retry"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqcount_latch_retry()</span></code></a>.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.raw_read_seqcount_latch_retry">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">raw_read_seqcount_latch_retry</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">seqcount_latch_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">s</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="n"><span class="pre">start</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.raw_read_seqcount_latch_retry" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>end a seqcount_latch_t read section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">seqcount_latch_t</span> <span class="pre">*s</span></code></dt><dd><p>Pointer to seqcount_latch_t</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">start</span></code></dt><dd><p>count, from <a class="reference internal" href="#c.raw_read_seqcount_latch" title="raw_read_seqcount_latch"><code class="xref c c-func docutils literal notranslate"><span class="pre">raw_read_seqcount_latch()</span></code></a></p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>true if a read section retry is required, else false</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.read_seqcount_latch_retry">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_seqcount_latch_retry</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">seqcount_latch_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">s</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="n"><span class="pre">start</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.read_seqcount_latch_retry" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>end a seqcount_latch_t read section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">seqcount_latch_t</span> <span class="pre">*s</span></code></dt><dd><p>Pointer to seqcount_latch_t</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">start</span></code></dt><dd><p>count, from <a class="reference internal" href="#c.read_seqcount_latch" title="read_seqcount_latch"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqcount_latch()</span></code></a></p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>true if a read section retry is required, else false</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.raw_write_seqcount_latch">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">raw_write_seqcount_latch</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqcount_latch_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">s</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.raw_write_seqcount_latch" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>redirect latch readers to even/odd copy</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqcount_latch_t</span> <span class="pre">*s</span></code></dt><dd><p>Pointer to seqcount_latch_t</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.write_seqcount_latch_begin">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write_seqcount_latch_begin</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqcount_latch_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">s</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.write_seqcount_latch_begin" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>redirect latch readers to odd copy</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqcount_latch_t</span> <span class="pre">*s</span></code></dt><dd><p>Pointer to seqcount_latch_t</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>The latch technique is a multiversion concurrency control method that allows
+queries during non-atomic modifications. If you can guarantee queries never
+interrupt the modification -- e.g. the concurrency is strictly between CPUs
+-- you most likely do not need this.</p>
+<p>Where the traditional RCU/lockless data structures rely on atomic
+modifications to ensure queries observe either the old or the new state the
+latch allows the same for non-atomic updates. The trade-off is doubling the
+cost of storage; we have to maintain two copies of the entire data
+structure.</p>
+<p>Very simply put: we first modify one copy and then the other. This ensures
+there is always one copy in a stable state, ready to give us an answer.</p>
+<p>The basic form is a data structure like:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct latch_struct {
+        seqcount_latch_t        seq;
+        struct data_struct      data[2];
+};
+</pre></div>
+</div>
+<p>Where a modification, which is assumed to be externally serialized, does the
+following:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void latch_modify(struct latch_struct *latch, ...)
+{
+        write_seqcount_latch_begin(&amp;latch-&gt;seq);
+        modify(latch-&gt;data[0], ...);
+        write_seqcount_latch(&amp;latch-&gt;seq);
+        modify(latch-&gt;data[1], ...);
+        write_seqcount_latch_end(&amp;latch-&gt;seq);
+}
+</pre></div>
+</div>
+<p>The query will have a form like:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct entry *latch_query(struct latch_struct *latch, ...)
+{
+        struct entry *entry;
+        unsigned seq, idx;
+
+        do {
+                seq = read_seqcount_latch(&amp;latch-&gt;seq);
+
+                idx = seq &amp; 0x01;
+                entry = data_query(latch-&gt;data[idx], ...);
+
+        // This includes needed smp_rmb()
+        } while (read_seqcount_latch_retry(&amp;latch-&gt;seq, seq));
+
+        return entry;
+}
+</pre></div>
+</div>
+<p>So during the modification, queries are first redirected to data[1]. Then we
+modify data[0]. When that is complete, we redirect queries back to data[0]
+and we can modify data[1].</p>
+<p><strong>NOTE</strong></p>
+<blockquote>
+<div><p>The non-requirement for atomic modifications does _NOT_ include
+the publishing of new entries in the case where data is a dynamic
+data structure.</p>
+<p>An iteration might start in data[0] and get suspended long enough
+to miss an entire modification sequence, once it resumes it might
+observe the new entry.</p>
+</div></blockquote>
+<p>NOTE2:</p>
+<blockquote>
+<div><p>When data is a dynamic data structure; one should use regular RCU
+patterns to manage the lifetimes of the objects within.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.write_seqcount_latch">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write_seqcount_latch</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqcount_latch_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">s</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.write_seqcount_latch" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>redirect latch readers to even copy</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqcount_latch_t</span> <span class="pre">*s</span></code></dt><dd><p>Pointer to seqcount_latch_t</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.write_seqcount_latch_end">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write_seqcount_latch_end</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqcount_latch_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">s</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.write_seqcount_latch_end" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>end a seqcount_latch_t write section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqcount_latch_t</span> <span class="pre">*s</span></code></dt><dd><p>Pointer to seqcount_latch_t</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Marks the end of a seqcount_latch_t writer section, after all copies of the
+latch-protected data have been updated.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.seqlock_init">
+<span class="sig-name descname"><span class="n"><span class="pre">seqlock_init</span></span></span><a class="headerlink" href="#c.seqlock_init" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">seqlock_init</span> <span class="pre">(sl)</span></code></p>
+<blockquote>
+<div><p>dynamic initializer for seqlock_t</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">sl</span></code></dt><dd><p>Pointer to the seqlock_t instance</p>
+</dd>
+</dl>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.DEFINE_SEQLOCK">
+<span class="sig-name descname"><span class="n"><span class="pre">DEFINE_SEQLOCK</span></span></span><a class="headerlink" href="#c.DEFINE_SEQLOCK" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">DEFINE_SEQLOCK</span> <span class="pre">(sl)</span></code></p>
+<blockquote>
+<div><p>Define a statically allocated seqlock_t</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">sl</span></code></dt><dd><p>Name of the seqlock_t instance</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.read_seqbegin">
+<span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_seqbegin</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.read_seqbegin" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>start a seqlock_t read side critical section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>count, to be passed to <a class="reference internal" href="#c.read_seqretry" title="read_seqretry"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqretry()</span></code></a></p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.read_seqretry">
+<span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_seqretry</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="n"><span class="pre">start</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.read_seqretry" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>end a seqlock_t read side section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">start</span></code></dt><dd><p>count, from <a class="reference internal" href="#c.read_seqbegin" title="read_seqbegin"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqbegin()</span></code></a></p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>read_seqretry closes the read side critical section of given seqlock_t.
+If the critical section was invalid, it must be ignored (and typically
+retried).</p>
+<p><strong>Return</strong></p>
+<p>true if a read section retry is required, else false</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.write_seqlock">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write_seqlock</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.write_seqlock" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>start a seqlock_t write side critical section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>write_seqlock opens a write side critical section for the given
+seqlock_t.  It also implicitly acquires the spinlock_t embedded inside
+that sequential lock. All seqlock_t write side sections are thus
+automatically serialized and non-preemptible.</p>
+<p><strong>Context</strong></p>
+<p>if the seqlock_t read section, or other write side critical
+sections, can be invoked from hardirq or softirq contexts, use the
+_irqsave or _bh variants of this function instead.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.write_sequnlock">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write_sequnlock</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.write_sequnlock" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>end a seqlock_t write side critical section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>write_sequnlock closes the (serialized and non-preemptible) write side
+critical section of given seqlock_t.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.write_seqlock_bh">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write_seqlock_bh</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.write_seqlock_bh" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>start a softirqs-disabled seqlock_t write section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>_bh variant of <a class="reference internal" href="#c.write_seqlock" title="write_seqlock"><code class="xref c c-func docutils literal notranslate"><span class="pre">write_seqlock()</span></code></a>. Use only if the read side section, or
+other write side sections, can be invoked from softirq contexts.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.write_sequnlock_bh">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write_sequnlock_bh</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.write_sequnlock_bh" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>end a softirqs-disabled seqlock_t write section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>write_sequnlock_bh closes the serialized, non-preemptible, and
+softirqs-disabled, seqlock_t write side critical section opened with
+<a class="reference internal" href="#c.write_seqlock_bh" title="write_seqlock_bh"><code class="xref c c-func docutils literal notranslate"><span class="pre">write_seqlock_bh()</span></code></a>.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.write_seqlock_irq">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write_seqlock_irq</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.write_seqlock_irq" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>start a non-interruptible seqlock_t write section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>_irq variant of <a class="reference internal" href="#c.write_seqlock" title="write_seqlock"><code class="xref c c-func docutils literal notranslate"><span class="pre">write_seqlock()</span></code></a>. Use only if the read side section, or
+other write sections, can be invoked from hardirq contexts.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.write_sequnlock_irq">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write_sequnlock_irq</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.write_sequnlock_irq" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>end a non-interruptible seqlock_t write section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>write_sequnlock_irq closes the serialized and non-interruptible
+seqlock_t write side section opened with <a class="reference internal" href="#c.write_seqlock_irq" title="write_seqlock_irq"><code class="xref c c-func docutils literal notranslate"><span class="pre">write_seqlock_irq()</span></code></a>.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.write_seqlock_irqsave">
+<span class="sig-name descname"><span class="n"><span class="pre">write_seqlock_irqsave</span></span></span><a class="headerlink" href="#c.write_seqlock_irqsave" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">write_seqlock_irqsave</span> <span class="pre">(lock,</span> <span class="pre">flags)</span></code></p>
+<blockquote>
+<div><p>start a non-interruptible seqlock_t write section</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">lock</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">flags</span></code></dt><dd><p>Stack-allocated storage for saving caller's local interrupt
+state, to be passed to <a class="reference internal" href="#c.write_sequnlock_irqrestore" title="write_sequnlock_irqrestore"><code class="xref c c-func docutils literal notranslate"><span class="pre">write_sequnlock_irqrestore()</span></code></a>.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>_irqsave variant of <a class="reference internal" href="#c.write_seqlock" title="write_seqlock"><code class="xref c c-func docutils literal notranslate"><span class="pre">write_seqlock()</span></code></a>. Use it only if the read side
+section, or other write sections, can be invoked from hardirq context.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.write_sequnlock_irqrestore">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">write_sequnlock_irqrestore</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">flags</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.write_sequnlock_irqrestore" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>end non-interruptible seqlock_t write section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">long</span> <span class="pre">flags</span></code></dt><dd><p>Caller's saved interrupt state, from <a class="reference internal" href="#c.write_seqlock_irqsave" title="write_seqlock_irqsave"><code class="xref c c-func docutils literal notranslate"><span class="pre">write_seqlock_irqsave()</span></code></a></p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>write_sequnlock_irqrestore closes the serialized and non-interruptible
+seqlock_t write section previously opened with <a class="reference internal" href="#c.write_seqlock_irqsave" title="write_seqlock_irqsave"><code class="xref c c-func docutils literal notranslate"><span class="pre">write_seqlock_irqsave()</span></code></a>.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.read_seqlock_excl">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_seqlock_excl</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.read_seqlock_excl" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>begin a seqlock_t locking reader section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>read_seqlock_excl opens a seqlock_t locking reader critical section.  A
+locking reader exclusively locks out <em>both</em> other writers <em>and</em> other
+locking readers, but it does not update the embedded sequence number.</p>
+<p>Locking readers act like a normal <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">spin_lock()</span></code>/<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">spin_unlock()</span></code>.</p>
+<p>The opened read section must be closed with <a class="reference internal" href="#c.read_sequnlock_excl" title="read_sequnlock_excl"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_sequnlock_excl()</span></code></a>.</p>
+<p><strong>Context</strong></p>
+<p>if the seqlock_t write section, <em>or other read sections</em>, can
+be invoked from hardirq or softirq contexts, use the _irqsave or _bh
+variant of this function instead.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.read_sequnlock_excl">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_sequnlock_excl</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.read_sequnlock_excl" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>end a seqlock_t locking reader critical section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.read_seqlock_excl_bh">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_seqlock_excl_bh</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.read_seqlock_excl_bh" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>start a seqlock_t locking reader section with softirqs disabled</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>_bh variant of <a class="reference internal" href="#c.read_seqlock_excl" title="read_seqlock_excl"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqlock_excl()</span></code></a>. Use this variant only if the
+seqlock_t write side section, <em>or other read sections</em>, can be invoked
+from softirq contexts.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.read_sequnlock_excl_bh">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_sequnlock_excl_bh</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.read_sequnlock_excl_bh" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>stop a seqlock_t softirq-disabled locking reader section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.read_seqlock_excl_irq">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_seqlock_excl_irq</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.read_seqlock_excl_irq" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>start a non-interruptible seqlock_t locking reader section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>_irq variant of <a class="reference internal" href="#c.read_seqlock_excl" title="read_seqlock_excl"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqlock_excl()</span></code></a>. Use this only if the seqlock_t
+write side section, <em>or other read sections</em>, can be invoked from a
+hardirq context.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.read_sequnlock_excl_irq">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_sequnlock_excl_irq</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.read_sequnlock_excl_irq" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>end an interrupts-disabled seqlock_t locking reader section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+</dl>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.read_seqlock_excl_irqsave">
+<span class="sig-name descname"><span class="n"><span class="pre">read_seqlock_excl_irqsave</span></span></span><a class="headerlink" href="#c.read_seqlock_excl_irqsave" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">read_seqlock_excl_irqsave</span> <span class="pre">(lock,</span> <span class="pre">flags)</span></code></p>
+<blockquote>
+<div><p>start a non-interruptible seqlock_t locking reader section</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">lock</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">flags</span></code></dt><dd><p>Stack-allocated storage for saving caller's local interrupt
+state, to be passed to <a class="reference internal" href="#c.read_sequnlock_excl_irqrestore" title="read_sequnlock_excl_irqrestore"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_sequnlock_excl_irqrestore()</span></code></a>.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>_irqsave variant of <a class="reference internal" href="#c.read_seqlock_excl" title="read_seqlock_excl"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqlock_excl()</span></code></a>. Use this only if the seqlock_t
+write side section, <em>or other read sections</em>, can be invoked from a
+hardirq context.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.read_sequnlock_excl_irqrestore">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_sequnlock_excl_irqrestore</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sl</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">flags</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.read_sequnlock_excl_irqrestore" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>end non-interruptible seqlock_t locking reader section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*sl</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">long</span> <span class="pre">flags</span></code></dt><dd><p>Caller saved interrupt state, from <a class="reference internal" href="#c.read_seqlock_excl_irqsave" title="read_seqlock_excl_irqsave"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqlock_excl_irqsave()</span></code></a></p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.read_seqbegin_or_lock">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_seqbegin_or_lock</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lock</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">seq</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.read_seqbegin_or_lock" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>begin a seqlock_t lockless or locking reader</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*lock</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">*seq</span></code></dt><dd><p>Marker and return parameter. If the passed value is even, the
+reader will become a <em>lockless</em> seqlock_t reader as in <a class="reference internal" href="#c.read_seqbegin" title="read_seqbegin"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqbegin()</span></code></a>.
+If the passed value is odd, the reader will become a <em>locking</em> reader
+as in <a class="reference internal" href="#c.read_seqlock_excl" title="read_seqlock_excl"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqlock_excl()</span></code></a>.  In the first call to this function, the
+caller <em>must</em> initialize and pass an even value to <strong>seq</strong>; this way, a
+lockless read can be optimistically tried first.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>read_seqbegin_or_lock is an API designed to optimistically try a normal
+lockless seqlock_t read section first.  If an odd counter is found, the
+lockless read trial has failed, and the next read iteration transforms
+itself into a full seqlock_t locking reader.</p>
+<p>This is typically used to avoid seqlock_t lockless readers starvation
+(too much retry loops) in the case of a sharp spike in write side
+activity.</p>
+<p>Check <a class="reference internal" href="#"><span class="doc">Sequence counters and sequential locks</span></a> for template example code.</p>
+<p><strong>Context</strong></p>
+<p>if the seqlock_t write section, <em>or other read sections</em>, can
+be invoked from hardirq or softirq contexts, use the _irqsave or _bh
+variant of this function instead.</p>
+<p><strong>Return</strong></p>
+<p>the encountered sequence counter value, through the <strong>seq</strong>
+parameter, which is overloaded as a return parameter. This returned
+value must be checked with <a class="reference internal" href="#c.need_seqretry" title="need_seqretry"><code class="xref c c-func docutils literal notranslate"><span class="pre">need_seqretry()</span></code></a>. If the read section need to
+be retried, this returned value must also be passed as the <strong>seq</strong>
+parameter of the next <a class="reference internal" href="#c.read_seqbegin_or_lock" title="read_seqbegin_or_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqbegin_or_lock()</span></code></a> iteration.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.need_seqretry">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">need_seqretry</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lock</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">seq</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.need_seqretry" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>validate seqlock_t &quot;locking or lockless&quot; read section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*lock</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">seq</span></code></dt><dd><p>sequence count, from <a class="reference internal" href="#c.read_seqbegin_or_lock" title="read_seqbegin_or_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqbegin_or_lock()</span></code></a></p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>true if a read section retry is required, false otherwise</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.done_seqretry">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">done_seqretry</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lock</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">seq</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.done_seqretry" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>end seqlock_t &quot;locking or lockless&quot; reader section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*lock</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">seq</span></code></dt><dd><p>count, from <a class="reference internal" href="#c.read_seqbegin_or_lock" title="read_seqbegin_or_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqbegin_or_lock()</span></code></a></p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>done_seqretry finishes the seqlock_t read side critical section started
+with <a class="reference internal" href="#c.read_seqbegin_or_lock" title="read_seqbegin_or_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqbegin_or_lock()</span></code></a> and validated by <a class="reference internal" href="#c.need_seqretry" title="need_seqretry"><code class="xref c c-func docutils literal notranslate"><span class="pre">need_seqretry()</span></code></a>.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.read_seqbegin_or_lock_irqsave">
+<span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">read_seqbegin_or_lock_irqsave</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lock</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">seq</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.read_seqbegin_or_lock_irqsave" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>begin a seqlock_t lockless reader, or a non-interruptible locking reader</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*lock</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">*seq</span></code></dt><dd><p>Marker and return parameter. Check <a class="reference internal" href="#c.read_seqbegin_or_lock" title="read_seqbegin_or_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqbegin_or_lock()</span></code></a>.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>This is the _irqsave variant of <a class="reference internal" href="#c.read_seqbegin_or_lock" title="read_seqbegin_or_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqbegin_or_lock()</span></code></a>. Use it only if
+the seqlock_t write section, <em>or other read sections</em>, can be invoked
+from hardirq context.</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>The saved local interrupts state in case of a locking reader, to
+be passed to <a class="reference internal" href="#c.done_seqretry_irqrestore" title="done_seqretry_irqrestore"><code class="xref c c-func docutils literal notranslate"><span class="pre">done_seqretry_irqrestore()</span></code></a>.</p></li>
+<li><p>The encountered sequence counter value, returned through <strong>seq</strong>
+overloaded as a return parameter. Check <a class="reference internal" href="#c.read_seqbegin_or_lock" title="read_seqbegin_or_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqbegin_or_lock()</span></code></a>.</p></li>
+</ol>
+</div></blockquote>
+<p><strong>Note</strong></p>
+<p>Interrupts will be disabled only for &quot;locking reader&quot; mode.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.done_seqretry_irqrestore">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">done_seqretry_irqrestore</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">seqlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lock</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">seq</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">flags</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.done_seqretry_irqrestore" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>end a seqlock_t lockless reader, or a non-interruptible locking reader section</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">seqlock_t</span> <span class="pre">*lock</span></code></dt><dd><p>Pointer to seqlock_t</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">seq</span></code></dt><dd><p>Count, from <a class="reference internal" href="#c.read_seqbegin_or_lock_irqsave" title="read_seqbegin_or_lock_irqsave"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqbegin_or_lock_irqsave()</span></code></a></p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">long</span> <span class="pre">flags</span></code></dt><dd><p>Caller's saved local interrupt state in case of a locking
+reader, also from <a class="reference internal" href="#c.read_seqbegin_or_lock_irqsave" title="read_seqbegin_or_lock_irqsave"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqbegin_or_lock_irqsave()</span></code></a></p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>This is the _irqrestore variant of <a class="reference internal" href="#c.done_seqretry" title="done_seqretry"><code class="xref c c-func docutils literal notranslate"><span class="pre">done_seqretry()</span></code></a>. The read section
+must've been opened with <a class="reference internal" href="#c.read_seqbegin_or_lock_irqsave" title="read_seqbegin_or_lock_irqsave"><code class="xref c c-func docutils literal notranslate"><span class="pre">read_seqbegin_or_lock_irqsave()</span></code></a>, and validated
+by <a class="reference internal" href="#c.need_seqretry" title="need_seqretry"><code class="xref c c-func docutils literal notranslate"><span class="pre">need_seqretry()</span></code></a>.</p>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/locking/seqlock.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

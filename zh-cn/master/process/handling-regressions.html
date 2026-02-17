@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Handling regressions &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/process/handling-regressions.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="Security bugs" href="security-bugs.html" />
+    <link rel="prev" title="Debugging and tracing in the media subsystem" href="debugging/media_specific_debugging_guide.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">All development-process docs</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#an-introduction-to-how-kernel-development-works">An introduction to how kernel development works</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#tools-and-technical-guides-for-kernel-developers">Tools and technical guides for kernel developers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#policy-guides-and-developer-statements">Policy guides and developer statements</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#dealing-with-bugs">Dealing with bugs</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="debugging/index.html">Debugging advice for Linux Kernel developers</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Handling regressions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="security-bugs.html">Security bugs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cve.html">CVEs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="embargoed-hardware-issues.html">Embargoed hardware issues</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#maintainer-information">Maintainer information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#other-material">Other material</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/process/handling-regressions.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="handling-regressions">
+<h1>Handling regressions<a class="headerlink" href="#handling-regressions" title="Link to this heading">¶</a></h1>
+<p><em>We don't cause regressions</em> -- this document describes what this &quot;first rule of
+Linux kernel development&quot; means in practice for developers. It complements
+<a class="reference internal" href="../admin-guide/reporting-regressions.html"><span class="doc">Reporting regressions</span></a>, which covers the topic from a
+user's point of view; if you never read that text, go and at least skim over it
+before continuing here.</p>
+<section id="the-important-bits-aka-the-tl-dr">
+<h2>The important bits (aka &quot;The TL;DR&quot;)<a class="headerlink" href="#the-important-bits-aka-the-tl-dr" title="Link to this heading">¶</a></h2>
+<ol class="arabic">
+<li><p>Ensure subscribers of the <a class="reference external" href="https://lore.kernel.org/regressions/">regression mailing list</a>
+(<a class="reference external" href="mailto:regressions&#37;&#52;&#48;lists&#46;linux&#46;dev">regressions<span>&#64;</span>lists<span>&#46;</span>linux<span>&#46;</span>dev</a>) quickly become aware of any new regression
+report:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>When receiving a mailed report that did not CC the list, bring it into the
+loop by immediately sending at least a brief &quot;Reply-all&quot; with the list
+CCed.</p></li>
+<li><p>Forward or bounce any reports submitted in bug trackers to the list.</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>Make the Linux kernel regression tracking bot &quot;regzbot&quot; track the issue (this
+is optional, but recommended):</p>
+<blockquote>
+<div><ul>
+<li><p>For mailed reports, check if the reporter included a line like <code class="docutils literal notranslate"><span class="pre">#regzbot</span>
+<span class="pre">introduced:</span> <span class="pre">v5.13..v5.14-rc1</span></code>. If not, send a reply (with the regressions
+list in CC) containing a paragraph like the following, which tells regzbot
+when the issue started to happen:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#regzbot ^introduced: 1f2e3d4c5b6a
+</pre></div>
+</div>
+</li>
+<li><p>When forwarding reports from a bug tracker to the regressions list (see
+above), include a paragraph like the following:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#regzbot introduced: v5.13..v5.14-rc1
+#regzbot from: Some N. Ice Human &lt;some.human@example.com&gt;
+#regzbot monitor: http://some.bugtracker.example.com/ticket?id=123456789
+</pre></div>
+</div>
+</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>When submitting fixes for regressions, add &quot;Closes:&quot; tags to the patch
+description pointing to all places where the issue was reported, as
+mandated by <a class="reference internal" href="submitting-patches.html"><span class="doc">Submitting patches: the essential guide to getting your code into the kernel</span></a> and
+<a class="reference internal" href="5.Posting.html#development-posting"><span class="std std-ref">Documentation/process/5.Posting.rst</span></a>. If you are
+only fixing part of the issue that caused the regression, you may use
+&quot;Link:&quot; tags instead. regzbot currently makes no distinction between the
+two.</p></li>
+<li><p>Try to fix regressions quickly once the culprit has been identified; fixes
+for most regressions should be merged within two weeks, but some need to be
+resolved within two or three days.</p></li>
+</ol>
+</section>
+<section id="all-the-details-on-linux-kernel-regressions-relevant-for-developers">
+<h2>All the details on Linux kernel regressions relevant for developers<a class="headerlink" href="#all-the-details-on-linux-kernel-regressions-relevant-for-developers" title="Link to this heading">¶</a></h2>
+<section id="the-important-basics-in-more-detail">
+<h3>The important basics in more detail<a class="headerlink" href="#the-important-basics-in-more-detail" title="Link to this heading">¶</a></h3>
+<section id="what-to-do-when-receiving-regression-reports">
+<h4>What to do when receiving regression reports<a class="headerlink" href="#what-to-do-when-receiving-regression-reports" title="Link to this heading">¶</a></h4>
+<p>Ensure the Linux kernel's regression tracker and others subscribers of the
+<a class="reference external" href="https://lore.kernel.org/regressions/">regression mailing list</a>
+(<a class="reference external" href="mailto:regressions&#37;&#52;&#48;lists&#46;linux&#46;dev">regressions<span>&#64;</span>lists<span>&#46;</span>linux<span>&#46;</span>dev</a>) become aware of any newly reported regression:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>When you receive a report by mail that did not CC the list, immediately bring
+it into the loop by sending at least a brief &quot;Reply-all&quot; with the list CCed;
+try to ensure it gets CCed again in case you reply to a reply that omitted
+the list.</p></li>
+<li><p>If a report submitted in a bug tracker hits your Inbox, forward or bounce it
+to the list. Consider checking the list archives beforehand, if the reporter
+already forwarded the report as instructed by
+<a class="reference internal" href="../admin-guide/reporting-issues.html"><span class="doc">Reporting issues</span></a>.</p></li>
+</ul>
+</div></blockquote>
+<p>When doing either, consider making the Linux kernel regression tracking bot
+&quot;regzbot&quot; immediately start tracking the issue:</p>
+<blockquote>
+<div><ul>
+<li><p>For mailed reports, check if the reporter included a &quot;regzbot command&quot; like
+<code class="docutils literal notranslate"><span class="pre">#regzbot</span> <span class="pre">introduced:</span> <span class="pre">1f2e3d4c5b6a</span></code>. If not, send a reply (with the
+regressions list in CC) with a paragraph like the following::</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#regzbot ^introduced: v5.13..v5.14-rc1
+</pre></div>
+</div>
+<p>This tells regzbot the version range in which the issue started to happen;
+you can specify a range using commit-ids as well or state a single commit-id
+in case the reporter bisected the culprit.</p>
+<p>Note the caret (^) before the &quot;introduced&quot;: it tells regzbot to treat the
+parent mail (the one you reply to) as the initial report for the regression
+you want to see tracked; that's important, as regzbot will later look out
+for patches with &quot;Closes:&quot; tags pointing to the report in the archives on
+lore.kernel.org.</p>
+</li>
+<li><p>When forwarding a regression reported to a bug tracker, include a paragraph
+with these regzbot commands:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#regzbot introduced: 1f2e3d4c5b6a
+#regzbot from: Some N. Ice Human &lt;some.human@example.com&gt;
+#regzbot monitor: http://some.bugtracker.example.com/ticket?id=123456789
+</pre></div>
+</div>
+<p>Regzbot will then automatically associate patches with the report that
+contain &quot;Closes:&quot; tags pointing to your mail or the mentioned ticket.</p>
+</li>
+</ul>
+</div></blockquote>
+</section>
+<section id="what-s-important-when-fixing-regressions">
+<h4>What's important when fixing regressions<a class="headerlink" href="#what-s-important-when-fixing-regressions" title="Link to this heading">¶</a></h4>
+<p>You don't need to do anything special when submitting fixes for regression, just
+remember to do what <a class="reference internal" href="submitting-patches.html"><span class="doc">Submitting patches: the essential guide to getting your code into the kernel</span></a>,
+<a class="reference internal" href="5.Posting.html#development-posting"><span class="std std-ref">Documentation/process/5.Posting.rst</span></a>, and
+<a class="reference internal" href="stable-kernel-rules.html"><span class="doc">Everything you ever wanted to know about Linux -stable releases</span></a> already explain in more detail:</p>
+<blockquote>
+<div><ul>
+<li><p>Point to all places where the issue was reported using &quot;Closes:&quot; tags:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Closes: https://lore.kernel.org/r/30th.anniversary.repost@klaava.Helsinki.FI/
+Closes: https://bugzilla.kernel.org/show_bug.cgi?id=1234567890
+</pre></div>
+</div>
+<p>If you are only fixing part of the issue, you may use &quot;Link:&quot; instead as
+described in the first document mentioned above. regzbot currently treats
+both of these equivalently and considers the linked reports as resolved.</p>
+</li>
+<li><p>Add a &quot;Fixes:&quot; tag to specify the commit causing the regression.</p></li>
+<li><p>If the culprit was merged in an earlier development cycle, explicitly mark
+the fix for backporting using the <code class="docutils literal notranslate"><span class="pre">Cc:</span> <span class="pre">stable&#64;vger.kernel.org</span></code> tag.</p></li>
+</ul>
+</div></blockquote>
+<p>All this is expected from you and important when it comes to regression, as
+these tags are of great value for everyone (you included) that might be looking
+into the issue weeks, months, or years later. These tags are also crucial for
+tools and scripts used by other kernel developers or Linux distributions; one of
+these tools is regzbot, which heavily relies on the &quot;Closes:&quot; tags to associate
+reports for regression with changes resolving them.</p>
+</section>
+<section id="expectations-and-best-practices-for-fixing-regressions">
+<h4>Expectations and best practices for fixing regressions<a class="headerlink" href="#expectations-and-best-practices-for-fixing-regressions" title="Link to this heading">¶</a></h4>
+<p>As a Linux kernel developer, you are expected to give your best to prevent
+situations where a regression caused by a recent change of yours leaves users
+only these options:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Run a kernel with a regression that impacts usage.</p></li>
+<li><p>Switch to an older or newer kernel series.</p></li>
+<li><p>Continue running an outdated and thus potentially insecure kernel for more
+than three weeks after the regression's culprit was identified. Ideally it
+should be less than two. And it ought to be just a few days, if the issue is
+severe or affects many users -- either in general or in prevalent
+environments.</p></li>
+</ul>
+</div></blockquote>
+<p>How to realize that in practice depends on various factors. Use the following
+rules of thumb as a guide.</p>
+<p>In general:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Prioritize work on regressions over all other Linux kernel work, unless the
+latter concerns a severe issue (e.g. acute security vulnerability, data loss,
+bricked hardware, ...).</p></li>
+<li><p>Expedite fixing mainline regressions that recently made it into a proper
+mainline, stable, or longterm release (either directly or via backport).</p></li>
+<li><p>Do not consider regressions from the current cycle as something that can wait
+till the end of the cycle, as the issue might discourage or prevent users and
+CI systems from testing mainline now or generally.</p></li>
+<li><p>Work with the required care to avoid additional or bigger damage, even if
+resolving an issue then might take longer than outlined below.</p></li>
+</ul>
+</div></blockquote>
+<p>On timing once the culprit of a regression is known:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Aim to mainline a fix within two or three days, if the issue is severe or
+bothering many users -- either in general or in prevalent conditions like a
+particular hardware environment, distribution, or stable/longterm series.</p></li>
+<li><p>Aim to mainline a fix by Sunday after the next, if the culprit made it
+into a recent mainline, stable, or longterm release (either directly or via
+backport); if the culprit became known early during a week and is simple to
+resolve, try to mainline the fix within the same week.</p></li>
+<li><p>For other regressions, aim to mainline fixes before the hindmost Sunday
+within the next three weeks. One or two Sundays later are acceptable, if the
+regression is something people can live with easily for a while -- like a
+mild performance regression.</p></li>
+<li><p>It's strongly discouraged to delay mainlining regression fixes till the next
+merge window, except when the fix is extraordinarily risky or when the
+culprit was mainlined more than a year ago.</p></li>
+</ul>
+</div></blockquote>
+<p>On procedure:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Always consider reverting the culprit, as it's often the quickest and least
+dangerous way to fix a regression. Don't worry about mainlining a fixed
+variant later: that should be straight-forward, as most of the code went
+through review once already.</p></li>
+<li><p>Try to resolve any regressions introduced in mainline during the past
+twelve months before the current development cycle ends: Linus wants such
+regressions to be handled like those from the current cycle, unless fixing
+bears unusual risks.</p></li>
+<li><p>Consider CCing Linus on discussions or patch review, if a regression seems
+tangly. Do the same in precarious or urgent cases -- especially if the
+subsystem maintainer might be unavailable. Also CC the stable team, when you
+know such a regression made it into a mainline, stable, or longterm release.</p></li>
+<li><p>For urgent regressions, consider asking Linus to pick up the fix straight
+from the mailing list: he is totally fine with that for uncontroversial
+fixes. Ideally though such requests should happen in accordance with the
+subsystem maintainers or come directly from them.</p></li>
+<li><p>In case you are unsure if a fix is worth the risk applying just days before
+a new mainline release, send Linus a mail with the usual lists and people in
+CC; in it, summarize the situation while asking him to consider picking up
+the fix straight from the list. He then himself can make the call and when
+needed even postpone the release. Such requests again should ideally happen
+in accordance with the subsystem maintainers or come directly from them.</p></li>
+</ul>
+</div></blockquote>
+<p>Regarding stable and longterm kernels:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>You are free to leave regressions to the stable team, if they at no point in
+time occurred with mainline or were fixed there already.</p></li>
+<li><p>If a regression made it into a proper mainline release during the past
+twelve months, ensure to tag the fix with &quot;Cc: <a class="reference external" href="mailto:stable&#37;&#52;&#48;vger&#46;kernel&#46;org">stable<span>&#64;</span>vger<span>&#46;</span>kernel<span>&#46;</span>org</a>&quot;, as a
+&quot;Fixes:&quot; tag alone does not guarantee a backport. Please add the same tag,
+in case you know the culprit was backported to stable or longterm kernels.</p></li>
+<li><p>When receiving reports about regressions in recent stable or longterm kernel
+series, please evaluate at least briefly if the issue might happen in current
+mainline as well -- and if that seems likely, take hold of the report. If in
+doubt, ask the reporter to check mainline.</p></li>
+<li><p>Whenever you want to swiftly resolve a regression that recently also made it
+into a proper mainline, stable, or longterm release, fix it quickly in
+mainline; when appropriate thus involve Linus to fast-track the fix (see
+above). That's because the stable team normally does neither revert nor fix
+any changes that cause the same problems in mainline.</p></li>
+<li><p>In case of urgent regression fixes you might want to ensure prompt
+backporting by dropping the stable team a note once the fix was mainlined;
+this is especially advisable during merge windows and shortly thereafter, as
+the fix otherwise might land at the end of a huge patch queue.</p></li>
+</ul>
+</div></blockquote>
+<p>On patch flow:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Developers, when trying to reach the time periods mentioned above, remember
+to account for the time it takes to get fixes tested, reviewed, and merged by
+Linus, ideally with them being in linux-next at least briefly. Hence, if a
+fix is urgent, make it obvious to ensure others handle it appropriately.</p></li>
+<li><p>Reviewers, you are kindly asked to assist developers in reaching the time
+periods mentioned above by reviewing regression fixes in a timely manner.</p></li>
+<li><p>Subsystem maintainers, you likewise are encouraged to expedite the handling
+of regression fixes. Thus evaluate if skipping linux-next is an option for
+the particular fix. Also consider sending git pull requests more often than
+usual when needed. And try to avoid holding onto regression fixes over
+weekends -- especially when the fix is marked for backporting.</p></li>
+</ul>
+</div></blockquote>
+</section>
+</section>
+<section id="more-aspects-regarding-regressions-developers-should-be-aware-of">
+<h3>More aspects regarding regressions developers should be aware of<a class="headerlink" href="#more-aspects-regarding-regressions-developers-should-be-aware-of" title="Link to this heading">¶</a></h3>
+<section id="how-to-deal-with-changes-where-a-risk-of-regression-is-known">
+<h4>How to deal with changes where a risk of regression is known<a class="headerlink" href="#how-to-deal-with-changes-where-a-risk-of-regression-is-known" title="Link to this heading">¶</a></h4>
+<p>Evaluate how big the risk of regressions is, for example by performing a code
+search in Linux distributions and Git forges. Also consider asking other
+developers or projects likely to be affected to evaluate or even test the
+proposed change; if problems surface, maybe some solution acceptable for all
+can be found.</p>
+<p>If the risk of regressions in the end seems to be relatively small, go ahead
+with the change, but let all involved parties know about the risk. Hence, make
+sure your patch description makes this aspect obvious. Once the change is
+merged, tell the Linux kernel's regression tracker and the regressions mailing
+list about the risk, so everyone has the change on the radar in case reports
+trickle in. Depending on the risk, you also might want to ask the subsystem
+maintainer to mention the issue in his mainline pull request.</p>
+</section>
+<section id="what-else-is-there-to-known-about-regressions">
+<h4>What else is there to known about regressions?<a class="headerlink" href="#what-else-is-there-to-known-about-regressions" title="Link to this heading">¶</a></h4>
+<p>Check out <a class="reference internal" href="../admin-guide/reporting-regressions.html"><span class="doc">Reporting regressions</span></a>, it covers a lot
+of other aspects you want might want to be aware of:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>the purpose of the &quot;no regressions&quot; rule</p></li>
+<li><p>what issues actually qualify as regression</p></li>
+<li><p>who's in charge for finding the root cause of a regression</p></li>
+<li><p>how to handle tricky situations, e.g. when a regression is caused by a
+security fix or when fixing a regression might cause another one</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="whom-to-ask-for-advice-when-it-comes-to-regressions">
+<h4>Whom to ask for advice when it comes to regressions<a class="headerlink" href="#whom-to-ask-for-advice-when-it-comes-to-regressions" title="Link to this heading">¶</a></h4>
+<p>Send a mail to the regressions mailing list (<a class="reference external" href="mailto:regressions&#37;&#52;&#48;lists&#46;linux&#46;dev">regressions<span>&#64;</span>lists<span>&#46;</span>linux<span>&#46;</span>dev</a>) while
+CCing the Linux kernel's regression tracker (<a class="reference external" href="mailto:regressions&#37;&#52;&#48;leemhuis&#46;info">regressions<span>&#64;</span>leemhuis<span>&#46;</span>info</a>); if the
+issue might better be dealt with in private, feel free to omit the list.</p>
+</section>
+</section>
+<section id="more-about-regression-tracking-and-regzbot">
+<h3>More about regression tracking and regzbot<a class="headerlink" href="#more-about-regression-tracking-and-regzbot" title="Link to this heading">¶</a></h3>
+<section id="why-the-linux-kernel-has-a-regression-tracker-and-why-is-regzbot-used">
+<h4>Why the Linux kernel has a regression tracker, and why is regzbot used?<a class="headerlink" href="#why-the-linux-kernel-has-a-regression-tracker-and-why-is-regzbot-used" title="Link to this heading">¶</a></h4>
+<p>Rules like &quot;no regressions&quot; need someone to ensure they are followed, otherwise
+they are broken either accidentally or on purpose. History has shown this to be
+true for the Linux kernel as well. That's why Thorsten Leemhuis volunteered to
+keep an eye on things as the Linux kernel's regression tracker, who's
+occasionally helped by other people. Neither of them are paid to do this,
+that's why regression tracking is done on a best effort basis.</p>
+<p>Earlier attempts to manually track regressions have shown it's an exhausting and
+frustrating work, which is why they were abandoned after a while. To prevent
+this from happening again, Thorsten developed regzbot to facilitate the work,
+with the long term goal to automate regression tracking as much as possible for
+everyone involved.</p>
+</section>
+<section id="how-does-regression-tracking-work-with-regzbot">
+<h4>How does regression tracking work with regzbot?<a class="headerlink" href="#how-does-regression-tracking-work-with-regzbot" title="Link to this heading">¶</a></h4>
+<p>The bot watches for replies to reports of tracked regressions. Additionally,
+it's looking out for posted or committed patches referencing such reports
+with &quot;Closes:&quot; tags; replies to such patch postings are tracked as well.
+Combined this data provides good insights into the current state of the fixing
+process.</p>
+<p>Regzbot tries to do its job with as little overhead as possible for both
+reporters and developers. In fact, only reporters are burdened with an extra
+duty: they need to tell regzbot about the regression report using the <code class="docutils literal notranslate"><span class="pre">#regzbot</span>
+<span class="pre">introduced</span></code> command outlined above; if they don't do that, someone else can
+take care of that using <code class="docutils literal notranslate"><span class="pre">#regzbot</span> <span class="pre">^introduced</span></code>.</p>
+<p>For developers there normally is no extra work involved, they just need to make
+sure to do something that was expected long before regzbot came to light: add
+links to the patch description pointing to all reports about the issue fixed.</p>
+</section>
+<section id="do-i-have-to-use-regzbot">
+<h4>Do I have to use regzbot?<a class="headerlink" href="#do-i-have-to-use-regzbot" title="Link to this heading">¶</a></h4>
+<p>It's in the interest of everyone if you do, as kernel maintainers like Linus
+Torvalds partly rely on regzbot's tracking in their work -- for example when
+deciding to release a new version or extend the development phase. For this they
+need to be aware of all unfixed regression; to do that, Linus is known to look
+into the weekly reports sent by regzbot.</p>
+</section>
+<section id="do-i-have-to-tell-regzbot-about-every-regression-i-stumble-upon">
+<h4>Do I have to tell regzbot about every regression I stumble upon?<a class="headerlink" href="#do-i-have-to-tell-regzbot-about-every-regression-i-stumble-upon" title="Link to this heading">¶</a></h4>
+<p>Ideally yes: we are all humans and easily forget problems when something more
+important unexpectedly comes up -- for example a bigger problem in the Linux
+kernel or something in real life that's keeping us away from keyboards for a
+while. Hence, it's best to tell regzbot about every regression, except when you
+immediately write a fix and commit it to a tree regularly merged to the affected
+kernel series.</p>
+</section>
+<section id="how-to-see-which-regressions-regzbot-tracks-currently">
+<h4>How to see which regressions regzbot tracks currently?<a class="headerlink" href="#how-to-see-which-regressions-regzbot-tracks-currently" title="Link to this heading">¶</a></h4>
+<p>Check <a class="reference external" href="https://linux-regtracking.leemhuis.info/regzbot/">regzbot's web-interface</a>
+for the latest info; alternatively, <a class="reference external" href="https://lore.kernel.org/lkml/?q=%22Linux+regressions+report%22+f%3Aregzbot">search for the latest regression report</a>,
+which regzbot normally sends out once a week on Sunday evening (UTC), which is a
+few hours before Linus usually publishes new (pre-)releases.</p>
+</section>
+<section id="what-places-is-regzbot-monitoring">
+<h4>What places is regzbot monitoring?<a class="headerlink" href="#what-places-is-regzbot-monitoring" title="Link to this heading">¶</a></h4>
+<p>Regzbot is watching the most important Linux mailing lists as well as the git
+repositories of linux-next, mainline, and stable/longterm.</p>
+</section>
+<section id="what-kind-of-issues-are-supposed-to-be-tracked-by-regzbot">
+<h4>What kind of issues are supposed to be tracked by regzbot?<a class="headerlink" href="#what-kind-of-issues-are-supposed-to-be-tracked-by-regzbot" title="Link to this heading">¶</a></h4>
+<p>The bot is meant to track regressions, hence please don't involve regzbot for
+regular issues. But it's okay for the Linux kernel's regression tracker if you
+use regzbot to track severe issues, like reports about hangs, corrupted data,
+or internal errors (Panic, Oops, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">BUG()</span></code>, warning, ...).</p>
+</section>
+<section id="can-i-add-regressions-found-by-ci-systems-to-regzbot-s-tracking">
+<h4>Can I add regressions found by CI systems to regzbot's tracking?<a class="headerlink" href="#can-i-add-regressions-found-by-ci-systems-to-regzbot-s-tracking" title="Link to this heading">¶</a></h4>
+<p>Feel free to do so, if the particular regression likely has impact on practical
+use cases and thus might be noticed by users; hence, please don't involve
+regzbot for theoretical regressions unlikely to show themselves in real world
+usage.</p>
+</section>
+<section id="how-to-interact-with-regzbot">
+<h4>How to interact with regzbot?<a class="headerlink" href="#how-to-interact-with-regzbot" title="Link to this heading">¶</a></h4>
+<p>By using a 'regzbot command' in a direct or indirect reply to the mail with the
+regression report. These commands need to be in their own paragraph (IOW: they
+need to be separated from the rest of the mail using blank lines).</p>
+<p>One such command is <code class="docutils literal notranslate"><span class="pre">#regzbot</span> <span class="pre">introduced:</span> <span class="pre">&lt;version</span> <span class="pre">or</span> <span class="pre">commit&gt;</span></code>, which makes
+regzbot consider your mail as a regressions report added to the tracking, as
+already described above; <code class="docutils literal notranslate"><span class="pre">#regzbot</span> <span class="pre">^introduced:</span> <span class="pre">&lt;version</span> <span class="pre">or</span> <span class="pre">commit&gt;</span></code> is another
+such command, which makes regzbot consider the parent mail as a report for a
+regression which it starts to track.</p>
+<p>Once one of those two commands has been utilized, other regzbot commands can be
+used in direct or indirect replies to the report. You can write them below one
+of the <cite>introduced</cite> commands or in replies to the mail that used one of them
+or itself is a reply to that mail:</p>
+<blockquote>
+<div><ul>
+<li><p>Set or update the title:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#regzbot title: foo
+</pre></div>
+</div>
+</li>
+<li><p>Monitor a discussion or bugzilla.kernel.org ticket where additions aspects of
+the issue or a fix are discussed -- for example the posting of a patch fixing
+the regression:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#regzbot monitor: https://lore.kernel.org/all/30th.anniversary.repost@klaava.Helsinki.FI/
+</pre></div>
+</div>
+<p>Monitoring only works for lore.kernel.org and bugzilla.kernel.org; regzbot
+will consider all messages in that thread or ticket as related to the fixing
+process.</p>
+</li>
+<li><p>Point to a place with further details of interest, like a mailing list post
+or a ticket in a bug tracker that are slightly related, but about a different
+topic:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#regzbot link: https://bugzilla.kernel.org/show_bug.cgi?id=123456789
+</pre></div>
+</div>
+</li>
+<li><p>Mark a regression as fixed by a commit that is heading upstream or already
+landed:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#regzbot fix: 1f2e3d4c5d
+</pre></div>
+</div>
+</li>
+<li><p>Mark a regression as a duplicate of another one already tracked by regzbot:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#regzbot dup-of: https://lore.kernel.org/all/30th.anniversary.repost@klaava.Helsinki.FI/
+</pre></div>
+</div>
+</li>
+<li><p>Mark a regression as invalid:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#regzbot invalid: wasn&#39;t a regression, problem has always existed
+</pre></div>
+</div>
+</li>
+</ul>
+</div></blockquote>
+</section>
+<section id="is-there-more-to-tell-about-regzbot-and-its-commands">
+<h4>Is there more to tell about regzbot and its commands?<a class="headerlink" href="#is-there-more-to-tell-about-regzbot-and-its-commands" title="Link to this heading">¶</a></h4>
+<p>More detailed and up-to-date information about the Linux
+kernel's regression tracking bot can be found on its
+<a class="reference external" href="https://gitlab.com/knurd42/regzbot">project page</a>, which among others
+contains a <a class="reference external" href="https://gitlab.com/knurd42/regzbot/-/blob/main/docs/getting_started.md">getting started guide</a>
+and <a class="reference external" href="https://gitlab.com/knurd42/regzbot/-/blob/main/docs/reference.md">reference documentation</a>
+which both cover more details than the above section.</p>
+</section>
+</section>
+<section id="quotes-from-linus-about-regression">
+<h3>Quotes from Linus about regression<a class="headerlink" href="#quotes-from-linus-about-regression" title="Link to this heading">¶</a></h3>
+<p>Find below a few real life examples of how Linus Torvalds expects regressions to
+be handled:</p>
+<blockquote>
+<div><ul>
+<li><p>From <a class="reference external" href="https://lore.kernel.org/lkml/CA+55aFwiiQYJ+YoLKCXjN_beDVfu38mg=Ggg5LFOcqHE8Qi7Zw&#64;mail.gmail.com/">2017-10-26 (1/2)</a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>If you break existing user space setups THAT IS A REGRESSION.
+
+It&#39;s not ok to say &quot;but we&#39;ll fix the user space setup&quot;.
+
+Really. NOT OK.
+
+[...]
+
+The first rule is:
+
+ - we don&#39;t cause regressions
+
+and the corollary is that when regressions *do* occur, we admit to
+them and fix them, instead of blaming user space.
+
+The fact that you have apparently been denying the regression now for
+three weeks means that I will revert, and I will stop pulling apparmor
+requests until the people involved understand how kernel development
+is done.
+</pre></div>
+</div>
+</li>
+<li><p>From <a class="reference external" href="https://lore.kernel.org/lkml/CA+55aFxW7NMAMvYhkvz1UPbUTUJewRt6Yb51QAx5RtrWOwjebg&#64;mail.gmail.com/">2017-10-26 (2/2)</a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>People should basically always feel like they can update their kernel
+and simply not have to worry about it.
+
+I refuse to introduce &quot;you can only update the kernel if you also
+update that other program&quot; kind of limitations. If the kernel used to
+work for you, the rule is that it continues to work for you.
+
+There have been exceptions, but they are few and far between, and they
+generally have some major and fundamental reasons for having happened,
+that were basically entirely unavoidable, and people _tried_hard_ to
+avoid them. Maybe we can&#39;t practically support the hardware any more
+after it is decades old and nobody uses it with modern kernels any
+more. Maybe there&#39;s a serious security issue with how we did things,
+and people actually depended on that fundamentally broken model. Maybe
+there was some fundamental other breakage that just _had_ to have a
+flag day for very core and fundamental reasons.
+
+And notice that this is very much about *breaking* peoples environments.
+
+Behavioral changes happen, and maybe we don&#39;t even support some
+feature any more. There&#39;s a number of fields in /proc/&lt;pid&gt;/stat that
+are printed out as zeroes, simply because they don&#39;t even *exist* in
+the kernel any more, or because showing them was a mistake (typically
+an information leak). But the numbers got replaced by zeroes, so that
+the code that used to parse the fields still works. The user might not
+see everything they used to see, and so behavior is clearly different,
+but things still _work_, even if they might no longer show sensitive
+(or no longer relevant) information.
+
+But if something actually breaks, then the change must get fixed or
+reverted. And it gets fixed in the *kernel*. Not by saying &quot;well, fix
+your user space then&quot;. It was a kernel change that exposed the
+problem, it needs to be the kernel that corrects for it, because we
+have a &quot;upgrade in place&quot; model. We don&#39;t have a &quot;upgrade with new
+user space&quot;.
+
+And I seriously will refuse to take code from people who do not
+understand and honor this very simple rule.
+
+This rule is also not going to change.
+
+And yes, I realize that the kernel is &quot;special&quot; in this respect. I&#39;m
+proud of it.
+
+I have seen, and can point to, lots of projects that go &quot;We need to
+break that use case in order to make progress&quot; or &quot;you relied on
+undocumented behavior, it sucks to be you&quot; or &quot;there&#39;s a better way to
+do what you want to do, and you have to change to that new better
+way&quot;, and I simply don&#39;t think that&#39;s acceptable outside of very early
+alpha releases that have experimental users that know what they signed
+up for. The kernel hasn&#39;t been in that situation for the last two
+decades.
+
+We do API breakage _inside_ the kernel all the time. We will fix
+internal problems by saying &quot;you now need to do XYZ&quot;, but then it&#39;s
+about internal kernel API&#39;s, and the people who do that then also
+obviously have to fix up all the in-kernel users of that API. Nobody
+can say &quot;I now broke the API you used, and now _you_ need to fix it
+up&quot;. Whoever broke something gets to fix it too.
+
+And we simply do not break user space.
+</pre></div>
+</div>
+</li>
+<li><p>From <a class="reference external" href="https://lore.kernel.org/all/CAHk-=wiVi7mSrsMP=fLXQrXK_UimybW=ziLOwSzFTtoXUacWVQ&#64;mail.gmail.com/">2020-05-21</a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>The rules about regressions have never been about any kind of
+documented behavior, or where the code lives.
+
+The rules about regressions are always about &quot;breaks user workflow&quot;.
+
+Users are literally the _only_ thing that matters.
+
+No amount of &quot;you shouldn&#39;t have used this&quot; or &quot;that behavior was
+undefined, it&#39;s your own fault your app broke&quot; or &quot;that used to work
+simply because of a kernel bug&quot; is at all relevant.
+
+Now, reality is never entirely black-and-white. So we&#39;ve had things
+like &quot;serious security issue&quot; etc that just forces us to make changes
+that may break user space. But even then the rule is that we don&#39;t
+really have other options that would allow things to continue.
+
+And obviously, if users take years to even notice that something
+broke, or if we have sane ways to work around the breakage that
+doesn&#39;t make for too much trouble for users (ie &quot;ok, there are a
+handful of users, and they can use a kernel command line to work
+around it&quot; kind of things) we&#39;ve also been a bit less strict.
+
+But no, &quot;that was documented to be broken&quot; (whether it&#39;s because the
+code was in staging or because the man-page said something else) is
+irrelevant. If staging code is so useful that people end up using it,
+that means that it&#39;s basically regular kernel code with a flag saying
+&quot;please clean this up&quot;.
+
+The other side of the coin is that people who talk about &quot;API
+stability&quot; are entirely wrong. API&#39;s don&#39;t matter either. You can make
+any changes to an API you like - as long as nobody notices.
+
+Again, the regression rule is not about documentation, not about
+API&#39;s, and not about the phase of the moon.
+
+It&#39;s entirely about &quot;we caused problems for user space that used to work&quot;.
+</pre></div>
+</div>
+</li>
+<li><p>From <a class="reference external" href="https://lore.kernel.org/all/CA+55aFzUvbGjD8nQ-+3oiMBx14c_6zOj2n7KLN3UsJ-qsd4Dcw&#64;mail.gmail.com/">2017-11-05</a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>And our regression rule has never been &quot;behavior doesn&#39;t change&quot;.
+That would mean that we could never make any changes at all.
+
+For example, we do things like add new error handling etc all the
+time, which we then sometimes even add tests for in our kselftest
+directory.
+
+So clearly behavior changes all the time and we don&#39;t consider that a
+regression per se.
+
+The rule for a regression for the kernel is that some real user
+workflow breaks. Not some test. Not a &quot;look, I used to be able to do
+X, now I can&#39;t&quot;.
+</pre></div>
+</div>
+</li>
+<li><p>From <a class="reference external" href="https://lore.kernel.org/all/CA+55aFwWZX=CXmWDTkDGb36kf12XmTehmQjbiMPCqCRG2hi9kw&#64;mail.gmail.com/">2018-08-03</a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>YOU ARE MISSING THE #1 KERNEL RULE.
+
+We do not regress, and we do not regress exactly because your are 100% wrong.
+
+And the reason you state for your opinion is in fact exactly *WHY* you
+are wrong.
+
+Your &quot;good reasons&quot; are pure and utter garbage.
+
+The whole point of &quot;we do not regress&quot; is so that people can upgrade
+the kernel and never have to worry about it.
+
+&gt; Kernel had a bug which has been fixed
+
+That is *ENTIRELY* immaterial.
+
+Guys, whether something was buggy or not DOES NOT MATTER.
+
+Why?
+
+Bugs happen. That&#39;s a fact of life. Arguing that &quot;we had to break
+something because we were fixing a bug&quot; is completely insane. We fix
+tens of bugs every single day, thinking that &quot;fixing a bug&quot; means that
+we can break something is simply NOT TRUE.
+
+So bugs simply aren&#39;t even relevant to the discussion. They happen,
+they get found, they get fixed, and it has nothing to do with &quot;we
+break users&quot;.
+
+Because the only thing that matters IS THE USER.
+
+How hard is that to understand?
+
+Anybody who uses &quot;but it was buggy&quot; as an argument is entirely missing
+the point. As far as the USER was concerned, it wasn&#39;t buggy - it
+worked for him/her.
+
+Maybe it worked *because* the user had taken the bug into account,
+maybe it worked because the user didn&#39;t notice - again, it doesn&#39;t
+matter. It worked for the user.
+
+Breaking a user workflow for a &quot;bug&quot; is absolutely the WORST reason
+for breakage you can imagine.
+
+It&#39;s basically saying &quot;I took something that worked, and I broke it,
+but now it&#39;s better&quot;. Do you not see how f*cking insane that statement
+is?
+
+And without users, your program is not a program, it&#39;s a pointless
+piece of code that you might as well throw away.
+
+Seriously. This is *why* the #1 rule for kernel development is &quot;we
+don&#39;t break users&quot;. Because &quot;I fixed a bug&quot; is absolutely NOT AN
+ARGUMENT if that bug fix broke a user setup. You actually introduced a
+MUCH BIGGER bug by &quot;fixing&quot; something that the user clearly didn&#39;t
+even care about.
+
+And dammit, we upgrade the kernel ALL THE TIME without upgrading any
+other programs at all. It is absolutely required, because flag-days
+and dependencies are horribly bad.
+
+And it is also required simply because I as a kernel developer do not
+upgrade random other tools that I don&#39;t even care about as I develop
+the kernel, and I want any of my users to feel safe doing the same
+time.
+
+So no. Your rule is COMPLETELY wrong. If you cannot upgrade a kernel
+without upgrading some other random binary, then we have a problem.
+</pre></div>
+</div>
+</li>
+<li><p>From <a class="reference external" href="https://lore.kernel.org/all/CAHk-=wiUVqHN76YUwhkjZzwTdjMMJf_zN4+u7vEJjmEGh3recw&#64;mail.gmail.com/">2021-06-05</a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>THERE ARE NO VALID ARGUMENTS FOR REGRESSIONS.
+
+Honestly, security people need to understand that &quot;not working&quot; is not
+a success case of security. It&#39;s a failure case.
+
+Yes, &quot;not working&quot; may be secure. But security in that case is *pointless*.
+</pre></div>
+</div>
+</li>
+<li><p>From <a class="reference external" href="https://lore.kernel.org/all/BANLkTim9YvResB+PwRp7QTK-a5VNg2PvmQ&#64;mail.gmail.com/">2011-05-06 (1/3)</a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Binary compatibility is more important.
+
+And if binaries don&#39;t use the interface to parse the format (or just
+parse it wrongly - see the fairly recent example of adding uuid&#39;s to
+/proc/self/mountinfo), then it&#39;s a regression.
+
+And regressions get reverted, unless there are security issues or
+similar that makes us go &quot;Oh Gods, we really have to break things&quot;.
+
+I don&#39;t understand why this simple logic is so hard for some kernel
+developers to understand. Reality matters. Your personal wishes matter
+NOT AT ALL.
+
+If you made an interface that can be used without parsing the
+interface description, then we&#39;re stuck with the interface. Theory
+simply doesn&#39;t matter.
+
+You could help fix the tools, and try to avoid the compatibility
+issues that way. There aren&#39;t that many of them.
+</pre></div>
+</div>
+<p>From <a class="reference external" href="https://lore.kernel.org/all/BANLkTi=KVXjKR82sqsz4gwjr+E0vtqCmvA&#64;mail.gmail.com/">2011-05-06 (2/3)</a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>it&#39;s clearly NOT an internal tracepoint. By definition. It&#39;s being
+used by powertop.
+</pre></div>
+</div>
+<p>From <a class="reference external" href="https://lore.kernel.org/all/BANLkTinazaXRdGovYL7rRVp+j6HbJ7pzhg&#64;mail.gmail.com/">2011-05-06 (3/3)</a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>We have programs that use that ABI and thus it&#39;s a regression if they break.
+</pre></div>
+</div>
+</li>
+<li><p>From <a class="reference external" href="https://lore.kernel.org/all/CA+55aFwnLJ+0sjx92EGREGTWOx84wwKaraSzpTNJwPVV8edw8g&#64;mail.gmail.com/">2012-07-06</a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>&gt; Now this got me wondering if Debian _unstable_ actually qualifies as a
+&gt; standard distro userspace.
+
+Oh, if the kernel breaks some standard user space, that counts. Tons
+of people run Debian unstable
+</pre></div>
+</div>
+</li>
+<li><p>From <a class="reference external" href="https://lore.kernel.org/lkml/CAHk-=wiP4K8DRJWsCo=20hn_6054xBamGKF2kPgUzpB5aMaofA&#64;mail.gmail.com/">2019-09-15</a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>One _particularly_ last-minute revert is the top-most commit (ignoring
+the version change itself) done just before the release, and while
+it&#39;s very annoying, it&#39;s perhaps also instructive.
+
+What&#39;s instructive about it is that I reverted a commit that wasn&#39;t
+actually buggy. In fact, it was doing exactly what it set out to do,
+and did it very well. In fact it did it _so_ well that the much
+improved IO patterns it caused then ended up revealing a user-visible
+regression due to a real bug in a completely unrelated area.
+
+The actual details of that regression are not the reason I point that
+revert out as instructive, though. It&#39;s more that it&#39;s an instructive
+example of what counts as a regression, and what the whole &quot;no
+regressions&quot; kernel rule means. The reverted commit didn&#39;t change any
+API&#39;s, and it didn&#39;t introduce any new bugs. But it ended up exposing
+another problem, and as such caused a kernel upgrade to fail for a
+user. So it got reverted.
+
+The point here being that we revert based on user-reported _behavior_,
+not based on some &quot;it changes the ABI&quot; or &quot;it caused a bug&quot; concept.
+The problem was really pre-existing, and it just didn&#39;t happen to
+trigger before. The better IO patterns introduced by the change just
+happened to expose an old bug, and people had grown to depend on the
+previously benign behavior of that old issue.
+
+And never fear, we&#39;ll re-introduce the fix that improved on the IO
+patterns once we&#39;ve decided just how to handle the fact that we had a
+bad interaction with an interface that people had then just happened
+to rely on incidental behavior for before. It&#39;s just that we&#39;ll have
+to hash through how to do that (there are no less than three different
+patches by three different developers being discussed, and there might
+be more coming...). In the meantime, I reverted the thing that exposed
+the problem to users for this release, even if I hope it will be
+re-introduced (perhaps even backported as a stable patch) once we have
+consensus about the issue it exposed.
+
+Take-away from the whole thing: it&#39;s not about whether you change the
+kernel-userspace ABI, or fix a bug, or about whether the old code
+&quot;should never have worked in the first place&quot;. It&#39;s about whether
+something breaks existing users&#39; workflow.
+
+Anyway, that was my little aside on the whole regression thing.  Since
+it&#39;s that &quot;first rule of kernel programming&quot;, I felt it is perhaps
+worth just bringing it up every once in a while
+</pre></div>
+</div>
+</li>
+</ul>
+</div></blockquote>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/process/handling-regressions.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

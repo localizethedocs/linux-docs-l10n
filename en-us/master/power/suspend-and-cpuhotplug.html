@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Interaction of Suspend code (S3) with the CPU hotplug infrastructure &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/power/suspend-and-cpuhotplug.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="System Suspend and Device Interrupts" href="suspend-and-interrupts.html" />
+    <link rel="prev" title="Debugging Kernel Shutdown Hangs with pstore" href="shutdown-debugging.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/power/suspend-and-cpuhotplug.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="interaction-of-suspend-code-s3-with-the-cpu-hotplug-infrastructure">
+<h1>Interaction of Suspend code (S3) with the CPU hotplug infrastructure<a class="headerlink" href="#interaction-of-suspend-code-s3-with-the-cpu-hotplug-infrastructure" title="Link to this heading">¶</a></h1>
+<ol class="upperalpha simple" start="3">
+<li><p>2011 - 2014 Srivatsa S. Bhat &lt;<a class="reference external" href="mailto:srivatsa&#46;bhat&#37;&#52;&#48;linux&#46;vnet&#46;ibm&#46;com">srivatsa<span>&#46;</span>bhat<span>&#64;</span>linux<span>&#46;</span>vnet<span>&#46;</span>ibm<span>&#46;</span>com</a>&gt;</p></li>
+</ol>
+<section id="i-differences-between-cpu-hotplug-and-suspend-to-ram">
+<h2>I. Differences between CPU hotplug and Suspend-to-RAM<a class="headerlink" href="#i-differences-between-cpu-hotplug-and-suspend-to-ram" title="Link to this heading">¶</a></h2>
+<p>How does the regular CPU hotplug code differ from how the Suspend-to-RAM
+infrastructure uses it internally? And where do they share common code?</p>
+<p>Well, a picture is worth a thousand words... So ASCII art follows :-)</p>
+<p>[This depicts the current design in the kernel, and focuses only on the
+interactions involving the freezer and CPU hotplug and also tries to explain
+the locking involved. It outlines the notifications involved as well.
+But please note that here, only the call paths are illustrated, with the aim
+of describing where they take different paths and where they share code.
+What happens when regular CPU hotplug and Suspend-to-RAM race with each other
+is not depicted here.]</p>
+<p>On a high level, the suspend-resume cycle goes like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>|Freeze| -&gt; |Disable nonboot| -&gt; |Do suspend| -&gt; |Enable nonboot| -&gt; |Thaw |
+|tasks |    |     cpus      |    |          |    |     cpus     |    |tasks|
+</pre></div>
+</div>
+<p>More details follow:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>                              Suspend call path
+                              -----------------
+
+                                Write &#39;mem&#39; to
+                              /sys/power/state
+                                  sysfs file
+                                      |
+                                      v
+                             Acquire system_transition_mutex lock
+                                      |
+                                      v
+                           Send PM_SUSPEND_PREPARE
+                                 notifications
+                                      |
+                                      v
+                                 Freeze tasks
+                                      |
+                                      |
+                                      v
+                            freeze_secondary_cpus()
+                                 /* start */
+                                      |
+                                      v
+                          Acquire cpu_add_remove_lock
+                                      |
+                                      v
+                           Iterate over CURRENTLY
+                                 online CPUs
+                                      |
+                                      |
+                                      |                ----------
+                                      v                          | L
+           ======&gt;               _cpu_down()                     |
+          |              [This takes cpuhotplug.lock             |
+Common    |               before taking down the CPU             |
+ code     |               and releases it when done]             | O
+          |            While it is at it, notifications          |
+          |            are sent when notable events occur,       |
+           ======&gt;     by running all registered callbacks.      |
+                                      |                          | O
+                                      |                          |
+                                      |                          |
+                                      v                          |
+                          Note down these cpus in                | P
+                              frozen_cpus mask         ----------
+                                      |
+                                      v
+                         Disable regular cpu hotplug
+                      by increasing cpu_hotplug_disabled
+                                      |
+                                      v
+                          Release cpu_add_remove_lock
+                                      |
+                                      v
+                     /* freeze_secondary_cpus() complete */
+                                      |
+                                      v
+                                 Do suspend
+</pre></div>
+</div>
+<p>Resuming back is likewise, with the counterparts being (in the order of
+execution during resume):</p>
+<ul>
+<li><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">thaw_secondary_cpus()</span></code> which involves:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>|  Acquire cpu_add_remove_lock
+|  Decrease cpu_hotplug_disabled, thereby enabling regular cpu hotplug
+|  Call _cpu_up() [for all those cpus in the frozen_cpus mask, in a loop]
+|  Release cpu_add_remove_lock
+v
+</pre></div>
+</div>
+</li>
+<li><p>thaw tasks</p></li>
+<li><p>send PM_POST_SUSPEND notifications</p></li>
+<li><p>Release system_transition_mutex lock.</p></li>
+</ul>
+<p>It is to be noted here that the system_transition_mutex lock is acquired at the
+very beginning, when we are just starting out to suspend, and then released only
+after the entire cycle is complete (i.e., suspend + resume).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>                        Regular CPU hotplug call path
+                        -----------------------------
+
+                              Write 0 (or 1) to
+                     /sys/devices/system/cpu/cpu*/online
+                                  sysfs file
+                                      |
+                                      |
+                                      v
+                                  cpu_down()
+                                      |
+                                      v
+                         Acquire cpu_add_remove_lock
+                                      |
+                                      v
+                        If cpu_hotplug_disabled &gt; 0
+                              return gracefully
+                                      |
+                                      |
+                                      v
+           ======&gt;                _cpu_down()
+          |              [This takes cpuhotplug.lock
+Common    |               before taking down the CPU
+ code     |               and releases it when done]
+          |            While it is at it, notifications
+          |           are sent when notable events occur,
+           ======&gt;    by running all registered callbacks.
+                                      |
+                                      |
+                                      v
+                        Release cpu_add_remove_lock
+                             [That&#39;s it!, for
+                            regular CPU hotplug]
+</pre></div>
+</div>
+<p>So, as can be seen from the two diagrams (the parts marked as “Common code”),
+regular CPU hotplug and the suspend code path converge at the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">_cpu_down()</span></code> and
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">_cpu_up()</span></code> functions. They differ in the arguments passed to these functions,
+in that during regular CPU hotplug, 0 is passed for the ‘tasks_frozen’
+argument. But during suspend, since the tasks are already frozen by the time
+the non-boot CPUs are offlined or onlined, the _cpu_*() functions are called
+with the ‘tasks_frozen’ argument set to 1.
+[See below for some known issues regarding this.]</p>
+<section id="important-files-and-functions-entry-points">
+<h3>Important files and functions/entry points:<a class="headerlink" href="#important-files-and-functions-entry-points" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>kernel/power/process.c : <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">freeze_processes()</span></code>, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">thaw_processes()</span></code></p></li>
+<li><p>kernel/power/suspend.c : <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">suspend_prepare()</span></code>, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">suspend_enter()</span></code>, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">suspend_finish()</span></code></p></li>
+<li><p>kernel/cpu.c: cpu_[up|down](), _cpu_[up|down](),
+[disable|enable]<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">_nonboot_cpus()</span></code></p></li>
+</ul>
+</section>
+<section id="ii-what-are-the-issues-involved-in-cpu-hotplug">
+<h3>II. What are the issues involved in CPU hotplug?<a class="headerlink" href="#ii-what-are-the-issues-involved-in-cpu-hotplug" title="Link to this heading">¶</a></h3>
+<p>There are some interesting situations involving CPU hotplug and microcode
+update on the CPUs, as discussed below:</p>
+<p>[Please bear in mind that the kernel requests the microcode images from
+userspace, using the <a class="reference internal" href="../driver-api/firmware/request_firmware.html#c.request_firmware" title="request_firmware"><code class="xref c c-func docutils literal notranslate"><span class="pre">request_firmware()</span></code></a> function defined in
+drivers/base/firmware_loader/main.c]</p>
+<ol class="loweralpha">
+<li><p>When all the CPUs are identical:</p>
+<p>This is the most common situation and it is quite straightforward: we want
+to apply the same microcode revision to each of the CPUs.
+To give an example of x86, the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">collect_cpu_info()</span></code> function defined in
+arch/x86/kernel/microcode_core.c helps in discovering the type of the CPU
+and thereby in applying the correct microcode revision to it.
+But note that the kernel does not maintain a common microcode image for the
+all CPUs, in order to handle case ‘b’ described below.</p>
+</li>
+<li><p>When some of the CPUs are different than the rest:</p>
+<p>In this case since we probably need to apply different microcode revisions
+to different CPUs, the kernel maintains a copy of the correct microcode
+image for each CPU (after appropriate CPU type/model discovery using
+functions such as <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">collect_cpu_info()</span></code>).</p>
+</li>
+<li><p>When a CPU is physically hot-unplugged and a new (and possibly different
+type of) CPU is hot-plugged into the system:</p>
+<p>In the current design of the kernel, whenever a CPU is taken offline during
+a regular CPU hotplug operation, upon receiving the CPU_DEAD notification
+(which is sent by the CPU hotplug code), the microcode update driver’s
+callback for that event reacts by freeing the kernel’s copy of the
+microcode image for that CPU.</p>
+<p>Hence, when a new CPU is brought online, since the kernel finds that it
+doesn’t have the microcode image, it does the CPU type/model discovery
+afresh and then requests the userspace for the appropriate microcode image
+for that CPU, which is subsequently applied.</p>
+<p>For example, in x86, the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">mc_cpu_callback()</span></code> function (which is the microcode
+update driver’s callback registered for CPU hotplug events) calls
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">microcode_update_cpu()</span></code> which would call <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">microcode_init_cpu()</span></code> in this case,
+instead of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">microcode_resume_cpu()</span></code> when it finds that the kernel doesn’t
+have a valid microcode image. This ensures that the CPU type/model
+discovery is performed and the right microcode is applied to the CPU after
+getting it from userspace.</p>
+</li>
+<li><p>Handling microcode update during suspend/hibernate:</p>
+<p>Strictly speaking, during a CPU hotplug operation which does not involve
+physically removing or inserting CPUs, the CPUs are not actually powered
+off during a CPU offline. They are just put to the lowest C-states possible.
+Hence, in such a case, it is not really necessary to re-apply microcode
+when the CPUs are brought back online, since they wouldn’t have lost the
+image during the CPU offline operation.</p>
+<p>This is the usual scenario encountered during a resume after a suspend.
+However, in the case of hibernation, since all the CPUs are completely
+powered off, during restore it becomes necessary to apply the microcode
+images to all the CPUs.</p>
+<p>[Note that we don’t expect someone to physically pull out nodes and insert
+nodes with a different type of CPUs in-between a suspend-resume or a
+hibernate/restore cycle.]</p>
+<p>In the current design of the kernel however, during a CPU offline operation
+as part of the suspend/hibernate cycle (cpuhp_tasks_frozen is set),
+the existing copy of microcode image in the kernel is not freed up.
+And during the CPU online operations (during resume/restore), since the
+kernel finds that it already has copies of the microcode images for all the
+CPUs, it just applies them to the CPUs, avoiding any re-discovery of CPU
+type/model and the need for validating whether the microcode revisions are
+right for the CPUs or not (due to the above assumption that physical CPU
+hotplug will not be done in-between suspend/resume or hibernate/restore
+cycles).</p>
+</li>
+</ol>
+</section>
+</section>
+<section id="iii-known-problems">
+<h2>III. Known problems<a class="headerlink" href="#iii-known-problems" title="Link to this heading">¶</a></h2>
+<p>Are there any known problems when regular CPU hotplug and suspend race
+with each other?</p>
+<p>Yes, they are listed below:</p>
+<ol class="arabic">
+<li><p>When invoking regular CPU hotplug, the ‘tasks_frozen’ argument passed to
+the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">_cpu_down()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">_cpu_up()</span></code> functions is <em>always</em> 0.
+This might not reflect the true current state of the system, since the
+tasks could have been frozen by an out-of-band event such as a suspend
+operation in progress. Hence, the cpuhp_tasks_frozen variable will not
+reflect the frozen state and the CPU hotplug callbacks which evaluate
+that variable might execute the wrong code path.</p></li>
+<li><p>If a regular CPU hotplug stress test happens to race with the freezer due
+to a suspend operation in progress at the same time, then we could hit the
+situation described below:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>A regular cpu online operation continues its journey from userspace
+into the kernel, since the freezing has not yet begun.</p></li>
+<li><p>Then freezer gets to work and freezes userspace.</p></li>
+<li><p>If cpu online has not yet completed the microcode update stuff by now,
+it will now start waiting on the frozen userspace in the
+TASK_UNINTERRUPTIBLE state, in order to get the microcode image.</p></li>
+<li><p>Now the freezer continues and tries to freeze the remaining tasks. But
+due to this wait mentioned above, the freezer won’t be able to freeze
+the cpu online hotplug task and hence freezing of tasks fails.</p></li>
+</ul>
+</div></blockquote>
+<p>As a result of this task freezing failure, the suspend operation gets
+aborted.</p>
+</li>
+</ol>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/power/suspend-and-cpuhotplug.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

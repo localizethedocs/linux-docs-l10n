@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>1. How To Write Linux PCI Drivers &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/PCI/pci.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="2. The PCI Express Port Bus Driver Guide HOWTO" href="pciebus-howto.html" />
+    <link rel="prev" title="PCI Bus Subsystem" href="index.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../accounting/index.html">Accounting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cpu-freq/index.html">CPUFreq - CPU frequency and voltage scaling code in the Linux(TM) kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../edac/index.html">EDAC Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../fpga/index.html">FPGA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../i2c/index.html">I2C/SMBus Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../iio/index.html">Industrial I/O</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pcmcia/index.html">PCMCIA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../spi/index.html">Serial Peripheral Interface (SPI)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../w1/index.html">1-Wire Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../watchdog/index.html">Watchdog Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../virt/index.html">Virtualization Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../hwmon/index.html">Hardware Monitoring</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../accel/index.html">Compute Accelerators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../security/index.html">Security Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../crypto/index.html">Crypto API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../bpf/index.html">BPF Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usb/index.html">USB support</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">PCI Bus Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../misc-devices/index.html">Assorted Miscellaneous Devices Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../peci/index.html">PECI Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../wmi/index.html">WMI Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tee/index.html">TEE Subsystem</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/PCI/pci.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="how-to-write-linux-pci-drivers">
+<h1><span class="section-number">1. </span>How To Write Linux PCI Drivers<a class="headerlink" href="#how-to-write-linux-pci-drivers" title="Link to this heading">¶</a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">Authors<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p>Martin Mares &lt;<a class="reference external" href="mailto:mj&#37;&#52;&#48;ucw&#46;cz">mj<span>&#64;</span>ucw<span>&#46;</span>cz</a>&gt;</p></li>
+<li><p>Grant Grundler &lt;<a class="reference external" href="mailto:grundler&#37;&#52;&#48;parisc-linux&#46;org">grundler<span>&#64;</span>parisc-linux<span>&#46;</span>org</a>&gt;</p></li>
+</ul>
+</dd>
+</dl>
+<p>The world of PCI is vast and full of (mostly unpleasant) surprises.
+Since each CPU architecture implements different chip-sets and PCI devices
+have different requirements (erm, &quot;features&quot;), the result is the PCI support
+in the Linux kernel is not as trivial as one would wish. This short paper
+tries to introduce all potential driver authors to Linux APIs for
+PCI device drivers.</p>
+<p>A more complete resource is the third edition of &quot;Linux Device Drivers&quot;
+by Jonathan Corbet, Alessandro Rubini, and Greg Kroah-Hartman.
+LDD3 is available for free (under Creative Commons License) from:
+<a class="reference external" href="https://lwn.net/Kernel/LDD3/">https://lwn.net/Kernel/LDD3/</a>.</p>
+<p>However, keep in mind that all documents are subject to &quot;bit rot&quot;.
+Refer to the source code if things are not working as described here.</p>
+<p>Please send questions/comments/patches about Linux PCI API to the
+&quot;Linux PCI&quot; &lt;<a class="reference external" href="mailto:linux-pci&#37;&#52;&#48;atrey&#46;karlin&#46;mff&#46;cuni&#46;cz">linux-pci<span>&#64;</span>atrey<span>&#46;</span>karlin<span>&#46;</span>mff<span>&#46;</span>cuni<span>&#46;</span>cz</a>&gt; mailing list.</p>
+<section id="structure-of-pci-drivers">
+<h2><span class="section-number">1.1. </span>Structure of PCI drivers<a class="headerlink" href="#structure-of-pci-drivers" title="Link to this heading">¶</a></h2>
+<p>PCI drivers &quot;discover&quot; PCI devices in a system via <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_register_driver()</span></code>.
+Actually, it's the other way around. When the PCI generic code discovers
+a new device, the driver with a matching &quot;description&quot; will be notified.
+Details on this below.</p>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_register_driver()</span></code> leaves most of the probing for devices to
+the PCI layer and supports online insertion/removal of devices [thus
+supporting hot-pluggable PCI, CardBus, and Express-Card in a single driver].
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_register_driver()</span></code> call requires passing in a table of function
+pointers and thus dictates the high level structure of a driver.</p>
+<p>Once the driver knows about a PCI device and takes ownership, the
+driver generally needs to perform the following initialization:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Enable the device</p></li>
+<li><p>Request MMIO/IOP resources</p></li>
+<li><p>Set the DMA mask size (for both coherent and streaming DMA)</p></li>
+<li><p>Allocate and initialize shared control data (<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_allocate_coherent()</span></code>)</p></li>
+<li><p>Access device configuration space (if needed)</p></li>
+<li><p>Register IRQ handler (<a class="reference internal" href="../core-api/genericirq.html#c.request_irq" title="request_irq"><code class="xref c c-func docutils literal notranslate"><span class="pre">request_irq()</span></code></a>)</p></li>
+<li><p>Initialize non-PCI (i.e. LAN/SCSI/etc parts of the chip)</p></li>
+<li><p>Enable DMA/processing engines</p></li>
+</ul>
+</div></blockquote>
+<p>When done using the device, and perhaps the module needs to be unloaded,
+the driver needs to take the following steps:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Disable the device from generating IRQs</p></li>
+<li><p>Release the IRQ (<a class="reference internal" href="../core-api/genericirq.html#c.free_irq" title="free_irq"><code class="xref c c-func docutils literal notranslate"><span class="pre">free_irq()</span></code></a>)</p></li>
+<li><p>Stop all DMA activity</p></li>
+<li><p>Release DMA buffers (both streaming and coherent)</p></li>
+<li><p>Unregister from other subsystems (e.g. scsi or netdev)</p></li>
+<li><p>Release MMIO/IOP resources</p></li>
+<li><p>Disable the device</p></li>
+</ul>
+</div></blockquote>
+<p>Most of these topics are covered in the following sections.
+For the rest look at LDD3 or &lt;linux/pci.h&gt; .</p>
+<p>If the PCI subsystem is not configured (CONFIG_PCI is not set), most of
+the PCI functions described below are defined as inline functions either
+completely empty or just returning an appropriate error codes to avoid
+lots of ifdefs in the drivers.</p>
+</section>
+<section id="pci-register-driver-call">
+<h2><span class="section-number">1.2. </span>pci_register_driver() call<a class="headerlink" href="#pci-register-driver-call" title="Link to this heading">¶</a></h2>
+<p>PCI device drivers call <code class="docutils literal notranslate"><span class="pre">pci_register_driver()</span></code> during their
+initialization with a pointer to a structure describing the driver
+(<code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">pci_driver</span></code>):</p>
+<dl class="c struct">
+<dt class="sig sig-object c" id="c.pci_driver">
+<span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">pci_driver</span></span></span><a class="headerlink" href="#c.pci_driver" title="Link to this definition">¶</a><br /></dt>
+<dd><p>PCI driver structure</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Definition</strong>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct pci_driver {
+    const char              *name;
+    const struct pci_device_id *id_table;
+    int (*probe)(struct pci_dev *dev, const struct pci_device_id *id);
+    void (*remove)(struct pci_dev *dev);
+    int (*suspend)(struct pci_dev *dev, pm_message_t state);
+    int (*resume)(struct pci_dev *dev);
+    void (*shutdown)(struct pci_dev *dev);
+    int (*sriov_configure)(struct pci_dev *dev, int num_vfs);
+    int (*sriov_set_msix_vec_count)(struct pci_dev *vf, int msix_vec_count);
+    u32 (*sriov_get_vf_total_msix)(struct pci_dev *pf);
+    const struct pci_error_handlers *err_handler;
+    const struct attribute_group **groups;
+    const struct attribute_group **dev_groups;
+    struct device_driver    driver;
+    struct pci_dynids       dynids;
+    bool driver_managed_dma;
+};
+</pre></div>
+</div>
+<p><strong>Members</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">name</span></code></dt><dd><p>Driver name.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">id_table</span></code></dt><dd><p>Pointer to table of device IDs the driver is
+interested in.  Most drivers should export this
+table using MODULE_DEVICE_TABLE(pci,...).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">probe</span></code></dt><dd><p>This probing function gets called (during execution
+of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_register_driver()</span></code> for already existing
+devices or later if a new device gets inserted) for
+all PCI devices which match the ID table and are not
+&quot;owned&quot; by the other drivers yet. This function gets
+passed a &quot;<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">pci_dev</span></code> *&quot; for each device whose
+entry in the ID table matches the device. The probe
+function returns zero when the driver chooses to
+take &quot;ownership&quot; of the device or an error code
+(negative number) otherwise.
+The probe function always gets called from process
+context, so it can sleep.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">remove</span></code></dt><dd><p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">remove()</span></code> function gets called whenever a device
+being handled by this driver is removed (either during
+deregistration of the driver or when it's manually
+pulled out of a hot-pluggable slot).
+The remove function always gets called from process
+context, so it can sleep.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">suspend</span></code></dt><dd><p>Put device into low power state.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">resume</span></code></dt><dd><p>Wake device from low power state.
+(Please see <a class="reference internal" href="../power/pci.html"><span class="doc">PCI Power Management</span></a> for descriptions
+of PCI Power Management and the related functions.)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">shutdown</span></code></dt><dd><p>Hook into reboot_notifier_list (kernel/sys.c).
+Intended to stop any idling DMA operations.
+Useful for enabling wake-on-lan (NIC) or changing
+the power state of a device before reboot.
+e.g. drivers/net/e100.c.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sriov_configure</span></code></dt><dd><p>Optional driver callback to allow configuration of
+number of VFs to enable via sysfs &quot;sriov_numvfs&quot; file.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sriov_set_msix_vec_count</span></code></dt><dd><p>PF Driver callback to change number of MSI-X
+vectors on a VF. Triggered via sysfs &quot;sriov_vf_msix_count&quot;.
+This will change MSI-X Table Size in the VF Message Control
+registers.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sriov_get_vf_total_msix</span></code></dt><dd><p>PF driver callback to get the total number of
+MSI-X vectors available for distribution to the VFs.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">err_handler</span></code></dt><dd><p>See <a class="reference internal" href="pci-error-recovery.html"><span class="doc">PCI Error Recovery</span></a></p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">groups</span></code></dt><dd><p>Sysfs attribute groups.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dev_groups</span></code></dt><dd><p>Attributes attached to the device that will be
+created once it is bound to the driver.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">driver</span></code></dt><dd><p>Driver model structure.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dynids</span></code></dt><dd><p>List of dynamically added device IDs.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">driver_managed_dma</span></code></dt><dd><p>Device driver doesn't use kernel DMA API for DMA.
+For most device drivers, no need to care about this flag
+as long as all DMAs are handled through the kernel DMA API.
+For some special ones, for example VFIO drivers, they know
+how to manage the DMA themselves and set this flag so that
+the IOMMU layer will allow them to setup and manage their
+own I/O address space.</p>
+</dd>
+</dl>
+</div>
+<p>The ID table is an array of <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">pci_device_id</span></code> entries ending with an
+all-zero entry.  Definitions with static const are generally preferred.</p>
+<dl class="c struct">
+<dt class="sig sig-object c" id="c.pci_device_id">
+<span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">pci_device_id</span></span></span><a class="headerlink" href="#c.pci_device_id" title="Link to this definition">¶</a><br /></dt>
+<dd><p>PCI device ID structure</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Definition</strong>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct pci_device_id {
+    __u32 vendor, device;
+    __u32 subvendor, subdevice;
+    __u32 class, class_mask;
+    kernel_ulong_t driver_data;
+    __u32 override_only;
+};
+</pre></div>
+</div>
+<p><strong>Members</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">vendor</span></code></dt><dd><p>Vendor ID to match (or PCI_ANY_ID)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">device</span></code></dt><dd><p>Device ID to match (or PCI_ANY_ID)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">subvendor</span></code></dt><dd><p>Subsystem vendor ID to match (or PCI_ANY_ID)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">subdevice</span></code></dt><dd><p>Subsystem device ID to match (or PCI_ANY_ID)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">class</span></code></dt><dd><p>Device class, subclass, and &quot;interface&quot; to match.
+See Appendix D of the PCI Local Bus Spec or
+include/linux/pci_ids.h for a full list of classes.
+Most drivers do not need to specify class/class_mask
+as vendor/device is normally sufficient.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">class_mask</span></code></dt><dd><p>Limit which sub-fields of the class field are compared.
+See drivers/scsi/sym53c8xx_2/ for example of usage.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">driver_data</span></code></dt><dd><p>Data private to the driver.
+Most drivers don't need to use driver_data field.
+Best practice is to use driver_data as an index
+into a static list of equivalent device types,
+instead of using it as a pointer.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">override_only</span></code></dt><dd><p>Match only when dev-&gt;driver_override is this driver.</p>
+</dd>
+</dl>
+</div>
+<p>Most drivers only need <code class="docutils literal notranslate"><span class="pre">PCI_DEVICE()</span></code> or <code class="docutils literal notranslate"><span class="pre">PCI_DEVICE_CLASS()</span></code> to set up
+a pci_device_id table.</p>
+<p>New PCI IDs may be added to a device driver pci_ids table at runtime
+as shown below:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>echo &quot;vendor device subvendor subdevice class class_mask driver_data&quot; &gt; \
+/sys/bus/pci/drivers/{driver}/new_id
+</pre></div>
+</div>
+<p>All fields are passed in as hexadecimal values (no leading 0x).
+The vendor and device fields are mandatory, the others are optional. Users
+need pass only as many optional fields as necessary:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>subvendor and subdevice fields default to PCI_ANY_ID (FFFFFFFF)</p></li>
+<li><p>class and classmask fields default to 0</p></li>
+<li><p>driver_data defaults to 0UL.</p></li>
+<li><p>override_only field defaults to 0.</p></li>
+</ul>
+</div></blockquote>
+<p>Note that driver_data must match the value used by any of the pci_device_id
+entries defined in the driver. This makes the driver_data field mandatory
+if all the pci_device_id entries have a non-zero driver_data value.</p>
+<p>Once added, the driver probe routine will be invoked for any unclaimed
+PCI devices listed in its (newly updated) pci_ids list.</p>
+<p>When the driver exits, it just calls <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_unregister_driver" title="pci_unregister_driver"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_unregister_driver()</span></code></a> and the PCI layer
+automatically calls the remove hook for all devices handled by the driver.</p>
+<section id="attributes-for-driver-functions-data">
+<h3><span class="section-number">1.2.1. </span>&quot;Attributes&quot; for driver functions/data<a class="headerlink" href="#attributes-for-driver-functions-data" title="Link to this heading">¶</a></h3>
+<p>Please mark the initialization and cleanup functions where appropriate
+(the corresponding macros are defined in &lt;linux/init.h&gt;):</p>
+<blockquote>
+<div><table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>__init</p></td>
+<td><p>Initialization code. Thrown away after the driver
+initializes.</p></td>
+</tr>
+<tr class="row-even"><td><p>__exit</p></td>
+<td><p>Exit code. Ignored for non-modular drivers.</p></td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="simple">
+<dt>Tips on when/where to use the above attributes:</dt><dd><ul class="simple">
+<li><p>The <a class="reference internal" href="../driver-api/basics.html#c.module_init" title="module_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">module_init()</span></code></a>/<a class="reference internal" href="../driver-api/basics.html#c.module_exit" title="module_exit"><code class="xref c c-func docutils literal notranslate"><span class="pre">module_exit()</span></code></a> functions (and all
+initialization functions called _only_ from these)
+should be marked __init/__exit.</p></li>
+<li><p>Do not mark the <a class="reference internal" href="#c.pci_driver" title="pci_driver"><code class="xref c c-struct docutils literal notranslate"><span class="pre">struct</span> <span class="pre">pci_driver</span></code></a>.</p></li>
+<li><p>Do NOT mark a function if you are not sure which mark to use.
+Better to not mark the function than mark the function wrong.</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+</section>
+<section id="how-to-find-pci-devices-manually">
+<h2><span class="section-number">1.3. </span>How to find PCI devices manually<a class="headerlink" href="#how-to-find-pci-devices-manually" title="Link to this heading">¶</a></h2>
+<p>PCI drivers should have a really good reason for not using the
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_register_driver()</span></code> interface to search for PCI devices.
+The main reason PCI devices are controlled by multiple drivers
+is because one PCI device implements several different HW services.
+E.g. combined serial/parallel port/floppy controller.</p>
+<p>A manual search may be performed using the following constructs:</p>
+<p>Searching by vendor and device ID:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct pci_dev *dev = NULL;
+while (dev = pci_get_device(VENDOR_ID, DEVICE_ID, dev))
+        configure_device(dev);
+</pre></div>
+</div>
+<p>Searching by class ID (iterate in a similar way):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pci_get_class(CLASS_ID, dev)
+</pre></div>
+</div>
+<p>Searching by both vendor/device and subsystem vendor/device ID:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>pci_get_subsys(VENDOR_ID,DEVICE_ID, SUBSYS_VENDOR_ID, SUBSYS_DEVICE_ID, dev).
+</pre></div>
+</div>
+<p>You can use the constant PCI_ANY_ID as a wildcard replacement for
+VENDOR_ID or DEVICE_ID.  This allows searching for any device from a
+specific vendor, for example.</p>
+<p>These functions are hotplug-safe. They increment the reference count on
+the pci_dev that they return. You must eventually (possibly at module unload)
+decrement the reference count on these devices by calling <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_dev_put" title="pci_dev_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_dev_put()</span></code></a>.</p>
+</section>
+<section id="device-initialization-steps">
+<h2><span class="section-number">1.4. </span>Device Initialization Steps<a class="headerlink" href="#device-initialization-steps" title="Link to this heading">¶</a></h2>
+<p>As noted in the introduction, most PCI drivers need the following steps
+for device initialization:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Enable the device</p></li>
+<li><p>Request MMIO/IOP resources</p></li>
+<li><p>Set the DMA mask size (for both coherent and streaming DMA)</p></li>
+<li><p>Allocate and initialize shared control data (<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_allocate_coherent()</span></code>)</p></li>
+<li><p>Access device configuration space (if needed)</p></li>
+<li><p>Register IRQ handler (<a class="reference internal" href="../core-api/genericirq.html#c.request_irq" title="request_irq"><code class="xref c c-func docutils literal notranslate"><span class="pre">request_irq()</span></code></a>)</p></li>
+<li><p>Initialize non-PCI (i.e. LAN/SCSI/etc parts of the chip)</p></li>
+<li><p>Enable DMA/processing engines.</p></li>
+</ul>
+</div></blockquote>
+<p>The driver can access PCI config space registers at any time.
+(Well, almost. When running BIST, config space can go away...but
+that will just result in a PCI Bus Master Abort and config reads
+will return garbage).</p>
+<section id="enable-the-pci-device">
+<h3><span class="section-number">1.4.1. </span>Enable the PCI device<a class="headerlink" href="#enable-the-pci-device" title="Link to this heading">¶</a></h3>
+<p>Before touching any device registers, the driver needs to enable
+the PCI device by calling <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_enable_device" title="pci_enable_device"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_enable_device()</span></code></a>. This will:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>wake up the device if it was in suspended state,</p></li>
+<li><p>allocate I/O and memory regions of the device (if BIOS did not),</p></li>
+<li><p>allocate an IRQ (if BIOS did not).</p></li>
+</ul>
+</div></blockquote>
+<div class="admonition note">
+<p class="admonition-title">备注</p>
+<p><a class="reference internal" href="../driver-api/pci/pci.html#c.pci_enable_device" title="pci_enable_device"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_enable_device()</span></code></a> can fail! Check the return value.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">警告</p>
+<p>OS BUG: we don't check resource allocations before enabling those
+resources. The sequence would make more sense if we called
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_request_resources()</span></code> before calling <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_enable_device" title="pci_enable_device"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_enable_device()</span></code></a>.
+Currently, the device drivers can't detect the bug when two
+devices have been allocated the same range. This is not a common
+problem and unlikely to get fixed soon.</p>
+<p>This has been discussed before but not changed as of 2.6.19:
+<a class="reference external" href="https://lore.kernel.org/r/20060302180025.GC28895&#64;flint.arm.linux.org.uk/">https://lore.kernel.org/r/20060302180025.GC28895&#64;flint.arm.linux.org.uk/</a></p>
+</div>
+<p><a class="reference internal" href="../driver-api/pci/pci.html#c.pci_set_master" title="pci_set_master"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_set_master()</span></code></a> will enable DMA by setting the bus master bit
+in the PCI_COMMAND register. It also fixes the latency timer value if
+it's set to something bogus by the BIOS.  <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_clear_master" title="pci_clear_master"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_clear_master()</span></code></a> will
+disable DMA by clearing the bus master bit.</p>
+<p>If the PCI device can use the PCI Memory-Write-Invalidate transaction,
+call <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_set_mwi" title="pci_set_mwi"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_set_mwi()</span></code></a>.  This enables the PCI_COMMAND bit for Mem-Wr-Inval
+and also ensures that the cache line size register is set correctly.
+Check the return value of <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_set_mwi" title="pci_set_mwi"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_set_mwi()</span></code></a> as not all architectures
+or chip-sets may support Memory-Write-Invalidate.  Alternatively,
+if Mem-Wr-Inval would be nice to have but is not required, call
+<a class="reference internal" href="../driver-api/pci/pci.html#c.pci_try_set_mwi" title="pci_try_set_mwi"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_try_set_mwi()</span></code></a> to have the system do its best effort at enabling
+Mem-Wr-Inval.</p>
+</section>
+<section id="request-mmio-iop-resources">
+<h3><span class="section-number">1.4.2. </span>Request MMIO/IOP resources<a class="headerlink" href="#request-mmio-iop-resources" title="Link to this heading">¶</a></h3>
+<p>Memory (MMIO), and I/O port addresses should NOT be read directly
+from the PCI device config space. Use the values in the pci_dev structure
+as the PCI &quot;bus address&quot; might have been remapped to a &quot;host physical&quot;
+address by the arch/chip-set specific kernel support.</p>
+<p>See <a class="reference internal" href="../driver-api/io-mapping.html"><span class="doc">The io_mapping functions</span></a> for how to access device registers
+or device memory.</p>
+<p>The device driver needs to call <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_request_region" title="pci_request_region"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_request_region()</span></code></a> to verify
+no other device is already using the same address resource.
+Conversely, drivers should call <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_release_region" title="pci_release_region"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_release_region()</span></code></a> AFTER
+calling <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_disable_device" title="pci_disable_device"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_disable_device()</span></code></a>.
+The idea is to prevent two devices colliding on the same address range.</p>
+<div class="admonition tip">
+<p class="admonition-title">小技巧</p>
+<p>See OS BUG comment above. Currently (2.6.19), The driver can only
+determine MMIO and IO Port resource availability _after_ calling
+<a class="reference internal" href="../driver-api/pci/pci.html#c.pci_enable_device" title="pci_enable_device"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_enable_device()</span></code></a>.</p>
+</div>
+<p>Generic flavors of <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_request_region" title="pci_request_region"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_request_region()</span></code></a> are <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">request_mem_region()</span></code>
+(for MMIO ranges) and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">request_region()</span></code> (for IO Port ranges).
+Use these for address resources that are not described by &quot;normal&quot; PCI
+BARs.</p>
+<p>Also see <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_request_selected_regions" title="pci_request_selected_regions"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_request_selected_regions()</span></code></a> below.</p>
+</section>
+<section id="set-the-dma-mask-size">
+<h3><span class="section-number">1.4.3. </span>Set the DMA mask size<a class="headerlink" href="#set-the-dma-mask-size" title="Link to this heading">¶</a></h3>
+<div class="admonition note">
+<p class="admonition-title">备注</p>
+<p>If anything below doesn't make sense, please refer to
+<a class="reference internal" href="../core-api/dma-api.html"><span class="doc">Dynamic DMA mapping using the generic device</span></a>. This section is just a reminder that
+drivers need to indicate DMA capabilities of the device and is not
+an authoritative source for DMA interfaces.</p>
+</div>
+<p>While all drivers should explicitly indicate the DMA capability
+(e.g. 32 or 64 bit) of the PCI bus master, devices with more than
+32-bit bus master capability for streaming data need the driver
+to &quot;register&quot; this capability by calling <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_set_mask()</span></code> with
+appropriate parameters.  In general this allows more efficient DMA
+on systems where System RAM exists above 4G _physical_ address.</p>
+<p>Drivers for all PCI-X and PCIe compliant devices must call
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_set_mask()</span></code> as they are 64-bit DMA devices.</p>
+<p>Similarly, drivers must also &quot;register&quot; this capability if the device
+can directly address &quot;coherent memory&quot; in System RAM above 4G physical
+address by calling <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_set_coherent_mask()</span></code>.
+Again, this includes drivers for all PCI-X and PCIe compliant devices.
+Many 64-bit &quot;PCI&quot; devices (before PCI-X) and some PCI-X devices are
+64-bit DMA capable for payload (&quot;streaming&quot;) data but not control
+(&quot;coherent&quot;) data.</p>
+</section>
+<section id="setup-shared-control-data">
+<h3><span class="section-number">1.4.4. </span>Setup shared control data<a class="headerlink" href="#setup-shared-control-data" title="Link to this heading">¶</a></h3>
+<p>Once the DMA masks are set, the driver can allocate &quot;coherent&quot; (a.k.a. shared)
+memory.  See <a class="reference internal" href="../core-api/dma-api.html"><span class="doc">Dynamic DMA mapping using the generic device</span></a> for a full description of
+the DMA APIs. This section is just a reminder that it needs to be done
+before enabling DMA on the device.</p>
+</section>
+<section id="initialize-device-registers">
+<h3><span class="section-number">1.4.5. </span>Initialize device registers<a class="headerlink" href="#initialize-device-registers" title="Link to this heading">¶</a></h3>
+<p>Some drivers will need specific &quot;capability&quot; fields programmed
+or other &quot;vendor specific&quot; register initialized or reset.
+E.g. clearing pending interrupts.</p>
+</section>
+<section id="register-irq-handler">
+<h3><span class="section-number">1.4.6. </span>Register IRQ handler<a class="headerlink" href="#register-irq-handler" title="Link to this heading">¶</a></h3>
+<p>While calling <a class="reference internal" href="../core-api/genericirq.html#c.request_irq" title="request_irq"><code class="xref c c-func docutils literal notranslate"><span class="pre">request_irq()</span></code></a> is the last step described here,
+this is often just another intermediate step to initialize a device.
+This step can often be deferred until the device is opened for use.</p>
+<p>All interrupt handlers for IRQ lines should be registered with IRQF_SHARED
+and use the devid to map IRQs to devices (remember that all PCI IRQ lines
+can be shared).</p>
+<p><a class="reference internal" href="../core-api/genericirq.html#c.request_irq" title="request_irq"><code class="xref c c-func docutils literal notranslate"><span class="pre">request_irq()</span></code></a> will associate an interrupt handler and device handle
+with an interrupt number. Historically interrupt numbers represent
+IRQ lines which run from the PCI device to the Interrupt controller.
+With MSI and MSI-X (more below) the interrupt number is a CPU &quot;vector&quot;.</p>
+<p><a class="reference internal" href="../core-api/genericirq.html#c.request_irq" title="request_irq"><code class="xref c c-func docutils literal notranslate"><span class="pre">request_irq()</span></code></a> also enables the interrupt. Make sure the device is
+quiesced and does not have any interrupts pending before registering
+the interrupt handler.</p>
+<p>MSI and MSI-X are PCI capabilities. Both are &quot;Message Signaled Interrupts&quot;
+which deliver interrupts to the CPU via a DMA write to a Local APIC.
+The fundamental difference between MSI and MSI-X is how multiple
+&quot;vectors&quot; get allocated. MSI requires contiguous blocks of vectors
+while MSI-X can allocate several individual ones.</p>
+<p>MSI capability can be enabled by calling <a class="reference internal" href="msi-howto.html#c.pci_alloc_irq_vectors" title="pci_alloc_irq_vectors"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_alloc_irq_vectors()</span></code></a> with the
+PCI_IRQ_MSI and/or PCI_IRQ_MSIX flags before calling <a class="reference internal" href="../core-api/genericirq.html#c.request_irq" title="request_irq"><code class="xref c c-func docutils literal notranslate"><span class="pre">request_irq()</span></code></a>. This
+causes the PCI support to program CPU vector data into the PCI device
+capability registers. Many architectures, chip-sets, or BIOSes do NOT
+support MSI or MSI-X and a call to pci_alloc_irq_vectors with just
+the PCI_IRQ_MSI and PCI_IRQ_MSIX flags will fail, so try to always
+specify PCI_IRQ_INTX as well.</p>
+<p>Drivers that have different interrupt handlers for MSI/MSI-X and
+legacy INTx should chose the right one based on the msi_enabled
+and msix_enabled flags in the pci_dev structure after calling
+pci_alloc_irq_vectors.</p>
+<p>There are (at least) two really good reasons for using MSI:</p>
+<ol class="arabic simple">
+<li><p>MSI is an exclusive interrupt vector by definition.
+This means the interrupt handler doesn't have to verify
+its device caused the interrupt.</p></li>
+<li><p>MSI avoids DMA/IRQ race conditions. DMA to host memory is guaranteed
+to be visible to the host CPU(s) when the MSI is delivered. This
+is important for both data coherency and avoiding stale control data.
+This guarantee allows the driver to omit MMIO reads to flush
+the DMA stream.</p></li>
+</ol>
+<p>See drivers/infiniband/hw/mthca/ or drivers/net/tg3.c for examples
+of MSI/MSI-X usage.</p>
+</section>
+</section>
+<section id="pci-device-shutdown">
+<h2><span class="section-number">1.5. </span>PCI device shutdown<a class="headerlink" href="#pci-device-shutdown" title="Link to this heading">¶</a></h2>
+<p>When a PCI device driver is being unloaded, most of the following
+steps need to be performed:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Disable the device from generating IRQs</p></li>
+<li><p>Release the IRQ (<a class="reference internal" href="../core-api/genericirq.html#c.free_irq" title="free_irq"><code class="xref c c-func docutils literal notranslate"><span class="pre">free_irq()</span></code></a>)</p></li>
+<li><p>Stop all DMA activity</p></li>
+<li><p>Release DMA buffers (both streaming and coherent)</p></li>
+<li><p>Unregister from other subsystems (e.g. scsi or netdev)</p></li>
+<li><p>Disable device from responding to MMIO/IO Port addresses</p></li>
+<li><p>Release MMIO/IO Port resource(s)</p></li>
+</ul>
+</div></blockquote>
+<section id="stop-irqs-on-the-device">
+<h3><span class="section-number">1.5.1. </span>Stop IRQs on the device<a class="headerlink" href="#stop-irqs-on-the-device" title="Link to this heading">¶</a></h3>
+<p>How to do this is chip/device specific. If it's not done, it opens
+the possibility of a &quot;screaming interrupt&quot; if (and only if)
+the IRQ is shared with another device.</p>
+<p>When the shared IRQ handler is &quot;unhooked&quot;, the remaining devices
+using the same IRQ line will still need the IRQ enabled. Thus if the
+&quot;unhooked&quot; device asserts IRQ line, the system will respond assuming
+it was one of the remaining devices asserted the IRQ line. Since none
+of the other devices will handle the IRQ, the system will &quot;hang&quot; until
+it decides the IRQ isn't going to get handled and masks the IRQ (100,000
+iterations later). Once the shared IRQ is masked, the remaining devices
+will stop functioning properly. Not a nice situation.</p>
+<p>This is another reason to use MSI or MSI-X if it's available.
+MSI and MSI-X are defined to be exclusive interrupts and thus
+are not susceptible to the &quot;screaming interrupt&quot; problem.</p>
+</section>
+<section id="release-the-irq">
+<h3><span class="section-number">1.5.2. </span>Release the IRQ<a class="headerlink" href="#release-the-irq" title="Link to this heading">¶</a></h3>
+<p>Once the device is quiesced (no more IRQs), one can call <a class="reference internal" href="../core-api/genericirq.html#c.free_irq" title="free_irq"><code class="xref c c-func docutils literal notranslate"><span class="pre">free_irq()</span></code></a>.
+This function will return control once any pending IRQs are handled,
+&quot;unhook&quot; the drivers IRQ handler from that IRQ, and finally release
+the IRQ if no one else is using it.</p>
+</section>
+<section id="stop-all-dma-activity">
+<h3><span class="section-number">1.5.3. </span>Stop all DMA activity<a class="headerlink" href="#stop-all-dma-activity" title="Link to this heading">¶</a></h3>
+<p>It's extremely important to stop all DMA operations BEFORE attempting
+to deallocate DMA control data. Failure to do so can result in memory
+corruption, hangs, and on some chip-sets a hard crash.</p>
+<p>Stopping DMA after stopping the IRQs can avoid races where the
+IRQ handler might restart DMA engines.</p>
+<p>While this step sounds obvious and trivial, several &quot;mature&quot; drivers
+didn't get this step right in the past.</p>
+</section>
+<section id="release-dma-buffers">
+<h3><span class="section-number">1.5.4. </span>Release DMA buffers<a class="headerlink" href="#release-dma-buffers" title="Link to this heading">¶</a></h3>
+<p>Once DMA is stopped, clean up streaming DMA first.
+I.e. unmap data buffers and return buffers to &quot;upstream&quot;
+owners if there is one.</p>
+<p>Then clean up &quot;coherent&quot; buffers which contain the control data.</p>
+<p>See <a class="reference internal" href="../core-api/dma-api.html"><span class="doc">Dynamic DMA mapping using the generic device</span></a> for details on unmapping interfaces.</p>
+</section>
+<section id="unregister-from-other-subsystems">
+<h3><span class="section-number">1.5.5. </span>Unregister from other subsystems<a class="headerlink" href="#unregister-from-other-subsystems" title="Link to this heading">¶</a></h3>
+<p>Most low level PCI device drivers support some other subsystem
+like USB, ALSA, SCSI, NetDev, Infiniband, etc. Make sure your
+driver isn't losing resources from that other subsystem.
+If this happens, typically the symptom is an Oops (panic) when
+the subsystem attempts to call into a driver that has been unloaded.</p>
+</section>
+<section id="disable-device-from-responding-to-mmio-io-port-addresses">
+<h3><span class="section-number">1.5.6. </span>Disable Device from responding to MMIO/IO Port addresses<a class="headerlink" href="#disable-device-from-responding-to-mmio-io-port-addresses" title="Link to this heading">¶</a></h3>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">io_unmap()</span></code> MMIO or IO Port resources and then call <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_disable_device" title="pci_disable_device"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_disable_device()</span></code></a>.
+This is the symmetric opposite of <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_enable_device" title="pci_enable_device"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_enable_device()</span></code></a>.
+Do not access device registers after calling <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_disable_device" title="pci_disable_device"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_disable_device()</span></code></a>.</p>
+</section>
+<section id="release-mmio-io-port-resource-s">
+<h3><span class="section-number">1.5.7. </span>Release MMIO/IO Port Resource(s)<a class="headerlink" href="#release-mmio-io-port-resource-s" title="Link to this heading">¶</a></h3>
+<p>Call <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_release_region" title="pci_release_region"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_release_region()</span></code></a> to mark the MMIO or IO Port range as available.
+Failure to do so usually results in the inability to reload the driver.</p>
+</section>
+</section>
+<section id="how-to-access-pci-config-space">
+<h2><span class="section-number">1.6. </span>How to access PCI config space<a class="headerlink" href="#how-to-access-pci-config-space" title="Link to this heading">¶</a></h2>
+<p>You can use <cite>pci_(read|write)_config_(byte|word|dword)</cite> to access the config
+space of a device represented by <cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">pci_dev</span></code> *</cite>. All these functions return
+0 when successful or an error code (<cite>PCIBIOS_...</cite>) which can be translated to a
+text string by pcibios_strerror. Most drivers expect that accesses to valid PCI
+devices don't fail.</p>
+<p>If you don't have a <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">pci_dev</span></code> available, you can call
+<cite>pci_bus_(read|write)_config_(byte|word|dword)</cite> to access a given device
+and function on that bus.</p>
+<p>If you access fields in the standard portion of the config header, please
+use symbolic names of locations and bits declared in &lt;linux/pci.h&gt;.</p>
+<p>If you need to access Extended PCI Capability registers, just call
+<a class="reference internal" href="../driver-api/pci/pci.html#c.pci_find_capability" title="pci_find_capability"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_find_capability()</span></code></a> for the particular capability and it will find the
+corresponding register block for you.</p>
+</section>
+<section id="other-interesting-functions">
+<h2><span class="section-number">1.7. </span>Other interesting functions<a class="headerlink" href="#other-interesting-functions" title="Link to this heading">¶</a></h2>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="../driver-api/pci/pci.html#c.pci_get_domain_bus_and_slot" title="pci_get_domain_bus_and_slot"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_get_domain_bus_and_slot()</span></code></a></p></td>
+<td><p>Find pci_dev corresponding to given domain,
+bus and slot and number. If the device is
+found, its reference count is increased.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../driver-api/pci/pci.html#c.pci_set_power_state" title="pci_set_power_state"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_set_power_state()</span></code></a></p></td>
+<td><p>Set PCI Power Management state (0=D0 ... 3=D3)</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../driver-api/pci/pci.html#c.pci_find_capability" title="pci_find_capability"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_find_capability()</span></code></a></p></td>
+<td><p>Find specified capability in device's capability
+list.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_resource_start()</span></code></p></td>
+<td><p>Returns bus start address for a given PCI region</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_resource_end()</span></code></p></td>
+<td><p>Returns bus end address for a given PCI region</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_resource_len()</span></code></p></td>
+<td><p>Returns the byte length of a PCI region</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_set_drvdata()</span></code></p></td>
+<td><p>Set private driver data pointer for a pci_dev</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_get_drvdata()</span></code></p></td>
+<td><p>Return private driver data pointer for a pci_dev</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../driver-api/pci/pci.html#c.pci_set_mwi" title="pci_set_mwi"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_set_mwi()</span></code></a></p></td>
+<td><p>Enable Memory-Write-Invalidate transactions.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../driver-api/pci/pci.html#c.pci_clear_mwi" title="pci_clear_mwi"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_clear_mwi()</span></code></a></p></td>
+<td><p>Disable Memory-Write-Invalidate transactions.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="miscellaneous-hints">
+<h2><span class="section-number">1.8. </span>Miscellaneous hints<a class="headerlink" href="#miscellaneous-hints" title="Link to this heading">¶</a></h2>
+<p>When displaying PCI device names to the user (for example when a driver wants
+to tell the user what card has it found), please use pci_name(pci_dev).</p>
+<p>Always refer to the PCI devices by a pointer to the pci_dev structure.
+All PCI layer functions use this identification and it's the only
+reasonable one. Don't use bus/slot/function numbers except for very
+special purposes -- on systems with multiple primary buses their semantics
+can be pretty complex.</p>
+<p>Don't try to turn on Fast Back to Back writes in your driver.  All devices
+on the bus need to be capable of doing it, so this is something which needs
+to be handled by platform and generic code, not individual drivers.</p>
+</section>
+<section id="vendor-and-device-identifications">
+<h2><span class="section-number">1.9. </span>Vendor and device identifications<a class="headerlink" href="#vendor-and-device-identifications" title="Link to this heading">¶</a></h2>
+<p>Do not add new device or vendor IDs to include/linux/pci_ids.h unless they
+are shared across multiple drivers.  You can add private definitions in
+your driver if they're helpful, or just use plain hex constants.</p>
+<p>The device IDs are arbitrary hex numbers (vendor controlled) and normally used
+only in a single location, the pci_device_id table.</p>
+<p>Please DO submit new vendor/device IDs to <a class="reference external" href="https://pci-ids.ucw.cz/">https://pci-ids.ucw.cz/</a>.
+There's a mirror of the pci.ids file at <a class="reference external" href="https://github.com/pciutils/pciids">https://github.com/pciutils/pciids</a>.</p>
+</section>
+<section id="obsolete-functions">
+<h2><span class="section-number">1.10. </span>Obsolete functions<a class="headerlink" href="#obsolete-functions" title="Link to this heading">¶</a></h2>
+<p>There are several functions which you might come across when trying to
+port an old driver to the new PCI interface.  They are no longer present
+in the kernel as they aren't compatible with hotplug or PCI domains or
+having sane locking.</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_find_device()</span></code></p></td>
+<td><p>Superseded by <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_get_device" title="pci_get_device"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_get_device()</span></code></a></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_find_subsys()</span></code></p></td>
+<td><p>Superseded by <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_get_subsys" title="pci_get_subsys"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_get_subsys()</span></code></a></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_find_slot()</span></code></p></td>
+<td><p>Superseded by <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_get_domain_bus_and_slot" title="pci_get_domain_bus_and_slot"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_get_domain_bus_and_slot()</span></code></a></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../driver-api/pci/pci.html#c.pci_get_slot" title="pci_get_slot"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_get_slot()</span></code></a></p></td>
+<td><p>Superseded by <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_get_domain_bus_and_slot" title="pci_get_domain_bus_and_slot"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_get_domain_bus_and_slot()</span></code></a></p></td>
+</tr>
+</tbody>
+</table>
+<p>The alternative is the traditional PCI device driver that walks PCI
+device lists. This is still possible but discouraged.</p>
+</section>
+<section id="mmio-space-and-write-posting">
+<h2><span class="section-number">1.11. </span>MMIO Space and &quot;Write Posting&quot;<a class="headerlink" href="#mmio-space-and-write-posting" title="Link to this heading">¶</a></h2>
+<p>Converting a driver from using I/O Port space to using MMIO space
+often requires some additional changes. Specifically, &quot;write posting&quot;
+needs to be handled. Many drivers (e.g. tg3, acenic, sym53c8xx_2)
+already do this. I/O Port space guarantees write transactions reach the PCI
+device before the CPU can continue. Writes to MMIO space allow the CPU
+to continue before the transaction reaches the PCI device. HW weenies
+call this &quot;Write Posting&quot; because the write completion is &quot;posted&quot; to
+the CPU before the transaction has reached its destination.</p>
+<p>Thus, timing sensitive code should add <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">readl()</span></code> where the CPU is
+expected to wait before doing other work.  The classic &quot;bit banging&quot;
+sequence works fine for I/O Port space:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>for (i = 8; --i; val &gt;&gt;= 1) {
+        outb(val &amp; 1, ioport_reg);      /* write bit */
+        udelay(10);
+}
+</pre></div>
+</div>
+<p>The same sequence for MMIO space should be:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>for (i = 8; --i; val &gt;&gt;= 1) {
+        writeb(val &amp; 1, mmio_reg);      /* write bit */
+        readb(safe_mmio_reg);           /* flush posted write */
+        udelay(10);
+}
+</pre></div>
+</div>
+<p>It is important that &quot;safe_mmio_reg&quot; not have any side effects that
+interferes with the correct operation of the device.</p>
+<p>Another case to watch out for is when resetting a PCI device. Use PCI
+Configuration space reads to flush the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">writel()</span></code>. This will gracefully
+handle the PCI master abort on all platforms if the PCI device is
+expected to not respond to a <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">readl()</span></code>.  Most x86 platforms will allow
+MMIO reads to master abort (a.k.a. &quot;Soft Fail&quot;) and return garbage
+(e.g. ~0). But many RISC platforms will crash (a.k.a.&quot;Hard Fail&quot;).</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/PCI/pci.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,2230 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Dynamic DMA mapping using the generic device &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/core-api/dma-api.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Dynamic DMA mapping Guide" href="dma-api-howto.html" />
+    <link rel="prev" title="Unaligned Memory Accesses" href="unaligned-memory-access.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">核心 API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#low-level-entry-and-exit">低階進入與退出</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#concurrency-primitives">Concurrency primitives</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#memory-management">記憶體管理</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="memory-allocation.html">Memory Allocation Guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="unaligned-memory-access.html">Unaligned Memory Accesses</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Dynamic DMA mapping using the generic device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dma-api-howto.html">Dynamic DMA mapping Guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dma-attributes.html">DMA attributes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dma-isa-lpc.html">DMA with ISA and LPC devices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="swiotlb.html">DMA and swiotlb</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mm-api.html">Memory Management APIs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cgroup.html">Cgroup Kernel APIs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="genalloc.html">The genalloc/genpool subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pin_user_pages.html">pin_user_pages() and related calls</a></li>
+<li class="toctree-l3"><a class="reference internal" href="boot-time-mm.html">Boot time memory management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="gfp_mask-from-fs-io.html">GFP masks used from FS/IO context</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kho/index.html">Kexec Handover Subsystem</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/core-api/dma-api.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="dynamic-dma-mapping-using-the-generic-device">
+<h1>Dynamic DMA mapping using the generic device<a class="headerlink" href="#dynamic-dma-mapping-using-the-generic-device" title="連結到這個標頭">¶</a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">作者<span class="colon">:</span></dt>
+<dd class="field-odd"><p>James E.J. Bottomley &lt;<a class="reference external" href="mailto:James&#46;Bottomley&#37;&#52;&#48;HansenPartnership&#46;com">James<span>&#46;</span>Bottomley<span>&#64;</span>HansenPartnership<span>&#46;</span>com</a>&gt;</p>
+</dd>
+</dl>
+<p>This document describes the DMA API.  For a more gentle introduction
+of the API (and actual examples), see <a class="reference internal" href="dma-api-howto.html"><span class="doc">Dynamic DMA mapping Guide</span></a>.</p>
+<p>This API is split into two pieces.  Part I describes the basic API.
+Part II describes extensions for supporting non-coherent memory
+machines.  Unless you know that your driver absolutely has to support
+non-coherent platforms (this is usually only legacy platforms) you
+should only use the API described in part I.</p>
+<section id="part-i-dma-api">
+<h2>Part I - DMA API<a class="headerlink" href="#part-i-dma-api" title="連結到這個標頭">¶</a></h2>
+<p>To get the DMA API, you must #include &lt;linux/dma-mapping.h&gt;.  This
+provides dma_addr_t and the interfaces described below.</p>
+<p>A dma_addr_t can hold any valid DMA address for the platform.  It can be
+given to a device to use as a DMA source or target.  A CPU cannot reference
+a dma_addr_t directly because there may be translation between its physical
+address space and the DMA address space.</p>
+</section>
+<section id="part-ia-using-large-dma-coherent-buffers">
+<h2>Part Ia - Using large DMA-coherent buffers<a class="headerlink" href="#part-ia-using-large-dma-coherent-buffers" title="連結到這個標頭">¶</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void *
+dma_alloc_coherent(struct device *dev, size_t size,
+                   dma_addr_t *dma_handle, gfp_t flag)
+</pre></div>
+</div>
+<p>Coherent memory is memory for which a write by either the device or
+the processor can immediately be read by the processor or device
+without having to worry about caching effects.  (You may however need
+to make sure to flush the processor's write buffers before telling
+devices to read that memory.)</p>
+<p>This routine allocates a region of &lt;size&gt; bytes of coherent memory.</p>
+<p>It returns a pointer to the allocated region (in the processor's virtual
+address space) or NULL if the allocation failed.</p>
+<p>It also returns a &lt;dma_handle&gt; which may be cast to an unsigned integer the
+same width as the bus and given to the device as the DMA address base of
+the region.</p>
+<p>Note: coherent memory can be expensive on some platforms, and the
+minimum allocation length may be as big as a page, so you should
+consolidate your requests for coherent memory as much as possible.
+The simplest way to do that is to use the dma_pool calls (see below).</p>
+<p>The flag parameter allows the caller to specify the <code class="docutils literal notranslate"><span class="pre">GFP_</span></code> flags (see
+<a class="reference internal" href="mm-api.html#c.kmalloc" title="kmalloc"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmalloc()</span></code></a>) for the allocation (the implementation may ignore flags that affect
+the location of the returned memory, like GFP_DMA).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void
+dma_free_coherent(struct device *dev, size_t size, void *cpu_addr,
+                  dma_addr_t dma_handle)
+</pre></div>
+</div>
+<p>Free a previously allocated region of coherent memory.  dev, size and dma_handle
+must all be the same as those passed into <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_coherent()</span></code>.  cpu_addr must
+be the virtual address returned by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_coherent()</span></code>.</p>
+<p>Note that unlike the sibling allocation call, this routine may only be called
+with IRQs enabled.</p>
+</section>
+<section id="part-ib-using-small-dma-coherent-buffers">
+<h2>Part Ib - Using small DMA-coherent buffers<a class="headerlink" href="#part-ib-using-small-dma-coherent-buffers" title="連結到這個標頭">¶</a></h2>
+<p>To get this part of the DMA API, you must #include &lt;linux/dmapool.h&gt;</p>
+<p>Many drivers need lots of small DMA-coherent memory regions for DMA
+descriptors or I/O buffers.  Rather than allocating in units of a page
+or more using <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_coherent()</span></code>, you can use DMA pools.  These work
+much like a <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kmem_cache</span></code>, except that they use the DMA-coherent allocator,
+not <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">__get_free_pages()</span></code>.  Also, they understand common hardware constraints
+for alignment, like queue heads needing to be aligned on N-byte boundaries.</p>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.dma_pool_create_node">
+<span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">dma_pool</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">dma_pool_create_node</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">name</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="../driver-api/infrastructure.html#c.device" title="device"><span class="n"><span class="pre">device</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">dev</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">size</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">align</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">boundary</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">node</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.dma_pool_create_node" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Creates a pool of coherent DMA memory blocks.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">char</span> <span class="pre">*name</span></code></dt><dd><p>name of pool, for diagnostics</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">device</span> <span class="pre">*dev</span></code></dt><dd><p>device that will be doing the DMA</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">size</span></code></dt><dd><p>size of the blocks in this pool.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">align</span></code></dt><dd><p>alignment requirement for blocks; must be a power of two</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">boundary</span></code></dt><dd><p>returned blocks won't cross this power of two boundary</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">node</span></code></dt><dd><p>optional NUMA node to allocate structs 'dma_pool' and 'dma_page' on</p>
+</dd>
+</dl>
+<p><strong>Context</strong></p>
+<p>not <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">in_interrupt()</span></code></p>
+<p><strong>Description</strong></p>
+<p>Given one of these pools, <a class="reference internal" href="#c.dma_pool_alloc" title="dma_pool_alloc"><code class="xref c c-func docutils literal notranslate"><span class="pre">dma_pool_alloc()</span></code></a>
+may be used to allocate memory.  Such memory will all have coherent
+DMA mappings, accessible by the device and its driver without using
+cache flushing primitives.  The actual size of blocks allocated may be
+larger than requested because of alignment.</p>
+<p>If <strong>boundary</strong> is nonzero, objects returned from <a class="reference internal" href="#c.dma_pool_alloc" title="dma_pool_alloc"><code class="xref c c-func docutils literal notranslate"><span class="pre">dma_pool_alloc()</span></code></a> won't
+cross that size boundary.  This is useful for devices which have
+addressing restrictions on individual DMA transfers, such as not crossing
+boundaries of 4KBytes.</p>
+<p><strong>Return</strong></p>
+<p>a dma allocation pool with the requested characteristics, or
+<code class="docutils literal notranslate"><span class="pre">NULL</span></code> if one can't be created.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.dma_pool_destroy">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">dma_pool_destroy</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">dma_pool</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.dma_pool_destroy" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>destroys a pool of dma memory blocks.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dma_pool</span> <span class="pre">*pool</span></code></dt><dd><p>dma pool that will be destroyed</p>
+</dd>
+</dl>
+<p><strong>Context</strong></p>
+<p>!<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">in_interrupt()</span></code></p>
+<p><strong>Description</strong></p>
+<p>Caller guarantees that no more memory from the pool is in use,
+and that nothing will try to use the pool after this call.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.dma_pool_alloc">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">dma_pool_alloc</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">dma_pool</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">pool</span></span>, <span class="n"><span class="pre">gfp_t</span></span><span class="w"> </span><span class="n"><span class="pre">mem_flags</span></span>, <span class="n"><span class="pre">dma_addr_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">handle</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.dma_pool_alloc" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>get a block of coherent memory</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dma_pool</span> <span class="pre">*pool</span></code></dt><dd><p>dma pool that will produce the block</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">gfp_t</span> <span class="pre">mem_flags</span></code></dt><dd><p>GFP_* bitmask</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dma_addr_t</span> <span class="pre">*handle</span></code></dt><dd><p>pointer to dma address of block</p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>the kernel virtual address of a currently unused block,
+and reports its dma address through the handle.
+If such a memory block can't be allocated, <code class="docutils literal notranslate"><span class="pre">NULL</span></code> is returned.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.dma_pool_free">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">dma_pool_free</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">dma_pool</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">pool</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">vaddr</span></span>, <span class="n"><span class="pre">dma_addr_t</span></span><span class="w"> </span><span class="n"><span class="pre">dma</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.dma_pool_free" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>put block back into dma pool</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dma_pool</span> <span class="pre">*pool</span></code></dt><dd><p>the dma pool holding the block</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*vaddr</span></code></dt><dd><p>virtual address of block</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dma_addr_t</span> <span class="pre">dma</span></code></dt><dd><p>dma address of block</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Caller promises neither device nor driver will again touch this block
+unless it is first re-allocated.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.dmam_pool_create">
+<span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">dma_pool</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">dmam_pool_create</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">name</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="../driver-api/infrastructure.html#c.device" title="device"><span class="n"><span class="pre">device</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">dev</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">size</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">align</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">allocation</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.dmam_pool_create" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Managed <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_pool_create()</span></code></p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">char</span> <span class="pre">*name</span></code></dt><dd><p>name of pool, for diagnostics</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">device</span> <span class="pre">*dev</span></code></dt><dd><p>device that will be doing the DMA</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">size</span></code></dt><dd><p>size of the blocks in this pool.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">align</span></code></dt><dd><p>alignment requirement for blocks; must be a power of two</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">allocation</span></code></dt><dd><p>returned blocks won't cross this boundary (or zero)</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Managed <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_pool_create()</span></code>.  DMA pool created with this function is
+automatically destroyed on driver detach.</p>
+<p><strong>Return</strong></p>
+<p>a managed dma allocation pool with the requested
+characteristics, or <code class="docutils literal notranslate"><span class="pre">NULL</span></code> if one can't be created.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.dmam_pool_destroy">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">dmam_pool_destroy</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">dma_pool</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.dmam_pool_destroy" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Managed <a class="reference internal" href="#c.dma_pool_destroy" title="dma_pool_destroy"><code class="xref c c-func docutils literal notranslate"><span class="pre">dma_pool_destroy()</span></code></a></p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dma_pool</span> <span class="pre">*pool</span></code></dt><dd><p>dma pool that will be destroyed</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Managed <a class="reference internal" href="#c.dma_pool_destroy" title="dma_pool_destroy"><code class="xref c c-func docutils literal notranslate"><span class="pre">dma_pool_destroy()</span></code></a>.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.dma_pool_zalloc">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">dma_pool_zalloc</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">dma_pool</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">pool</span></span>, <span class="n"><span class="pre">gfp_t</span></span><span class="w"> </span><span class="n"><span class="pre">mem_flags</span></span>, <span class="n"><span class="pre">dma_addr_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">handle</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.dma_pool_zalloc" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Get a zero-initialized block of DMA coherent memory.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dma_pool</span> <span class="pre">*pool</span></code></dt><dd><p>dma pool that will produce the block</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">gfp_t</span> <span class="pre">mem_flags</span></code></dt><dd><p>GFP_* bitmask</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dma_addr_t</span> <span class="pre">*handle</span></code></dt><dd><p>pointer to dma address of block</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Same as <a class="reference internal" href="#c.dma_pool_alloc" title="dma_pool_alloc"><code class="xref c c-func docutils literal notranslate"><span class="pre">dma_pool_alloc()</span></code></a>, but the returned memory is zeroed.</p>
+</div>
+</section>
+<section id="part-ic-dma-addressing-limitations">
+<h2>Part Ic - DMA addressing limitations<a class="headerlink" href="#part-ic-dma-addressing-limitations" title="連結到這個標頭">¶</a></h2>
+<p>DMA mask is a bit mask of the addressable region for the device. In other words,
+if applying the DMA mask (a bitwise AND operation) to the DMA address of a
+memory region does not clear any bits in the address, then the device can
+perform DMA to that memory region.</p>
+<p>All the below functions which set a DMA mask may fail if the requested mask
+cannot be used with the device, or if the device is not capable of doing DMA.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int
+dma_set_mask_and_coherent(struct device *dev, u64 mask)
+</pre></div>
+</div>
+<p>Updates both streaming and coherent DMA masks.</p>
+<p>Returns: 0 if successful and a negative error if not.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int
+dma_set_mask(struct device *dev, u64 mask)
+</pre></div>
+</div>
+<p>Updates only the streaming DMA mask.</p>
+<p>Returns: 0 if successful and a negative error if not.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int
+dma_set_coherent_mask(struct device *dev, u64 mask)
+</pre></div>
+</div>
+<p>Updates only the coherent DMA mask.</p>
+<p>Returns: 0 if successful and a negative error if not.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>u64
+dma_get_required_mask(struct device *dev)
+</pre></div>
+</div>
+<p>This API returns the mask that the platform requires to
+operate efficiently.  Usually this means the returned mask
+is the minimum required to cover all of memory.  Examining the
+required mask gives drivers with variable descriptor sizes the
+opportunity to use smaller descriptors as necessary.</p>
+<p>Requesting the required mask does not alter the current mask.  If you
+wish to take advantage of it, you should issue a <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_set_mask()</span></code>
+call to set the mask to the value returned.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>size_t
+dma_max_mapping_size(struct device *dev);
+</pre></div>
+</div>
+<p>Returns the maximum size of a mapping for the device. The size parameter
+of the mapping functions like <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_single()</span></code>, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_page()</span></code> and
+others should not be larger than the returned value.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>size_t
+dma_opt_mapping_size(struct device *dev);
+</pre></div>
+</div>
+<p>Returns the maximum optimal size of a mapping for the device.</p>
+<p>Mapping larger buffers may take much longer in certain scenarios. In
+addition, for high-rate short-lived streaming mappings, the upfront time
+spent on the mapping may account for an appreciable part of the total
+request lifetime. As such, if splitting larger requests incurs no
+significant performance penalty, then device drivers are advised to
+limit total DMA streaming mappings length to the returned value.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bool
+dma_need_sync(struct device *dev, dma_addr_t dma_addr);
+</pre></div>
+</div>
+<p>Returns %true if dma_sync_single_for_{device,cpu} calls are required to
+transfer memory ownership.  Returns %false if those calls can be skipped.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>unsigned long
+dma_get_merge_boundary(struct device *dev);
+</pre></div>
+</div>
+<p>Returns the DMA merge boundary. If the device cannot merge any DMA address
+segments, the function returns 0.</p>
+</section>
+<section id="part-id-streaming-dma-mappings">
+<h2>Part Id - Streaming DMA mappings<a class="headerlink" href="#part-id-streaming-dma-mappings" title="連結到這個標頭">¶</a></h2>
+<p>Streaming DMA allows to map an existing buffer for DMA transfers and then
+unmap it when finished.  Map functions are not guaranteed to succeed, so the
+return value must be checked.</p>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>In particular, mapping may fail for memory not addressable by the
+device, e.g. if it is not within the DMA mask of the device and/or a
+connecting bus bridge.  Streaming DMA functions try to overcome such
+addressing constraints, either by using an IOMMU (a device which maps
+I/O DMA addresses to physical memory addresses), or by copying the
+data to/from a bounce buffer if the kernel is configured with a
+<a class="reference internal" href="swiotlb.html"><span class="doc">SWIOTLB</span></a>.  However, these methods are not always
+available, and even if they are, they may still fail for a number of
+reasons.</p>
+<p>In short, a device driver may need to be wary of where buffers are
+located in physical memory, especially if the DMA mask is less than 32
+bits.</p>
+</div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>dma_addr_t
+dma_map_single(struct device *dev, void *cpu_addr, size_t size,
+               enum dma_data_direction direction)
+</pre></div>
+</div>
+<p>Maps a piece of processor virtual memory so it can be accessed by the
+device and returns the DMA address of the memory.</p>
+<p>The DMA API uses a strongly typed enumerator for its direction:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>DMA_NONE</p></td>
+<td><p>no direction (used for debugging)</p></td>
+</tr>
+<tr class="row-even"><td><p>DMA_TO_DEVICE</p></td>
+<td><p>data is going from the memory to the device</p></td>
+</tr>
+<tr class="row-odd"><td><p>DMA_FROM_DEVICE</p></td>
+<td><p>data is coming from the device to the memory</p></td>
+</tr>
+<tr class="row-even"><td><p>DMA_BIDIRECTIONAL</p></td>
+<td><p>direction isn't known</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>Contiguous kernel virtual space may not be contiguous as
+physical memory.  Since this API does not provide any scatter/gather
+capability, it will fail if the user tries to map a non-physically
+contiguous piece of memory.  For this reason, memory to be mapped by
+this API should be obtained from sources which guarantee it to be
+physically contiguous (like kmalloc).</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">警告</p>
+<p>Memory coherency operates at a granularity called the cache
+line width.  In order for memory mapped by this API to operate
+correctly, the mapped region must begin exactly on a cache line
+boundary and end exactly on one (to prevent two separately mapped
+regions from sharing a single cache line).  Since the cache line size
+may not be known at compile time, the API will not enforce this
+requirement.  Therefore, it is recommended that driver writers who
+don't take special care to determine the cache line size at run time
+only map virtual regions that begin and end on page boundaries (which
+are guaranteed also to be cache line boundaries).</p>
+<p>DMA_TO_DEVICE synchronisation must be done after the last modification
+of the memory region by the software and before it is handed off to
+the device.  Once this primitive is used, memory covered by this
+primitive should be treated as read-only by the device.  If the device
+may write to it at any point, it should be DMA_BIDIRECTIONAL (see
+below).</p>
+<p>DMA_FROM_DEVICE synchronisation must be done before the driver
+accesses data that may be changed by the device.  This memory should
+be treated as read-only by the driver.  If the driver needs to write
+to it at any point, it should be DMA_BIDIRECTIONAL (see below).</p>
+<p>DMA_BIDIRECTIONAL requires special handling: it means that the driver
+isn't sure if the memory was modified before being handed off to the
+device and also isn't sure if the device will also modify it.  Thus,
+you must always sync bidirectional memory twice: once before the
+memory is handed off to the device (to make sure all memory changes
+are flushed from the processor) and once before the data may be
+accessed after being used by the device (to make sure any processor
+cache lines are updated with data that the device may have changed).</p>
+</div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void
+dma_unmap_single(struct device *dev, dma_addr_t dma_addr, size_t size,
+                 enum dma_data_direction direction)
+</pre></div>
+</div>
+<p>Unmaps the region previously mapped.  All the parameters passed in
+must be identical to those passed to (and returned by) <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_single()</span></code>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>dma_addr_t
+dma_map_page(struct device *dev, struct page *page,
+             unsigned long offset, size_t size,
+             enum dma_data_direction direction)
+
+void
+dma_unmap_page(struct device *dev, dma_addr_t dma_address, size_t size,
+               enum dma_data_direction direction)
+</pre></div>
+</div>
+<p>API for mapping and unmapping for pages.  All the notes and warnings
+for the other mapping APIs apply here.  Also, although the &lt;offset&gt;
+and &lt;size&gt; parameters are provided to do partial page mapping, it is
+recommended that you never use these unless you really know what the
+cache width is.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>dma_addr_t
+dma_map_resource(struct device *dev, phys_addr_t phys_addr, size_t size,
+                 enum dma_data_direction dir, unsigned long attrs)
+
+void
+dma_unmap_resource(struct device *dev, dma_addr_t addr, size_t size,
+                   enum dma_data_direction dir, unsigned long attrs)
+</pre></div>
+</div>
+<p>API for mapping and unmapping for MMIO resources. All the notes and
+warnings for the other mapping APIs apply here. The API should only be
+used to map device MMIO resources, mapping of RAM is not permitted.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int
+dma_mapping_error(struct device *dev, dma_addr_t dma_addr)
+</pre></div>
+</div>
+<p>In some circumstances <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_single()</span></code>, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_page()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_resource()</span></code>
+will fail to create a mapping. A driver can check for these errors by testing
+the returned DMA address with <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_mapping_error()</span></code>. A non-zero return value
+means the mapping could not be created and the driver should take appropriate
+action (e.g. reduce current DMA mapping usage or delay and try again later).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int
+dma_map_sg(struct device *dev, struct scatterlist *sg,
+           int nents, enum dma_data_direction direction)
+</pre></div>
+</div>
+<p>Maps a scatter/gather list for DMA. Returns the number of DMA address segments
+mapped, which may be smaller than &lt;nents&gt; passed in if several consecutive
+sglist entries are merged (e.g. with an IOMMU, or if some adjacent segments
+just happen to be physically contiguous).</p>
+<p>Please note that the sg cannot be mapped again if it has been mapped once.
+The mapping process is allowed to destroy information in the sg.</p>
+<p>As with the other mapping interfaces, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_sg()</span></code> can fail. When it
+does, 0 is returned and a driver must take appropriate action. It is
+critical that the driver do something, in the case of a block driver
+aborting the request or even oopsing is better than doing nothing and
+corrupting the filesystem.</p>
+<p>With scatterlists, you use the resulting mapping like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int i, count = dma_map_sg(dev, sglist, nents, direction);
+struct scatterlist *sg;
+
+for_each_sg(sglist, sg, count, i) {
+        hw_address[i] = sg_dma_address(sg);
+        hw_len[i] = sg_dma_len(sg);
+}
+</pre></div>
+</div>
+<p>where nents is the number of entries in the sglist.</p>
+<p>The implementation is free to merge several consecutive sglist entries
+into one.  The returned number is the actual number of sg entries it
+mapped them to. On failure, 0 is returned.</p>
+<p>Then you should loop count times (note: this can be less than nents times)
+and use <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">sg_dma_address()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">sg_dma_len()</span></code> macros where you previously
+accessed sg-&gt;address and sg-&gt;length as shown above.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void
+dma_unmap_sg(struct device *dev, struct scatterlist *sg,
+             int nents, enum dma_data_direction direction)
+</pre></div>
+</div>
+<p>Unmap the previously mapped scatter/gather list.  All the parameters
+must be the same as those and passed in to the scatter/gather mapping
+API.</p>
+<p>Note: &lt;nents&gt; must be the number you passed in, <em>not</em> the number of
+DMA address entries returned.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void
+dma_sync_single_for_cpu(struct device *dev, dma_addr_t dma_handle,
+                        size_t size,
+                        enum dma_data_direction direction)
+
+void
+dma_sync_single_for_device(struct device *dev, dma_addr_t dma_handle,
+                           size_t size,
+                           enum dma_data_direction direction)
+
+void
+dma_sync_sg_for_cpu(struct device *dev, struct scatterlist *sg,
+                    int nents,
+                    enum dma_data_direction direction)
+
+void
+dma_sync_sg_for_device(struct device *dev, struct scatterlist *sg,
+                       int nents,
+                       enum dma_data_direction direction)
+</pre></div>
+</div>
+<p>Synchronise a single contiguous or scatter/gather mapping for the CPU
+and device. With the sync_sg API, all the parameters must be the same
+as those passed into the sg mapping API. With the sync_single API,
+you can use dma_handle and size parameters that aren't identical to
+those passed into the single mapping API to do a partial sync.</p>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>You must do this:</p>
+<ul class="simple">
+<li><p>Before reading values that have been written by DMA from the device
+(use the DMA_FROM_DEVICE direction)</p></li>
+<li><p>After writing values that will be written to the device using DMA
+(use the DMA_TO_DEVICE) direction</p></li>
+<li><p>before <em>and</em> after handing memory to the device if the memory is
+DMA_BIDIRECTIONAL</p></li>
+</ul>
+</div>
+<p>See also <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_single()</span></code>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>dma_addr_t
+dma_map_single_attrs(struct device *dev, void *cpu_addr, size_t size,
+                     enum dma_data_direction dir,
+                     unsigned long attrs)
+
+void
+dma_unmap_single_attrs(struct device *dev, dma_addr_t dma_addr,
+                       size_t size, enum dma_data_direction dir,
+                       unsigned long attrs)
+
+int
+dma_map_sg_attrs(struct device *dev, struct scatterlist *sgl,
+                 int nents, enum dma_data_direction dir,
+                 unsigned long attrs)
+
+void
+dma_unmap_sg_attrs(struct device *dev, struct scatterlist *sgl,
+                   int nents, enum dma_data_direction dir,
+                   unsigned long attrs)
+</pre></div>
+</div>
+<p>The four functions above are just like the counterpart functions
+without the _attrs suffixes, except that they pass an optional
+dma_attrs.</p>
+<p>The interpretation of DMA attributes is architecture-specific, and
+each attribute should be documented in
+<a class="reference internal" href="dma-attributes.html"><span class="doc">DMA attributes</span></a>.</p>
+<p>If dma_attrs are 0, the semantics of each of these functions
+is identical to those of the corresponding function
+without the _attrs suffix. As a result <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_single_attrs()</span></code>
+can generally replace <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_single()</span></code>, etc.</p>
+<p>As an example of the use of the <code class="docutils literal notranslate"><span class="pre">*_attrs</span></code> functions, here's how
+you could pass an attribute DMA_ATTR_FOO when mapping memory
+for DMA:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/dma-mapping.h&gt;
+/* DMA_ATTR_FOO should be defined in linux/dma-mapping.h and
+* documented in Documentation/core-api/dma-attributes.rst */
+...
+
+        unsigned long attr;
+        attr |= DMA_ATTR_FOO;
+        ....
+        n = dma_map_sg_attrs(dev, sg, nents, DMA_TO_DEVICE, attr);
+        ....
+</pre></div>
+</div>
+<p>Architectures that care about DMA_ATTR_FOO would check for its
+presence in their implementations of the mapping and unmapping
+routines, e.g.::</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void whizco_dma_map_sg_attrs(struct device *dev, dma_addr_t dma_addr,
+                             size_t size, enum dma_data_direction dir,
+                             unsigned long attrs)
+{
+        ....
+        if (attrs &amp; DMA_ATTR_FOO)
+                /* twizzle the frobnozzle */
+        ....
+}
+</pre></div>
+</div>
+</section>
+<section id="part-ie-iova-based-dma-mappings">
+<h2>Part Ie - IOVA-based DMA mappings<a class="headerlink" href="#part-ie-iova-based-dma-mappings" title="連結到這個標頭">¶</a></h2>
+<p>These APIs allow a very efficient mapping when using an IOMMU.  They are an
+optional path that requires extra code and are only recommended for drivers
+where DMA mapping performance, or the space usage for storing the DMA addresses
+matter.  All the considerations from the previous section apply here as well.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bool dma_iova_try_alloc(struct device *dev, struct dma_iova_state *state,
+            phys_addr_t phys, size_t size);
+</pre></div>
+</div>
+<p>Is used to try to allocate IOVA space for mapping operation.  If it returns
+false this API can't be used for the given device and the normal streaming
+DMA mapping API should be used.  The <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dma_iova_state</span></code> is allocated
+by the driver and must be kept around until unmap time.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static inline bool dma_use_iova(struct dma_iova_state *state)
+</pre></div>
+</div>
+<p>Can be used by the driver to check if the IOVA-based API is used after a
+call to dma_iova_try_alloc.  This can be useful in the unmap path.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int dma_iova_link(struct device *dev, struct dma_iova_state *state,
+            phys_addr_t phys, size_t offset, size_t size,
+            enum dma_data_direction dir, unsigned long attrs);
+</pre></div>
+</div>
+<p>Is used to link ranges to the IOVA previously allocated.  The start of all
+but the first call to dma_iova_link for a given state must be aligned
+to the DMA merge boundary returned by <code class="docutils literal notranslate"><span class="pre">dma_get_merge_boundary())</span></code>, and
+the size of all but the last range must be aligned to the DMA merge boundary
+as well.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int dma_iova_sync(struct device *dev, struct dma_iova_state *state,
+            size_t offset, size_t size);
+</pre></div>
+</div>
+<p>Must be called to sync the IOMMU page tables for IOVA-range mapped by one or
+more calls to <code class="docutils literal notranslate"><span class="pre">dma_iova_link()</span></code>.</p>
+<p>For drivers that use a one-shot mapping, all ranges can be unmapped and the
+IOVA freed by calling:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void dma_iova_destroy(struct device *dev, struct dma_iova_state *state,
+             size_t mapped_len, enum dma_data_direction dir,
+             unsigned long attrs);
+</pre></div>
+</div>
+<p>Alternatively drivers can dynamically manage the IOVA space by unmapping
+and mapping individual regions.  In that case</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void dma_iova_unlink(struct device *dev, struct dma_iova_state *state,
+            size_t offset, size_t size, enum dma_data_direction dir,
+            unsigned long attrs);
+</pre></div>
+</div>
+<p>is used to unmap a range previously mapped, and</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void dma_iova_free(struct device *dev, struct dma_iova_state *state);
+</pre></div>
+</div>
+<p>is used to free the IOVA space.  All regions must have been unmapped using
+<code class="docutils literal notranslate"><span class="pre">dma_iova_unlink()</span></code> before calling <code class="docutils literal notranslate"><span class="pre">dma_iova_free()</span></code>.</p>
+</section>
+<section id="part-ii-non-coherent-dma-allocations">
+<h2>Part II - Non-coherent DMA allocations<a class="headerlink" href="#part-ii-non-coherent-dma-allocations" title="連結到這個標頭">¶</a></h2>
+<p>These APIs allow to allocate pages that are guaranteed to be DMA addressable
+by the passed in device, but which need explicit management of memory ownership
+for the kernel vs the device.</p>
+<p>If you don't understand how cache line coherency works between a processor and
+an I/O device, you should not be using this part of the API.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct page *
+dma_alloc_pages(struct device *dev, size_t size, dma_addr_t *dma_handle,
+                enum dma_data_direction dir, gfp_t gfp)
+</pre></div>
+</div>
+<p>This routine allocates a region of &lt;size&gt; bytes of non-coherent memory.  It
+returns a pointer to first <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> for the region, or NULL if the
+allocation failed. The resulting <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> can be used for everything a
+<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> is suitable for.</p>
+<p>It also returns a &lt;dma_handle&gt; which may be cast to an unsigned integer the
+same width as the bus and given to the device as the DMA address base of
+the region.</p>
+<p>The dir parameter specified if data is read and/or written by the device,
+see <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_single()</span></code> for details.</p>
+<p>The gfp parameter allows the caller to specify the <code class="docutils literal notranslate"><span class="pre">GFP_</span></code> flags (see
+<a class="reference internal" href="mm-api.html#c.kmalloc" title="kmalloc"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmalloc()</span></code></a>) for the allocation, but rejects flags used to specify a memory
+zone such as GFP_DMA or GFP_HIGHMEM.</p>
+<p>Before giving the memory to the device, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_sync_single_for_device()</span></code> needs
+to be called, and before reading memory written by the device,
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_sync_single_for_cpu()</span></code>, just like for streaming DMA mappings that are
+reused.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void
+dma_free_pages(struct device *dev, size_t size, struct page *page,
+                dma_addr_t dma_handle, enum dma_data_direction dir)
+</pre></div>
+</div>
+<p>Free a region of memory previously allocated using <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_pages()</span></code>.
+dev, size, dma_handle and dir must all be the same as those passed into
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_pages()</span></code>.  page must be the pointer returned by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_pages()</span></code>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int
+dma_mmap_pages(struct device *dev, struct vm_area_struct *vma,
+               size_t size, struct page *page)
+</pre></div>
+</div>
+<p>Map an allocation returned from <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_pages()</span></code> into a user address space.
+dev and size must be the same as those passed into <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_pages()</span></code>.
+page must be the pointer returned by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_pages()</span></code>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void *
+dma_alloc_noncoherent(struct device *dev, size_t size,
+                dma_addr_t *dma_handle, enum dma_data_direction dir,
+                gfp_t gfp)
+</pre></div>
+</div>
+<p>This routine is a convenient wrapper around dma_alloc_pages that returns the
+kernel virtual address for the allocated memory instead of the page structure.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void
+dma_free_noncoherent(struct device *dev, size_t size, void *cpu_addr,
+                dma_addr_t dma_handle, enum dma_data_direction dir)
+</pre></div>
+</div>
+<p>Free a region of memory previously allocated using <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_noncoherent()</span></code>.
+dev, size, dma_handle and dir must all be the same as those passed into
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_noncoherent()</span></code>.  cpu_addr must be the virtual address returned by
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_noncoherent()</span></code>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct sg_table *
+dma_alloc_noncontiguous(struct device *dev, size_t size,
+                        enum dma_data_direction dir, gfp_t gfp,
+                        unsigned long attrs);
+</pre></div>
+</div>
+<p>This routine allocates  &lt;size&gt; bytes of non-coherent and possibly non-contiguous
+memory.  It returns a pointer to <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_table</span></code> that describes the allocated
+and DMA mapped memory, or NULL if the allocation failed. The resulting memory
+can be used for <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> mapped into a scatterlist are suitable for.</p>
+<p>The return sg_table is guaranteed to have 1 single DMA mapped segment as
+indicated by sgt-&gt;nents, but it might have multiple CPU side segments as
+indicated by sgt-&gt;orig_nents.</p>
+<p>The dir parameter specified if data is read and/or written by the device,
+see <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_single()</span></code> for details.</p>
+<p>The gfp parameter allows the caller to specify the <code class="docutils literal notranslate"><span class="pre">GFP_</span></code> flags (see
+<a class="reference internal" href="mm-api.html#c.kmalloc" title="kmalloc"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmalloc()</span></code></a>) for the allocation, but rejects flags used to specify a memory
+zone such as GFP_DMA or GFP_HIGHMEM.</p>
+<p>The attrs argument must be either 0 or DMA_ATTR_ALLOC_SINGLE_PAGES.</p>
+<p>Before giving the memory to the device, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_sync_sgtable_for_device()</span></code> needs
+to be called, and before reading memory written by the device,
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_sync_sgtable_for_cpu()</span></code>, just like for streaming DMA mappings that are
+reused.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void
+dma_free_noncontiguous(struct device *dev, size_t size,
+                       struct sg_table *sgt,
+                       enum dma_data_direction dir)
+</pre></div>
+</div>
+<p>Free memory previously allocated using <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_noncontiguous()</span></code>.  dev, size,
+and dir must all be the same as those passed into <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_noncontiguous()</span></code>.
+sgt must be the pointer returned by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_noncontiguous()</span></code>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void *
+dma_vmap_noncontiguous(struct device *dev, size_t size,
+        struct sg_table *sgt)
+</pre></div>
+</div>
+<p>Return a contiguous kernel mapping for an allocation returned from
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_noncontiguous()</span></code>.  dev and size must be the same as those passed into
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_noncontiguous()</span></code>.  sgt must be the pointer returned by
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_noncontiguous()</span></code>.</p>
+<p>Once a non-contiguous allocation is mapped using this function, the
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">flush_kernel_vmap_range()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">invalidate_kernel_vmap_range()</span></code> APIs must be used
+to manage the coherency between the kernel mapping, the device and user space
+mappings (if any).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void
+dma_vunmap_noncontiguous(struct device *dev, void *vaddr)
+</pre></div>
+</div>
+<p>Unmap a kernel mapping returned by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_vmap_noncontiguous()</span></code>.  dev must be the
+same the one passed into <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_noncontiguous()</span></code>.  vaddr must be the pointer
+returned by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_vmap_noncontiguous()</span></code>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int
+dma_mmap_noncontiguous(struct device *dev, struct vm_area_struct *vma,
+                       size_t size, struct sg_table *sgt)
+</pre></div>
+</div>
+<p>Map an allocation returned from <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_noncontiguous()</span></code> into a user address
+space.  dev and size must be the same as those passed into
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_noncontiguous()</span></code>.  sgt must be the pointer returned by
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_alloc_noncontiguous()</span></code>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int
+dma_get_cache_alignment(void)
+</pre></div>
+</div>
+<p>Returns the processor cache alignment.  This is the absolute minimum
+alignment <em>and</em> width that you must observe when either mapping
+memory or doing partial flushes.</p>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>This API may return a number <em>larger</em> than the actual cache
+line, but it will guarantee that one or more cache lines fit exactly
+into the width returned by this call.  It will also always be a power
+of two for easy alignment.</p>
+</div>
+</section>
+<section id="part-iii-debug-drivers-use-of-the-dma-api">
+<h2>Part III - Debug drivers use of the DMA API<a class="headerlink" href="#part-iii-debug-drivers-use-of-the-dma-api" title="連結到這個標頭">¶</a></h2>
+<p>The DMA API as described above has some constraints. DMA addresses must be
+released with the corresponding function with the same size for example. With
+the advent of hardware IOMMUs it becomes more and more important that drivers
+do not violate those constraints. In the worst case such a violation can
+result in data corruption up to destroyed filesystems.</p>
+<p>To debug drivers and find bugs in the usage of the DMA API checking code can
+be compiled into the kernel which will tell the developer about those
+violations. If your architecture supports it you can select the &quot;Enable
+debugging of DMA API usage&quot; option in your kernel configuration. Enabling this
+option has a performance impact. Do not enable it in production kernels.</p>
+<p>If you boot the resulting kernel will contain code which does some bookkeeping
+about what DMA memory was allocated for which device. If this code detects an
+error it prints a warning message with some details into your kernel log. An
+example warning message may look like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>WARNING: at /data2/repos/linux-2.6-iommu/lib/dma-debug.c:448
+        check_unmap+0x203/0x490()
+Hardware name:
+forcedeth 0000:00:08.0: DMA-API: device driver frees DMA memory with wrong
+        function [device address=0x00000000640444be] [size=66 bytes] [mapped as
+single] [unmapped as page]
+Modules linked in: nfsd exportfs bridge stp llc r8169
+Pid: 0, comm: swapper Tainted: G        W  2.6.28-dmatest-09289-g8bb99c0 #1
+Call Trace:
+&lt;IRQ&gt;  [&lt;ffffffff80240b22&gt;] warn_slowpath+0xf2/0x130
+[&lt;ffffffff80647b70&gt;] _spin_unlock+0x10/0x30
+[&lt;ffffffff80537e75&gt;] usb_hcd_link_urb_to_ep+0x75/0xc0
+[&lt;ffffffff80647c22&gt;] _spin_unlock_irqrestore+0x12/0x40
+[&lt;ffffffff8055347f&gt;] ohci_urb_enqueue+0x19f/0x7c0
+[&lt;ffffffff80252f96&gt;] queue_work+0x56/0x60
+[&lt;ffffffff80237e10&gt;] enqueue_task_fair+0x20/0x50
+[&lt;ffffffff80539279&gt;] usb_hcd_submit_urb+0x379/0xbc0
+[&lt;ffffffff803b78c3&gt;] cpumask_next_and+0x23/0x40
+[&lt;ffffffff80235177&gt;] find_busiest_group+0x207/0x8a0
+[&lt;ffffffff8064784f&gt;] _spin_lock_irqsave+0x1f/0x50
+[&lt;ffffffff803c7ea3&gt;] check_unmap+0x203/0x490
+[&lt;ffffffff803c8259&gt;] debug_dma_unmap_phys+0x49/0x50
+[&lt;ffffffff80485f26&gt;] nv_tx_done_optimized+0xc6/0x2c0
+[&lt;ffffffff80486c13&gt;] nv_nic_irq_optimized+0x73/0x2b0
+[&lt;ffffffff8026df84&gt;] handle_IRQ_event+0x34/0x70
+[&lt;ffffffff8026ffe9&gt;] handle_edge_irq+0xc9/0x150
+[&lt;ffffffff8020e3ab&gt;] do_IRQ+0xcb/0x1c0
+[&lt;ffffffff8020c093&gt;] ret_from_intr+0x0/0xa
+&lt;EOI&gt; &lt;4&gt;---[ end trace f6435a98e2a38c0e ]---
+</pre></div>
+</div>
+<p>The driver developer can find the driver and the device including a stacktrace
+of the DMA API call which caused this warning.</p>
+<p>Per default only the first error will result in a warning message. All other
+errors will only silently counted. This limitation exist to prevent the code
+from flooding your kernel log. To support debugging a device driver this can
+be disabled via debugfs. See the debugfs interface documentation below for
+details.</p>
+<p>The debugfs directory for the DMA API debugging code is called dma-api/. In
+this directory the following files can currently be found:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>dma-api/all_errors</p></td>
+<td><p>This file contains a numeric value. If this
+value is not equal to zero the debugging code
+will print a warning for every error it finds
+into the kernel log. Be careful with this
+option, as it can easily flood your logs.</p></td>
+</tr>
+<tr class="row-even"><td><p>dma-api/disabled</p></td>
+<td><p>This read-only file contains the character 'Y'
+if the debugging code is disabled. This can
+happen when it runs out of memory or if it was
+disabled at boot time</p></td>
+</tr>
+<tr class="row-odd"><td><p>dma-api/dump</p></td>
+<td><p>This read-only file contains current DMA
+mappings.</p></td>
+</tr>
+<tr class="row-even"><td><p>dma-api/error_count</p></td>
+<td><p>This file is read-only and shows the total
+numbers of errors found.</p></td>
+</tr>
+<tr class="row-odd"><td><p>dma-api/num_errors</p></td>
+<td><p>The number in this file shows how many
+warnings will be printed to the kernel log
+before it stops. This number is initialized to
+one at system boot and be set by writing into
+this file</p></td>
+</tr>
+<tr class="row-even"><td><p>dma-api/min_free_entries</p></td>
+<td><p>This read-only file can be read to get the
+minimum number of free dma_debug_entries the
+allocator has ever seen. If this value goes
+down to zero the code will attempt to increase
+nr_total_entries to compensate.</p></td>
+</tr>
+<tr class="row-odd"><td><p>dma-api/num_free_entries</p></td>
+<td><p>The current number of free dma_debug_entries
+in the allocator.</p></td>
+</tr>
+<tr class="row-even"><td><p>dma-api/nr_total_entries</p></td>
+<td><p>The total number of dma_debug_entries in the
+allocator, both free and used.</p></td>
+</tr>
+<tr class="row-odd"><td><p>dma-api/driver_filter</p></td>
+<td><p>You can write a name of a driver into this file
+to limit the debug output to requests from that
+particular driver. Write an empty string to
+that file to disable the filter and see
+all errors again.</p></td>
+</tr>
+</tbody>
+</table>
+<p>If you have this code compiled into your kernel it will be enabled by default.
+If you want to boot without the bookkeeping anyway you can provide
+'dma_debug=off' as a boot parameter. This will disable DMA API debugging.
+Notice that you can not enable it again at runtime. You have to reboot to do
+so.</p>
+<p>If you want to see debug messages only for a special device driver you can
+specify the dma_debug_driver=&lt;drivername&gt; parameter. This will enable the
+driver filter at boot time. The debug code will only print errors for that
+driver afterwards. This filter can be disabled or changed later using debugfs.</p>
+<p>When the code disables itself at runtime this is most likely because it ran
+out of dma_debug_entries and was unable to allocate more on-demand. 65536
+entries are preallocated at boot - if this is too low for you boot with
+'dma_debug_entries=&lt;your_desired_number&gt;' to overwrite the default. Note
+that the code allocates entries in batches, so the exact number of
+preallocated entries may be greater than the actual number requested. The
+code will print to the kernel log each time it has dynamically allocated
+as many entries as were initially preallocated. This is to indicate that a
+larger preallocation size may be appropriate, or if it happens continually
+that a driver may be leaking mappings.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void
+debug_dma_mapping_error(struct device *dev, dma_addr_t dma_addr);
+</pre></div>
+</div>
+<p>dma-debug interface <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">debug_dma_mapping_error()</span></code> to debug drivers that fail
+to check DMA mapping errors on addresses returned by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_single()</span></code> and
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_page()</span></code> interfaces. This interface clears a flag set by
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">debug_dma_map_phys()</span></code> to indicate that <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_mapping_error()</span></code> has been called by
+the driver. When driver does unmap, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">debug_dma_unmap()</span></code> checks the flag and if
+this flag is still set, prints warning message that includes call trace that
+leads up to the unmap. This interface can be called from <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_mapping_error()</span></code>
+routines to enable DMA mapping error check debugging.</p>
+<section id="functions-and-structures">
+<h3>Functions and structures<a class="headerlink" href="#functions-and-structures" title="連結到這個標頭">¶</a></h3>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_next">
+<span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">sg_next</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_next" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>return the next scatterlist entry in a list</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>The current sg entry</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Usually the next entry will be <strong>sg</strong> + 1, but if this sg element is part
+of a chained scatterlist, it could jump to the start of a new
+scatterlist array.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_assign_page">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_assign_page</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.sg_assign_page" title="page"><span class="n"><span class="pre">page</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">page</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_assign_page" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Assign a given page to an SG entry</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entry</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span> <span class="pre">*page</span></code></dt><dd><p>The page</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Assign page to sg entry. Also see <a class="reference internal" href="#c.sg_set_page" title="sg_set_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">sg_set_page()</span></code></a>, the most commonly used
+variant.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_set_page">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_set_page</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.sg_set_page" title="page"><span class="n"><span class="pre">page</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">page</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">len</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">offset</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_set_page" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Set sg entry to point at given page</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entry</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span> <span class="pre">*page</span></code></dt><dd><p>The page</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">len</span></code></dt><dd><p>Length of data</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">offset</span></code></dt><dd><p>Offset into page</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Use this function to set an sg entry pointing at a page, never assign
+the page directly. We encode sg table information in the lower bits
+of the page pointer. See <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">sg_page()</span></code> for looking up the page belonging
+to an sg entry.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_set_folio">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_set_folio</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.sg_set_folio" title="folio"><span class="n"><span class="pre">folio</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">folio</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">len</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">offset</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_set_folio" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Set sg entry to point at given folio</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entry</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">folio</span> <span class="pre">*folio</span></code></dt><dd><p>The folio</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">len</span></code></dt><dd><p>Length of data</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">offset</span></code></dt><dd><p>Offset into folio</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Use this function to set an sg entry pointing at a folio, never assign
+the folio directly. We encode sg table information in the lower bits
+of the folio pointer. See <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">sg_page()</span></code> for looking up the page belonging
+to an sg entry.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_set_buf">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_set_buf</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">buf</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">buflen</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_set_buf" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Set sg entry to point at given data</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entry</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">void</span> <span class="pre">*buf</span></code></dt><dd><p>Data</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">buflen</span></code></dt><dd><p>Data length</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_chain">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_chain</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">prv</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">prv_nents</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_chain" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Chain two sglists together</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*prv</span></code></dt><dd><p>First scatterlist</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">prv_nents</span></code></dt><dd><p>Number of entries in prv</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>Second scatterlist</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Links <strong>prv</strong> and <strong>sgl</strong> together, to form a longer scatterlist.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_mark_end">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_mark_end</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_mark_end" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Mark the end of the scatterlist</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entryScatterlist</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Marks the passed in sg entry as the termination point for the sg
+table. A call to <a class="reference internal" href="#c.sg_next" title="sg_next"><code class="xref c c-func docutils literal notranslate"><span class="pre">sg_next()</span></code></a> on this entry will return NULL.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_unmark_end">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_unmark_end</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_unmark_end" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Undo setting the end of the scatterlist</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entryScatterlist</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Removes the termination marker from the given entry of the scatterlist.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_dma_is_bus_address">
+<span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_dma_is_bus_address</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_dma_is_bus_address" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Return whether a given segment was marked as a bus address</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entry</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Returns true if <a class="reference internal" href="#c.sg_dma_mark_bus_address" title="sg_dma_mark_bus_address"><code class="xref c c-func docutils literal notranslate"><span class="pre">sg_dma_mark_bus_address()</span></code></a> has been called on
+this segment.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_dma_mark_bus_address">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_dma_mark_bus_address</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_dma_mark_bus_address" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Mark the scatterlist entry as a bus address</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entry</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Marks the passed in sg entry to indicate that the dma_address is
+a bus address and doesn't need to be unmapped. This should only be
+used by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_map_sg()</span></code> implementations to mark bus addresses
+so they can be properly cleaned up in <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dma_unmap_sg()</span></code>.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_dma_unmark_bus_address">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_dma_unmark_bus_address</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_dma_unmark_bus_address" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Unmark the scatterlist entry as a bus address</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entry</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Clears the bus address mark.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_dma_is_swiotlb">
+<span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_dma_is_swiotlb</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_dma_is_swiotlb" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Return whether the scatterlist was marked for SWIOTLB bouncing</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entry</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Returns true if the scatterlist was marked for SWIOTLB bouncing. Not all
+elements may have been bounced, so the caller would have to check
+individual SG entries with <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">swiotlb_find_pool()</span></code>.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_dma_mark_swiotlb">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_dma_mark_swiotlb</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_dma_mark_swiotlb" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Mark the scatterlist for SWIOTLB bouncing</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entry</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Marks a a scatterlist for SWIOTLB bounce. Not all SG entries may be
+bounced.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_phys">
+<span class="n"><span class="pre">dma_addr_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_phys</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_phys" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Return physical address of an sg entry</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entry</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>This calls <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">page_to_phys()</span></code> on the page in this sg entry, and adds the
+sg offset. The caller must know that it is legal to call <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">page_to_phys()</span></code>
+on the sg page.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_virt">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">sg_virt</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_virt" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Return virtual address of an sg entry</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entry</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>This calls <a class="reference internal" href="../mm/highmem.html#c.page_address" title="page_address"><code class="xref c c-func docutils literal notranslate"><span class="pre">page_address()</span></code></a> on the page in this sg entry, and adds the
+sg offset. The caller must know that the sg page has a valid virtual
+mapping.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_init_marker">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_init_marker</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_init_marker" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Initialize markers in sg table</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>The SG table</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents</span></code></dt><dd><p>Number of entries in table</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_alloc_table_from_pages">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_alloc_table_from_pages</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_table</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgt</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">page</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">pages</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n_pages</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">offset</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">size</span></span>, <span class="n"><span class="pre">gfp_t</span></span><span class="w"> </span><span class="n"><span class="pre">gfp_mask</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_alloc_table_from_pages" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Allocate and initialize an sg table from an array of pages</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_table</span> <span class="pre">*sgt</span></code></dt><dd><p>The sg table header to use</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span> <span class="pre">**pages</span></code></dt><dd><p>Pointer to an array of page pointers</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">n_pages</span></code></dt><dd><p>Number of pages in the pages array</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">offset</span></code></dt><dd><p>Offset from start of the first page to the start of a buffer</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">long</span> <span class="pre">size</span></code></dt><dd><p>Number of valid bytes in the buffer (after offset)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">gfp_t</span> <span class="pre">gfp_mask</span></code></dt><dd><p>GFP allocation mask</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Allocate and initialize an sg table from a list of pages. Contiguous
+ranges of the pages are squashed into a single scatterlist node. A user
+may provide an offset at a start and a size of valid data in a buffer
+specified by the page array. The returned sg table is released by
+sg_free_table.</p>
+</div></blockquote>
+<p><strong>Return</strong></p>
+<p>0 on success, negative error on failure</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_page_iter_page">
+<span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">page</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">sg_page_iter_page</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_page_iter</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">piter</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_page_iter_page" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>get the current page held by the page iterator</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_page_iter</span> <span class="pre">*piter</span></code></dt><dd><p>page iterator holding the page</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_page_iter_dma_address">
+<span class="n"><span class="pre">dma_addr_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_page_iter_dma_address</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_dma_page_iter</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">dma_iter</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_page_iter_dma_address" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>get the dma address of the current page held by the page iterator.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_dma_page_iter</span> <span class="pre">*dma_iter</span></code></dt><dd><p>page iterator holding the page</p>
+</dd>
+</dl>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.for_each_sg_page">
+<span class="sig-name descname"><span class="n"><span class="pre">for_each_sg_page</span></span></span><a class="headerlink" href="#c.for_each_sg_page" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">for_each_sg_page</span> <span class="pre">(sglist,</span> <span class="pre">piter,</span> <span class="pre">nents,</span> <span class="pre">pgoffset)</span></code></p>
+<blockquote>
+<div><p>iterate over the pages of the given sg list</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">sglist</span></code></dt><dd><p>sglist to iterate over</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">piter</span></code></dt><dd><p>page iterator to hold current page, sg, sg_pgoffset</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">nents</span></code></dt><dd><p>maximum number of sg entries to iterate over</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">pgoffset</span></code></dt><dd><p>starting page offset (in pages)</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Callers may use <a class="reference internal" href="#c.sg_page_iter_page" title="sg_page_iter_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">sg_page_iter_page()</span></code></a> to get each page pointer.
+In each loop it operates on PAGE_SIZE unit.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.for_each_sg_dma_page">
+<span class="sig-name descname"><span class="n"><span class="pre">for_each_sg_dma_page</span></span></span><a class="headerlink" href="#c.for_each_sg_dma_page" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">for_each_sg_dma_page</span> <span class="pre">(sglist,</span> <span class="pre">dma_iter,</span> <span class="pre">dma_nents,</span> <span class="pre">pgoffset)</span></code></p>
+<blockquote>
+<div><p>iterate over the pages of the given sg list</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">sglist</span></code></dt><dd><p>sglist to iterate over</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dma_iter</span></code></dt><dd><p>DMA page iterator to hold current page</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dma_nents</span></code></dt><dd><p>maximum number of sg entries to iterate over, this is the value
+returned from dma_map_sg</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">pgoffset</span></code></dt><dd><p>starting page offset (in pages)</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Callers may use <a class="reference internal" href="#c.sg_page_iter_dma_address" title="sg_page_iter_dma_address"><code class="xref c c-func docutils literal notranslate"><span class="pre">sg_page_iter_dma_address()</span></code></a> to get each page's DMA address.
+In each loop it operates on PAGE_SIZE unit.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.for_each_sgtable_page">
+<span class="sig-name descname"><span class="n"><span class="pre">for_each_sgtable_page</span></span></span><a class="headerlink" href="#c.for_each_sgtable_page" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">for_each_sgtable_page</span> <span class="pre">(sgt,</span> <span class="pre">piter,</span> <span class="pre">pgoffset)</span></code></p>
+<blockquote>
+<div><p>iterate over all pages in the sg_table object</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">sgt</span></code></dt><dd><p>sg_table object to iterate over</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">piter</span></code></dt><dd><p>page iterator to hold current page</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">pgoffset</span></code></dt><dd><p>starting page offset (in pages)</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Iterates over the all memory pages in the buffer described by
+a scatterlist stored in the given sg_table object.
+See also <a class="reference internal" href="#c.for_each_sg_page" title="for_each_sg_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">for_each_sg_page()</span></code></a>. In each loop it operates on PAGE_SIZE unit.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.for_each_sgtable_dma_page">
+<span class="sig-name descname"><span class="n"><span class="pre">for_each_sgtable_dma_page</span></span></span><a class="headerlink" href="#c.for_each_sgtable_dma_page" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">for_each_sgtable_dma_page</span> <span class="pre">(sgt,</span> <span class="pre">dma_iter,</span> <span class="pre">pgoffset)</span></code></p>
+<blockquote>
+<div><p>iterate over the DMA mapped sg_table object</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">sgt</span></code></dt><dd><p>sg_table object to iterate over</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">dma_iter</span></code></dt><dd><p>DMA page iterator to hold current page</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">pgoffset</span></code></dt><dd><p>starting page offset (in pages)</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Iterates over the all DMA mapped pages in the buffer described by
+a scatterlist stored in the given sg_table object.
+See also <a class="reference internal" href="#c.for_each_sg_dma_page" title="for_each_sg_dma_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">for_each_sg_dma_page()</span></code></a>. In each loop it operates on PAGE_SIZE
+unit.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_nents">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_nents</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_nents" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>return total count of entries in scatterlist</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>The scatterlist</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Allows to know how many entries are in sg, taking into account
+chaining as well</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_nents_for_len">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_nents_for_len</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span>, <span class="n"><span class="pre">u64</span></span><span class="w"> </span><span class="n"><span class="pre">len</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_nents_for_len" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>return total count of entries in scatterlist needed to satisfy the supplied length</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>The scatterlist</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">u64</span> <span class="pre">len</span></code></dt><dd><p>The total required length</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Determines the number of entries in sg that are required to meet
+the supplied length, taking into account chaining as well</p>
+<p><strong>Return</strong></p>
+<p>the number of sg entries needed, negative error on failure</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_last">
+<span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">sg_last</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_last" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>return the last scatterlist entry in a list</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>First entry in the scatterlist</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents</span></code></dt><dd><p>Number of entries in the scatterlist</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Should only be used casually, it (currently) scans the entire list
+to get the last entry.</p>
+<p>Note that the <strong>sgl</strong> pointer passed in need not be the first one,
+the important bit is that <strong>nents</strong> denotes the number of entries that
+exist from <strong>sgl</strong>.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_init_table">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_init_table</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_init_table" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Initialize SG table</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>The SG table</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents</span></code></dt><dd><p>Number of entries in table</p>
+</dd>
+</dl>
+<p><strong>Notes</strong></p>
+<blockquote>
+<div><p>If this is part of a chained sg table, <a class="reference internal" href="#c.sg_mark_end" title="sg_mark_end"><code class="xref c c-func docutils literal notranslate"><span class="pre">sg_mark_end()</span></code></a> should be
+used only on the last table part.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_init_one">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_init_one</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sg</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">buf</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">buflen</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_init_one" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Initialize a single entry sg list</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sg</span></code></dt><dd><p>SG entry</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">void</span> <span class="pre">*buf</span></code></dt><dd><p>Virtual address for IO</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">buflen</span></code></dt><dd><p>IO length</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.__sg_free_table">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">__sg_free_table</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_table</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">table</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">max_ents</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents_first_chunk</span></span>, <span class="n"><span class="pre">sg_free_fn</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">free_fn</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">num_ents</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.__sg_free_table" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Free a previously mapped sg table</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_table</span> <span class="pre">*table</span></code></dt><dd><p>The sg table header to use</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">max_ents</span></code></dt><dd><p>The maximum number of entries per single scatterlist</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents_first_chunk</span></code></dt><dd><p>Number of entries int the (preallocated) first
+scatterlist chunk, 0 means no such preallocated first chunk</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sg_free_fn</span> <span class="pre">*free_fn</span></code></dt><dd><p>Free function</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">num_ents</span></code></dt><dd><p>Number of entries in the table</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Free an sg table previously allocated and setup with
+<a class="reference internal" href="#c.__sg_alloc_table" title="__sg_alloc_table"><code class="xref c c-func docutils literal notranslate"><span class="pre">__sg_alloc_table()</span></code></a>.  The <strong>max_ents</strong> value must be identical to
+that previously used with <a class="reference internal" href="#c.__sg_alloc_table" title="__sg_alloc_table"><code class="xref c c-func docutils literal notranslate"><span class="pre">__sg_alloc_table()</span></code></a>.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_free_append_table">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_free_append_table</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_append_table</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">table</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_free_append_table" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Free a previously allocated append sg table.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_append_table</span> <span class="pre">*table</span></code></dt><dd><p>The mapped sg append table header</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_free_table">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_free_table</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_table</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">table</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_free_table" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Free a previously allocated sg table</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_table</span> <span class="pre">*table</span></code></dt><dd><p>The mapped sg table header</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.__sg_alloc_table">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">__sg_alloc_table</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_table</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">table</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">max_ents</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">first_chunk</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents_first_chunk</span></span>, <span class="n"><span class="pre">gfp_t</span></span><span class="w"> </span><span class="n"><span class="pre">gfp_mask</span></span>, <span class="n"><span class="pre">sg_alloc_fn</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">alloc_fn</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.__sg_alloc_table" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Allocate and initialize an sg table with given allocator</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_table</span> <span class="pre">*table</span></code></dt><dd><p>The sg table header to use</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents</span></code></dt><dd><p>Number of entries in sg list</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">max_ents</span></code></dt><dd><p>The maximum number of entries the allocator returns per call</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*first_chunk</span></code></dt><dd><p>first SGL if preallocated (may be <code class="docutils literal notranslate"><span class="pre">NULL</span></code>)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents_first_chunk</span></code></dt><dd><p>Number of entries in the (preallocated) first
+scatterlist chunk, 0 means no such preallocated chunk provided by user</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">gfp_t</span> <span class="pre">gfp_mask</span></code></dt><dd><p>GFP allocation mask</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sg_alloc_fn</span> <span class="pre">*alloc_fn</span></code></dt><dd><p>Allocator to use</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>This function returns a <strong>table</strong> <strong>nents</strong> long. The allocator is
+defined to return scatterlist chunks of maximum size <strong>max_ents</strong>.
+Thus if <strong>nents</strong> is bigger than <strong>max_ents</strong>, the scatterlists will be
+chained in units of <strong>max_ents</strong>.</p>
+</div></blockquote>
+<p><strong>Notes</strong></p>
+<blockquote>
+<div><p>If this function returns non-0 (eg failure), the caller must call
+<a class="reference internal" href="#c.__sg_free_table" title="__sg_free_table"><code class="xref c c-func docutils literal notranslate"><span class="pre">__sg_free_table()</span></code></a> to cleanup any leftover allocations.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_alloc_table">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_alloc_table</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_table</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">table</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents</span></span>, <span class="n"><span class="pre">gfp_t</span></span><span class="w"> </span><span class="n"><span class="pre">gfp_mask</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_alloc_table" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Allocate and initialize an sg table</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_table</span> <span class="pre">*table</span></code></dt><dd><p>The sg table header to use</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents</span></code></dt><dd><p>Number of entries in sg list</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">gfp_t</span> <span class="pre">gfp_mask</span></code></dt><dd><p>GFP allocation mask</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Allocate and initialize an sg table. If <strong>nents</strong> is larger than
+SG_MAX_SINGLE_ALLOC a chained sg table will be setup.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_alloc_append_table_from_pages">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_alloc_append_table_from_pages</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_append_table</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgt_append</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">page</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">pages</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n_pages</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">offset</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">size</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">max_segment</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">left_pages</span></span>, <span class="n"><span class="pre">gfp_t</span></span><span class="w"> </span><span class="n"><span class="pre">gfp_mask</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_alloc_append_table_from_pages" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Allocate and initialize an append sg table from an array of pages</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_append_table</span> <span class="pre">*sgt_append</span></code></dt><dd><p>The sg append table to use</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span> <span class="pre">**pages</span></code></dt><dd><p>Pointer to an array of page pointers</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">n_pages</span></code></dt><dd><p>Number of pages in the pages array</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">offset</span></code></dt><dd><p>Offset from start of the first page to the start of a buffer</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">long</span> <span class="pre">size</span></code></dt><dd><p>Number of valid bytes in the buffer (after offset)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">max_segment</span></code></dt><dd><p>Maximum size of a scatterlist element in bytes</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">left_pages</span></code></dt><dd><p>Left pages caller have to set after this call</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">gfp_t</span> <span class="pre">gfp_mask</span></code></dt><dd><p>GFP allocation mask</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>In the first call it allocate and initialize an sg table from a list of
+pages, else reuse the scatterlist from sgt_append. Contiguous ranges of
+the pages are squashed into a single scatterlist entry up to the maximum
+size specified in <strong>max_segment</strong>.  A user may provide an offset at a start
+and a size of valid data in a buffer specified by the page array. The
+returned sg table is released by sg_free_append_table</p>
+</div></blockquote>
+<p><strong>Return</strong></p>
+<p>0 on success, negative error on failure</p>
+<p><strong>Notes</strong></p>
+<blockquote>
+<div><p>If this function returns non-0 (eg failure), the caller must call
+<a class="reference internal" href="#c.sg_free_append_table" title="sg_free_append_table"><code class="xref c c-func docutils literal notranslate"><span class="pre">sg_free_append_table()</span></code></a> to cleanup any leftover allocations.</p>
+<p>In the fist call, sgt_append must by initialized.</p>
+</div></blockquote>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_alloc_table_from_pages_segment">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_alloc_table_from_pages_segment</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_table</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgt</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">page</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">pages</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n_pages</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">offset</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">size</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">max_segment</span></span>, <span class="n"><span class="pre">gfp_t</span></span><span class="w"> </span><span class="n"><span class="pre">gfp_mask</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_alloc_table_from_pages_segment" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Allocate and initialize an sg table from an array of pages and given maximum segment.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_table</span> <span class="pre">*sgt</span></code></dt><dd><p>The sg table header to use</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span> <span class="pre">**pages</span></code></dt><dd><p>Pointer to an array of page pointers</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">n_pages</span></code></dt><dd><p>Number of pages in the pages array</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">offset</span></code></dt><dd><p>Offset from start of the first page to the start of a buffer</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">long</span> <span class="pre">size</span></code></dt><dd><p>Number of valid bytes in the buffer (after offset)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">max_segment</span></code></dt><dd><p>Maximum size of a scatterlist element in bytes</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">gfp_t</span> <span class="pre">gfp_mask</span></code></dt><dd><p>GFP allocation mask</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Allocate and initialize an sg table from a list of pages. Contiguous
+ranges of the pages are squashed into a single scatterlist node up to the
+maximum size specified in <strong>max_segment</strong>. A user may provide an offset at a
+start and a size of valid data in a buffer specified by the page array.</p>
+<p>The returned sg table is released by sg_free_table.</p>
+</div></blockquote>
+<p><strong>Return</strong></p>
+<p>0 on success, negative error on failure</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sgl_alloc_order">
+<span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">sgl_alloc_order</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">length</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">order</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">chainable</span></span>, <span class="n"><span class="pre">gfp_t</span></span><span class="w"> </span><span class="n"><span class="pre">gfp</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">nent_p</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sgl_alloc_order" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>allocate a scatterlist and its pages</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">long</span> <span class="pre">long</span> <span class="pre">length</span></code></dt><dd><p>Length in bytes of the scatterlist. Must be at least one</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">order</span></code></dt><dd><p>Second argument for <a class="reference internal" href="mm-api.html#c.alloc_pages" title="alloc_pages"><code class="xref c c-func docutils literal notranslate"><span class="pre">alloc_pages()</span></code></a></p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">bool</span> <span class="pre">chainable</span></code></dt><dd><p>Whether or not to allocate an extra element in the scatterlist
+for scatterlist chaining purposes</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">gfp_t</span> <span class="pre">gfp</span></code></dt><dd><p>Memory allocation flags</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">*nent_p</span></code></dt><dd><p>[out] Number of entries in the scatterlist that have pages</p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>A pointer to an initialized scatterlist or <code class="docutils literal notranslate"><span class="pre">NULL</span></code> upon failure.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sgl_alloc">
+<span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">sgl_alloc</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">length</span></span>, <span class="n"><span class="pre">gfp_t</span></span><span class="w"> </span><span class="n"><span class="pre">gfp</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">nent_p</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sgl_alloc" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>allocate a scatterlist and its pages</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">long</span> <span class="pre">long</span> <span class="pre">length</span></code></dt><dd><p>Length in bytes of the scatterlist</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">gfp_t</span> <span class="pre">gfp</span></code></dt><dd><p>Memory allocation flags</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">*nent_p</span></code></dt><dd><p>[out] Number of entries in the scatterlist</p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>A pointer to an initialized scatterlist or <code class="docutils literal notranslate"><span class="pre">NULL</span></code> upon failure.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sgl_free_n_order">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sgl_free_n_order</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">order</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sgl_free_n_order" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>free a scatterlist and its pages</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>Scatterlist with one or more elements</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">nents</span></code></dt><dd><p>Maximum number of elements to free</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">order</span></code></dt><dd><p>Second argument for <a class="reference internal" href="mm-api.html#c.__free_pages" title="__free_pages"><code class="xref c c-func docutils literal notranslate"><span class="pre">__free_pages()</span></code></a></p>
+</dd>
+</dl>
+<p><strong>Notes</strong></p>
+<ul class="simple">
+<li><p>If several scatterlists have been chained and each chain element is
+freed separately then it's essential to set nents correctly to avoid that a
+page would get freed twice.</p></li>
+<li><p>All pages in a chained scatterlist can be freed at once by setting <strong>nents</strong>
+to a high number.</p></li>
+</ul>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sgl_free_order">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sgl_free_order</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">order</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sgl_free_order" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>free a scatterlist and its pages</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>Scatterlist with one or more elements</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">order</span></code></dt><dd><p>Second argument for <a class="reference internal" href="mm-api.html#c.__free_pages" title="__free_pages"><code class="xref c c-func docutils literal notranslate"><span class="pre">__free_pages()</span></code></a></p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sgl_free">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sgl_free</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sgl_free" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>free a scatterlist and its pages</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>Scatterlist with one or more elements</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_miter_start">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_miter_start</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_mapping_iter</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">miter</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">flags</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_miter_start" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>start mapping iteration over a sg list</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_mapping_iter</span> <span class="pre">*miter</span></code></dt><dd><p>sg mapping iter to be started</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>sg list to iterate over</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents</span></code></dt><dd><p>number of sg entries</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">flags</span></code></dt><dd><p>sg iterator flags</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Starts mapping iterator <strong>miter</strong>.</p>
+</div></blockquote>
+<p><strong>Context</strong></p>
+<p>Don't care.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_miter_skip">
+<span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_miter_skip</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_mapping_iter</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">miter</span></span>, <span class="n"><span class="pre">off_t</span></span><span class="w"> </span><span class="n"><span class="pre">offset</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_miter_skip" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>reposition mapping iterator</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_mapping_iter</span> <span class="pre">*miter</span></code></dt><dd><p>sg mapping iter to be skipped</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">off_t</span> <span class="pre">offset</span></code></dt><dd><p>number of bytes to plus the current location</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Sets the offset of <strong>miter</strong> to its current location plus <strong>offset</strong> bytes.
+If mapping iterator <strong>miter</strong> has been proceeded by <a class="reference internal" href="#c.sg_miter_next" title="sg_miter_next"><code class="xref c c-func docutils literal notranslate"><span class="pre">sg_miter_next()</span></code></a>, this
+stops <strong>miter</strong>.</p>
+</div></blockquote>
+<p><strong>Context</strong></p>
+<p>Don't care.</p>
+<p><strong>Return</strong></p>
+<p>true if <strong>miter</strong> contains the valid mapping.  false if end of sg
+list is reached.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_miter_next">
+<span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_miter_next</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_mapping_iter</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">miter</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_miter_next" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>proceed mapping iterator to the next mapping</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_mapping_iter</span> <span class="pre">*miter</span></code></dt><dd><p>sg mapping iter to proceed</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Proceeds <strong>miter</strong> to the next mapping.  <strong>miter</strong> should have been started
+using <a class="reference internal" href="#c.sg_miter_start" title="sg_miter_start"><code class="xref c c-func docutils literal notranslate"><span class="pre">sg_miter_start()</span></code></a>.  On successful return, <strong>miter-&gt;page</strong>,
+<strong>miter-&gt;addr</strong> and <strong>miter-&gt;length</strong> point to the current mapping.</p>
+</div></blockquote>
+<p><strong>Context</strong></p>
+<p>May sleep if !SG_MITER_ATOMIC &amp;&amp; !SG_MITER_LOCAL.</p>
+<p><strong>Return</strong></p>
+<p>true if <strong>miter</strong> contains the next mapping.  false if end of sg
+list is reached.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_miter_stop">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_miter_stop</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_mapping_iter</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">miter</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_miter_stop" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>stop mapping iteration</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_mapping_iter</span> <span class="pre">*miter</span></code></dt><dd><p>sg mapping iter to be stopped</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<blockquote>
+<div><p>Stops mapping iterator <strong>miter</strong>.  <strong>miter</strong> should have been started
+using <a class="reference internal" href="#c.sg_miter_start" title="sg_miter_start"><code class="xref c c-func docutils literal notranslate"><span class="pre">sg_miter_start()</span></code></a>.  A stopped iteration can be resumed by
+calling <a class="reference internal" href="#c.sg_miter_next" title="sg_miter_next"><code class="xref c c-func docutils literal notranslate"><span class="pre">sg_miter_next()</span></code></a> on it.  This is useful when resources (kmap)
+need to be released during iteration.</p>
+</div></blockquote>
+<p><strong>Context</strong></p>
+<p>Don't care otherwise.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_copy_buffer">
+<span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_copy_buffer</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">buf</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">buflen</span></span>, <span class="n"><span class="pre">off_t</span></span><span class="w"> </span><span class="n"><span class="pre">skip</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">to_buffer</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_copy_buffer" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Copy data between a linear buffer and an SG list</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>The SG list</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents</span></code></dt><dd><p>Number of SG entries</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*buf</span></code></dt><dd><p>Where to copy from</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">buflen</span></code></dt><dd><p>The number of bytes to copy</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">off_t</span> <span class="pre">skip</span></code></dt><dd><p>Number of bytes to skip before copying</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">bool</span> <span class="pre">to_buffer</span></code></dt><dd><p>transfer direction (true == from an sg list to a
+buffer, false == from a buffer to an sg list)</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Returns the number of copied bytes.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_copy_from_buffer">
+<span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_copy_from_buffer</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">buf</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">buflen</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_copy_from_buffer" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Copy from a linear buffer to an SG list</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>The SG list</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents</span></code></dt><dd><p>Number of SG entries</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">void</span> <span class="pre">*buf</span></code></dt><dd><p>Where to copy from</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">buflen</span></code></dt><dd><p>The number of bytes to copy</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Returns the number of copied bytes.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_copy_to_buffer">
+<span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_copy_to_buffer</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">buf</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">buflen</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_copy_to_buffer" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Copy from an SG list to a linear buffer</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>The SG list</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents</span></code></dt><dd><p>Number of SG entries</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*buf</span></code></dt><dd><p>Where to copy to</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">buflen</span></code></dt><dd><p>The number of bytes to copy</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Returns the number of copied bytes.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_pcopy_from_buffer">
+<span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_pcopy_from_buffer</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">buf</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">buflen</span></span>, <span class="n"><span class="pre">off_t</span></span><span class="w"> </span><span class="n"><span class="pre">skip</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_pcopy_from_buffer" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Copy from a linear buffer to an SG list</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>The SG list</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents</span></code></dt><dd><p>Number of SG entries</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">void</span> <span class="pre">*buf</span></code></dt><dd><p>Where to copy from</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">buflen</span></code></dt><dd><p>The number of bytes to copy</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">off_t</span> <span class="pre">skip</span></code></dt><dd><p>Number of bytes to skip before copying</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Returns the number of copied bytes.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_pcopy_to_buffer">
+<span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_pcopy_to_buffer</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">buf</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">buflen</span></span>, <span class="n"><span class="pre">off_t</span></span><span class="w"> </span><span class="n"><span class="pre">skip</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_pcopy_to_buffer" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Copy from an SG list to a linear buffer</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>The SG list</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents</span></code></dt><dd><p>Number of SG entries</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*buf</span></code></dt><dd><p>Where to copy to</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">buflen</span></code></dt><dd><p>The number of bytes to copy</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">off_t</span> <span class="pre">skip</span></code></dt><dd><p>Number of bytes to skip before copying</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Returns the number of copied bytes.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.sg_zero_buffer">
+<span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">sg_zero_buffer</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">scatterlist</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgl</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nents</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">buflen</span></span>, <span class="n"><span class="pre">off_t</span></span><span class="w"> </span><span class="n"><span class="pre">skip</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.sg_zero_buffer" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Zero-out a part of a SG list</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">scatterlist</span> <span class="pre">*sgl</span></code></dt><dd><p>The SG list</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">nents</span></code></dt><dd><p>Number of SG entries</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">buflen</span></code></dt><dd><p>The number of bytes to zero out</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">off_t</span> <span class="pre">skip</span></code></dt><dd><p>Number of bytes to skip before zeroing</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Returns the number of bytes zeroed.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.extract_iter_to_sg">
+<span class="n"><span class="pre">ssize_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">extract_iter_to_sg</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">iov_iter</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">iter</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">maxsize</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">sg_table</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">sgtable</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">sg_max</span></span>, <span class="n"><span class="pre">iov_iter_extraction_t</span></span><span class="w"> </span><span class="n"><span class="pre">extraction_flags</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.extract_iter_to_sg" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Extract pages from an iterator and add to an sglist</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">iov_iter</span> <span class="pre">*iter</span></code></dt><dd><p>The iterator to extract from</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">maxsize</span></code></dt><dd><p>The amount of iterator to copy</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sg_table</span> <span class="pre">*sgtable</span></code></dt><dd><p>The scatterlist table to fill in</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">sg_max</span></code></dt><dd><p>Maximum number of elements in <strong>sgtable</strong> that may be filled</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">iov_iter_extraction_t</span> <span class="pre">extraction_flags</span></code></dt><dd><p>Flags to qualify the request</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Extract the page fragments from the given amount of the source iterator and
+add them to a scatterlist that refers to all of those bits, to a maximum
+addition of <strong>sg_max</strong> elements.</p>
+<p>The pages referred to by UBUF- and IOVEC-type iterators are extracted and
+pinned; BVEC-, KVEC-, FOLIOQ- and XARRAY-type are extracted but aren't
+pinned; DISCARD-type is not supported.</p>
+<p>No end mark is placed on the scatterlist; that's left to the caller.</p>
+<p><strong>extraction_flags</strong> can have ITER_ALLOW_P2PDMA set to request peer-to-peer DMA
+be allowed on the pages extracted.</p>
+<p>If successful, <strong>sgtable-&gt;nents</strong> is updated to include the number of elements
+added and the number of bytes added is returned.  <strong>sgtable-&gt;orig_nents</strong> is
+left unaltered.</p>
+<p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">iov_iter_extract_mode()</span></code> function should be used to query how cleanup
+should be performed.</p>
+</div>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/core-api/dma-api.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

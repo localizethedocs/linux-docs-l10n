@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Why the &#34;volatile&#34; type class should not be used &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/process/volatile-considered-harmful.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="(How to avoid) Botching up ioctls" href="botching-up-ioctls.html" />
+    <link rel="prev" title="Adding a New System Call" href="adding-syscalls.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">All development-process docs</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#an-introduction-to-how-kernel-development-works">An introduction to how kernel development works</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#tools-and-technical-guides-for-kernel-developers">Tools and technical guides for kernel developers</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="changes.html">Minimal requirements to compile the Kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="programming-language.html">Programming Language</a></li>
+<li class="toctree-l3"><a class="reference internal" href="coding-style.html">Linux kernel coding style</a></li>
+<li class="toctree-l3"><a class="reference internal" href="maintainer-pgp-guide.html">Kernel Maintainer PGP guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="email-clients.html">Email clients info for Linux</a></li>
+<li class="toctree-l3"><a class="reference internal" href="applying-patches.html">Applying Patches To The Linux Kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="backporting.html">Backporting and conflict resolution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="adding-syscalls.html">Adding a New System Call</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Why the &quot;volatile&quot; type class should not be used</a></li>
+<li class="toctree-l3"><a class="reference internal" href="botching-up-ioctls.html">(How to avoid) Botching up ioctls</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#policy-guides-and-developer-statements">方針指南與開發者聲明</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#dealing-with-bugs">處理臭蟲</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#maintainer-information">維護者資訊</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#other-material">Other material</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/process/volatile-considered-harmful.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="why-the-volatile-type-class-should-not-be-used">
+<span id="volatile-considered-harmful"></span><h1>Why the &quot;volatile&quot; type class should not be used<a class="headerlink" href="#why-the-volatile-type-class-should-not-be-used" title="連結到這個標頭">¶</a></h1>
+<p>C programmers have often taken volatile to mean that the variable could be
+changed outside of the current thread of execution; as a result, they are
+sometimes tempted to use it in kernel code when shared data structures are
+being used.  In other words, they have been known to treat volatile types
+as a sort of easy atomic variable, which they are not.  The use of volatile in
+kernel code is almost never correct; this document describes why.</p>
+<p>The key point to understand with regard to volatile is that its purpose is
+to suppress optimization, which is almost never what one really wants to
+do.  In the kernel, one must protect shared data structures against
+unwanted concurrent access, which is very much a different task.  The
+process of protecting against unwanted concurrency will also avoid almost
+all optimization-related problems in a more efficient way.</p>
+<p>Like volatile, the kernel primitives which make concurrent access to data
+safe (spinlocks, mutexes, memory barriers, etc.) are designed to prevent
+unwanted optimization.  If they are being used properly, there will be no
+need to use volatile as well.  If volatile is still necessary, there is
+almost certainly a bug in the code somewhere.  In properly-written kernel
+code, volatile can only serve to slow things down.</p>
+<p>Consider a typical block of kernel code:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>spin_lock(&amp;the_lock);
+do_something_on(&amp;shared_data);
+do_something_else_with(&amp;shared_data);
+spin_unlock(&amp;the_lock);
+</pre></div>
+</div>
+<p>If all the code follows the locking rules, the value of shared_data cannot
+change unexpectedly while the_lock is held.  Any other code which might
+want to play with that data will be waiting on the lock.  The spinlock
+primitives act as memory barriers - they are explicitly written to do so -
+meaning that data accesses will not be optimized across them.  So the
+compiler might think it knows what will be in shared_data, but the
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">spin_lock()</span></code> call, since it acts as a memory barrier, will force it to
+forget anything it knows.  There will be no optimization problems with
+accesses to that data.</p>
+<p>If shared_data were declared volatile, the locking would still be
+necessary.  But the compiler would also be prevented from optimizing access
+to shared_data _within_ the critical section, when we know that nobody else
+can be working with it.  While the lock is held, shared_data is not
+volatile.  When dealing with shared data, proper locking makes volatile
+unnecessary - and potentially harmful.</p>
+<p>The volatile storage class was originally meant for memory-mapped I/O
+registers.  Within the kernel, register accesses, too, should be protected
+by locks, but one also does not want the compiler &quot;optimizing&quot; register
+accesses within a critical section.  But, within the kernel, I/O memory
+accesses are always done through accessor functions; accessing I/O memory
+directly through pointers is frowned upon and does not work on all
+architectures.  Those accessors are written to prevent unwanted
+optimization, so, once again, volatile is unnecessary.</p>
+<p>Another situation where one might be tempted to use volatile is
+when the processor is busy-waiting on the value of a variable.  The right
+way to perform a busy wait is:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>while (my_variable != what_i_want)
+    cpu_relax();
+</pre></div>
+</div>
+<p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">cpu_relax()</span></code> call can lower CPU power consumption or yield to a
+hyperthreaded twin processor; it also happens to serve as a compiler
+barrier, so, once again, volatile is unnecessary.  Of course, busy-
+waiting is generally an anti-social act to begin with.</p>
+<p>There are still a few rare situations where volatile makes sense in the
+kernel:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>The above-mentioned accessor functions might use volatile on
+architectures where direct I/O memory access does work.  Essentially,
+each accessor call becomes a little critical section on its own and
+ensures that the access happens as expected by the programmer.</p></li>
+<li><p>Inline assembly code which changes memory, but which has no other
+visible side effects, risks being deleted by GCC.  Adding the volatile
+keyword to asm statements will prevent this removal.</p></li>
+<li><p>The jiffies variable is special in that it can have a different value
+every time it is referenced, but it can be read without any special
+locking.  So jiffies can be volatile, but the addition of other
+variables of this type is strongly frowned upon.  Jiffies is considered
+to be a &quot;stupid legacy&quot; issue (Linus's words) in this regard; fixing it
+would be more trouble than it is worth.</p></li>
+<li><p>Pointers to data structures in coherent memory which might be modified
+by I/O devices can, sometimes, legitimately be volatile.  A ring buffer
+used by a network adapter, where that adapter changes pointers to
+indicate which descriptors have been processed, is an example of this
+type of situation.</p></li>
+</ul>
+</div></blockquote>
+<p>For most code, none of the above justifications for volatile apply.  As a
+result, the use of volatile is likely to be seen as a bug and will bring
+additional scrutiny to the code.  Developers who are tempted to use
+volatile should take a step back and think about what they are truly trying
+to accomplish.</p>
+<p>Patches to remove volatile variables are generally welcome - as long as
+they come with a justification which shows that the concurrency issues have
+been properly thought through.</p>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="連結到這個標頭">¶</a></h2>
+<p>[1] <a class="reference external" href="https://lwn.net/Articles/233481/">https://lwn.net/Articles/233481/</a></p>
+<p>[2] <a class="reference external" href="https://lwn.net/Articles/233482/">https://lwn.net/Articles/233482/</a></p>
+</section>
+<section id="credits">
+<h2>Credits<a class="headerlink" href="#credits" title="連結到這個標頭">¶</a></h2>
+<p>Original impetus and research by Randy Dunlap</p>
+<p>Written by Jonathan Corbet</p>
+<p>Improvements via comments from Satyam Sharma, Johannes Stezenbach, Jesper
+Juhl, Heikki Orsila, H. Peter Anvin, Philipp Hahn, and Stefan
+Richter.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/process/volatile-considered-harmful.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

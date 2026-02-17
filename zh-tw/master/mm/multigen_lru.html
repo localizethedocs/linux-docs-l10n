@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Multi-Gen LRU &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/mm/multigen_lru.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="What is NUMA?" href="numa.html" />
+    <link rel="prev" title="When do you need to notify inside page table lock ?" href="mmu_notifier.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/mm/multigen_lru.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="multi-gen-lru">
+<h1>Multi-Gen LRU<a class="headerlink" href="#multi-gen-lru" title="連結到這個標頭">¶</a></h1>
+<p>The multi-gen LRU is an alternative LRU implementation that optimizes
+page reclaim and improves performance under memory pressure. Page
+reclaim decides the kernel's caching policy and ability to overcommit
+memory. It directly impacts the kswapd CPU usage and RAM efficiency.</p>
+<section id="design-overview">
+<h2>Design overview<a class="headerlink" href="#design-overview" title="連結到這個標頭">¶</a></h2>
+<section id="objectives">
+<h3>Objectives<a class="headerlink" href="#objectives" title="連結到這個標頭">¶</a></h3>
+<p>The design objectives are:</p>
+<ul class="simple">
+<li><p>Good representation of access recency</p></li>
+<li><p>Try to profit from spatial locality</p></li>
+<li><p>Fast paths to make obvious choices</p></li>
+<li><p>Simple self-correcting heuristics</p></li>
+</ul>
+<p>The representation of access recency is at the core of all LRU
+implementations. In the multi-gen LRU, each generation represents a
+group of pages with similar access recency. Generations establish a
+(time-based) common frame of reference and therefore help make better
+choices, e.g., between different memcgs on a computer or different
+computers in a data center (for job scheduling).</p>
+<p>Exploiting spatial locality improves efficiency when gathering the
+accessed bit. A rmap walk targets a single page and does not try to
+profit from discovering a young PTE. A page table walk can sweep all
+the young PTEs in an address space, but the address space can be too
+sparse to make a profit. The key is to optimize both methods and use
+them in combination.</p>
+<p>Fast paths reduce code complexity and runtime overhead. Unmapped pages
+do not require TLB flushes; clean pages do not require writeback.
+These facts are only helpful when other conditions, e.g., access
+recency, are similar. With generations as a common frame of reference,
+additional factors stand out. But obvious choices might not be good
+choices; thus self-correction is necessary.</p>
+<p>The benefits of simple self-correcting heuristics are self-evident.
+Again, with generations as a common frame of reference, this becomes
+attainable. Specifically, pages in the same generation can be
+categorized based on additional factors, and a feedback loop can
+statistically compare the refault percentages across those categories
+and infer which of them are better choices.</p>
+</section>
+<section id="assumptions">
+<h3>Assumptions<a class="headerlink" href="#assumptions" title="連結到這個標頭">¶</a></h3>
+<p>The protection of hot pages and the selection of cold pages are based
+on page access channels and patterns. There are two access channels:</p>
+<ul class="simple">
+<li><p>Accesses through page tables</p></li>
+<li><p>Accesses through file descriptors</p></li>
+</ul>
+<p>The protection of the former channel is by design stronger because:</p>
+<ol class="arabic simple">
+<li><p>The uncertainty in determining the access patterns of the former
+channel is higher due to the approximation of the accessed bit.</p></li>
+<li><p>The cost of evicting the former channel is higher due to the TLB
+flushes required and the likelihood of encountering the dirty bit.</p></li>
+<li><p>The penalty of underprotecting the former channel is higher because
+applications usually do not prepare themselves for major page
+faults like they do for blocked I/O. E.g., GUI applications
+commonly use dedicated I/O threads to avoid blocking rendering
+threads.</p></li>
+</ol>
+<p>There are also two access patterns:</p>
+<ul class="simple">
+<li><p>Accesses exhibiting temporal locality</p></li>
+<li><p>Accesses not exhibiting temporal locality</p></li>
+</ul>
+<p>For the reasons listed above, the former channel is assumed to follow
+the former pattern unless <code class="docutils literal notranslate"><span class="pre">VM_SEQ_READ</span></code> or <code class="docutils literal notranslate"><span class="pre">VM_RAND_READ</span></code> is
+present, and the latter channel is assumed to follow the latter
+pattern unless outlying refaults have been observed.</p>
+</section>
+</section>
+<section id="workflow-overview">
+<h2>Workflow overview<a class="headerlink" href="#workflow-overview" title="連結到這個標頭">¶</a></h2>
+<p>Evictable pages are divided into multiple generations for each
+<code class="docutils literal notranslate"><span class="pre">lruvec</span></code>. The youngest generation number is stored in
+<code class="docutils literal notranslate"><span class="pre">lrugen-&gt;max_seq</span></code> for both anon and file types as they are aged on
+an equal footing. The oldest generation numbers are stored in
+<code class="docutils literal notranslate"><span class="pre">lrugen-&gt;min_seq[]</span></code> separately for anon and file types as clean file
+pages can be evicted regardless of swap constraints. These three
+variables are monotonically increasing.</p>
+<p>Generation numbers are truncated into <code class="docutils literal notranslate"><span class="pre">order_base_2(MAX_NR_GENS+1)</span></code>
+bits in order to fit into the gen counter in <code class="docutils literal notranslate"><span class="pre">folio-&gt;flags</span></code>. Each
+truncated generation number is an index to <code class="docutils literal notranslate"><span class="pre">lrugen-&gt;folios[]</span></code>. The
+sliding window technique is used to track at least <code class="docutils literal notranslate"><span class="pre">MIN_NR_GENS</span></code> and
+at most <code class="docutils literal notranslate"><span class="pre">MAX_NR_GENS</span></code> generations. The gen counter stores a value
+within <code class="docutils literal notranslate"><span class="pre">[1,</span> <span class="pre">MAX_NR_GENS]</span></code> while a page is on one of
+<code class="docutils literal notranslate"><span class="pre">lrugen-&gt;folios[]</span></code>; otherwise it stores zero.</p>
+<p>Each generation is divided into multiple tiers. A page accessed <code class="docutils literal notranslate"><span class="pre">N</span></code>
+times through file descriptors is in tier <code class="docutils literal notranslate"><span class="pre">order_base_2(N)</span></code>. Unlike
+generations, tiers do not have dedicated <code class="docutils literal notranslate"><span class="pre">lrugen-&gt;folios[]</span></code>. In
+contrast to moving across generations, which requires the LRU lock,
+moving across tiers only involves atomic operations on
+<code class="docutils literal notranslate"><span class="pre">folio-&gt;flags</span></code> and therefore has a negligible cost. A feedback loop
+modeled after the PID controller monitors refaults over all the tiers
+from anon and file types and decides which tiers from which types to
+evict or protect. The desired effect is to balance refault percentages
+between anon and file types proportional to the swappiness level.</p>
+<p>There are two conceptually independent procedures: the aging and the
+eviction. They form a closed-loop system, i.e., the page reclaim.</p>
+<section id="aging">
+<h3>Aging<a class="headerlink" href="#aging" title="連結到這個標頭">¶</a></h3>
+<p>The aging produces young generations. Given an <code class="docutils literal notranslate"><span class="pre">lruvec</span></code>, it
+increments <code class="docutils literal notranslate"><span class="pre">max_seq</span></code> when <code class="docutils literal notranslate"><span class="pre">max_seq-min_seq+1</span></code> approaches
+<code class="docutils literal notranslate"><span class="pre">MIN_NR_GENS</span></code>. The aging promotes hot pages to the youngest
+generation when it finds them accessed through page tables; the
+demotion of cold pages happens consequently when it increments
+<code class="docutils literal notranslate"><span class="pre">max_seq</span></code>. The aging uses page table walks and rmap walks to find
+young PTEs. For the former, it iterates <code class="docutils literal notranslate"><span class="pre">lruvec_memcg()-&gt;mm_list</span></code>
+and calls <code class="docutils literal notranslate"><span class="pre">walk_page_range()</span></code> with each <code class="docutils literal notranslate"><span class="pre">mm_struct</span></code> on this list
+to scan PTEs, and after each iteration, it increments <code class="docutils literal notranslate"><span class="pre">max_seq</span></code>. For
+the latter, when the eviction walks the rmap and finds a young PTE,
+the aging scans the adjacent PTEs. For both, on finding a young PTE,
+the aging clears the accessed bit and updates the gen counter of the
+page mapped by this PTE to <code class="docutils literal notranslate"><span class="pre">(max_seq%MAX_NR_GENS)+1</span></code>.</p>
+</section>
+<section id="eviction">
+<h3>Eviction<a class="headerlink" href="#eviction" title="連結到這個標頭">¶</a></h3>
+<p>The eviction consumes old generations. Given an <code class="docutils literal notranslate"><span class="pre">lruvec</span></code>, it
+increments <code class="docutils literal notranslate"><span class="pre">min_seq</span></code> when <code class="docutils literal notranslate"><span class="pre">lrugen-&gt;folios[]</span></code> indexed by
+<code class="docutils literal notranslate"><span class="pre">min_seq%MAX_NR_GENS</span></code> becomes empty. To select a type and a tier to
+evict from, it first compares <code class="docutils literal notranslate"><span class="pre">min_seq[]</span></code> to select the older type.
+If both types are equally old, it selects the one whose first tier has
+a lower refault percentage. The first tier contains single-use
+unmapped clean pages, which are the best bet. The eviction sorts a
+page according to its gen counter if the aging has found this page
+accessed through page tables and updated its gen counter. It also
+moves a page to the next generation, i.e., <code class="docutils literal notranslate"><span class="pre">min_seq+1</span></code>, if this page
+was accessed multiple times through file descriptors and the feedback
+loop has detected outlying refaults from the tier this page is in. To
+this end, the feedback loop uses the first tier as the baseline, for
+the reason stated earlier.</p>
+</section>
+<section id="working-set-protection">
+<h3>Working set protection<a class="headerlink" href="#working-set-protection" title="連結到這個標頭">¶</a></h3>
+<p>Each generation is timestamped at birth. If <code class="docutils literal notranslate"><span class="pre">lru_gen_min_ttl</span></code> is
+set, an <code class="docutils literal notranslate"><span class="pre">lruvec</span></code> is protected from the eviction when its oldest
+generation was born within <code class="docutils literal notranslate"><span class="pre">lru_gen_min_ttl</span></code> milliseconds. In other
+words, it prevents the working set of <code class="docutils literal notranslate"><span class="pre">lru_gen_min_ttl</span></code> milliseconds
+from getting evicted. The OOM killer is triggered if this working set
+cannot be kept in memory.</p>
+<p>This time-based approach has the following advantages:</p>
+<ol class="arabic simple">
+<li><p>It is easier to configure because it is agnostic to applications
+and memory sizes.</p></li>
+<li><p>It is more reliable because it is directly wired to the OOM killer.</p></li>
+</ol>
+</section>
+<section id="mm-struct-list">
+<h3><code class="docutils literal notranslate"><span class="pre">mm_struct</span></code> list<a class="headerlink" href="#mm-struct-list" title="連結到這個標頭">¶</a></h3>
+<p>An <code class="docutils literal notranslate"><span class="pre">mm_struct</span></code> list is maintained for each memcg, and an
+<code class="docutils literal notranslate"><span class="pre">mm_struct</span></code> follows its owner task to the new memcg when this task
+is migrated.</p>
+<p>A page table walker iterates <code class="docutils literal notranslate"><span class="pre">lruvec_memcg()-&gt;mm_list</span></code> and calls
+<code class="docutils literal notranslate"><span class="pre">walk_page_range()</span></code> with each <code class="docutils literal notranslate"><span class="pre">mm_struct</span></code> on this list to scan
+PTEs. When multiple page table walkers iterate the same list, each of
+them gets a unique <code class="docutils literal notranslate"><span class="pre">mm_struct</span></code>, and therefore they can run in
+parallel.</p>
+<p>Page table walkers ignore any misplaced pages, e.g., if an
+<code class="docutils literal notranslate"><span class="pre">mm_struct</span></code> was migrated, pages left in the previous memcg will be
+ignored when the current memcg is under reclaim. Similarly, page table
+walkers will ignore pages from nodes other than the one under reclaim.</p>
+<p>This infrastructure also tracks the usage of <code class="docutils literal notranslate"><span class="pre">mm_struct</span></code> between
+context switches so that page table walkers can skip processes that
+have been sleeping since the last iteration.</p>
+</section>
+<section id="rmap-pt-walk-feedback">
+<h3>Rmap/PT walk feedback<a class="headerlink" href="#rmap-pt-walk-feedback" title="連結到這個標頭">¶</a></h3>
+<p>Searching the rmap for PTEs mapping each page on an LRU list (to test
+and clear the accessed bit) can be expensive because pages from
+different VMAs (PA space) are not cache friendly to the rmap (VA
+space). For workloads mostly using mapped pages, searching the rmap
+can incur the highest CPU cost in the reclaim path.</p>
+<p><code class="docutils literal notranslate"><span class="pre">lru_gen_look_around()</span></code> exploits spatial locality to reduce the
+trips into the rmap. It scans the adjacent PTEs of a young PTE and
+promotes hot pages. If the scan was done cacheline efficiently, it
+adds the PMD entry pointing to the PTE table to the Bloom filter. This
+forms a feedback loop between the eviction and the aging.</p>
+</section>
+<section id="bloom-filters">
+<h3>Bloom filters<a class="headerlink" href="#bloom-filters" title="連結到這個標頭">¶</a></h3>
+<p>Bloom filters are a space and memory efficient data structure for set
+membership test, i.e., test if an element is not in the set or may be
+in the set.</p>
+<p>In the eviction path, specifically, in <code class="docutils literal notranslate"><span class="pre">lru_gen_look_around()</span></code>, if a
+PMD has a sufficient number of hot pages, its address is placed in the
+filter. In the aging path, set membership means that the PTE range
+will be scanned for young pages.</p>
+<p>Note that Bloom filters are probabilistic on set membership. If a test
+is false positive, the cost is an additional scan of a range of PTEs,
+which may yield hot pages anyway. Parameters of the filter itself can
+control the false positive rate in the limit.</p>
+</section>
+<section id="pid-controller">
+<h3>PID controller<a class="headerlink" href="#pid-controller" title="連結到這個標頭">¶</a></h3>
+<p>A feedback loop modeled after the Proportional-Integral-Derivative
+(PID) controller monitors refaults over anon and file types and
+decides which type to evict when both types are available from the
+same generation.</p>
+<p>The PID controller uses generations rather than the wall clock as the
+time domain because a CPU can scan pages at different rates under
+varying memory pressure. It calculates a moving average for each new
+generation to avoid being permanently locked in a suboptimal state.</p>
+</section>
+<section id="memcg-lru">
+<h3>Memcg LRU<a class="headerlink" href="#memcg-lru" title="連結到這個標頭">¶</a></h3>
+<p>An memcg LRU is a per-node LRU of memcgs. It is also an LRU of LRUs,
+since each node and memcg combination has an LRU of folios (see
+<code class="docutils literal notranslate"><span class="pre">mem_cgroup_lruvec()</span></code>). Its goal is to improve the scalability of
+global reclaim, which is critical to system-wide memory overcommit in
+data centers. Note that memcg LRU only applies to global reclaim.</p>
+<p>The basic structure of an memcg LRU can be understood by an analogy to
+the active/inactive LRU (of folios):</p>
+<ol class="arabic simple">
+<li><p>It has the young and the old (generations), i.e., the counterparts
+to the active and the inactive;</p></li>
+<li><p>The increment of <code class="docutils literal notranslate"><span class="pre">max_seq</span></code> triggers promotion, i.e., the
+counterpart to activation;</p></li>
+<li><p>Other events trigger similar operations, e.g., offlining an memcg
+triggers demotion, i.e., the counterpart to deactivation.</p></li>
+</ol>
+<p>In terms of global reclaim, it has two distinct features:</p>
+<ol class="arabic simple">
+<li><p>Sharding, which allows each thread to start at a random memcg (in
+the old generation) and improves parallelism;</p></li>
+<li><p>Eventual fairness, which allows direct reclaim to bail out at will
+and reduces latency without affecting fairness over some time.</p></li>
+</ol>
+<p>In terms of traversing memcgs during global reclaim, it improves the
+best-case complexity from O(n) to O(1) and does not affect the
+worst-case complexity O(n). Therefore, on average, it has a sublinear
+complexity.</p>
+</section>
+<section id="summary">
+<h3>Summary<a class="headerlink" href="#summary" title="連結到這個標頭">¶</a></h3>
+<p>The multi-gen LRU (of folios) can be disassembled into the following
+parts:</p>
+<ul class="simple">
+<li><p>Generations</p></li>
+<li><p>Rmap walks</p></li>
+<li><p>Page table walks via <code class="docutils literal notranslate"><span class="pre">mm_struct</span></code> list</p></li>
+<li><p>Bloom filters for rmap/PT walk feedback</p></li>
+<li><p>PID controller for refault feedback</p></li>
+</ul>
+<p>The aging and the eviction form a producer-consumer model;
+specifically, the latter drives the former by the sliding window over
+generations. Within the aging, rmap walks drive page table walks by
+inserting hot densely populated page tables to the Bloom filters.
+Within the eviction, the PID controller uses refaults as the feedback
+to select types to evict and tiers to protect.</p>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/mm/multigen_lru.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

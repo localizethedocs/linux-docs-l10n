@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Kernel Crypto API Architecture &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/crypto/architecture.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Asynchronous Transfers/Transforms API" href="async-tx-api.html" />
+    <link rel="prev" title="Scatterlist Cryptographic API" href="api-intro.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../accounting/index.html">Accounting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cpu-freq/index.html">CPUFreq - CPU frequency and voltage scaling code in the Linux(TM) kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../edac/index.html">EDAC 子系統</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../fpga/index.html">FPGA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../i2c/index.html">I2C/SMBus Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../iio/index.html">Industrial I/O</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pcmcia/index.html">PCMCIA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../spi/index.html">Serial Peripheral Interface (SPI)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../w1/index.html">1-Wire Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../watchdog/index.html">Watchdog 支援</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../virt/index.html">Virtualization Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../hwmon/index.html">Hardware Monitoring</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../accel/index.html">Compute Accelerators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../security/index.html">Security Documentation</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Crypto API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../bpf/index.html">BPF 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usb/index.html">USB support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../PCI/index.html">PCI Bus Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../misc-devices/index.html">Assorted Miscellaneous Devices Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../peci/index.html">PECI 子系統</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../wmi/index.html">WMI 子系統</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tee/index.html">TEE Subsystem</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/crypto/architecture.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="kernel-crypto-api-architecture">
+<h1>Kernel Crypto API Architecture<a class="headerlink" href="#kernel-crypto-api-architecture" title="連結到這個標頭">¶</a></h1>
+<section id="cipher-algorithm-types">
+<h2>Cipher algorithm types<a class="headerlink" href="#cipher-algorithm-types" title="連結到這個標頭">¶</a></h2>
+<p>The kernel crypto API provides different API calls for the following
+cipher types:</p>
+<ul class="simple">
+<li><p>Symmetric ciphers</p></li>
+<li><p>AEAD ciphers</p></li>
+<li><p>Message digest, including keyed message digest</p></li>
+<li><p>Random number generation</p></li>
+<li><p>User space interface</p></li>
+</ul>
+</section>
+<section id="ciphers-and-templates">
+<h2>Ciphers And Templates<a class="headerlink" href="#ciphers-and-templates" title="連結到這個標頭">¶</a></h2>
+<p>The kernel crypto API provides implementations of single block ciphers
+and message digests. In addition, the kernel crypto API provides
+numerous &quot;templates&quot; that can be used in conjunction with the single
+block ciphers and message digests. Templates include all types of block
+chaining mode, the HMAC mechanism, etc.</p>
+<p>Single block ciphers and message digests can either be directly used by
+a caller or invoked together with a template to form multi-block ciphers
+or keyed message digests.</p>
+<p>A single block cipher may even be called with multiple templates.
+However, templates cannot be used without a single cipher.</p>
+<p>See /proc/crypto and search for &quot;name&quot;. For example:</p>
+<ul class="simple">
+<li><p>aes</p></li>
+<li><p>ecb(aes)</p></li>
+<li><p>cmac(aes)</p></li>
+<li><p>ccm(aes)</p></li>
+<li><p>rfc4106(gcm(aes))</p></li>
+<li><p>sha1</p></li>
+<li><p>hmac(sha1)</p></li>
+<li><p>authenc(hmac(sha1),cbc(aes))</p></li>
+</ul>
+<p>In these examples, &quot;aes&quot; and &quot;sha1&quot; are the ciphers and all others are
+the templates.</p>
+</section>
+<section id="synchronous-and-asynchronous-operation">
+<h2>Synchronous And Asynchronous Operation<a class="headerlink" href="#synchronous-and-asynchronous-operation" title="連結到這個標頭">¶</a></h2>
+<p>The kernel crypto API provides synchronous and asynchronous API
+operations.</p>
+<p>When using the synchronous API operation, the caller invokes a cipher
+operation which is performed synchronously by the kernel crypto API.
+That means, the caller waits until the cipher operation completes.
+Therefore, the kernel crypto API calls work like regular function calls.
+For synchronous operation, the set of API calls is small and
+conceptually similar to any other crypto library.</p>
+<p>Asynchronous operation is provided by the kernel crypto API which
+implies that the invocation of a cipher operation will complete almost
+instantly. That invocation triggers the cipher operation but it does not
+signal its completion. Before invoking a cipher operation, the caller
+must provide a callback function the kernel crypto API can invoke to
+signal the completion of the cipher operation. Furthermore, the caller
+must ensure it can handle such asynchronous events by applying
+appropriate locking around its data. The kernel crypto API does not
+perform any special serialization operation to protect the caller's data
+integrity.</p>
+</section>
+<section id="crypto-api-cipher-references-and-priority">
+<h2>Crypto API Cipher References And Priority<a class="headerlink" href="#crypto-api-cipher-references-and-priority" title="連結到這個標頭">¶</a></h2>
+<p>A cipher is referenced by the caller with a string. That string has the
+following semantics:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(single block cipher)
+</pre></div>
+</div>
+<p>where &quot;template&quot; and &quot;single block cipher&quot; is the aforementioned
+template and single block cipher, respectively. If applicable,
+additional templates may enclose other templates, such as</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template1(template2(single block cipher)))
+</pre></div>
+</div>
+<p>The kernel crypto API may provide multiple implementations of a template
+or a single block cipher. For example, AES on newer Intel hardware has
+the following implementations: AES-NI, assembler implementation, or
+straight C. Now, when using the string &quot;aes&quot; with the kernel crypto API,
+which cipher implementation is used? The answer to that question is the
+priority number assigned to each cipher implementation by the kernel
+crypto API. When a caller uses the string to refer to a cipher during
+initialization of a cipher handle, the kernel crypto API looks up all
+implementations providing an implementation with that name and selects
+the implementation with the highest priority.</p>
+<p>Now, a caller may have the need to refer to a specific cipher
+implementation and thus does not want to rely on the priority-based
+selection. To accommodate this scenario, the kernel crypto API allows
+the cipher implementation to register a unique name in addition to
+common names. When using that unique name, a caller is therefore always
+sure to refer to the intended cipher implementation.</p>
+<p>The list of available ciphers is given in /proc/crypto. However, that
+list does not specify all possible permutations of templates and
+ciphers. Each block listed in /proc/crypto may contain the following
+information -- if one of the components listed as follows are not
+applicable to a cipher, it is not displayed:</p>
+<ul class="simple">
+<li><p>name: the generic name of the cipher that is subject to the
+priority-based selection -- this name can be used by the cipher
+allocation API calls (all names listed above are examples for such
+generic names)</p></li>
+<li><p>driver: the unique name of the cipher -- this name can be used by the
+cipher allocation API calls</p></li>
+<li><p>module: the kernel module providing the cipher implementation (or
+&quot;kernel&quot; for statically linked ciphers)</p></li>
+<li><p>priority: the priority value of the cipher implementation</p></li>
+<li><p>refcnt: the reference count of the respective cipher (i.e. the number
+of current consumers of this cipher)</p></li>
+<li><p>selftest: specification whether the self test for the cipher passed</p></li>
+<li><p>type:</p>
+<ul>
+<li><p>skcipher for symmetric key ciphers</p></li>
+<li><p>cipher for single block ciphers that may be used with an
+additional template</p></li>
+<li><p>shash for synchronous message digest</p></li>
+<li><p>ahash for asynchronous message digest</p></li>
+<li><p>aead for AEAD cipher type</p></li>
+<li><p>compression for compression type transformations</p></li>
+<li><p>rng for random number generator</p></li>
+<li><p>kpp for a Key-agreement Protocol Primitive (KPP) cipher such as
+an ECDH or DH implementation</p></li>
+</ul>
+</li>
+<li><p>blocksize: blocksize of cipher in bytes</p></li>
+<li><p>keysize: key size in bytes</p></li>
+<li><p>ivsize: IV size in bytes</p></li>
+<li><p>seedsize: required size of seed data for random number generator</p></li>
+<li><p>digestsize: output size of the message digest</p></li>
+<li><p>geniv: IV generator (obsolete)</p></li>
+</ul>
+</section>
+<section id="key-sizes">
+<h2>Key Sizes<a class="headerlink" href="#key-sizes" title="連結到這個標頭">¶</a></h2>
+<p>When allocating a cipher handle, the caller only specifies the cipher
+type. Symmetric ciphers, however, typically support multiple key sizes
+(e.g. AES-128 vs. AES-192 vs. AES-256). These key sizes are determined
+with the length of the provided key. Thus, the kernel crypto API does
+not provide a separate way to select the particular symmetric cipher key
+size.</p>
+</section>
+<section id="cipher-allocation-type-and-masks">
+<h2>Cipher Allocation Type And Masks<a class="headerlink" href="#cipher-allocation-type-and-masks" title="連結到這個標頭">¶</a></h2>
+<p>The different cipher handle allocation functions allow the specification
+of a type and mask flag. Both parameters have the following meaning (and
+are therefore not covered in the subsequent sections).</p>
+<p>The type flag specifies the type of the cipher algorithm. The caller
+usually provides a 0 when the caller wants the default handling.
+Otherwise, the caller may provide the following selections which match
+the aforementioned cipher types:</p>
+<ul class="simple">
+<li><p>CRYPTO_ALG_TYPE_CIPHER Single block cipher</p></li>
+<li><p>CRYPTO_ALG_TYPE_AEAD Authenticated Encryption with Associated Data
+(MAC)</p></li>
+<li><p>CRYPTO_ALG_TYPE_KPP Key-agreement Protocol Primitive (KPP) such as
+an ECDH or DH implementation</p></li>
+<li><p>CRYPTO_ALG_TYPE_HASH Raw message digest</p></li>
+<li><p>CRYPTO_ALG_TYPE_SHASH Synchronous multi-block hash</p></li>
+<li><p>CRYPTO_ALG_TYPE_AHASH Asynchronous multi-block hash</p></li>
+<li><p>CRYPTO_ALG_TYPE_RNG Random Number Generation</p></li>
+<li><p>CRYPTO_ALG_TYPE_AKCIPHER Asymmetric cipher</p></li>
+<li><p>CRYPTO_ALG_TYPE_SIG Asymmetric signature</p></li>
+<li><p>CRYPTO_ALG_TYPE_PCOMPRESS Enhanced version of
+CRYPTO_ALG_TYPE_COMPRESS allowing for segmented compression /
+decompression instead of performing the operation on one segment
+only. CRYPTO_ALG_TYPE_PCOMPRESS is intended to replace
+CRYPTO_ALG_TYPE_COMPRESS once existing consumers are converted.</p></li>
+</ul>
+<p>The mask flag restricts the type of cipher. The only allowed flag is
+CRYPTO_ALG_ASYNC to restrict the cipher lookup function to
+asynchronous ciphers. Usually, a caller provides a 0 for the mask flag.</p>
+<p>When the caller provides a mask and type specification, the caller
+limits the search the kernel crypto API can perform for a suitable
+cipher implementation for the given cipher name. That means, even when a
+caller uses a cipher name that exists during its initialization call,
+the kernel crypto API may not select it due to the used type and mask
+field.</p>
+</section>
+<section id="internal-structure-of-kernel-crypto-api">
+<h2>Internal Structure of Kernel Crypto API<a class="headerlink" href="#internal-structure-of-kernel-crypto-api" title="連結到這個標頭">¶</a></h2>
+<p>The kernel crypto API has an internal structure where a cipher
+implementation may use many layers and indirections. This section shall
+help to clarify how the kernel crypto API uses various components to
+implement the complete cipher.</p>
+<p>The following subsections explain the internal structure based on
+existing cipher implementations. The first section addresses the most
+complex scenario where all other scenarios form a logical subset.</p>
+<section id="generic-aead-cipher-structure">
+<h3>Generic AEAD Cipher Structure<a class="headerlink" href="#generic-aead-cipher-structure" title="連結到這個標頭">¶</a></h3>
+<p>The following ASCII art decomposes the kernel crypto API layers when
+using the AEAD cipher with the automated IV generation. The shown
+example is used by the IPSEC layer.</p>
+<p>For other use cases of AEAD ciphers, the ASCII art applies as well, but
+the caller may not use the AEAD cipher with a separate IV generator. In
+this case, the caller must generate the IV.</p>
+<p>The depicted example decomposes the AEAD cipher of GCM(AES) based on the
+generic C implementations (gcm.c, aes-generic.c, ctr.c, ghash-generic.c,
+seqiv.c). The generic implementation serves as an example showing the
+complete logic of the kernel crypto API.</p>
+<p>It is possible that some streamlined cipher implementations (like
+AES-NI) provide implementations merging aspects which in the view of the
+kernel crypto API cannot be decomposed into layers any more. In case of
+the AES-NI implementation, the CTR mode, the GHASH implementation and
+the AES cipher are all merged into one cipher implementation registered
+with the kernel crypto API. In this case, the concept described by the
+following ASCII art applies too. However, the decomposition of GCM into
+the individual sub-components by the kernel crypto API is not done any
+more.</p>
+<p>Each block in the following ASCII art is an independent cipher instance
+obtained from the kernel crypto API. Each block is accessed by the
+caller or by other blocks using the API functions defined by the kernel
+crypto API for the cipher implementation type.</p>
+<p>The blocks below indicate the cipher type as well as the specific logic
+implemented in the cipher.</p>
+<p>The ASCII art picture also indicates the call structure, i.e. who calls
+which component. The arrows point to the invoked block where the caller
+uses the API applicable to the cipher type specified for the block.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kernel crypto API                                |   IPSEC Layer
+                                                 |
++-----------+                                    |
+|           |            (1)
+|   aead    | &lt;-----------------------------------  esp_output
+|  (seqiv)  | ---+
++-----------+    |
+                 | (2)
++-----------+    |
+|           | &lt;--+                (2)
+|   aead    | &lt;-----------------------------------  esp_input
+|   (gcm)   | ------------+
++-----------+             |
+      | (3)               | (5)
+      v                   v
++-----------+       +-----------+
+|           |       |           |
+|  skcipher |       |   ahash   |
+|   (ctr)   | ---+  |  (ghash)  |
++-----------+    |  +-----------+
+                 |
++-----------+    | (4)
+|           | &lt;--+
+|   cipher  |
+|   (aes)   |
++-----------+
+</pre></div>
+</div>
+<p>The following call sequence is applicable when the IPSEC layer triggers
+an encryption operation with the esp_output function. During
+configuration, the administrator set up the use of seqiv(rfc4106(gcm(aes)))
+as the cipher for ESP. The following call sequence is now depicted in
+the ASCII art above:</p>
+<ol class="arabic">
+<li><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">esp_output()</span></code> invokes <a class="reference internal" href="api-aead.html#c.crypto_aead_encrypt" title="crypto_aead_encrypt"><code class="xref c c-func docutils literal notranslate"><span class="pre">crypto_aead_encrypt()</span></code></a> to trigger an
+encryption operation of the AEAD cipher with IV generator.</p>
+<p>The SEQIV generates the IV.</p>
+</li>
+<li><p>Now, SEQIV uses the AEAD API function calls to invoke the associated
+AEAD cipher. In our case, during the instantiation of SEQIV, the
+cipher handle for GCM is provided to SEQIV. This means that SEQIV
+invokes AEAD cipher operations with the GCM cipher handle.</p>
+<p>During instantiation of the GCM handle, the CTR(AES) and GHASH
+ciphers are instantiated. The cipher handles for CTR(AES) and GHASH
+are retained for later use.</p>
+<p>The GCM implementation is responsible to invoke the CTR mode AES and
+the GHASH cipher in the right manner to implement the GCM
+specification.</p>
+</li>
+<li><p>The GCM AEAD cipher type implementation now invokes the SKCIPHER API
+with the instantiated CTR(AES) cipher handle.</p>
+<p>During instantiation of the CTR(AES) cipher, the CIPHER type
+implementation of AES is instantiated. The cipher handle for AES is
+retained.</p>
+<p>That means that the SKCIPHER implementation of CTR(AES) only
+implements the CTR block chaining mode. After performing the block
+chaining operation, the CIPHER implementation of AES is invoked.</p>
+</li>
+<li><p>The SKCIPHER of CTR(AES) now invokes the CIPHER API with the AES
+cipher handle to encrypt one block.</p></li>
+<li><p>The GCM AEAD implementation also invokes the GHASH cipher
+implementation via the AHASH API.</p></li>
+</ol>
+<p>When the IPSEC layer triggers the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">esp_input()</span></code> function, the same call
+sequence is followed with the only difference that the operation starts
+with step (2).</p>
+</section>
+<section id="generic-block-cipher-structure">
+<h3>Generic Block Cipher Structure<a class="headerlink" href="#generic-block-cipher-structure" title="連結到這個標頭">¶</a></h3>
+<p>Generic block ciphers follow the same concept as depicted with the ASCII
+art picture above.</p>
+<p>For example, CBC(AES) is implemented with cbc.c, and aes-generic.c. The
+ASCII art picture above applies as well with the difference that only
+step (4) is used and the SKCIPHER block chaining mode is CBC.</p>
+</section>
+<section id="generic-keyed-message-digest-structure">
+<h3>Generic Keyed Message Digest Structure<a class="headerlink" href="#generic-keyed-message-digest-structure" title="連結到這個標頭">¶</a></h3>
+<p>Keyed message digest implementations again follow the same concept as
+depicted in the ASCII art picture above.</p>
+<p>For example, HMAC(SHA256) is implemented with hmac.c and
+sha256_generic.c. The following ASCII art illustrates the
+implementation:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kernel crypto API            |       Caller
+                             |
++-----------+         (1)    |
+|           | &lt;------------------  some_function
+|   ahash   |
+|   (hmac)  | ---+
++-----------+    |
+                 | (2)
++-----------+    |
+|           | &lt;--+
+|   shash   |
+|  (sha256) |
++-----------+
+</pre></div>
+</div>
+<p>The following call sequence is applicable when a caller triggers an HMAC
+operation:</p>
+<ol class="arabic">
+<li><p>The AHASH API functions are invoked by the caller. The HMAC
+implementation performs its operation as needed.</p>
+<p>During initialization of the HMAC cipher, the SHASH cipher type of
+SHA256 is instantiated. The cipher handle for the SHA256 instance is
+retained.</p>
+<p>At one time, the HMAC implementation requires a SHA256 operation
+where the SHA256 cipher handle is used.</p>
+</li>
+<li><p>The HMAC instance now invokes the SHASH API with the SHA256 cipher
+handle to calculate the message digest.</p></li>
+</ol>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/crypto/architecture.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

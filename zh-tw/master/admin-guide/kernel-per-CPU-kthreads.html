@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Reducing OS jitter due to per-cpu kthreads &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/kernel-per-CPU-kthreads.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Softlockup detector and hardlockup detector (aka nmi_watchdog)" href="lockup-watchdogs.html" />
+    <link rel="prev" title="Clearing WARN_ONCE" href="clearing-warn-once.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reporting-regressions.html">Reporting regressions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quickly-build-trimmed-linux.html">How to quickly build a trimmed Linux kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="verify-bugs-and-bisect-regressions.html">How to verify bugs and bisect regressions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bug-hunting.html">Bug hunting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bug-bisect.html">Bisecting a regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tainted-kernels.html">Tainted kernels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ramoops.html">Ramoops oops/panic logger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dynamic-debug-howto.html">Dynamic debug</a></li>
+<li class="toctree-l3"><a class="reference internal" href="init.html">Explaining the &quot;No working init found.&quot; boot hang message</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kdump/index.html">Documentation for Kdump - The kexec-based Crash Dumping Solution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="perf/index.html">Performance monitor support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pstore-blk.html">pstore block oops/panic logger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="clearing-warn-once.html">Clearing WARN_ONCE</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Reducing OS jitter due to per-cpu kthreads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="lockup-watchdogs.html">Softlockup detector and hardlockup detector (aka nmi_watchdog)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RAS/main.html">Reliability, Availability and Serviceability (RAS)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RAS/error-decoding.html">Error decoding</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RAS/address-translation.html">Address translation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sysrq.html">Linux Magic System Request Key Hacks</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-kernel-subsystems">Core-kernel subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/admin-guide/kernel-per-CPU-kthreads.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="reducing-os-jitter-due-to-per-cpu-kthreads">
+<h1>Reducing OS jitter due to per-cpu kthreads<a class="headerlink" href="#reducing-os-jitter-due-to-per-cpu-kthreads" title="連結到這個標頭">¶</a></h1>
+<p>This document lists per-CPU kthreads in the Linux kernel and presents
+options to control their OS jitter.  Note that non-per-CPU kthreads are
+not listed here.  To reduce OS jitter from non-per-CPU kthreads, bind
+them to a &quot;housekeeping&quot; CPU dedicated to such work.</p>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="連結到這個標頭">¶</a></h2>
+<ul>
+<li><p><a class="reference internal" href="../core-api/irq/irq-affinity.html"><span class="doc">SMP IRQ affinity</span></a>:  Binding interrupts to sets of CPUs.</p></li>
+<li><p>Documentation/admin-guide/cgroup-v1:  Using cgroups to bind tasks to sets of CPUs.</p></li>
+<li><p>man taskset:  Using the taskset command to bind tasks to sets
+of CPUs.</p></li>
+<li><p>man sched_setaffinity:  Using the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">sched_setaffinity()</span></code> system
+call to bind tasks to sets of CPUs.</p></li>
+<li><p>/sys/devices/system/cpu/cpuN/online:  Control CPU N's hotplug state,
+writing &quot;0&quot; to offline and &quot;1&quot; to online.</p></li>
+<li><p>In order to locate kernel-generated OS jitter on CPU N:</p>
+<blockquote>
+<div><p>cd /sys/kernel/tracing
+echo 1 &gt; max_graph_depth # Increase the &quot;1&quot; for more detail
+echo function_graph &gt; current_tracer
+# run workload
+cat per_cpu/cpuN/trace</p>
+</div></blockquote>
+</li>
+</ul>
+</section>
+<section id="kthreads">
+<h2>kthreads<a class="headerlink" href="#kthreads" title="連結到這個標頭">¶</a></h2>
+<dl class="simple">
+<dt>Name:</dt><dd><p>ehca_comp/%u</p>
+</dd>
+<dt>Purpose:</dt><dd><p>Periodically process Infiniband-related work.</p>
+</dd>
+</dl>
+<p>To reduce its OS jitter, do any of the following:</p>
+<ol class="arabic simple">
+<li><p>Don't use eHCA Infiniband hardware, instead choosing hardware
+that does not require per-CPU kthreads.  This will prevent these
+kthreads from being created in the first place.  (This will
+work for most people, as this hardware, though important, is
+relatively old and is produced in relatively low unit volumes.)</p></li>
+<li><p>Do all eHCA-Infiniband-related work on other CPUs, including
+interrupts.</p></li>
+<li><p>Rework the eHCA driver so that its per-CPU kthreads are
+provisioned only on selected CPUs.</p></li>
+</ol>
+<dl class="simple">
+<dt>Name:</dt><dd><p>irq/%d-%s</p>
+</dd>
+<dt>Purpose:</dt><dd><p>Handle threaded interrupts.</p>
+</dd>
+</dl>
+<p>To reduce its OS jitter, do the following:</p>
+<ol class="arabic simple">
+<li><p>Use irq affinity to force the irq threads to execute on
+some other CPU.</p></li>
+</ol>
+<dl class="simple">
+<dt>Name:</dt><dd><p>kcmtpd_ctr_%d</p>
+</dd>
+<dt>Purpose:</dt><dd><p>Handle Bluetooth work.</p>
+</dd>
+</dl>
+<p>To reduce its OS jitter, do one of the following:</p>
+<ol class="arabic simple">
+<li><p>Don't use Bluetooth, in which case these kthreads won't be
+created in the first place.</p></li>
+<li><p>Use irq affinity to force Bluetooth-related interrupts to
+occur on some other CPU and furthermore initiate all
+Bluetooth activity on some other CPU.</p></li>
+</ol>
+<dl class="simple">
+<dt>Name:</dt><dd><p>ksoftirqd/%u</p>
+</dd>
+<dt>Purpose:</dt><dd><p>Execute softirq handlers when threaded or when under heavy load.</p>
+</dd>
+</dl>
+<p>To reduce its OS jitter, each softirq vector must be handled
+separately as follows:</p>
+<section id="timer-softirq">
+<h3>TIMER_SOFTIRQ<a class="headerlink" href="#timer-softirq" title="連結到這個標頭">¶</a></h3>
+<p>Do all of the following:</p>
+<ol class="arabic simple">
+<li><p>To the extent possible, keep the CPU out of the kernel when it
+is non-idle, for example, by avoiding system calls and by forcing
+both kernel threads and interrupts to execute elsewhere.</p></li>
+<li><p>Build with CONFIG_HOTPLUG_CPU=y.  After boot completes, force
+the CPU offline, then bring it back online.  This forces
+recurring timers to migrate elsewhere.  If you are concerned
+with multiple CPUs, force them all offline before bringing the
+first one back online.  Once you have onlined the CPUs in question,
+do not offline any other CPUs, because doing so could force the
+timer back onto one of the CPUs in question.</p></li>
+</ol>
+</section>
+<section id="net-tx-softirq-and-net-rx-softirq">
+<h3>NET_TX_SOFTIRQ and NET_RX_SOFTIRQ<a class="headerlink" href="#net-tx-softirq-and-net-rx-softirq" title="連結到這個標頭">¶</a></h3>
+<p>Do all of the following:</p>
+<ol class="arabic simple">
+<li><p>Force networking interrupts onto other CPUs.</p></li>
+<li><p>Initiate any network I/O on other CPUs.</p></li>
+<li><p>Once your application has started, prevent CPU-hotplug operations
+from being initiated from tasks that might run on the CPU to
+be de-jittered.  (It is OK to force this CPU offline and then
+bring it back online before you start your application.)</p></li>
+</ol>
+</section>
+<section id="block-softirq">
+<h3>BLOCK_SOFTIRQ<a class="headerlink" href="#block-softirq" title="連結到這個標頭">¶</a></h3>
+<p>Do all of the following:</p>
+<ol class="arabic simple">
+<li><p>Force block-device interrupts onto some other CPU.</p></li>
+<li><p>Initiate any block I/O on other CPUs.</p></li>
+<li><p>Once your application has started, prevent CPU-hotplug operations
+from being initiated from tasks that might run on the CPU to
+be de-jittered.  (It is OK to force this CPU offline and then
+bring it back online before you start your application.)</p></li>
+</ol>
+</section>
+<section id="irq-poll-softirq">
+<h3>IRQ_POLL_SOFTIRQ<a class="headerlink" href="#irq-poll-softirq" title="連結到這個標頭">¶</a></h3>
+<p>Do all of the following:</p>
+<ol class="arabic simple">
+<li><p>Force block-device interrupts onto some other CPU.</p></li>
+<li><p>Initiate any block I/O and block-I/O polling on other CPUs.</p></li>
+<li><p>Once your application has started, prevent CPU-hotplug operations
+from being initiated from tasks that might run on the CPU to
+be de-jittered.  (It is OK to force this CPU offline and then
+bring it back online before you start your application.)</p></li>
+</ol>
+</section>
+<section id="tasklet-softirq">
+<h3>TASKLET_SOFTIRQ<a class="headerlink" href="#tasklet-softirq" title="連結到這個標頭">¶</a></h3>
+<p>Do one or more of the following:</p>
+<ol class="arabic simple">
+<li><p>Avoid use of drivers that use tasklets.  (Such drivers will contain
+calls to things like <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">tasklet_schedule()</span></code>.)</p></li>
+<li><p>Convert all drivers that you must use from tasklets to workqueues.</p></li>
+<li><p>Force interrupts for drivers using tasklets onto other CPUs,
+and also do I/O involving these drivers on other CPUs.</p></li>
+</ol>
+</section>
+<section id="sched-softirq">
+<h3>SCHED_SOFTIRQ<a class="headerlink" href="#sched-softirq" title="連結到這個標頭">¶</a></h3>
+<p>Do all of the following:</p>
+<ol class="arabic simple">
+<li><p>Avoid sending scheduler IPIs to the CPU to be de-jittered,
+for example, ensure that at most one runnable kthread is present
+on that CPU.  If a thread that expects to run on the de-jittered
+CPU awakens, the scheduler will send an IPI that can result in
+a subsequent SCHED_SOFTIRQ.</p></li>
+<li><p>CONFIG_NO_HZ_FULL=y and ensure that the CPU to be de-jittered
+is marked as an adaptive-ticks CPU using the &quot;nohz_full=&quot;
+boot parameter.  This reduces the number of scheduler-clock
+interrupts that the de-jittered CPU receives, minimizing its
+chances of being selected to do the load balancing work that
+runs in SCHED_SOFTIRQ context.</p></li>
+<li><p>To the extent possible, keep the CPU out of the kernel when it
+is non-idle, for example, by avoiding system calls and by
+forcing both kernel threads and interrupts to execute elsewhere.
+This further reduces the number of scheduler-clock interrupts
+received by the de-jittered CPU.</p></li>
+</ol>
+</section>
+<section id="hrtimer-softirq">
+<h3>HRTIMER_SOFTIRQ<a class="headerlink" href="#hrtimer-softirq" title="連結到這個標頭">¶</a></h3>
+<p>Do all of the following:</p>
+<ol class="arabic simple">
+<li><p>To the extent possible, keep the CPU out of the kernel when it
+is non-idle.  For example, avoid system calls and force both
+kernel threads and interrupts to execute elsewhere.</p></li>
+<li><p>Build with CONFIG_HOTPLUG_CPU=y.  Once boot completes, force the
+CPU offline, then bring it back online.  This forces recurring
+timers to migrate elsewhere.  If you are concerned with multiple
+CPUs, force them all offline before bringing the first one
+back online.  Once you have onlined the CPUs in question, do not
+offline any other CPUs, because doing so could force the timer
+back onto one of the CPUs in question.</p></li>
+</ol>
+</section>
+<section id="rcu-softirq">
+<h3>RCU_SOFTIRQ<a class="headerlink" href="#rcu-softirq" title="連結到這個標頭">¶</a></h3>
+<p>Do at least one of the following:</p>
+<ol class="arabic simple">
+<li><p>Offload callbacks and keep the CPU in either dyntick-idle or
+adaptive-ticks state by doing all of the following:</p>
+<ol class="loweralpha simple">
+<li><p>CONFIG_NO_HZ_FULL=y and ensure that the CPU to be
+de-jittered is marked as an adaptive-ticks CPU using the
+&quot;nohz_full=&quot; boot parameter.  Bind the rcuo kthreads to
+housekeeping CPUs, which can tolerate OS jitter.</p></li>
+<li><p>To the extent possible, keep the CPU out of the kernel
+when it is non-idle, for example, by avoiding system
+calls and by forcing both kernel threads and interrupts
+to execute elsewhere.</p></li>
+</ol>
+</li>
+<li><p>Enable RCU to do its processing remotely via dyntick-idle by
+doing all of the following:</p>
+<ol class="loweralpha simple">
+<li><p>Build with CONFIG_NO_HZ=y.</p></li>
+<li><p>Ensure that the CPU goes idle frequently, allowing other
+CPUs to detect that it has passed through an RCU quiescent
+state.  If the kernel is built with CONFIG_NO_HZ_FULL=y,
+userspace execution also allows other CPUs to detect that
+the CPU in question has passed through a quiescent state.</p></li>
+<li><p>To the extent possible, keep the CPU out of the kernel
+when it is non-idle, for example, by avoiding system
+calls and by forcing both kernel threads and interrupts
+to execute elsewhere.</p></li>
+</ol>
+</li>
+</ol>
+<dl class="simple">
+<dt>Name:</dt><dd><p>kworker/%u:%d%s (cpu, id, priority)</p>
+</dd>
+<dt>Purpose:</dt><dd><p>Execute workqueue requests</p>
+</dd>
+</dl>
+<p>To reduce its OS jitter, do any of the following:</p>
+<ol class="arabic">
+<li><p>Run your workload at a real-time priority, which will allow
+preempting the kworker daemons.</p></li>
+<li><p>A given workqueue can be made visible in the sysfs filesystem
+by passing the WQ_SYSFS to that workqueue's <a class="reference internal" href="../core-api/workqueue.html#c.alloc_workqueue" title="alloc_workqueue"><code class="xref c c-func docutils literal notranslate"><span class="pre">alloc_workqueue()</span></code></a>.
+Such a workqueue can be confined to a given subset of the
+CPUs using the <code class="docutils literal notranslate"><span class="pre">/sys/devices/virtual/workqueue/*/cpumask</span></code> sysfs
+files.  The set of WQ_SYSFS workqueues can be displayed using
+&quot;ls /sys/devices/virtual/workqueue&quot;.  That said, the workqueues
+maintainer would like to caution people against indiscriminately
+sprinkling WQ_SYSFS across all the workqueues.  The reason for
+caution is that it is easy to add WQ_SYSFS, but because sysfs is
+part of the formal user/kernel API, it can be nearly impossible
+to remove it, even if its addition was a mistake.</p></li>
+<li><p>Do any of the following needed to avoid jitter that your
+application cannot tolerate:</p>
+<ol class="loweralpha">
+<li><p>Avoid using oprofile, thus avoiding OS jitter from
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">wq_sync_buffer()</span></code>.</p></li>
+<li><p>Limit your CPU frequency so that a CPU-frequency
+governor is not required, possibly enlisting the aid of
+special heatsinks or other cooling technologies.  If done
+correctly, and if you CPU architecture permits, you should
+be able to build your kernel with CONFIG_CPU_FREQ=n to
+avoid the CPU-frequency governor periodically running
+on each CPU, including <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">cs_dbs_timer()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">od_dbs_timer()</span></code>.</p>
+<p>WARNING:  Please check your CPU specifications to
+make sure that this is safe on your particular system.</p>
+</li>
+<li><p>As of v3.18, Christoph Lameter's on-demand vmstat workers
+commit prevents OS jitter due to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">vmstat_update()</span></code> on
+CONFIG_SMP=y systems.  Before v3.18, is not possible
+to entirely get rid of the OS jitter, but you can
+decrease its frequency by writing a large value to
+/proc/sys/vm/stat_interval.  The default value is HZ,
+for an interval of one second.  Of course, larger values
+will make your virtual-memory statistics update more
+slowly.  Of course, you can also run your workload at
+a real-time priority, thus preempting <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">vmstat_update()</span></code>,
+but if your workload is CPU-bound, this is a bad idea.
+However, there is an RFC patch from Christoph Lameter
+(based on an earlier one from Gilad Ben-Yossef) that
+reduces or even eliminates vmstat overhead for some
+workloads at <a class="reference external" href="https://lore.kernel.org/r/00000140e9dfd6bd-40db3d4f-c1be-434f-8132-7820f81bb586-000000&#64;email.amazonses.com">https://lore.kernel.org/r/00000140e9dfd6bd-40db3d4f-c1be-434f-8132-7820f81bb586-000000&#64;email.amazonses.com</a>.</p></li>
+<li><p>If running on high-end powerpc servers, build with
+CONFIG_PPC_RTAS_DAEMON=n.  This prevents the RTAS
+daemon from running on each CPU every second or so.
+(This will require editing Kconfig files and will defeat
+this platform's RAS functionality.)  This avoids jitter
+due to the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rtas_event_scan()</span></code> function.
+WARNING:  Please check your CPU specifications to
+make sure that this is safe on your particular system.</p></li>
+<li><p>If running on PowerMAC, build your kernel with
+CONFIG_PMAC_RACKMETER=n to disable the CPU-meter,
+avoiding OS jitter from <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rackmeter_do_timer()</span></code>.</p></li>
+</ol>
+</li>
+</ol>
+<dl class="simple">
+<dt>Name:</dt><dd><p>rcuc/%u</p>
+</dd>
+<dt>Purpose:</dt><dd><p>Execute RCU callbacks in CONFIG_RCU_BOOST=y kernels.</p>
+</dd>
+</dl>
+<p>To reduce its OS jitter, do at least one of the following:</p>
+<ol class="arabic simple">
+<li><p>Build the kernel with CONFIG_PREEMPT=n.  This prevents these
+kthreads from being created in the first place, and also obviates
+the need for RCU priority boosting.  This approach is feasible
+for workloads that do not require high degrees of responsiveness.</p></li>
+<li><p>Build the kernel with CONFIG_RCU_BOOST=n.  This prevents these
+kthreads from being created in the first place.  This approach
+is feasible only if your workload never requires RCU priority
+boosting, for example, if you ensure frequent idle time on all
+CPUs that might execute within the kernel.</p></li>
+<li><p>Build with CONFIG_RCU_NOCB_CPU=y and boot with the rcu_nocbs=
+boot parameter offloading RCU callbacks from all CPUs susceptible
+to OS jitter.  This approach prevents the rcuc/%u kthreads from
+having any work to do, so that they are never awakened.</p></li>
+<li><p>Ensure that the CPU never enters the kernel, and, in particular,
+avoid initiating any CPU hotplug operations on this CPU.  This is
+another way of preventing any callbacks from being queued on the
+CPU, again preventing the rcuc/%u kthreads from having any work
+to do.</p></li>
+</ol>
+<dl class="simple">
+<dt>Name:</dt><dd><p>rcuop/%d, rcuos/%d, and rcuog/%d</p>
+</dd>
+<dt>Purpose:</dt><dd><p>Offload RCU callbacks from the corresponding CPU.</p>
+</dd>
+</dl>
+<p>To reduce its OS jitter, do at least one of the following:</p>
+<ol class="arabic simple">
+<li><p>Use affinity, cgroups, or other mechanism to force these kthreads
+to execute on some other CPU.</p></li>
+<li><p>Build with CONFIG_RCU_NOCB_CPU=n, which will prevent these
+kthreads from being created in the first place.  However, please
+note that this will not eliminate OS jitter, but will instead
+shift it to RCU_SOFTIRQ.</p></li>
+</ol>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/admin-guide/kernel-per-CPU-kthreads.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

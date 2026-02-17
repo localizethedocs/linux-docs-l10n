@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Kernel Memory Sanitizer (KMSAN) &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/dev-tools/kmsan.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Undefined Behavior Sanitizer - UBSAN" href="ubsan.html" />
+    <link rel="prev" title="Kernel Address Sanitizer (KASAN)" href="kasan.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">開發工具</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="testing-overview.html">內核測試指南</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checkpatch.html">Checkpatch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clang-format.html">clang-format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="coccinelle.html">Coccinelle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sparse.html">Sparse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kcov.html">KCOV: code coverage for fuzzing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gcov.html">Using gcov with the Linux kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kasan.html">Kernel Address Sanitizer (KASAN)</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Kernel Memory Sanitizer (KMSAN)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#support">Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#how-kmsan-works">How KMSAN works</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ubsan.html">Undefined Behavior Sanitizer - UBSAN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kmemleak.html">Kernel Memory Leak Detector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kcsan.html">Kernel Concurrency Sanitizer (KCSAN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lkmm/index.html">Linux Kernel Memory Consistency Model (LKMM)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfence.html">Kernel Electric-Fence (KFENCE)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kselftest.html">Linux Kernel Selftests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kunit/index.html">KUnit - Linux Kernel Unit Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ktap.html">The Kernel Test Anything Protocol (KTAP), version 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checkuapi.html">UAPI Checker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gpio-sloppy-logic-analyzer.html">Linux Kernel GPIO based sloppy logic analyzer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autofdo.html">Using AutoFDO with the Linux kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="propeller.html">Using Propeller with the Linux kernel</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/dev-tools/kmsan.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="kernel-memory-sanitizer-kmsan">
+<h1>Kernel Memory Sanitizer (KMSAN)<a class="headerlink" href="#kernel-memory-sanitizer-kmsan" title="連結到這個標頭">¶</a></h1>
+<p>KMSAN is a dynamic error detector aimed at finding uses of uninitialized
+values. It is based on compiler instrumentation, and is quite similar to the
+userspace <a class="reference external" href="https://clang.llvm.org/docs/MemorySanitizer.html">MemorySanitizer tool</a>.</p>
+<p>An important note is that KMSAN is not intended for production use, because it
+drastically increases kernel memory footprint and slows the whole system down.</p>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="連結到這個標頭">¶</a></h2>
+<section id="building-the-kernel">
+<h3>Building the kernel<a class="headerlink" href="#building-the-kernel" title="連結到這個標頭">¶</a></h3>
+<p>In order to build a kernel with KMSAN you will need a fresh Clang (14.0.6+).
+Please refer to <a class="reference external" href="https://llvm.org/docs/GettingStarted.html">LLVM documentation</a> for the instructions on how to build Clang.</p>
+<p>Now configure and build the kernel with CONFIG_KMSAN enabled.</p>
+</section>
+<section id="example-report">
+<h3>Example report<a class="headerlink" href="#example-report" title="連結到這個標頭">¶</a></h3>
+<p>Here is an example of a KMSAN report:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>=====================================================
+BUG: KMSAN: uninit-value in test_uninit_kmsan_check_memory+0x1be/0x380 [kmsan_test]
+ test_uninit_kmsan_check_memory+0x1be/0x380 mm/kmsan/kmsan_test.c:273
+ kunit_run_case_internal lib/kunit/test.c:333
+ kunit_try_run_case+0x206/0x420 lib/kunit/test.c:374
+ kunit_generic_run_threadfn_adapter+0x6d/0xc0 lib/kunit/try-catch.c:28
+ kthread+0x721/0x850 kernel/kthread.c:327
+ ret_from_fork+0x1f/0x30 ??:?
+
+Uninit was stored to memory at:
+ do_uninit_local_array+0xfa/0x110 mm/kmsan/kmsan_test.c:260
+ test_uninit_kmsan_check_memory+0x1a2/0x380 mm/kmsan/kmsan_test.c:271
+ kunit_run_case_internal lib/kunit/test.c:333
+ kunit_try_run_case+0x206/0x420 lib/kunit/test.c:374
+ kunit_generic_run_threadfn_adapter+0x6d/0xc0 lib/kunit/try-catch.c:28
+ kthread+0x721/0x850 kernel/kthread.c:327
+ ret_from_fork+0x1f/0x30 ??:?
+
+Local variable uninit created at:
+ do_uninit_local_array+0x4a/0x110 mm/kmsan/kmsan_test.c:256
+ test_uninit_kmsan_check_memory+0x1a2/0x380 mm/kmsan/kmsan_test.c:271
+
+Bytes 4-7 of 8 are uninitialized
+Memory access of size 8 starts at ffff888083fe3da0
+
+CPU: 0 PID: 6731 Comm: kunit_try_catch Tainted: G    B       E     5.16.0-rc3+ #104
+Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.14.0-2 04/01/2014
+=====================================================
+</pre></div>
+</div>
+<p>The report says that the local variable <code class="docutils literal notranslate"><span class="pre">uninit</span></code> was created uninitialized in
+<code class="docutils literal notranslate"><span class="pre">do_uninit_local_array()</span></code>. The third stack trace corresponds to the place
+where this variable was created.</p>
+<p>The first stack trace shows where the uninit value was used (in
+<code class="docutils literal notranslate"><span class="pre">test_uninit_kmsan_check_memory()</span></code>). The tool shows the bytes which were left
+uninitialized in the local variable, as well as the stack where the value was
+copied to another memory location before use.</p>
+<p>A use of uninitialized value <code class="docutils literal notranslate"><span class="pre">v</span></code> is reported by KMSAN in the following cases:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>in a condition, e.g. <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">(v)</span> <span class="pre">{</span> <span class="pre">...</span> <span class="pre">}</span></code>;</p></li>
+<li><p>in an indexing or pointer dereferencing, e.g. <code class="docutils literal notranslate"><span class="pre">array[v]</span></code> or <code class="docutils literal notranslate"><span class="pre">*v</span></code>;</p></li>
+<li><p>when it is copied to userspace or hardware, e.g. <code class="docutils literal notranslate"><span class="pre">copy_to_user(...,</span> <span class="pre">&amp;v,</span> <span class="pre">...)</span></code>;</p></li>
+<li><p>when it is passed as an argument to a function, and
+<code class="docutils literal notranslate"><span class="pre">CONFIG_KMSAN_CHECK_PARAM_RETVAL</span></code> is enabled (see below).</p></li>
+</ul>
+</div></blockquote>
+<p>The mentioned cases (apart from copying data to userspace or hardware, which is
+a security issue) are considered undefined behavior from the C11 Standard point
+of view.</p>
+</section>
+<section id="disabling-the-instrumentation">
+<h3>Disabling the instrumentation<a class="headerlink" href="#disabling-the-instrumentation" title="連結到這個標頭">¶</a></h3>
+<p>A function can be marked with <code class="docutils literal notranslate"><span class="pre">__no_kmsan_checks</span></code>. Doing so makes KMSAN
+ignore uninitialized values in that function and mark its output as initialized.
+As a result, the user will not get KMSAN reports related to that function.</p>
+<p>Another function attribute supported by KMSAN is <code class="docutils literal notranslate"><span class="pre">__no_sanitize_memory</span></code>.
+Applying this attribute to a function will result in KMSAN not instrumenting
+it, which can be helpful if we do not want the compiler to interfere with some
+low-level code (e.g. that marked with <code class="docutils literal notranslate"><span class="pre">noinstr</span></code> which implicitly adds
+<code class="docutils literal notranslate"><span class="pre">__no_sanitize_memory</span></code>).</p>
+<p>This however comes at a cost: stack allocations from such functions will have
+incorrect shadow/origin values, likely leading to false positives. Functions
+called from non-instrumented code may also receive incorrect metadata for their
+parameters.</p>
+<p>As a rule of thumb, avoid using <code class="docutils literal notranslate"><span class="pre">__no_sanitize_memory</span></code> explicitly.</p>
+<p>It is also possible to disable KMSAN for a single file (e.g. main.o):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>KMSAN_SANITIZE_main.o := n
+</pre></div>
+</div>
+<p>or for the whole directory:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>KMSAN_SANITIZE := n
+</pre></div>
+</div>
+<p>in the Makefile. Think of this as applying <code class="docutils literal notranslate"><span class="pre">__no_sanitize_memory</span></code> to every
+function in the file or directory. Most users won't need KMSAN_SANITIZE, unless
+their code gets broken by KMSAN (e.g. runs at early boot time).</p>
+<p>KMSAN checks can also be temporarily disabled for the current task using
+<code class="docutils literal notranslate"><span class="pre">kmsan_disable_current()</span></code> and <code class="docutils literal notranslate"><span class="pre">kmsan_enable_current()</span></code> calls. Each
+<code class="docutils literal notranslate"><span class="pre">kmsan_enable_current()</span></code> call must be preceded by a
+<code class="docutils literal notranslate"><span class="pre">kmsan_disable_current()</span></code> call; these call pairs may be nested. One needs to
+be careful with these calls, keeping the regions short and preferring other
+ways to disable instrumentation, where possible.</p>
+</section>
+</section>
+<section id="support">
+<h2>Support<a class="headerlink" href="#support" title="連結到這個標頭">¶</a></h2>
+<p>In order for KMSAN to work the kernel must be built with Clang, which so far is
+the only compiler that has KMSAN support. The kernel instrumentation pass is
+based on the userspace <a class="reference external" href="https://clang.llvm.org/docs/MemorySanitizer.html">MemorySanitizer tool</a>.</p>
+<p>The runtime library only supports x86_64 at the moment.</p>
+</section>
+<section id="how-kmsan-works">
+<h2>How KMSAN works<a class="headerlink" href="#how-kmsan-works" title="連結到這個標頭">¶</a></h2>
+<section id="kmsan-shadow-memory">
+<h3>KMSAN shadow memory<a class="headerlink" href="#kmsan-shadow-memory" title="連結到這個標頭">¶</a></h3>
+<p>KMSAN associates a metadata byte (also called shadow byte) with every byte of
+kernel memory. A bit in the shadow byte is set if the corresponding bit of the
+kernel memory byte is uninitialized. Marking the memory uninitialized (i.e.
+setting its shadow bytes to <code class="docutils literal notranslate"><span class="pre">0xff</span></code>) is called poisoning, marking it
+initialized (setting the shadow bytes to <code class="docutils literal notranslate"><span class="pre">0x00</span></code>) is called unpoisoning.</p>
+<p>When a new variable is allocated on the stack, it is poisoned by default by
+instrumentation code inserted by the compiler (unless it is a stack variable
+that is immediately initialized). Any new heap allocation done without
+<code class="docutils literal notranslate"><span class="pre">__GFP_ZERO</span></code> is also poisoned.</p>
+<p>Compiler instrumentation also tracks the shadow values as they are used along
+the code. When needed, instrumentation code invokes the runtime library in
+<code class="docutils literal notranslate"><span class="pre">mm/kmsan/</span></code> to persist shadow values.</p>
+<p>The shadow value of a basic or compound type is an array of bytes of the same
+length. When a constant value is written into memory, that memory is unpoisoned.
+When a value is read from memory, its shadow memory is also obtained and
+propagated into all the operations which use that value. For every instruction
+that takes one or more values the compiler generates code that calculates the
+shadow of the result depending on those values and their shadows.</p>
+<p>Example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int a = 0xff;  // i.e. 0x000000ff
+int b;
+int c = a | b;
+</pre></div>
+</div>
+<p>In this case the shadow of <code class="docutils literal notranslate"><span class="pre">a</span></code> is <code class="docutils literal notranslate"><span class="pre">0</span></code>, shadow of <code class="docutils literal notranslate"><span class="pre">b</span></code> is <code class="docutils literal notranslate"><span class="pre">0xffffffff</span></code>,
+shadow of <code class="docutils literal notranslate"><span class="pre">c</span></code> is <code class="docutils literal notranslate"><span class="pre">0xffffff00</span></code>. This means that the upper three bytes of
+<code class="docutils literal notranslate"><span class="pre">c</span></code> are uninitialized, while the lower byte is initialized.</p>
+</section>
+<section id="origin-tracking">
+<h3>Origin tracking<a class="headerlink" href="#origin-tracking" title="連結到這個標頭">¶</a></h3>
+<p>Every four bytes of kernel memory also have a so-called origin mapped to them.
+This origin describes the point in program execution at which the uninitialized
+value was created. Every origin is associated with either the full allocation
+stack (for heap-allocated memory), or the function containing the uninitialized
+variable (for locals).</p>
+<p>When an uninitialized variable is allocated on stack or heap, a new origin
+value is created, and that variable's origin is filled with that value. When a
+value is read from memory, its origin is also read and kept together with the
+shadow. For every instruction that takes one or more values, the origin of the
+result is one of the origins corresponding to any of the uninitialized inputs.
+If a poisoned value is written into memory, its origin is written to the
+corresponding storage as well.</p>
+<p>Example 1:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int a = 42;
+int b;
+int c = a + b;
+</pre></div>
+</div>
+<p>In this case the origin of <code class="docutils literal notranslate"><span class="pre">b</span></code> is generated upon function entry, and is
+stored to the origin of <code class="docutils literal notranslate"><span class="pre">c</span></code> right before the addition result is written into
+memory.</p>
+<p>Several variables may share the same origin address, if they are stored in the
+same four-byte chunk. In this case every write to either variable updates the
+origin for all of them. We have to sacrifice precision in this case, because
+storing origins for individual bits (and even bytes) would be too costly.</p>
+<p>Example 2:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int combine(short a, short b) {
+  union ret_t {
+    int i;
+    short s[2];
+  } ret;
+  ret.s[0] = a;
+  ret.s[1] = b;
+  return ret.i;
+}
+</pre></div>
+</div>
+<p>If <code class="docutils literal notranslate"><span class="pre">a</span></code> is initialized and <code class="docutils literal notranslate"><span class="pre">b</span></code> is not, the shadow of the result would be
+0xffff0000, and the origin of the result would be the origin of <code class="docutils literal notranslate"><span class="pre">b</span></code>.
+<code class="docutils literal notranslate"><span class="pre">ret.s[0]</span></code> would have the same origin, but it will never be used, because
+that variable is initialized.</p>
+<p>If both function arguments are uninitialized, only the origin of the second
+argument is preserved.</p>
+<section id="origin-chaining">
+<h4>Origin chaining<a class="headerlink" href="#origin-chaining" title="連結到這個標頭">¶</a></h4>
+<p>To ease debugging, KMSAN creates a new origin for every store of an
+uninitialized value to memory. The new origin references both its creation stack
+and the previous origin the value had. This may cause increased memory
+consumption, so we limit the length of origin chains in the runtime.</p>
+</section>
+</section>
+<section id="clang-instrumentation-api">
+<h3>Clang instrumentation API<a class="headerlink" href="#clang-instrumentation-api" title="連結到這個標頭">¶</a></h3>
+<p>Clang instrumentation pass inserts calls to functions defined in
+<code class="docutils literal notranslate"><span class="pre">mm/kmsan/nstrumentation.c</span></code> into the kernel code.</p>
+<section id="shadow-manipulation">
+<h4>Shadow manipulation<a class="headerlink" href="#shadow-manipulation" title="連結到這個標頭">¶</a></h4>
+<p>For every memory access the compiler emits a call to a function that returns a
+pair of pointers to the shadow and origin addresses of the given memory:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>typedef struct {
+  void *shadow, *origin;
+} shadow_origin_ptr_t
+
+shadow_origin_ptr_t __msan_metadata_ptr_for_load_{1,2,4,8}(void *addr)
+shadow_origin_ptr_t __msan_metadata_ptr_for_store_{1,2,4,8}(void *addr)
+shadow_origin_ptr_t __msan_metadata_ptr_for_load_n(void *addr, uintptr_t size)
+shadow_origin_ptr_t __msan_metadata_ptr_for_store_n(void *addr, uintptr_t size)
+</pre></div>
+</div>
+<p>The function name depends on the memory access size.</p>
+<p>The compiler makes sure that for every loaded value its shadow and origin
+values are read from memory. When a value is stored to memory, its shadow and
+origin are also stored using the metadata pointers.</p>
+</section>
+<section id="handling-locals">
+<h4>Handling locals<a class="headerlink" href="#handling-locals" title="連結到這個標頭">¶</a></h4>
+<p>A special function is used to create a new origin value for a local variable and
+set the origin of that variable to that value:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void __msan_poison_alloca(void *addr, uintptr_t size, char *descr)
+</pre></div>
+</div>
+</section>
+<section id="access-to-per-task-data">
+<h4>Access to per-task data<a class="headerlink" href="#access-to-per-task-data" title="連結到這個標頭">¶</a></h4>
+<p>At the beginning of every instrumented function KMSAN inserts a call to
+<code class="docutils literal notranslate"><span class="pre">__msan_get_context_state()</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kmsan_context_state *__msan_get_context_state(void)
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">kmsan_context_state</span></code> is declared in <code class="docutils literal notranslate"><span class="pre">include/linux/kmsan.h</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct kmsan_context_state {
+  char param_tls[KMSAN_PARAM_SIZE];
+  char retval_tls[KMSAN_RETVAL_SIZE];
+  char va_arg_tls[KMSAN_PARAM_SIZE];
+  char va_arg_origin_tls[KMSAN_PARAM_SIZE];
+  u64 va_arg_overflow_size_tls;
+  char param_origin_tls[KMSAN_PARAM_SIZE];
+  depot_stack_handle_t retval_origin_tls;
+};
+</pre></div>
+</div>
+<p>This structure is used by KMSAN to pass parameter shadows and origins between
+instrumented functions (unless the parameters are checked immediately by
+<code class="docutils literal notranslate"><span class="pre">CONFIG_KMSAN_CHECK_PARAM_RETVAL</span></code>).</p>
+</section>
+<section id="passing-uninitialized-values-to-functions">
+<h4>Passing uninitialized values to functions<a class="headerlink" href="#passing-uninitialized-values-to-functions" title="連結到這個標頭">¶</a></h4>
+<p>Clang's MemorySanitizer instrumentation has an option,
+<code class="docutils literal notranslate"><span class="pre">-fsanitize-memory-param-retval</span></code>, which makes the compiler check function
+parameters passed by value, as well as function return values.</p>
+<p>The option is controlled by <code class="docutils literal notranslate"><span class="pre">CONFIG_KMSAN_CHECK_PARAM_RETVAL</span></code>, which is
+enabled by default to let KMSAN report uninitialized values earlier.
+Please refer to the <a class="reference external" href="https://lore.kernel.org/all/20220614144853.3693273-1-glider&#64;google.com/">LKML discussion</a> for more details.</p>
+<p>Because of the way the checks are implemented in LLVM (they are only applied to
+parameters marked as <code class="docutils literal notranslate"><span class="pre">noundef</span></code>), not all parameters are guaranteed to be
+checked, so we cannot give up the metadata storage in <code class="docutils literal notranslate"><span class="pre">kmsan_context_state</span></code>.</p>
+</section>
+<section id="string-functions">
+<h4>String functions<a class="headerlink" href="#string-functions" title="連結到這個標頭">¶</a></h4>
+<p>The compiler replaces calls to <code class="docutils literal notranslate"><span class="pre">memcpy()</span></code>/<code class="docutils literal notranslate"><span class="pre">memmove()</span></code>/<code class="docutils literal notranslate"><span class="pre">memset()</span></code> with the
+following functions. These functions are also called when data structures are
+initialized or copied, making sure shadow and origin values are copied alongside
+with the data:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void *__msan_memcpy(void *dst, void *src, uintptr_t n)
+void *__msan_memmove(void *dst, void *src, uintptr_t n)
+void *__msan_memset(void *dst, int c, uintptr_t n)
+</pre></div>
+</div>
+</section>
+<section id="error-reporting">
+<h4>Error reporting<a class="headerlink" href="#error-reporting" title="連結到這個標頭">¶</a></h4>
+<p>For each use of a value the compiler emits a shadow check that calls
+<code class="docutils literal notranslate"><span class="pre">__msan_warning()</span></code> in the case that value is poisoned:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void __msan_warning(u32 origin)
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">__msan_warning()</span></code> causes KMSAN runtime to print an error report.</p>
+</section>
+<section id="inline-assembly-instrumentation">
+<h4>Inline assembly instrumentation<a class="headerlink" href="#inline-assembly-instrumentation" title="連結到這個標頭">¶</a></h4>
+<p>KMSAN instruments every inline assembly output with a call to:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void __msan_instrument_asm_store(void *addr, uintptr_t size)
+</pre></div>
+</div>
+<p>, which unpoisons the memory region.</p>
+<p>This approach may mask certain errors, but it also helps to avoid a lot of
+false positives in bitwise operations, atomics etc.</p>
+<p>Sometimes the pointers passed into inline assembly do not point to valid memory.
+In such cases they are ignored at runtime.</p>
+</section>
+</section>
+<section id="runtime-library">
+<h3>Runtime library<a class="headerlink" href="#runtime-library" title="連結到這個標頭">¶</a></h3>
+<p>The code is located in <code class="docutils literal notranslate"><span class="pre">mm/kmsan/</span></code>.</p>
+<section id="per-task-kmsan-state">
+<h4>Per-task KMSAN state<a class="headerlink" href="#per-task-kmsan-state" title="連結到這個標頭">¶</a></h4>
+<p>Every task_struct has an associated KMSAN task state that holds the KMSAN
+context (see above) and a per-task counter disallowing KMSAN reports:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct kmsan_context {
+  ...
+  unsigned int depth;
+  struct kmsan_context_state cstate;
+  ...
+}
+
+struct task_struct {
+  ...
+  struct kmsan_context kmsan;
+  ...
+}
+</pre></div>
+</div>
+</section>
+<section id="kmsan-contexts">
+<h4>KMSAN contexts<a class="headerlink" href="#kmsan-contexts" title="連結到這個標頭">¶</a></h4>
+<p>When running in a kernel task context, KMSAN uses <code class="docutils literal notranslate"><span class="pre">current-&gt;kmsan.cstate</span></code> to
+hold the metadata for function parameters and return values.</p>
+<p>But in the case the kernel is running in the interrupt, softirq or NMI context,
+where <code class="docutils literal notranslate"><span class="pre">current</span></code> is unavailable, KMSAN switches to per-cpu interrupt state:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>DEFINE_PER_CPU(struct kmsan_ctx, kmsan_percpu_ctx);
+</pre></div>
+</div>
+</section>
+<section id="metadata-allocation">
+<h4>Metadata allocation<a class="headerlink" href="#metadata-allocation" title="連結到這個標頭">¶</a></h4>
+<p>There are several places in the kernel for which the metadata is stored.</p>
+<p>1. Each <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> instance contains two pointers to its shadow and
+origin pages:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct page {
+  ...
+  struct page *shadow, *origin;
+  ...
+};
+</pre></div>
+</div>
+<p>At boot-time, the kernel allocates shadow and origin pages for every available
+kernel page. This is done quite late, when the kernel address space is already
+fragmented, so normal data pages may arbitrarily interleave with the metadata
+pages.</p>
+<p>This means that in general for two contiguous memory pages their shadow/origin
+pages may not be contiguous. Consequently, if a memory access crosses the
+boundary of a memory block, accesses to shadow/origin memory may potentially
+corrupt other pages or read incorrect values from them.</p>
+<p>In practice, contiguous memory pages returned by the same <code class="docutils literal notranslate"><span class="pre">alloc_pages()</span></code>
+call will have contiguous metadata, whereas if these pages belong to two
+different allocations their metadata pages can be fragmented.</p>
+<p>For the kernel data (<code class="docutils literal notranslate"><span class="pre">.data</span></code>, <code class="docutils literal notranslate"><span class="pre">.bss</span></code> etc.) and percpu memory regions
+there also are no guarantees on metadata contiguity.</p>
+<p>In the case <code class="docutils literal notranslate"><span class="pre">__msan_metadata_ptr_for_XXX_YYY()</span></code> hits the border between two
+pages with non-contiguous metadata, it returns pointers to fake shadow/origin regions:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>char dummy_load_page[PAGE_SIZE] __attribute__((aligned(PAGE_SIZE)));
+char dummy_store_page[PAGE_SIZE] __attribute__((aligned(PAGE_SIZE)));
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">dummy_load_page</span></code> is zero-initialized, so reads from it always yield zeroes.
+All stores to <code class="docutils literal notranslate"><span class="pre">dummy_store_page</span></code> are ignored.</p>
+<p>2. For vmalloc memory and modules, there is a direct mapping between the memory
+range, its shadow and origin. KMSAN reduces the vmalloc area by 3/4, making only
+the first quarter available to <code class="docutils literal notranslate"><span class="pre">vmalloc()</span></code>. The second quarter of the vmalloc
+area contains shadow memory for the first quarter, the third one holds the
+origins. A small part of the fourth quarter contains shadow and origins for the
+kernel modules. Please refer to <code class="docutils literal notranslate"><span class="pre">arch/x86/include/asm/pgtable_64_types.h</span></code> for
+more details.</p>
+<p>When an array of pages is mapped into a contiguous virtual memory space, their
+shadow and origin pages are similarly mapped into contiguous regions.</p>
+</section>
+</section>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="連結到這個標頭">¶</a></h2>
+<p>E. Stepanov, K. Serebryany. <a class="reference external" href="https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/43308.pdf">MemorySanitizer: fast detector of uninitialized
+memory use in C++</a>.
+In Proceedings of CGO 2015.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/dev-tools/kmsan.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

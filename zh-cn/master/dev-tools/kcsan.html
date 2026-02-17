@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Kernel Concurrency Sanitizer (KCSAN) &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/dev-tools/kcsan.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="Linux Kernel Memory Consistency Model (LKMM)" href="lkmm/index.html" />
+    <link rel="prev" title="Kernel Memory Leak Detector" href="kmemleak.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Development tools</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="testing-overview.html">Kernel Testing Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checkpatch.html">Checkpatch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clang-format.html">clang-format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="coccinelle.html">Coccinelle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sparse.html">Sparse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kcov.html">KCOV: code coverage for fuzzing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gcov.html">Using gcov with the Linux kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kasan.html">Kernel Address Sanitizer (KASAN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kmsan.html">Kernel Memory Sanitizer (KMSAN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ubsan.html">Undefined Behavior Sanitizer - UBSAN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kmemleak.html">Kernel Memory Leak Detector</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Kernel Concurrency Sanitizer (KCSAN)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data-races">Data Races</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#race-detection-beyond-data-races">Race Detection Beyond Data Races</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#implementation-details">Implementation Details</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#alternatives-considered">Alternatives Considered</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="lkmm/index.html">Linux Kernel Memory Consistency Model (LKMM)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfence.html">Kernel Electric-Fence (KFENCE)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kselftest.html">Linux Kernel Selftests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kunit/index.html">KUnit - Linux Kernel Unit Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ktap.html">The Kernel Test Anything Protocol (KTAP), version 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checkuapi.html">UAPI Checker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gpio-sloppy-logic-analyzer.html">Linux Kernel GPIO based sloppy logic analyzer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autofdo.html">Using AutoFDO with the Linux kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="propeller.html">Using Propeller with the Linux kernel</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/dev-tools/kcsan.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="kernel-concurrency-sanitizer-kcsan">
+<h1>Kernel Concurrency Sanitizer (KCSAN)<a class="headerlink" href="#kernel-concurrency-sanitizer-kcsan" title="Link to this heading">¶</a></h1>
+<p>The Kernel Concurrency Sanitizer (KCSAN) is a dynamic race detector, which
+relies on compile-time instrumentation, and uses a watchpoint-based sampling
+approach to detect races. KCSAN's primary purpose is to detect <a class="reference internal" href="#data-races">data races</a>.</p>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading">¶</a></h2>
+<p>KCSAN is supported by both GCC and Clang. With GCC we require version 11 or
+later, and with Clang also require version 11 or later.</p>
+<p>To enable KCSAN configure the kernel with:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>CONFIG_KCSAN = y
+</pre></div>
+</div>
+<p>KCSAN provides several other configuration options to customize behaviour (see
+the respective help text in <code class="docutils literal notranslate"><span class="pre">lib/Kconfig.kcsan</span></code> for more info).</p>
+<section id="error-reports">
+<h3>Error reports<a class="headerlink" href="#error-reports" title="Link to this heading">¶</a></h3>
+<p>A typical data race report looks like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>==================================================================
+BUG: KCSAN: data-race in test_kernel_read / test_kernel_write
+
+write to 0xffffffffc009a628 of 8 bytes by task 487 on cpu 0:
+ test_kernel_write+0x1d/0x30
+ access_thread+0x89/0xd0
+ kthread+0x23e/0x260
+ ret_from_fork+0x22/0x30
+
+read to 0xffffffffc009a628 of 8 bytes by task 488 on cpu 6:
+ test_kernel_read+0x10/0x20
+ access_thread+0x89/0xd0
+ kthread+0x23e/0x260
+ ret_from_fork+0x22/0x30
+
+value changed: 0x00000000000009a6 -&gt; 0x00000000000009b2
+
+Reported by Kernel Concurrency Sanitizer on:
+CPU: 6 PID: 488 Comm: access_thread Not tainted 5.12.0-rc2+ #1
+Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.14.0-2 04/01/2014
+==================================================================
+</pre></div>
+</div>
+<p>The header of the report provides a short summary of the functions involved in
+the race. It is followed by the access types and stack traces of the 2 threads
+involved in the data race. If KCSAN also observed a value change, the observed
+old value and new value are shown on the &quot;value changed&quot; line respectively.</p>
+<p>The other less common type of data race report looks like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>==================================================================
+BUG: KCSAN: data-race in test_kernel_rmw_array+0x71/0xd0
+
+race at unknown origin, with read to 0xffffffffc009bdb0 of 8 bytes by task 515 on cpu 2:
+ test_kernel_rmw_array+0x71/0xd0
+ access_thread+0x89/0xd0
+ kthread+0x23e/0x260
+ ret_from_fork+0x22/0x30
+
+value changed: 0x0000000000002328 -&gt; 0x0000000000002329
+
+Reported by Kernel Concurrency Sanitizer on:
+CPU: 2 PID: 515 Comm: access_thread Not tainted 5.12.0-rc2+ #1
+Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.14.0-2 04/01/2014
+==================================================================
+</pre></div>
+</div>
+<p>This report is generated where it was not possible to determine the other
+racing thread, but a race was inferred due to the data value of the watched
+memory location having changed. These reports always show a &quot;value changed&quot;
+line. A common reason for reports of this type are missing instrumentation in
+the racing thread, but could also occur due to e.g. DMA accesses. Such reports
+are shown only if <code class="docutils literal notranslate"><span class="pre">CONFIG_KCSAN_REPORT_RACE_UNKNOWN_ORIGIN=y</span></code>, which is
+enabled by default.</p>
+</section>
+<section id="selective-analysis">
+<h3>Selective analysis<a class="headerlink" href="#selective-analysis" title="Link to this heading">¶</a></h3>
+<p>It may be desirable to disable data race detection for specific accesses,
+functions, compilation units, or entire subsystems.  For static blacklisting,
+the below options are available:</p>
+<ul>
+<li><p>KCSAN understands the <code class="docutils literal notranslate"><span class="pre">data_race(expr)</span></code> annotation, which tells KCSAN that
+any data races due to accesses in <code class="docutils literal notranslate"><span class="pre">expr</span></code> should be ignored and resulting
+behaviour when encountering a data race is deemed safe.  Please see
+<a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/tools/memory-model/Documentation/access-marking.txt">&quot;Marking Shared-Memory Accesses&quot; in the LKMM</a> for more information.</p></li>
+<li><p>Similar to <code class="docutils literal notranslate"><span class="pre">data_race(...)</span></code>, the type qualifier <code class="docutils literal notranslate"><span class="pre">__data_racy</span></code> can be used
+to document that all data races due to accesses to a variable are intended
+and should be ignored by KCSAN:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct foo {
+    ...
+    int __data_racy stats_counter;
+    ...
+};
+</pre></div>
+</div>
+</li>
+<li><p>Disabling data race detection for entire functions can be accomplished by
+using the function attribute <code class="docutils literal notranslate"><span class="pre">__no_kcsan</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>__no_kcsan
+void foo(void) {
+    ...
+</pre></div>
+</div>
+<p>To dynamically limit for which functions to generate reports, see the
+<a class="reference internal" href="#debugfs-interface">DebugFS interface</a> blacklist/whitelist feature.</p>
+</li>
+<li><p>To disable data race detection for a particular compilation unit, add to the
+<code class="docutils literal notranslate"><span class="pre">Makefile</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>KCSAN_SANITIZE_file.o := n
+</pre></div>
+</div>
+</li>
+<li><p>To disable data race detection for all compilation units listed in a
+<code class="docutils literal notranslate"><span class="pre">Makefile</span></code>, add to the respective <code class="docutils literal notranslate"><span class="pre">Makefile</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>KCSAN_SANITIZE := n
+</pre></div>
+</div>
+</li>
+</ul>
+<p>Furthermore, it is possible to tell KCSAN to show or hide entire classes of
+data races, depending on preferences. These can be changed via the following
+Kconfig options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">CONFIG_KCSAN_REPORT_VALUE_CHANGE_ONLY</span></code>: If enabled and a conflicting write
+is observed via a watchpoint, but the data value of the memory location was
+observed to remain unchanged, do not report the data race.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CONFIG_KCSAN_ASSUME_PLAIN_WRITES_ATOMIC</span></code>: Assume that plain aligned writes
+up to word size are atomic by default. Assumes that such writes are not
+subject to unsafe compiler optimizations resulting in data races. The option
+causes KCSAN to not report data races due to conflicts where the only plain
+accesses are aligned writes up to word size.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CONFIG_KCSAN_PERMISSIVE</span></code>: Enable additional permissive rules to ignore
+certain classes of common data races. Unlike the above, the rules are more
+complex involving value-change patterns, access type, and address. This
+option depends on <code class="docutils literal notranslate"><span class="pre">CONFIG_KCSAN_REPORT_VALUE_CHANGE_ONLY=y</span></code>. For details
+please see the <code class="docutils literal notranslate"><span class="pre">kernel/kcsan/permissive.h</span></code>. Testers and maintainers that
+only focus on reports from specific subsystems and not the whole kernel are
+recommended to disable this option.</p></li>
+</ul>
+<p>To use the strictest possible rules, select <code class="docutils literal notranslate"><span class="pre">CONFIG_KCSAN_STRICT=y</span></code>, which
+configures KCSAN to follow the Linux-kernel memory consistency model (LKMM) as
+closely as possible.</p>
+</section>
+<section id="debugfs-interface">
+<h3>DebugFS interface<a class="headerlink" href="#debugfs-interface" title="Link to this heading">¶</a></h3>
+<p>The file <code class="docutils literal notranslate"><span class="pre">/sys/kernel/debug/kcsan</span></code> provides the following interface:</p>
+<ul class="simple">
+<li><p>Reading <code class="docutils literal notranslate"><span class="pre">/sys/kernel/debug/kcsan</span></code> returns various runtime statistics.</p></li>
+<li><p>Writing <code class="docutils literal notranslate"><span class="pre">on</span></code> or <code class="docutils literal notranslate"><span class="pre">off</span></code> to <code class="docutils literal notranslate"><span class="pre">/sys/kernel/debug/kcsan</span></code> allows turning KCSAN
+on or off, respectively.</p></li>
+<li><p>Writing <code class="docutils literal notranslate"><span class="pre">!some_func_name</span></code> to <code class="docutils literal notranslate"><span class="pre">/sys/kernel/debug/kcsan</span></code> adds
+<code class="docutils literal notranslate"><span class="pre">some_func_name</span></code> to the report filter list, which (by default) blacklists
+reporting data races where either one of the top stackframes are a function
+in the list.</p></li>
+<li><p>Writing either <code class="docutils literal notranslate"><span class="pre">blacklist</span></code> or <code class="docutils literal notranslate"><span class="pre">whitelist</span></code> to <code class="docutils literal notranslate"><span class="pre">/sys/kernel/debug/kcsan</span></code>
+changes the report filtering behaviour. For example, the blacklist feature
+can be used to silence frequently occurring data races; the whitelist feature
+can help with reproduction and testing of fixes.</p></li>
+</ul>
+</section>
+<section id="tuning-performance">
+<h3>Tuning performance<a class="headerlink" href="#tuning-performance" title="Link to this heading">¶</a></h3>
+<p>Core parameters that affect KCSAN's overall performance and bug detection
+ability are exposed as kernel command-line arguments whose defaults can also be
+changed via the corresponding Kconfig options.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">kcsan.skip_watch</span></code> (<code class="docutils literal notranslate"><span class="pre">CONFIG_KCSAN_SKIP_WATCH</span></code>): Number of per-CPU memory
+operations to skip, before another watchpoint is set up. Setting up
+watchpoints more frequently will result in the likelihood of races to be
+observed to increase. This parameter has the most significant impact on
+overall system performance and race detection ability.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">kcsan.udelay_task</span></code> (<code class="docutils literal notranslate"><span class="pre">CONFIG_KCSAN_UDELAY_TASK</span></code>): For tasks, the
+microsecond delay to stall execution after a watchpoint has been set up.
+Larger values result in the window in which we may observe a race to
+increase.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">kcsan.udelay_interrupt</span></code> (<code class="docutils literal notranslate"><span class="pre">CONFIG_KCSAN_UDELAY_INTERRUPT</span></code>): For
+interrupts, the microsecond delay to stall execution after a watchpoint has
+been set up. Interrupts have tighter latency requirements, and their delay
+should generally be smaller than the one chosen for tasks.</p></li>
+</ul>
+<p>They may be tweaked at runtime via <code class="docutils literal notranslate"><span class="pre">/sys/module/kcsan/parameters/</span></code>.</p>
+</section>
+</section>
+<section id="data-races">
+<h2>Data Races<a class="headerlink" href="#data-races" title="Link to this heading">¶</a></h2>
+<p>In an execution, two memory accesses form a <em>data race</em> if they <em>conflict</em>,
+they happen concurrently in different threads, and at least one of them is a
+<em>plain access</em>; they <em>conflict</em> if both access the same memory location, and at
+least one is a write. For a more thorough discussion and definition, see <a class="reference external" href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/tools/memory-model/Documentation/explanation.txt?id=8f6629c004b193d23612641c3607e785819e97ab#n2164">&quot;Plain
+Accesses and Data Races&quot; in the LKMM</a>.</p>
+<section id="relationship-with-the-linux-kernel-memory-consistency-model-lkmm">
+<h3>Relationship with the Linux-Kernel Memory Consistency Model (LKMM)<a class="headerlink" href="#relationship-with-the-linux-kernel-memory-consistency-model-lkmm" title="Link to this heading">¶</a></h3>
+<p>The LKMM defines the propagation and ordering rules of various memory
+operations, which gives developers the ability to reason about concurrent code.
+Ultimately this allows to determine the possible executions of concurrent code,
+and if that code is free from data races.</p>
+<p>KCSAN is aware of <em>marked atomic operations</em> (<code class="docutils literal notranslate"><span class="pre">READ_ONCE</span></code>, <code class="docutils literal notranslate"><span class="pre">WRITE_ONCE</span></code>,
+<code class="docutils literal notranslate"><span class="pre">atomic_*</span></code>, etc.), and a subset of ordering guarantees implied by memory
+barriers. With <code class="docutils literal notranslate"><span class="pre">CONFIG_KCSAN_WEAK_MEMORY=y</span></code>, KCSAN models load or store
+buffering, and can detect missing <code class="docutils literal notranslate"><span class="pre">smp_mb()</span></code>, <code class="docutils literal notranslate"><span class="pre">smp_wmb()</span></code>, <code class="docutils literal notranslate"><span class="pre">smp_rmb()</span></code>,
+<code class="docutils literal notranslate"><span class="pre">smp_store_release()</span></code>, and all <code class="docutils literal notranslate"><span class="pre">atomic_*</span></code> operations with equivalent
+implied barriers.</p>
+<p>Note, KCSAN will not report all data races due to missing memory ordering,
+specifically where a memory barrier would be required to prohibit subsequent
+memory operation from reordering before the barrier. Developers should
+therefore carefully consider the required memory ordering requirements that
+remain unchecked.</p>
+</section>
+</section>
+<section id="race-detection-beyond-data-races">
+<h2>Race Detection Beyond Data Races<a class="headerlink" href="#race-detection-beyond-data-races" title="Link to this heading">¶</a></h2>
+<p>For code with complex concurrency design, race-condition bugs may not always
+manifest as data races. Race conditions occur if concurrently executing
+operations result in unexpected system behaviour. On the other hand, data races
+are defined at the C-language level. The following macros can be used to check
+properties of concurrent code where bugs would not manifest as data races.</p>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.ASSERT_EXCLUSIVE_WRITER">
+<span class="sig-name descname"><span class="n"><span class="pre">ASSERT_EXCLUSIVE_WRITER</span></span></span><a class="headerlink" href="#c.ASSERT_EXCLUSIVE_WRITER" title="Link to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">ASSERT_EXCLUSIVE_WRITER</span> <span class="pre">(var)</span></code></p>
+<blockquote>
+<div><p>assert no concurrent writes to <strong>var</strong></p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">var</span></code></dt><dd><p>variable to assert on</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Assert that there are no concurrent writes to <strong>var</strong>; other readers are
+allowed. This assertion can be used to specify properties of concurrent code,
+where violation cannot be detected as a normal data race.</p>
+<p>For example, if we only have a single writer, but multiple concurrent
+readers, to avoid data races, all these accesses must be marked; even
+concurrent marked writes racing with the single writer are bugs.
+Unfortunately, due to being marked, they are no longer data races. For cases
+like these, we can use the macro as follows:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">writer</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">spin_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">update_foo_lock</span><span class="p">);</span>
+<span class="w">        </span><span class="n">ASSERT_EXCLUSIVE_WRITER</span><span class="p">(</span><span class="n">shared_foo</span><span class="p">);</span>
+<span class="w">        </span><span class="n">WRITE_ONCE</span><span class="p">(</span><span class="n">shared_foo</span><span class="p">,</span><span class="w"> </span><span class="p">...);</span>
+<span class="w">        </span><span class="n">spin_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">update_foo_lock</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">reader</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// update_foo_lock does not need to be held!</span>
+<span class="w">        </span><span class="p">...</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">READ_ONCE</span><span class="p">(</span><span class="n">shared_foo</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Note</strong></p>
+<p><a class="reference internal" href="#c.ASSERT_EXCLUSIVE_WRITER_SCOPED" title="ASSERT_EXCLUSIVE_WRITER_SCOPED"><code class="xref c c-func docutils literal notranslate"><span class="pre">ASSERT_EXCLUSIVE_WRITER_SCOPED()</span></code></a>, if applicable, performs more thorough
+checking if a clear scope where no concurrent writes are expected exists.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.ASSERT_EXCLUSIVE_WRITER_SCOPED">
+<span class="sig-name descname"><span class="n"><span class="pre">ASSERT_EXCLUSIVE_WRITER_SCOPED</span></span></span><a class="headerlink" href="#c.ASSERT_EXCLUSIVE_WRITER_SCOPED" title="Link to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">ASSERT_EXCLUSIVE_WRITER_SCOPED</span> <span class="pre">(var)</span></code></p>
+<blockquote>
+<div><p>assert no concurrent writes to <strong>var</strong> in scope</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">var</span></code></dt><dd><p>variable to assert on</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Scoped variant of <a class="reference internal" href="#c.ASSERT_EXCLUSIVE_WRITER" title="ASSERT_EXCLUSIVE_WRITER"><code class="xref c c-func docutils literal notranslate"><span class="pre">ASSERT_EXCLUSIVE_WRITER()</span></code></a>.</p>
+<p>Assert that there are no concurrent writes to <strong>var</strong> for the duration of the
+scope in which it is introduced. This provides a better way to fully cover
+the enclosing scope, compared to multiple <a class="reference internal" href="#c.ASSERT_EXCLUSIVE_WRITER" title="ASSERT_EXCLUSIVE_WRITER"><code class="xref c c-func docutils literal notranslate"><span class="pre">ASSERT_EXCLUSIVE_WRITER()</span></code></a>, and
+increases the likelihood for KCSAN to detect racing accesses.</p>
+<p>For example, it allows finding race-condition bugs that only occur due to
+state changes within the scope itself:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">writer</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">spin_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">update_foo_lock</span><span class="p">);</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">                </span><span class="n">ASSERT_EXCLUSIVE_WRITER_SCOPED</span><span class="p">(</span><span class="n">shared_foo</span><span class="p">);</span>
+<span class="w">                </span><span class="n">WRITE_ONCE</span><span class="p">(</span><span class="n">shared_foo</span><span class="p">,</span><span class="w"> </span><span class="mi">42</span><span class="p">);</span>
+<span class="w">                </span><span class="p">...</span>
+<span class="w">                </span><span class="c1">// shared_foo should still be 42 here!</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">        </span><span class="n">spin_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">update_foo_lock</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">buggy</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">READ_ONCE</span><span class="p">(</span><span class="n">shared_foo</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">42</span><span class="p">)</span>
+<span class="w">                </span><span class="n">WRITE_ONCE</span><span class="p">(</span><span class="n">shared_foo</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span><span class="w"> </span><span class="c1">// bug!</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.ASSERT_EXCLUSIVE_ACCESS">
+<span class="sig-name descname"><span class="n"><span class="pre">ASSERT_EXCLUSIVE_ACCESS</span></span></span><a class="headerlink" href="#c.ASSERT_EXCLUSIVE_ACCESS" title="Link to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">ASSERT_EXCLUSIVE_ACCESS</span> <span class="pre">(var)</span></code></p>
+<blockquote>
+<div><p>assert no concurrent accesses to <strong>var</strong></p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">var</span></code></dt><dd><p>variable to assert on</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Assert that there are no concurrent accesses to <strong>var</strong> (no readers nor
+writers). This assertion can be used to specify properties of concurrent
+code, where violation cannot be detected as a normal data race.</p>
+<p>For example, where exclusive access is expected after determining no other
+users of an object are left, but the object is not actually freed. We can
+check that this property actually holds as follows:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">refcount_dec_and_test</span><span class="p">(</span><span class="o">&amp;</span><span class="n">obj</span><span class="o">-&gt;</span><span class="n">refcnt</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">ASSERT_EXCLUSIVE_ACCESS</span><span class="p">(</span><span class="o">*</span><span class="n">obj</span><span class="p">);</span>
+<span class="w">        </span><span class="n">do_some_cleanup</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>
+<span class="w">        </span><span class="n">release_for_reuse</span><span class="p">(</span><span class="n">obj</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Note</strong></p>
+<ol class="arabic simple">
+<li><p><a class="reference internal" href="#c.ASSERT_EXCLUSIVE_ACCESS_SCOPED" title="ASSERT_EXCLUSIVE_ACCESS_SCOPED"><code class="xref c c-func docutils literal notranslate"><span class="pre">ASSERT_EXCLUSIVE_ACCESS_SCOPED()</span></code></a>, if applicable, performs more thorough
+checking if a clear scope where no concurrent accesses are expected exists.</p></li>
+<li><p>For cases where the object is freed, <a class="reference external" href="kasan.html">KASAN</a> is a better
+fit to detect use-after-free bugs.</p></li>
+</ol>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.ASSERT_EXCLUSIVE_ACCESS_SCOPED">
+<span class="sig-name descname"><span class="n"><span class="pre">ASSERT_EXCLUSIVE_ACCESS_SCOPED</span></span></span><a class="headerlink" href="#c.ASSERT_EXCLUSIVE_ACCESS_SCOPED" title="Link to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">ASSERT_EXCLUSIVE_ACCESS_SCOPED</span> <span class="pre">(var)</span></code></p>
+<blockquote>
+<div><p>assert no concurrent accesses to <strong>var</strong> in scope</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">var</span></code></dt><dd><p>variable to assert on</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Scoped variant of <a class="reference internal" href="#c.ASSERT_EXCLUSIVE_ACCESS" title="ASSERT_EXCLUSIVE_ACCESS"><code class="xref c c-func docutils literal notranslate"><span class="pre">ASSERT_EXCLUSIVE_ACCESS()</span></code></a>.</p>
+<p>Assert that there are no concurrent accesses to <strong>var</strong> (no readers nor writers)
+for the entire duration of the scope in which it is introduced. This provides
+a better way to fully cover the enclosing scope, compared to multiple
+<a class="reference internal" href="#c.ASSERT_EXCLUSIVE_ACCESS" title="ASSERT_EXCLUSIVE_ACCESS"><code class="xref c c-func docutils literal notranslate"><span class="pre">ASSERT_EXCLUSIVE_ACCESS()</span></code></a>, and increases the likelihood for KCSAN to detect
+racing accesses.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.ASSERT_EXCLUSIVE_BITS">
+<span class="sig-name descname"><span class="n"><span class="pre">ASSERT_EXCLUSIVE_BITS</span></span></span><a class="headerlink" href="#c.ASSERT_EXCLUSIVE_BITS" title="Link to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">ASSERT_EXCLUSIVE_BITS</span> <span class="pre">(var,</span> <span class="pre">mask)</span></code></p>
+<blockquote>
+<div><p>assert no concurrent writes to subset of bits in <strong>var</strong></p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">var</span></code></dt><dd><p>variable to assert on</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">mask</span></code></dt><dd><p>only check for modifications to bits set in <strong>mask</strong></p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Bit-granular variant of <a class="reference internal" href="#c.ASSERT_EXCLUSIVE_WRITER" title="ASSERT_EXCLUSIVE_WRITER"><code class="xref c c-func docutils literal notranslate"><span class="pre">ASSERT_EXCLUSIVE_WRITER()</span></code></a>.</p>
+<p>Assert that there are no concurrent writes to a subset of bits in <strong>var</strong>;
+concurrent readers are permitted. This assertion captures more detailed
+bit-level properties, compared to the other (word granularity) assertions.
+Only the bits set in <strong>mask</strong> are checked for concurrent modifications, while
+ignoring the remaining bits, i.e. concurrent writes (or reads) to ~mask bits
+are ignored.</p>
+<p>Use this for variables, where some bits must not be modified concurrently,
+yet other bits are expected to be modified concurrently.</p>
+<p>For example, variables where, after initialization, some bits are read-only,
+but other bits may still be modified concurrently. A reader may wish to
+assert that this is true as follows:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">ASSERT_EXCLUSIVE_BITS</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span><span class="w"> </span><span class="n">READ_ONLY_MASK</span><span class="p">);</span>
+<span class="n">foo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">READ_ONCE</span><span class="p">(</span><span class="n">flags</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">READ_ONLY_MASK</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">READ_ONLY_SHIFT</span><span class="p">;</span>
+</pre></div>
+</div>
+<p><strong>Note</strong></p>
+<p>The access that immediately follows <a class="reference internal" href="#c.ASSERT_EXCLUSIVE_BITS" title="ASSERT_EXCLUSIVE_BITS"><code class="xref c c-func docutils literal notranslate"><span class="pre">ASSERT_EXCLUSIVE_BITS()</span></code></a> is assumed
+to access the masked bits only, and KCSAN optimistically assumes it is
+therefore safe, even in the presence of data races, and marking it with
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">READ_ONCE()</span></code> is optional from KCSAN's point-of-view. We caution, however, that
+it may still be advisable to do so, since we cannot reason about all compiler
+optimizations when it comes to bit manipulations (on the reader and writer
+side). If you are sure nothing can go wrong, we can write the above simply
+as:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">ASSERT_EXCLUSIVE_BITS</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span><span class="w"> </span><span class="n">READ_ONLY_MASK</span><span class="p">);</span>
+<span class="n">foo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">flags</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">READ_ONLY_MASK</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="n">READ_ONLY_SHIFT</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Another example, where this may be used, is when certain bits of <strong>var</strong> may
+only be modified when holding the appropriate lock, but other bits may still
+be modified concurrently. Writers, where other bits may change concurrently,
+could use the assertion as follows:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">spin_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">foo_lock</span><span class="p">);</span>
+<span class="n">ASSERT_EXCLUSIVE_BITS</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span><span class="w"> </span><span class="n">FOO_MASK</span><span class="p">);</span>
+<span class="n">old_flags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">flags</span><span class="p">;</span>
+<span class="n">new_flags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">old_flags</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="o">~</span><span class="n">FOO_MASK</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="p">(</span><span class="n">new_foo</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">FOO_SHIFT</span><span class="p">);</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cmpxchg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">flags</span><span class="p">,</span><span class="w"> </span><span class="n">old_flags</span><span class="p">,</span><span class="w"> </span><span class="n">new_flags</span><span class="p">)</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">old_flags</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">}</span>
+<span class="n">spin_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">foo_lock</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="implementation-details">
+<h2>Implementation Details<a class="headerlink" href="#implementation-details" title="Link to this heading">¶</a></h2>
+<p>KCSAN relies on observing that two accesses happen concurrently. Crucially, we
+want to (a) increase the chances of observing races (especially for races that
+manifest rarely), and (b) be able to actually observe them. We can accomplish
+(a) by injecting various delays, and (b) by using address watchpoints (or
+breakpoints).</p>
+<p>If we deliberately stall a memory access, while we have a watchpoint for its
+address set up, and then observe the watchpoint to fire, two accesses to the
+same address just raced. Using hardware watchpoints, this is the approach taken
+in <a class="reference external" href="http://usenix.org/legacy/events/osdi10/tech/full_papers/Erickson.pdf">DataCollider</a>.
+Unlike DataCollider, KCSAN does not use hardware watchpoints, but instead
+relies on compiler instrumentation and &quot;soft watchpoints&quot;.</p>
+<p>In KCSAN, watchpoints are implemented using an efficient encoding that stores
+access type, size, and address in a long; the benefits of using &quot;soft
+watchpoints&quot; are portability and greater flexibility. KCSAN then relies on the
+compiler instrumenting plain accesses. For each instrumented plain access:</p>
+<ol class="arabic simple">
+<li><p>Check if a matching watchpoint exists; if yes, and at least one access is a
+write, then we encountered a racing access.</p></li>
+<li><p>Periodically, if no matching watchpoint exists, set up a watchpoint and
+stall for a small randomized delay.</p></li>
+<li><p>Also check the data value before the delay, and re-check the data value
+after delay; if the values mismatch, we infer a race of unknown origin.</p></li>
+</ol>
+<p>To detect data races between plain and marked accesses, KCSAN also annotates
+marked accesses, but only to check if a watchpoint exists; i.e. KCSAN never
+sets up a watchpoint on marked accesses. By never setting up watchpoints for
+marked operations, if all accesses to a variable that is accessed concurrently
+are properly marked, KCSAN will never trigger a watchpoint and therefore never
+report the accesses.</p>
+<section id="modeling-weak-memory">
+<h3>Modeling Weak Memory<a class="headerlink" href="#modeling-weak-memory" title="Link to this heading">¶</a></h3>
+<p>KCSAN's approach to detecting data races due to missing memory barriers is
+based on modeling access reordering (with <code class="docutils literal notranslate"><span class="pre">CONFIG_KCSAN_WEAK_MEMORY=y</span></code>).
+Each plain memory access for which a watchpoint is set up, is also selected for
+simulated reordering within the scope of its function (at most 1 in-flight
+access).</p>
+<p>Once an access has been selected for reordering, it is checked along every
+other access until the end of the function scope. If an appropriate memory
+barrier is encountered, the access will no longer be considered for simulated
+reordering.</p>
+<p>When the result of a memory operation should be ordered by a barrier, KCSAN can
+then detect data races where the conflict only occurs as a result of a missing
+barrier. Consider the example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int x, flag;
+void T1(void)
+{
+    x = 1;                  // data race!
+    WRITE_ONCE(flag, 1);    // correct: smp_store_release(&amp;flag, 1)
+}
+void T2(void)
+{
+    while (!READ_ONCE(flag));   // correct: smp_load_acquire(&amp;flag)
+    ... = x;                    // data race!
+}
+</pre></div>
+</div>
+<p>When weak memory modeling is enabled, KCSAN can consider <code class="docutils literal notranslate"><span class="pre">x</span></code> in <code class="docutils literal notranslate"><span class="pre">T1</span></code> for
+simulated reordering. After the write of <code class="docutils literal notranslate"><span class="pre">flag</span></code>, <code class="docutils literal notranslate"><span class="pre">x</span></code> is again checked for
+concurrent accesses: because <code class="docutils literal notranslate"><span class="pre">T2</span></code> is able to proceed after the write of
+<code class="docutils literal notranslate"><span class="pre">flag</span></code>, a data race is detected. With the correct barriers in place, <code class="docutils literal notranslate"><span class="pre">x</span></code>
+would not be considered for reordering after the proper release of <code class="docutils literal notranslate"><span class="pre">flag</span></code>,
+and no data race would be detected.</p>
+<p>Deliberate trade-offs in complexity but also practical limitations mean only a
+subset of data races due to missing memory barriers can be detected. With
+currently available compiler support, the implementation is limited to modeling
+the effects of &quot;buffering&quot; (delaying accesses), since the runtime cannot
+&quot;prefetch&quot; accesses. Also recall that watchpoints are only set up for plain
+accesses, and the only access type for which KCSAN simulates reordering. This
+means reordering of marked accesses is not modeled.</p>
+<p>A consequence of the above is that acquire operations do not require barrier
+instrumentation (no prefetching). Furthermore, marked accesses introducing
+address or control dependencies do not require special handling (the marked
+access cannot be reordered, later dependent accesses cannot be prefetched).</p>
+</section>
+<section id="key-properties">
+<h3>Key Properties<a class="headerlink" href="#key-properties" title="Link to this heading">¶</a></h3>
+<ol class="arabic simple">
+<li><p><strong>Memory Overhead:</strong>  The overall memory overhead is only a few MiB
+depending on configuration. The current implementation uses a small array of
+longs to encode watchpoint information, which is negligible.</p></li>
+<li><p><strong>Performance Overhead:</strong> KCSAN's runtime aims to be minimal, using an
+efficient watchpoint encoding that does not require acquiring any shared
+locks in the fast-path. For kernel boot on a system with 8 CPUs:</p>
+<ul class="simple">
+<li><p>5.0x slow-down with the default KCSAN config;</p></li>
+<li><p>2.8x slow-down from runtime fast-path overhead only (set very large
+<code class="docutils literal notranslate"><span class="pre">KCSAN_SKIP_WATCH</span></code> and unset <code class="docutils literal notranslate"><span class="pre">KCSAN_SKIP_WATCH_RANDOMIZE</span></code>).</p></li>
+</ul>
+</li>
+<li><p><strong>Annotation Overheads:</strong> Minimal annotations are required outside the KCSAN
+runtime. As a result, maintenance overheads are minimal as the kernel
+evolves.</p></li>
+<li><p><strong>Detects Racy Writes from Devices:</strong> Due to checking data values upon
+setting up watchpoints, racy writes from devices can also be detected.</p></li>
+<li><p><strong>Memory Ordering:</strong> KCSAN is aware of only a subset of LKMM ordering rules;
+this may result in missed data races (false negatives).</p></li>
+<li><p><strong>Analysis Accuracy:</strong> For observed executions, due to using a sampling
+strategy, the analysis is <em>unsound</em> (false negatives possible), but aims to
+be complete (no false positives).</p></li>
+</ol>
+</section>
+</section>
+<section id="alternatives-considered">
+<h2>Alternatives Considered<a class="headerlink" href="#alternatives-considered" title="Link to this heading">¶</a></h2>
+<p>An alternative data race detection approach for the kernel can be found in the
+<a class="reference external" href="https://github.com/google/kernel-sanitizers/blob/master/KTSAN.md">Kernel Thread Sanitizer (KTSAN)</a>.
+KTSAN is a happens-before data race detector, which explicitly establishes the
+happens-before order between memory operations, which can then be used to
+determine data races as defined in <a class="reference internal" href="#data-races">Data Races</a>.</p>
+<p>To build a correct happens-before relation, KTSAN must be aware of all ordering
+rules of the LKMM and synchronization primitives. Unfortunately, any omission
+leads to large numbers of false positives, which is especially detrimental in
+the context of the kernel which includes numerous custom synchronization
+mechanisms. To track the happens-before relation, KTSAN's implementation
+requires metadata for each memory location (shadow memory), which for each page
+corresponds to 4 pages of shadow memory, and can translate into overhead of
+tens of GiB on a large system.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/dev-tools/kcsan.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

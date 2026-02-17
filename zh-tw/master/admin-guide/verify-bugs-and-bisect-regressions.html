@@ -1,0 +1,2160 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>How to verify bugs and bisect regressions &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/verify-bugs-and-bisect-regressions.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Bug hunting" href="bug-hunting.html" />
+    <link rel="prev" title="How to quickly build a trimmed Linux kernel" href="quickly-build-trimmed-linux.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reporting-regressions.html">Reporting regressions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quickly-build-trimmed-linux.html">How to quickly build a trimmed Linux kernel</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">How to verify bugs and bisect regressions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bug-hunting.html">Bug hunting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bug-bisect.html">Bisecting a regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tainted-kernels.html">Tainted kernels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ramoops.html">Ramoops oops/panic logger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dynamic-debug-howto.html">Dynamic debug</a></li>
+<li class="toctree-l3"><a class="reference internal" href="init.html">Explaining the &quot;No working init found.&quot; boot hang message</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kdump/index.html">Documentation for Kdump - The kexec-based Crash Dumping Solution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="perf/index.html">Performance monitor support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pstore-blk.html">pstore block oops/panic logger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="clearing-warn-once.html">Clearing WARN_ONCE</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kernel-per-CPU-kthreads.html">Reducing OS jitter due to per-cpu kthreads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="lockup-watchdogs.html">Softlockup detector and hardlockup detector (aka nmi_watchdog)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RAS/main.html">Reliability, Availability and Serviceability (RAS)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RAS/error-decoding.html">Error decoding</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RAS/address-translation.html">Address translation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sysrq.html">Linux Magic System Request Key Hacks</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-kernel-subsystems">Core-kernel subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/admin-guide/verify-bugs-and-bisect-regressions.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="how-to-verify-bugs-and-bisect-regressions">
+<h1>How to verify bugs and bisect regressions<a class="headerlink" href="#how-to-verify-bugs-and-bisect-regressions" title="連結到這個標頭">¶</a></h1>
+<p>This document describes how to check if some Linux kernel problem occurs in code
+currently supported by developers -- to then explain how to locate the change
+causing the issue, if it is a regression (e.g. did not happen with earlier
+versions).</p>
+<p>The text aims at people running kernels from mainstream Linux distributions on
+commodity hardware who want to report a kernel bug to the upstream Linux
+developers. Despite this intent, the instructions work just as well for users
+who are already familiar with building their own kernels: they help avoid
+mistakes occasionally made even by experienced developers.</p>
+<section id="the-essence-of-the-process-aka-tl-dr">
+<h2>The essence of the process (aka 'TL;DR')<a class="headerlink" href="#the-essence-of-the-process-aka-tl-dr" title="連結到這個標頭">¶</a></h2>
+<p><em>[If you are new to building or bisecting Linux, ignore this section and head
+over to the</em> '<a class="reference internal" href="#introguide-bissbs"><span class="std std-ref">step-by-step guide</span></a>' <em>below. It utilizes
+the same commands as this section while describing them in brief fashion. The
+steps are nevertheless easy to follow and together with accompanying entries
+in a reference section mention many alternatives, pitfalls, and additional
+aspects, all of which might be essential in your present case.]</em></p>
+<p><strong>In case you want to check if a bug is present in code currently supported by
+developers</strong>, execute just the <em>preparations</em> and <em>segment 1</em>; while doing so,
+consider the newest Linux kernel you regularly use to be the 'working' kernel.
+In the following example that's assumed to be 6.0, which is why its sources
+will be used to prepare the .config file.</p>
+<p><strong>In case you face a regression</strong>, follow the steps at least till the end of
+<em>segment 2</em>. Then you can submit a preliminary report -- or continue with
+<em>segment 3</em>, which describes how to perform a bisection needed for a
+full-fledged regression report. In the following example 6.0.13 is assumed to be
+the 'working' kernel and 6.1.5 to be the first 'broken', which is why 6.0
+will be considered the 'good' release and used to prepare the .config file.</p>
+<ul>
+<li><p><strong>Preparations</strong>: set up everything to build your own kernels:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># * Remove any software that depends on externally maintained kernel modules
+#   or builds any automatically during bootup.
+# * Ensure Secure Boot permits booting self-compiled Linux kernels.
+# * If you are not already running the &#39;working&#39; kernel, reboot into it.
+# * Install compilers and everything else needed for building Linux.
+# * Ensure to have 15 Gigabyte free space in your home directory.
+git clone -o mainline --no-checkout \
+  https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git ~/linux/
+cd ~/linux/
+git remote add -t master stable \
+  https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
+git switch --detach v6.0
+# * Hint: if you used an existing clone, ensure no stale .config is around.
+make olddefconfig
+# * Ensure the former command picked the .config of the &#39;working&#39; kernel.
+# * Connect external hardware (USB keys, tokens, ...), start a VM, bring up
+#   VPNs, mount network shares, and briefly try the feature that is broken.
+yes &#39;&#39; | make localmodconfig
+./scripts/config --set-str CONFIG_LOCALVERSION &#39;-local&#39;
+./scripts/config -e CONFIG_LOCALVERSION_AUTO
+# * Note, when short on storage space, check the guide for an alternative:
+./scripts/config -d DEBUG_INFO_NONE -e KALLSYMS_ALL -e DEBUG_KERNEL \
+  -e DEBUG_INFO -e DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT -e KALLSYMS
+# * Hint: at this point you might want to adjust the build configuration;
+#   you&#39;ll have to, if you are running Debian.
+make olddefconfig
+cp .config ~/kernel-config-working
+</pre></div>
+</div>
+</li>
+<li><p><strong>Segment 1</strong>: build a kernel from the latest mainline codebase.</p>
+<p>This among others checks if the problem was fixed already and which developers
+later need to be told about the problem; in case of a regression, this rules
+out a .config change as root of the problem.</p>
+<ol class="loweralpha">
+<li><p>Checking out latest mainline code:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cd ~/linux/
+git switch --discard-changes --detach mainline/master
+</pre></div>
+</div>
+</li>
+<li><p>Build, install, and boot a kernel:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cp ~/kernel-config-working .config
+make olddefconfig
+make -j $(nproc --all)
+# * Make sure there is enough disk space to hold another kernel:
+df -h /boot/ /lib/modules/
+# * Note: on Arch Linux, its derivatives and a few other distributions
+#   the following commands will do nothing at all or only part of the
+#   job. See the step-by-step guide for further details.
+sudo make modules_install
+command -v installkernel &amp;&amp; sudo make install
+# * Check how much space your self-built kernel actually needs, which
+#   enables you to make better estimates later:
+du -ch /boot/*$(make -s kernelrelease)* | tail -n 1
+du -sh /lib/modules/$(make -s kernelrelease)/
+# * Hint: the output of the following command will help you pick the
+#   right kernel from the boot menu:
+make -s kernelrelease | tee -a ~/kernels-built
+reboot
+# * Once booted, ensure you are running the kernel you just built by
+#   checking if the output of the next two commands matches:
+tail -n 1 ~/kernels-built
+uname -r
+cat /proc/sys/kernel/tainted
+</pre></div>
+</div>
+</li>
+<li><p>Check if the problem occurs with this kernel as well.</p></li>
+</ol>
+</li>
+<li><p><strong>Segment 2</strong>: ensure the 'good' kernel is also a 'working' kernel.</p>
+<p>This among others verifies the trimmed .config file actually works well, as
+bisecting with it otherwise would be a waste of time:</p>
+<ol class="loweralpha">
+<li><p>Start by checking out the sources of the 'good' version:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cd ~/linux/
+git switch --discard-changes --detach v6.0
+</pre></div>
+</div>
+</li>
+<li><p>Build, install, and boot a kernel as described earlier in <em>segment 1,
+section b</em> -- just feel free to skip the 'du' commands, as you have a rough
+estimate already.</p></li>
+<li><p>Ensure the feature that regressed with the 'broken' kernel actually works
+with this one.</p></li>
+</ol>
+</li>
+<li><p><strong>Segment 3</strong>: perform and validate the bisection.</p>
+<ol class="loweralpha">
+<li><p>Retrieve the sources for your 'bad' version:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git remote set-branches --add stable linux-6.1.y
+git fetch stable
+</pre></div>
+</div>
+</li>
+<li><p>Initialize the bisection:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cd ~/linux/
+git bisect start
+git bisect good v6.0
+git bisect bad v6.1.5
+</pre></div>
+</div>
+</li>
+<li><p>Build, install, and boot a kernel as described earlier in <em>segment 1,
+section b</em>.</p>
+<p>In case building or booting the kernel fails for unrelated reasons, run
+<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">bisect</span> <span class="pre">skip</span></code>. In all other outcomes, check if the regressed feature
+works with the newly built kernel. If it does, tell Git by executing
+<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">bisect</span> <span class="pre">good</span></code>; if it does not, run <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">bisect</span> <span class="pre">bad</span></code> instead.</p>
+<p>All three commands will make Git check out another commit; then re-execute
+this step (e.g. build, install, boot, and test a kernel to then tell Git
+the outcome). Do so again and again until Git shows which commit broke
+things. If you run short of disk space during this process, check the
+section 'Complementary tasks: cleanup during and after the process'
+below.</p>
+</li>
+<li><p>Once your finished the bisection, put a few things away:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cd ~/linux/
+git bisect log &gt; ~/bisect-log
+cp .config ~/bisection-config-culprit
+git bisect reset
+</pre></div>
+</div>
+</li>
+<li><p>Try to verify the bisection result:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git switch --discard-changes --detach mainline/master
+git revert --no-edit cafec0cacaca0
+cp ~/kernel-config-working .config
+./scripts/config --set-str CONFIG_LOCALVERSION &#39;-local-cafec0cacaca0-reverted&#39;
+</pre></div>
+</div>
+</li>
+</ol>
+<blockquote>
+<div><p>This is optional, as some commits are impossible to revert. But if the
+second command worked flawlessly, build, install, and boot one more kernel
+kernel; just this time skip the first command copying the base .config file
+over, as that already has been taken care off.</p>
+</div></blockquote>
+</li>
+<li><p><strong>Complementary tasks</strong>: cleanup during and after the process.</p>
+<ol class="loweralpha">
+<li><p>To avoid running out of disk space during a bisection, you might need to
+remove some kernels you built earlier. You most likely want to keep those
+you built during segment 1 and 2 around for a while, but you will most
+likely no longer need kernels tested during the actual bisection
+(Segment 3 c). You can list them in build order using:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ls -ltr /lib/modules/*-local*
+</pre></div>
+</div>
+</li>
+</ol>
+<blockquote>
+<div><p>To then for example erase a kernel that identifies itself as
+'6.0-rc1-local-gcafec0cacaca0', use this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo rm -rf /lib/modules/6.0-rc1-local-gcafec0cacaca0
+sudo kernel-install -v remove 6.0-rc1-local-gcafec0cacaca0
+# * Note, on some distributions kernel-install is missing
+#   or does only part of the job.
+</pre></div>
+</div>
+</div></blockquote>
+<ol class="loweralpha simple" start="2">
+<li><p>If you performed a bisection and successfully validated the result, feel
+free to remove all kernels built during the actual bisection (Segment 3 c);
+the kernels you built earlier and later you might want to keep around for
+a week or two.</p></li>
+</ol>
+</li>
+<li><p><strong>Optional task</strong>: test a debug patch or a proposed fix later:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git fetch mainline
+git switch --discard-changes --detach mainline/master
+git apply /tmp/foobars-proposed-fix-v1.patch
+cp ~/kernel-config-working .config
+./scripts/config --set-str CONFIG_LOCALVERSION &#39;-local-foobars-fix-v1&#39;
+</pre></div>
+</div>
+<p>Build, install, and boot a kernel as described in <em>segment 1, section b</em> --
+but this time omit the first command copying the build configuration over,
+as that has been taken care of already.</p>
+</li>
+</ul>
+</section>
+<section id="step-by-step-guide-on-how-to-verify-bugs-and-bisect-regressions">
+<span id="introguide-bissbs"></span><h2>Step-by-step guide on how to verify bugs and bisect regressions<a class="headerlink" href="#step-by-step-guide-on-how-to-verify-bugs-and-bisect-regressions" title="連結到這個標頭">¶</a></h2>
+<p>This guide describes how to set up your own Linux kernels for investigating bugs
+or regressions you intend to report. How far you want to follow the instructions
+depends on your issue:</p>
+<p>Execute all steps till the end of <em>segment 1</em> to <strong>verify if your kernel problem
+is present in code supported by Linux kernel developers</strong>. If it is, you are all
+set to report the bug -- unless it did not happen with earlier kernel versions,
+as then your want to at least continue with <em>segment 2</em> to <strong>check if the issue
+qualifies as regression</strong> which receive priority treatment. Depending on the
+outcome you then are ready to report a bug or submit a preliminary regression
+report; instead of the latter your could also head straight on and follow
+<em>segment 3</em> to <strong>perform a bisection</strong> for a full-fledged regression report
+developers are obliged to act upon.</p>
+<blockquote>
+<div><p><a class="reference internal" href="#introprep-bissbs"><span class="std std-ref">Preparations: set up everything to build your own kernels</span></a>.</p>
+<p><a class="reference internal" href="#introlatestcheck-bissbs"><span class="std std-ref">Segment 1: try to reproduce the problem with the latest codebase</span></a>.</p>
+<p><a class="reference internal" href="#introworkingcheck-bissbs"><span class="std std-ref">Segment 2: check if the kernels you build work fine</span></a>.</p>
+<p><a class="reference internal" href="#introbisect-bissbs"><span class="std std-ref">Segment 3: perform a bisection and validate the result</span></a>.</p>
+<p><a class="reference internal" href="#introclosure-bissbs"><span class="std std-ref">Complementary tasks: cleanup during and after following this guide</span></a>.</p>
+<p><a class="reference internal" href="#introoptional-bissbs"><span class="std std-ref">Optional tasks: test reverts, patches, or later versions</span></a>.</p>
+</div></blockquote>
+<p>The steps in each segment illustrate the important aspects of the process, while
+a comprehensive reference section holds additional details for almost all of the
+steps. The reference section sometimes also outlines alternative approaches,
+pitfalls, as well as problems that might occur at the particular step -- and how
+to get things rolling again.</p>
+<p>For further details on how to report Linux kernel issues or regressions check
+out <a class="reference internal" href="reporting-issues.html"><span class="doc">Reporting issues</span></a>, which works in conjunction
+with this document. It among others explains why you need to verify bugs with
+the latest 'mainline' kernel (e.g. versions like 6.0, 6.1-rc1, or 6.1-rc6),
+even if you face a problem with a kernel from a 'stable/longterm' series
+(say 6.0.13).</p>
+<p>For users facing a regression that document also explains why sending a
+preliminary report after segment 2 might be wise, as the regression and its
+culprit might be known already. For further details on what actually qualifies
+as a regression check out <a class="reference internal" href="reporting-regressions.html"><span class="doc">Reporting regressions</span></a>.</p>
+<p>If you run into any problems while following this guide or have ideas how to
+improve it, <a class="reference internal" href="#submit-improvements-vbbr"><span class="std std-ref">please let the kernel developers know</span></a>.</p>
+<section id="preparations-set-up-everything-to-build-your-own-kernels">
+<span id="introprep-bissbs"></span><h3>Preparations: set up everything to build your own kernels<a class="headerlink" href="#preparations-set-up-everything-to-build-your-own-kernels" title="連結到這個標頭">¶</a></h3>
+<p>The following steps lay the groundwork for all further tasks.</p>
+<p>Note: the instructions assume you are building and testing on the same
+machine; if you want to compile the kernel on another system, check
+<a class="reference internal" href="#buildhost-bis"><span class="std std-ref">Build kernels on a different machine</span></a> below.</p>
+<ul id="backup-bissbs">
+<li><p>Create a fresh backup and put system repair and restore tools at hand, just
+to be prepared for the unlikely case of something going sideways.</p>
+<p>[<a class="reference internal" href="#backup-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="vanilla-bissbs">
+<li><p>Remove all software that depends on externally developed kernel drivers or
+builds them automatically. That includes but is not limited to DKMS, openZFS,
+VirtualBox, and Nvidia's graphics drivers (including the GPLed kernel module).</p>
+<p>[<a class="reference internal" href="#vanilla-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="secureboot-bissbs">
+<li><p>On platforms with 'Secure Boot' or similar solutions, prepare everything to
+ensure the system will permit your self-compiled kernel to boot. The
+quickest and easiest way to achieve this on commodity x86 systems is to
+disable such techniques in the BIOS setup utility; alternatively, remove
+their restrictions through a process initiated by
+<code class="docutils literal notranslate"><span class="pre">mokutil</span> <span class="pre">--disable-validation</span></code>.</p>
+<p>[<a class="reference internal" href="#secureboot-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="rangecheck-bissbs">
+<li><p>Determine the kernel versions considered 'good' and 'bad' throughout this
+guide:</p>
+<ul class="simple">
+<li><p>Do you follow this guide to verify if a bug is present in the code the
+primary developers care for? Then consider the version of the newest kernel
+you regularly use currently as 'good' (e.g. 6.0, 6.0.13, or 6.1-rc2).</p></li>
+<li><p>Do you face a regression, e.g. something broke or works worse after
+switching to a newer kernel version? In that case it depends on the version
+range during which the problem appeared:</p>
+<ul>
+<li><p>Something regressed when updating from a stable/longterm release
+(say 6.0.13) to a newer mainline series (like 6.1-rc7 or 6.1) or a
+stable/longterm version based on one (say 6.1.5)? Then consider the
+mainline release your working kernel is based on to be the 'good'
+version (e.g. 6.0) and the first version to be broken as the 'bad' one
+(e.g. 6.1-rc7, 6.1, or 6.1.5). Note, at this point it is merely assumed
+that 6.0 is fine; this hypothesis will be checked in segment 2.</p></li>
+<li><p>Something regressed when switching from one mainline version (say 6.0) to
+a later one (like 6.1-rc1) or a stable/longterm release based on it
+(say 6.1.5)? Then regard the last working version (e.g. 6.0) as 'good' and
+the first broken (e.g. 6.1-rc1 or 6.1.5) as 'bad'.</p></li>
+<li><p>Something regressed when updating within a stable/longterm series (say
+from 6.0.13 to 6.0.15)? Then consider those versions as 'good' and 'bad'
+(e.g. 6.0.13 and 6.0.15), as you need to bisect within that series.</p></li>
+</ul>
+</li>
+</ul>
+<p><em>Note, do not confuse 'good' version with 'working' kernel; the latter term
+throughout this guide will refer to the last kernel that has been working
+fine.</em></p>
+<p>[<a class="reference internal" href="#rangecheck-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="bootworking-bissbs">
+<li><p>Boot into the 'working' kernel and briefly use the apparently broken feature.</p>
+<p>[<a class="reference internal" href="#bootworking-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="diskspace-bissbs">
+<li><p>Ensure to have enough free space for building Linux. 15 Gigabyte in your home
+directory should typically suffice. If you have less available, be sure to pay
+attention to later steps about retrieving the Linux sources and handling of
+debug symbols: both explain approaches reducing the amount of space, which
+should allow you to master these tasks with about 4 Gigabytes free space.</p>
+<p>[<a class="reference internal" href="#diskspace-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="buildrequires-bissbs">
+<li><p>Install all software required to build a Linux kernel. Often you will need:
+'bc', 'binutils' ('ld' et al.), 'bison', 'flex', 'gcc', 'git', 'openssl',
+'pahole', 'perl', and the development headers for 'libelf' and 'openssl'. The
+reference section shows how to quickly install those on various popular Linux
+distributions.</p>
+<p>[<a class="reference internal" href="#buildrequires-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="sources-bissbs">
+<li><p>Retrieve the mainline Linux sources; then change into the directory holding
+them, as all further commands in this guide are meant to be executed from
+there.</p>
+<p><em>Note, the following describe how to retrieve the sources using a full
+mainline clone, which downloads about 2,75 GByte as of early 2024. The</em>
+<a class="reference internal" href="#sources-bisref"><span class="std std-ref">reference section describes two alternatives</span></a> <em>:
+one downloads less than 500 MByte, the other works better with unreliable
+internet connections.</em></p>
+<p>Execute the following command to retrieve a fresh mainline codebase while
+preparing things to add branches for stable/longterm series later:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git clone -o mainline --no-checkout \
+  https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git ~/linux/
+cd ~/linux/
+git remote add -t master stable \
+  https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
+</pre></div>
+</div>
+<p>[<a class="reference internal" href="#sources-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="stablesources-bissbs">
+<li><p>Is one of the versions you earlier established as 'good' or 'bad' a stable or
+longterm release (say 6.1.5)? Then download the code for the series it belongs
+to ('linux-6.1.y' in this example):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git remote set-branches --add stable linux-6.1.y
+git fetch stable
+</pre></div>
+</div>
+</li>
+</ul>
+<ul id="oldconfig-bissbs">
+<li><p>Start preparing a kernel build configuration (the '.config' file).</p>
+<p>Before doing so, ensure you are still running the 'working' kernel an earlier
+step told you to boot; if you are unsure, check the current kernelrelease
+identifier using <code class="docutils literal notranslate"><span class="pre">uname</span> <span class="pre">-r</span></code>.</p>
+<p>Afterwards check out the source code for the version earlier established as
+'good'. In the following example command this is assumed to be 6.0; note that
+the version number in this and all later Git commands needs to be prefixed
+with a 'v':</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git switch --discard-changes --detach v6.0
+</pre></div>
+</div>
+<p>Now create a build configuration file:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>make olddefconfig
+</pre></div>
+</div>
+<p>The kernel build scripts then will try to locate the build configuration file
+for the running kernel and then adjust it for the needs of the kernel sources
+you checked out. While doing so, it will print a few lines you need to check.</p>
+<p>Look out for a line starting with '# using defaults found in'. It should be
+followed by a path to a file in '/boot/' that contains the release identifier
+of your currently working kernel. If the line instead continues with something
+like 'arch/x86/configs/x86_64_defconfig', then the build infra failed to find
+the .config file for your running kernel -- in which case you have to put one
+there manually, as explained in the reference section.</p>
+<p>In case you can not find such a line, look for one containing '# configuration
+written to .config'. If that's the case you have a stale build configuration
+lying around. Unless you intend to use it, delete it; afterwards run
+'make olddefconfig' again and check if it now picked up the right config file
+as base.</p>
+<p>[<a class="reference internal" href="#oldconfig-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="localmodconfig-bissbs">
+<li><p>Disable any kernel modules apparently superfluous for your setup. This is
+optional, but especially wise for bisections, as it speeds up the build
+process enormously -- at least unless the .config file picked up in the
+previous step was already tailored to your and your hardware needs, in which
+case you should skip this step.</p>
+<p>To prepare the trimming, connect external hardware you occasionally use (USB
+keys, tokens, ...), quickly start a VM, and bring up VPNs. And if you rebooted
+since you started that guide, ensure that you tried using the feature causing
+trouble since you started the system. Only then trim your .config:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>yes &#39;&#39; | make localmodconfig
+</pre></div>
+</div>
+<p>There is a catch to this, as the 'apparently' in initial sentence of this step
+and the preparation instructions already hinted at:</p>
+<p>The 'localmodconfig' target easily disables kernel modules for features only
+used occasionally -- like modules for external peripherals not yet connected
+since booting, virtualization software not yet utilized, VPN tunnels, and a
+few other things. That's because some tasks rely on kernel modules Linux only
+loads when you execute tasks like the aforementioned ones for the first time.</p>
+<p>This drawback of localmodconfig is nothing you should lose sleep over, but
+something to keep in mind: if something is misbehaving with the kernels built
+during this guide, this is most likely the reason. You can reduce or nearly
+eliminate the risk with tricks outlined in the reference section; but when
+building a kernel just for quick testing purposes this is usually not worth
+spending much effort on, as long as it boots and allows to properly test the
+feature that causes trouble.</p>
+<p>[<a class="reference internal" href="#localmodconfig-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="tagging-bissbs">
+<li><p>Ensure all the kernels you will build are clearly identifiable using a special
+tag and a unique version number:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>./scripts/config --set-str CONFIG_LOCALVERSION &#39;-local&#39;
+./scripts/config -e CONFIG_LOCALVERSION_AUTO
+</pre></div>
+</div>
+<p>[<a class="reference internal" href="#tagging-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="debugsymbols-bissbs">
+<li><p>Decide how to handle debug symbols.</p>
+<p>In the context of this document it is often wise to enable them, as there is a
+decent chance you will need to decode a stack trace from a 'panic', 'Oops',
+'warning', or 'BUG':</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>./scripts/config -d DEBUG_INFO_NONE -e KALLSYMS_ALL -e DEBUG_KERNEL \
+  -e DEBUG_INFO -e DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT -e KALLSYMS
+</pre></div>
+</div>
+<p>But if you are extremely short on storage space, you might want to disable
+debug symbols instead:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>./scripts/config -d DEBUG_INFO -d DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT \
+  -d DEBUG_INFO_DWARF4 -d DEBUG_INFO_DWARF5 -e CONFIG_DEBUG_INFO_NONE
+</pre></div>
+</div>
+<p>[<a class="reference internal" href="#debugsymbols-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="configmods-bissbs">
+<li><p>Check if you may want or need to adjust some other kernel configuration
+options:</p>
+<ul>
+<li><p>Are you running Debian? Then you want to avoid known problems by performing
+additional adjustments explained in the reference section.</p>
+<p>[<a class="reference internal" href="#configmods-distros-bisref"><span class="std std-ref">details</span></a>].</p>
+</li>
+<li><p>If you want to influence other aspects of the configuration, do so now using
+your preferred tool. Note, to use make targets like 'menuconfig' or
+'nconfig', you will need to install the development files of ncurses; for
+'xconfig' you likewise need the Qt5 or Qt6 headers.</p>
+<p>[<a class="reference internal" href="#configmods-individual-bisref"><span class="std std-ref">details</span></a>].</p>
+</li>
+</ul>
+</li>
+</ul>
+<ul id="saveconfig-bissbs">
+<li><p>Reprocess the .config after the latest adjustments and store it in a safe
+place:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>make olddefconfig
+cp .config ~/kernel-config-working
+</pre></div>
+</div>
+<p>[<a class="reference internal" href="#saveconfig-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+</section>
+<section id="segment-1-try-to-reproduce-the-problem-with-the-latest-codebase">
+<span id="introlatestcheck-bissbs"></span><h3>Segment 1: try to reproduce the problem with the latest codebase<a class="headerlink" href="#segment-1-try-to-reproduce-the-problem-with-the-latest-codebase" title="連結到這個標頭">¶</a></h3>
+<p>The following steps verify if the problem occurs with the code currently
+supported by developers. In case you face a regression, it also checks that the
+problem is not caused by some .config change, as reporting the issue then would
+be a waste of time. [<a class="reference internal" href="#introlatestcheck-bisref"><span class="std std-ref">details</span></a>]</p>
+<ul id="checkoutmaster-bissbs">
+<li><p>Check out the latest Linux codebase.</p>
+<ul>
+<li><p>Are your 'good' and 'bad' versions from the same stable or longterm series?
+Then check the <a class="reference external" href="https://kernel.org/">front page of kernel.org</a>: if it
+lists a release from that series without an '[EOL]' tag, checkout the series
+latest version ('linux-6.1.y' in the following example):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cd ~/linux/
+git switch --discard-changes --detach stable/linux-6.1.y
+</pre></div>
+</div>
+<p>Your series is unsupported, if is not listed or carrying a 'end of life'
+tag. In that case you might want to check if a successor series (say
+linux-6.2.y) or mainline (see next point) fix the bug.</p>
+</li>
+<li><p>In all other cases, run:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cd ~/linux/
+git switch --discard-changes --detach mainline/master
+</pre></div>
+</div>
+</li>
+</ul>
+<p>[<a class="reference internal" href="#checkoutmaster-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="build-bissbs">
+<li><p>Build the image and the modules of your first kernel using the config file you
+prepared:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cp ~/kernel-config-working .config
+make olddefconfig
+make -j $(nproc --all)
+</pre></div>
+</div>
+<p>If you want your kernel packaged up as deb, rpm, or tar file, see the
+reference section for alternatives, which obviously will require other
+steps to install as well.</p>
+<p>[<a class="reference internal" href="#build-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="install-bissbs">
+<li><p>Install your newly built kernel.</p>
+<p>Before doing so, consider checking if there is still enough space for it:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>df -h /boot/ /lib/modules/
+</pre></div>
+</div>
+<p>For now assume 150 MByte in /boot/ and 200 in /lib/modules/ will suffice; how
+much your kernels actually require will be determined later during this guide.</p>
+<p>Now install the kernel's modules and its image, which will be stored in
+parallel to the your Linux distribution's kernels:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo make modules_install
+command -v installkernel &amp;&amp; sudo make install
+</pre></div>
+</div>
+<p>The second command ideally will take care of three steps required at this
+point: copying the kernel's image to /boot/, generating an initramfs, and
+adding an entry for both to the boot loader's configuration.</p>
+<p>Sadly some distributions (among them Arch Linux, its derivatives, and many
+immutable Linux distributions) will perform none or only some of those tasks.
+You therefore want to check if all of them were taken care of and manually
+perform those that were not. The reference section provides further details on
+that; your distribution's documentation might help, too.</p>
+<p>Once you figured out the steps needed at this point, consider writing them
+down: if you will build more kernels as described in segment 2 and 3, you will
+have to perform those again after executing <code class="docutils literal notranslate"><span class="pre">command</span> <span class="pre">-v</span> <span class="pre">installkernel</span> <span class="pre">[...]</span></code>.</p>
+<p>[<a class="reference internal" href="#install-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="storagespace-bissbs">
+<li><p>In case you plan to follow this guide further, check how much storage space
+the kernel, its modules, and other related files like the initramfs consume:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>du -ch /boot/*$(make -s kernelrelease)* | tail -n 1
+du -sh /lib/modules/$(make -s kernelrelease)/
+</pre></div>
+</div>
+<p>Write down or remember those two values for later: they enable you to prevent
+running out of disk space accidentally during a bisection.</p>
+<p>[<a class="reference internal" href="#storagespace-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="kernelrelease-bissbs">
+<li><p>Show and store the kernelrelease identifier of the kernel you just built:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>make -s kernelrelease | tee -a ~/kernels-built
+</pre></div>
+</div>
+<p>Remember the identifier momentarily, as it will help you pick the right kernel
+from the boot menu upon restarting.</p>
+</li>
+<li><p>Reboot into your newly built kernel. To ensure your actually started the one
+you just built, you might want to verify if the output of these commands
+matches:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>tail -n 1 ~/kernels-built
+uname -r
+</pre></div>
+</div>
+</li>
+</ul>
+<ul id="tainted-bissbs">
+<li><p>Check if the kernel marked itself as 'tainted':</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cat /proc/sys/kernel/tainted
+</pre></div>
+</div>
+<p>If that command does not return '0', check the reference section, as the cause
+for this might interfere with your testing.</p>
+<p>[<a class="reference internal" href="#tainted-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="recheckbroken-bissbs">
+<li><p>Verify if your bug occurs with the newly built kernel. If it does not, check
+out the instructions in the reference section to ensure nothing went sideways
+during your tests.</p>
+<p>[<a class="reference internal" href="#recheckbroken-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="recheckstablebroken-bissbs">
+<li><p>Did you just built a stable or longterm kernel? And were you able to reproduce
+the regression with it? Then you should test the latest mainline codebase as
+well, because the result determines which developers the bug must be submitted
+to.</p>
+<p>To prepare that test, check out current mainline:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cd ~/linux/
+git switch --discard-changes --detach mainline/master
+</pre></div>
+</div>
+<p>Now use the checked out code to build and install another kernel using the
+commands the earlier steps already described in more detail:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cp ~/kernel-config-working .config
+make olddefconfig
+make -j $(nproc --all)
+# * Check if the free space suffices holding another kernel:
+df -h /boot/ /lib/modules/
+sudo make modules_install
+command -v installkernel &amp;&amp; sudo make install
+make -s kernelrelease | tee -a ~/kernels-built
+reboot
+</pre></div>
+</div>
+<p>Confirm you booted the kernel you intended to start and check its tainted
+status:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>tail -n 1 ~/kernels-built
+uname -r
+cat /proc/sys/kernel/tainted
+</pre></div>
+</div>
+<p>Now verify if this kernel is showing the problem. If it does, then you need
+to report the bug to the primary developers; if it does not, report it to the
+stable team. See <a class="reference internal" href="reporting-issues.html"><span class="doc">Reporting issues</span></a> for details.</p>
+<p>[<a class="reference internal" href="#recheckstablebroken-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<p>Do you follow this guide to verify if a problem is present in the code
+currently supported by Linux kernel developers? Then you are done at this
+point. If you later want to remove the kernel you just built, check out
+<a class="reference internal" href="#introclosure-bissbs"><span class="std std-ref">Complementary tasks: cleanup during and after following this guide</span></a>.</p>
+<p>In case you face a regression, move on and execute at least the next segment
+as well.</p>
+</section>
+<section id="segment-2-check-if-the-kernels-you-build-work-fine">
+<span id="introworkingcheck-bissbs"></span><h3>Segment 2: check if the kernels you build work fine<a class="headerlink" href="#segment-2-check-if-the-kernels-you-build-work-fine" title="連結到這個標頭">¶</a></h3>
+<p>In case of a regression, you now want to ensure the trimmed configuration file
+you created earlier works as expected; a bisection with the .config file
+otherwise would be a waste of time. [<a class="reference internal" href="#introworkingcheck-bisref"><span class="std std-ref">details</span></a>]</p>
+<ul id="recheckworking-bissbs">
+<li><p>Build your own variant of the 'working' kernel and check if the feature that
+regressed works as expected with it.</p>
+<p>Start by checking out the sources for the version earlier established as
+'good' (once again assumed to be 6.0 here):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cd ~/linux/
+git switch --discard-changes --detach v6.0
+</pre></div>
+</div>
+<p>Now use the checked out code to configure, build, and install another kernel
+using the commands the previous subsection explained in more detail:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cp ~/kernel-config-working .config
+make olddefconfig
+make -j $(nproc --all)
+# * Check if the free space suffices holding another kernel:
+df -h /boot/ /lib/modules/
+sudo make modules_install
+command -v installkernel &amp;&amp; sudo make install
+make -s kernelrelease | tee -a ~/kernels-built
+reboot
+</pre></div>
+</div>
+<p>When the system booted, you may want to verify once again that the
+kernel you started is the one you just built:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>tail -n 1 ~/kernels-built
+uname -r
+</pre></div>
+</div>
+<p>Now check if this kernel works as expected; if not, consult the reference
+section for further instructions.</p>
+<p>[<a class="reference internal" href="#recheckworking-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+</section>
+<section id="segment-3-perform-the-bisection-and-validate-the-result">
+<span id="introbisect-bissbs"></span><h3>Segment 3: perform the bisection and validate the result<a class="headerlink" href="#segment-3-perform-the-bisection-and-validate-the-result" title="連結到這個標頭">¶</a></h3>
+<p>With all the preparations and precaution builds taken care of, you are now ready
+to begin the bisection. This will make you build quite a few kernels -- usually
+about 15 in case you encountered a regression when updating to a newer series
+(say from 6.0.13 to 6.1.5). But do not worry, due to the trimmed build
+configuration created earlier this works a lot faster than many people assume:
+overall on average it will often just take about 10 to 15 minutes to compile
+each kernel on commodity x86 machines.</p>
+<ul id="bisectstart-bissbs">
+<li><p>Start the bisection and tell Git about the versions earlier established as
+'good' (6.0 in the following example command) and 'bad' (6.1.5):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cd ~/linux/
+git bisect start
+git bisect good v6.0
+git bisect bad v6.1.5
+</pre></div>
+</div>
+<p>[<a class="reference internal" href="#bisectstart-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="bisectbuild-bissbs">
+<li><p>Now use the code Git checked out to build, install, and boot a kernel using
+the commands introduced earlier:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cp ~/kernel-config-working .config
+make olddefconfig
+make -j $(nproc --all)
+# * Check if the free space suffices holding another kernel:
+df -h /boot/ /lib/modules/
+sudo make modules_install
+command -v installkernel &amp;&amp; sudo make install
+make -s kernelrelease | tee -a ~/kernels-built
+reboot
+</pre></div>
+</div>
+<p>If compilation fails for some reason, run <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">bisect</span> <span class="pre">skip</span></code> and restart
+executing the stack of commands from the beginning.</p>
+<p>In case you skipped the 'test latest codebase' step in the guide, check its
+description as for why the 'df [...]' and 'make -s kernelrelease [...]'
+commands are here.</p>
+<p>Important note: the latter command from this point on will print release
+identifiers that might look odd or wrong to you -- which they are not, as it's
+totally normal to see release identifiers like '6.0-rc1-local-gcafec0cacaca0'
+if you bisect between versions 6.1 and 6.2 for example.</p>
+<p>[<a class="reference internal" href="#bisectbuild-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="bisecttest-bissbs">
+<li><p>Now check if the feature that regressed works in the kernel you just built.</p>
+<p>You again might want to start by making sure the kernel you booted is the one
+you just built:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cd ~/linux/
+tail -n 1 ~/kernels-built
+uname -r
+</pre></div>
+</div>
+<p>Now verify if the feature that regressed works at this kernel bisection point.
+If it does, run this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git bisect good
+</pre></div>
+</div>
+<p>If it does not, run this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git bisect bad
+</pre></div>
+</div>
+<p>Be sure about what you tell Git, as getting this wrong just once will send the
+rest of the bisection totally off course.</p>
+<p>While the bisection is ongoing, Git will use the information you provided to
+find and check out another bisection point for you to test. While doing so, it
+will print something like 'Bisecting: 675 revisions left to test after this
+(roughly 10 steps)' to indicate how many further changes it expects to be
+tested. Now build and install another kernel using the instructions from the
+previous step; afterwards follow the instructions in this step again.</p>
+<p>Repeat this again and again until you finish the bisection -- that's the case
+when Git after tagging a change as 'good' or 'bad' prints something like
+'cafecaca0c0dacafecaca0c0dacafecaca0c0da is the first bad commit'; right
+afterwards it will show some details about the culprit including the patch
+description of the change. The latter might fill your terminal screen, so you
+might need to scroll up to see the message mentioning the culprit;
+alternatively, run <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">bisect</span> <span class="pre">log</span> <span class="pre">&gt;</span> <span class="pre">~/bisection-log</span></code>.</p>
+<p>[<a class="reference internal" href="#bisecttest-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="bisectlog-bissbs">
+<li><p>Store Git's bisection log and the current .config file in a safe place before
+telling Git to reset the sources to the state before the bisection:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cd ~/linux/
+git bisect log &gt; ~/bisection-log
+cp .config ~/bisection-config-culprit
+git bisect reset
+</pre></div>
+</div>
+<p>[<a class="reference internal" href="#bisectlog-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="revert-bissbs">
+<li><p>Try reverting the culprit on top of latest mainline to see if this fixes your
+regression.</p>
+<p>This is optional, as it might be impossible or hard to realize. The former is
+the case, if the bisection determined a merge commit as the culprit; the
+latter happens if other changes depend on the culprit. But if the revert
+succeeds, it is worth building another kernel, as it validates the result of
+a bisection, which can easily deroute; it furthermore will let kernel
+developers know, if they can resolve the regression with a quick revert.</p>
+<p>Begin by checking out the latest codebase depending on the range you bisected:</p>
+<ul>
+<li><p>Did you face a regression within a stable/longterm series (say between
+6.0.13 and 6.0.15) that does not happen in mainline? Then check out the
+latest codebase for the affected series like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git fetch stable
+git switch --discard-changes --detach linux-6.0.y
+</pre></div>
+</div>
+</li>
+<li><p>In all other cases check out latest mainline:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git fetch mainline
+git switch --discard-changes --detach mainline/master
+</pre></div>
+</div>
+<p>If you bisected a regression within a stable/longterm series that also
+happens in mainline, there is one more thing to do: look up the mainline
+commit-id. To do so, use a command like <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">show</span> <span class="pre">abcdcafecabcd</span></code> to
+view the patch description of the culprit. There will be a line near
+the top which looks like '<a class="reference external" href="https://git.kernel.org/torvalds/c/cafec0cacaca0">commit cafec0cacaca0</a> upstream.' or
+'Upstream <a class="reference external" href="https://git.kernel.org/torvalds/c/cafec0cacaca0">commit cafec0cacaca0</a>'; use that commit-id in the next command
+and not the one the bisection blamed.</p>
+</li>
+</ul>
+<p>Now try reverting the culprit by specifying its commit id:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git revert --no-edit cafec0cacaca0
+</pre></div>
+</div>
+<p>If that fails, give up trying and move on to the next step; if it works,
+adjust the tag to facilitate the identification and prevent accidentally
+overwriting another kernel:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cp ~/kernel-config-working .config
+./scripts/config --set-str CONFIG_LOCALVERSION &#39;-local-cafec0cacaca0-reverted&#39;
+</pre></div>
+</div>
+<p>Build a kernel using the familiar command sequence, just without copying the
+the base .config over:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>make olddefconfig &amp;&amp;
+make -j $(nproc --all)
+# * Check if the free space suffices holding another kernel:
+df -h /boot/ /lib/modules/
+sudo make modules_install
+command -v installkernel &amp;&amp; sudo make install
+make -s kernelrelease | tee -a ~/kernels-built
+reboot
+</pre></div>
+</div>
+<p>Now check one last time if the feature that made you perform a bisection works
+with that kernel: if everything went well, it should not show the regression.</p>
+<p>[<a class="reference internal" href="#revert-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+</section>
+<section id="complementary-tasks-cleanup-during-and-after-the-bisection">
+<span id="introclosure-bissbs"></span><h3>Complementary tasks: cleanup during and after the bisection<a class="headerlink" href="#complementary-tasks-cleanup-during-and-after-the-bisection" title="連結到這個標頭">¶</a></h3>
+<p>During and after following this guide you might want or need to remove some of
+the kernels you installed: the boot menu otherwise will become confusing or
+space might run out.</p>
+<ul id="makeroom-bissbs">
+<li><p>To remove one of the kernels you installed, look up its 'kernelrelease'
+identifier. This guide stores them in '~/kernels-built', but the following
+command will print them as well:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ls -ltr /lib/modules/*-local*
+</pre></div>
+</div>
+<p>You in most situations want to remove the oldest kernels built during the
+actual bisection (e.g. segment 3 of this guide). The two ones you created
+beforehand (e.g. to test the latest codebase and the version considered
+'good') might become handy to verify something later -- thus better keep them
+around, unless you are really short on storage space.</p>
+<p>To remove the modules of a kernel with the kernelrelease identifier
+'<em>6.0-rc1-local-gcafec0cacaca0</em>', start by removing the directory holding its
+modules:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo rm -rf /lib/modules/6.0-rc1-local-gcafec0cacaca0
+</pre></div>
+</div>
+<p>Afterwards try the following command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo kernel-install -v remove 6.0-rc1-local-gcafec0cacaca0
+</pre></div>
+</div>
+<p>On quite a few distributions this will delete all other kernel files installed
+while also removing the kernel's entry from the boot menu. But on some
+distributions kernel-install does not exist or leaves boot-loader entries or
+kernel image and related files behind; in that case remove them as described
+in the reference section.</p>
+<p>[<a class="reference internal" href="#makeroom-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+<ul id="finishingtouch-bissbs">
+<li><p>Once you have finished the bisection, do not immediately remove anything you
+set up, as you might need a few things again. What is safe to remove depends
+on the outcome of the bisection:</p>
+<ul class="simple">
+<li><p>Could you initially reproduce the regression with the latest codebase and
+after the bisection were able to fix the problem by reverting the culprit on
+top of the latest codebase? Then you want to keep those two kernels around
+for a while, but safely remove all others with a '-local' in the release
+identifier.</p></li>
+<li><p>Did the bisection end on a merge-commit or seems questionable for other
+reasons? Then you want to keep as many kernels as possible around for a few
+days: it's pretty likely that you will be asked to recheck something.</p></li>
+<li><p>In other cases it likely is a good idea to keep the following kernels around
+for some time: the one built from the latest codebase, the one created from
+the version considered 'good', and the last three or four you compiled
+during the actual bisection process.</p></li>
+</ul>
+<p>[<a class="reference internal" href="#finishingtouch-bisref"><span class="std std-ref">details</span></a>]</p>
+</li>
+</ul>
+</section>
+<section id="optional-test-reverts-patches-or-later-versions">
+<span id="introoptional-bissbs"></span><h3>Optional: test reverts, patches, or later versions<a class="headerlink" href="#optional-test-reverts-patches-or-later-versions" title="連結到這個標頭">¶</a></h3>
+<p>While or after reporting a bug, you might want or potentially will be asked to
+test reverts, debug patches, proposed fixes, or other versions. In that case
+follow these instructions.</p>
+<ul>
+<li><p>Update your Git clone and check out the latest code.</p>
+<ul>
+<li><p>In case you want to test mainline, fetch its latest changes before checking
+its code out:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git fetch mainline
+git switch --discard-changes --detach mainline/master
+</pre></div>
+</div>
+</li>
+<li><p>In case you want to test a stable or longterm kernel, first add the branch
+holding the series you are interested in (6.2 in the example), unless you
+already did so earlier:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git remote set-branches --add stable linux-6.2.y
+</pre></div>
+</div>
+<p>Then fetch the latest changes and check out the latest version from the
+series:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git fetch stable
+git switch --discard-changes --detach stable/linux-6.2.y
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+<li><p>Copy your kernel build configuration over:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cp ~/kernel-config-working .config
+</pre></div>
+</div>
+</li>
+<li><p>Your next step depends on what you want to do:</p>
+<ul>
+<li><p>In case you just want to test the latest codebase, head to the next step,
+you are already all set.</p></li>
+<li><p>In case you want to test if a revert fixes an issue, revert one or multiple
+changes by specifying their commit ids:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git revert --no-edit cafec0cacaca0
+</pre></div>
+</div>
+<p>Now give that kernel a special tag to facilitates its identification and
+prevent accidentally overwriting another kernel:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>./scripts/config --set-str CONFIG_LOCALVERSION &#39;-local-cafec0cacaca0-reverted&#39;
+</pre></div>
+</div>
+</li>
+<li><p>In case you want to test a patch, store the patch in a file like
+'/tmp/foobars-proposed-fix-v1.patch' and apply it like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git apply /tmp/foobars-proposed-fix-v1.patch
+</pre></div>
+</div>
+<p>In case of multiple patches, repeat this step with the others.</p>
+<p>Now give that kernel a special tag to facilitates its identification and
+prevent accidentally overwriting another kernel:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>./scripts/config --set-str CONFIG_LOCALVERSION &#39;-local-foobars-fix-v1&#39;
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+<li><p>Build a kernel using the familiar commands, just without copying the kernel
+build configuration over, as that has been taken care of already:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>make olddefconfig &amp;&amp;
+make -j $(nproc --all)
+# * Check if the free space suffices holding another kernel:
+df -h /boot/ /lib/modules/
+sudo make modules_install
+command -v installkernel &amp;&amp; sudo make install
+make -s kernelrelease | tee -a ~/kernels-built
+reboot
+</pre></div>
+</div>
+</li>
+<li><p>Now verify you booted the newly built kernel and check it.</p></li>
+</ul>
+<p>[<a class="reference internal" href="#introoptional-bisref"><span class="std std-ref">details</span></a>]</p>
+</section>
+<section id="conclusion">
+<span id="submit-improvements-vbbr"></span><h3>Conclusion<a class="headerlink" href="#conclusion" title="連結到這個標頭">¶</a></h3>
+<p>You have reached the end of the step-by-step guide.</p>
+<p>Did you run into trouble following any of the above steps not cleared up by the
+reference section below? Did you spot errors? Or do you have ideas how to
+improve the guide?</p>
+<p>If any of that applies, please take a moment and let the maintainer of this
+document know by email (Thorsten Leemhuis &lt;<a class="reference external" href="mailto:linux&#37;&#52;&#48;leemhuis&#46;info">linux<span>&#64;</span>leemhuis<span>&#46;</span>info</a>&gt;), ideally while
+CCing the Linux docs mailing list (<a class="reference external" href="mailto:linux-doc&#37;&#52;&#48;vger&#46;kernel&#46;org">linux-doc<span>&#64;</span>vger<span>&#46;</span>kernel<span>&#46;</span>org</a>). Such feedback is
+vital to improve this text further, which is in everybody's interest, as it
+will enable more people to master the task described here -- and hopefully also
+improve similar guides inspired by this one.</p>
+</section>
+</section>
+<section id="reference-section-for-the-step-by-step-guide">
+<h2>Reference section for the step-by-step guide<a class="headerlink" href="#reference-section-for-the-step-by-step-guide" title="連結到這個標頭">¶</a></h2>
+<p>This section holds additional information for almost all the items in the above
+step-by-step guide.</p>
+<section id="preparations-for-building-your-own-kernels">
+<h3>Preparations for building your own kernels<a class="headerlink" href="#preparations-for-building-your-own-kernels" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p><em>The steps in this section lay the groundwork for all further tests.</em>
+[<a class="reference internal" href="#introprep-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>The steps in all later sections of this guide depend on those described here.</p>
+<p>[<a class="reference internal" href="#introprep-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>].</p>
+<section id="prepare-for-emergencies">
+<span id="backup-bisref"></span><h4>Prepare for emergencies<a class="headerlink" href="#prepare-for-emergencies" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Create a fresh backup and put system repair and restore tools at hand.</em>
+[<a class="reference internal" href="#backup-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>Remember, you are dealing with computers, which sometimes do unexpected things
+-- especially if you fiddle with crucial parts like the kernel of an operating
+system. That's what you are about to do in this process. Hence, better prepare
+for something going sideways, even if that should not happen.</p>
+<p>[<a class="reference internal" href="#backup-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="remove-anything-related-to-externally-maintained-kernel-modules">
+<span id="vanilla-bisref"></span><h4>Remove anything related to externally maintained kernel modules<a class="headerlink" href="#remove-anything-related-to-externally-maintained-kernel-modules" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Remove all software that depends on externally developed kernel drivers or
+builds them automatically.</em> [<a class="reference internal" href="#vanilla-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>Externally developed kernel modules can easily cause trouble during a bisection.</p>
+<p>But there is a more important reason why this guide contains this step: most
+kernel developers will not care about reports about regressions occurring with
+kernels that utilize such modules. That's because such kernels are not
+considered 'vanilla' anymore, as <a class="reference internal" href="reporting-issues.html"><span class="doc">Reporting issues</span></a>
+explains in more detail.</p>
+<p>[<a class="reference internal" href="#vanilla-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="deal-with-techniques-like-secure-boot">
+<span id="secureboot-bisref"></span><h4>Deal with techniques like Secure Boot<a class="headerlink" href="#deal-with-techniques-like-secure-boot" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>On platforms with 'Secure Boot' or similar techniques, prepare everything to
+ensure the system will permit your self-compiled kernel to boot later.</em>
+[<a class="reference internal" href="#secureboot-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>Many modern systems allow only certain operating systems to start; that's why
+they reject booting self-compiled kernels by default.</p>
+<p>You ideally deal with this by making your platform trust your self-built kernels
+with the help of a certificate. How to do that is not described
+here, as it requires various steps that would take the text too far away from
+its purpose; '<a class="reference internal" href="module-signing.html"><span class="doc">Kernel module signing facility</span></a>' and various web
+sides already explain everything needed in more detail.</p>
+<p>Temporarily disabling solutions like Secure Boot is another way to make your own
+Linux boot. On commodity x86 systems it is possible to do this in the BIOS Setup
+utility; the required steps vary a lot between machines and therefore cannot be
+described here.</p>
+<p>On mainstream x86 Linux distributions there is a third and universal option:
+disable all Secure Boot restrictions for your Linux environment. You can
+initiate this process by running <code class="docutils literal notranslate"><span class="pre">mokutil</span> <span class="pre">--disable-validation</span></code>; this will
+tell you to create a one-time password, which is safe to write down. Now
+restart; right after your BIOS performed all self-tests the bootloader Shim will
+show a blue box with a message 'Press any key to perform MOK management'. Hit
+some key before the countdown exposes, which will open a menu. Choose 'Change
+Secure Boot state'. Shim's 'MokManager' will now ask you to enter three
+randomly chosen characters from the one-time password specified earlier. Once
+you provided them, confirm you really want to disable the validation.
+Afterwards, permit MokManager to reboot the machine.</p>
+<p>[<a class="reference internal" href="#secureboot-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="boot-the-last-kernel-that-was-working">
+<span id="bootworking-bisref"></span><h4>Boot the last kernel that was working<a class="headerlink" href="#boot-the-last-kernel-that-was-working" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Boot into the last working kernel and briefly recheck if the feature that
+regressed really works.</em> [<a class="reference internal" href="#bootworking-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>This will make later steps that cover creating and trimming the configuration do
+the right thing.</p>
+<p>[<a class="reference internal" href="#bootworking-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="space-requirements">
+<span id="diskspace-bisref"></span><h4>Space requirements<a class="headerlink" href="#space-requirements" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Ensure to have enough free space for building Linux.</em>
+[<a class="reference internal" href="#diskspace-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>The numbers mentioned are rough estimates with a big extra charge to be on the
+safe side, so often you will need less.</p>
+<p>If you have space constraints, be sure to hay attention to the <a class="reference internal" href="#debugsymbols-bissbs"><span class="std std-ref">step about
+debug symbols'</span></a> and its <a class="reference internal" href="#debugsymbols-bisref"><span class="std std-ref">accompanying reference
+section'</span></a>, as disabling then will reduce the consumed disk
+space by quite a few gigabytes.</p>
+<p>[<a class="reference internal" href="#diskspace-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="bisection-range">
+<span id="rangecheck-bisref"></span><h4>Bisection range<a class="headerlink" href="#bisection-range" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Determine the kernel versions considered 'good' and 'bad' throughout this
+guide.</em> [<a class="reference internal" href="#rangecheck-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>Establishing the range of commits to be checked is mostly straightforward,
+except when a regression occurred when switching from a release of one stable
+series to a release of a later series (e.g. from 6.0.13 to 6.1.5). In that case
+Git will need some hand holding, as there is no straight line of descent.</p>
+<p>That's because with the release of 6.0 mainline carried on to 6.1 while the
+stable series 6.0.y branched to the side. It's therefore theoretically possible
+that the issue you face with 6.1.5 only worked in 6.0.13, as it was fixed by a
+commit that went into one of the 6.0.y releases, but never hit mainline or the
+6.1.y series. Thankfully that normally should not happen due to the way the
+stable/longterm maintainers maintain the code. It's thus pretty safe to assume
+6.0 as a 'good' kernel. That assumption will be tested anyway, as that kernel
+will be built and tested in the segment '2' of this guide; Git would force you
+to do this as well, if you tried bisecting between 6.0.13 and 6.1.15.</p>
+<p>[<a class="reference internal" href="#rangecheck-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="install-build-requirements">
+<span id="buildrequires-bisref"></span><h4>Install build requirements<a class="headerlink" href="#install-build-requirements" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Install all software required to build a Linux kernel.</em>
+[<a class="reference internal" href="#buildrequires-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>The kernel is pretty stand-alone, but besides tools like the compiler you will
+sometimes need a few libraries to build one. How to install everything needed
+depends on your Linux distribution and the configuration of the kernel you are
+about to build.</p>
+<p>Here are a few examples what you typically need on some mainstream
+distributions:</p>
+<ul>
+<li><p>Arch Linux and derivatives:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo pacman --needed -S bc binutils bison flex gcc git kmod libelf openssl \
+  pahole perl zlib ncurses qt6-base
+</pre></div>
+</div>
+</li>
+<li><p>Debian, Ubuntu, and derivatives:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo apt install bc binutils bison dwarves flex gcc git kmod libelf-dev \
+  libssl-dev make openssl pahole perl-base pkg-config zlib1g-dev \
+  libncurses-dev qt6-base-dev g++
+</pre></div>
+</div>
+</li>
+<li><p>Fedora and derivatives:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo dnf install binutils \
+  /usr/bin/{bc,bison,flex,gcc,git,openssl,make,perl,pahole,rpmbuild} \
+  /usr/include/{libelf.h,openssl/pkcs7.h,zlib.h,ncurses.h,qt6/QtGui/QAction}
+</pre></div>
+</div>
+</li>
+<li><p>openSUSE and derivatives:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo zypper install bc binutils bison dwarves flex gcc git \
+  kernel-install-tools libelf-devel make modutils openssl openssl-devel \
+  perl-base zlib-devel rpm-build ncurses-devel qt6-base-devel
+</pre></div>
+</div>
+</li>
+</ul>
+<p>These commands install a few packages that are often, but not always needed. You
+for example might want to skip installing the development headers for ncurses,
+which you will only need in case you later might want to adjust the kernel build
+configuration using make the targets 'menuconfig' or 'nconfig'; likewise omit
+the headers of Qt6 if you do not plan to adjust the .config using 'xconfig'.</p>
+<p>You furthermore might need additional libraries and their development headers
+for tasks not covered in this guide -- for example when building utilities from
+the kernel's tools/ directory.</p>
+<p>[<a class="reference internal" href="#buildrequires-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="download-the-sources-using-git">
+<span id="sources-bisref"></span><h4>Download the sources using Git<a class="headerlink" href="#download-the-sources-using-git" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Retrieve the Linux mainline sources.</em>
+[<a class="reference internal" href="#sources-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>The step-by-step guide outlines how to download the Linux sources using a full
+Git clone of Linus' mainline repository. There is nothing more to say about
+that -- but there are two alternatives ways to retrieve the sources that might
+work better for you:</p>
+<ul class="simple">
+<li><p>If you have an unreliable internet connection, consider
+<a class="reference internal" href="#sources-bundle-bisref"><span class="std std-ref">using a 'Git bundle'</span></a>.</p></li>
+<li><p>If downloading the complete repository would take too long or requires too
+much storage space, consider <a class="reference internal" href="#sources-shallow-bisref"><span class="std std-ref">using a 'shallow
+clone'</span></a>.</p></li>
+</ul>
+<section id="downloading-linux-mainline-sources-using-a-bundle">
+<span id="sources-bundle-bisref"></span><h5>Downloading Linux mainline sources using a bundle<a class="headerlink" href="#downloading-linux-mainline-sources-using-a-bundle" title="連結到這個標頭">¶</a></h5>
+<p>Use the following commands to retrieve the Linux mainline sources using a
+bundle:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>wget -c \
+  https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/clone.bundle
+git clone --no-checkout clone.bundle ~/linux/
+cd ~/linux/
+git remote remove origin
+git remote add mainline \
+  https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+git fetch mainline
+git remote add -t master stable \
+  https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
+</pre></div>
+</div>
+<p>In case the 'wget' command fails, just re-execute it, it will pick up where
+it left off.</p>
+<p>[<a class="reference internal" href="#sources-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]
+[<a class="reference internal" href="#sources-bisref"><span class="std std-ref">back to section intro</span></a>]</p>
+</section>
+</section>
+<section id="downloading-linux-mainline-sources-using-a-shallow-clone">
+<span id="sources-shallow-bisref"></span><h4>Downloading Linux mainline sources using a shallow clone<a class="headerlink" href="#downloading-linux-mainline-sources-using-a-shallow-clone" title="連結到這個標頭">¶</a></h4>
+<p>First, execute the following command to retrieve the latest mainline codebase:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git clone -o mainline --no-checkout --depth 1 -b master \
+  https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git ~/linux/
+cd ~/linux/
+git remote add -t master stable \
+  https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
+</pre></div>
+</div>
+<p>Now deepen your clone's history to the second predecessor of the mainline
+release of your 'good' version. In case the latter are 6.0 or 6.0.13, 5.19 would
+be the first predecessor and 5.18 the second -- hence deepen the history up to
+that version:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git fetch --shallow-exclude=v5.18 mainline
+</pre></div>
+</div>
+<p>Afterwards add the stable Git repository as remote and all required stable
+branches as explained in the step-by-step guide.</p>
+<p>Note, shallow clones have a few peculiar characteristics:</p>
+<ul class="simple">
+<li><p>For bisections the history needs to be deepened a few mainline versions
+farther than it seems necessary, as explained above already. That's because
+Git otherwise will be unable to revert or describe most of the commits within
+a range (say 6.1..6.2), as they are internally based on earlier kernels
+releases (like 6.0-rc2 or 5.19-rc3).</p></li>
+<li><p>This document in most places uses <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">fetch</span></code> with <code class="docutils literal notranslate"><span class="pre">--shallow-exclude=</span></code>
+to specify the earliest version you care about (or to be precise: its git
+tag). You alternatively can use the parameter <code class="docutils literal notranslate"><span class="pre">--shallow-since=</span></code> to specify
+an absolute (say <code class="docutils literal notranslate"><span class="pre">'2023-07-15'</span></code>) or relative (<code class="docutils literal notranslate"><span class="pre">'12</span> <span class="pre">months'</span></code>) date to
+define the depth of the history you want to download. When using them while
+bisecting mainline, ensure to deepen the history to at least 7 months before
+the release of the mainline release your 'good' kernel is based on.</p></li>
+<li><p>Be warned, when deepening your clone you might encounter an error like
+'fatal: error in object: unshallow cafecaca0c0dacafecaca0c0dacafecaca0c0da'.
+In that case run <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">repack</span> <span class="pre">-d</span></code> and try again.</p></li>
+</ul>
+<p>[<a class="reference internal" href="#sources-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]
+[<a class="reference internal" href="#sources-bisref"><span class="std std-ref">back to section intro</span></a>]</p>
+</section>
+<section id="start-defining-the-build-configuration-for-your-kernel">
+<span id="oldconfig-bisref"></span><h4>Start defining the build configuration for your kernel<a class="headerlink" href="#start-defining-the-build-configuration-for-your-kernel" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Start preparing a kernel build configuration (the '.config' file).</em>
+[<a class="reference internal" href="#oldconfig-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p><em>Note, this is the first of multiple steps in this guide that create or modify
+build artifacts. The commands used in this guide store them right in the source
+tree to keep things simple. In case you prefer storing the build artifacts
+separately, create a directory like '~/linux-builddir/' and add the parameter
+``O=~/linux-builddir/`` to all make calls used throughout this guide. You will
+have to point other commands there as well -- among them the ``./scripts/config
+[...]`` commands, which will require ``--file ~/linux-builddir/.config`` to
+locate the right build configuration.</em></p>
+<p>Two things can easily go wrong when creating a .config file as advised:</p>
+<ul>
+<li><p>The oldconfig target will use a .config file from your build directory, if
+one is already present there (e.g. '~/linux/.config'). That's totally fine if
+that's what you intend (see next step), but in all other cases you want to
+delete it. This for example is important in case you followed this guide
+further, but due to problems come back here to redo the configuration from
+scratch.</p></li>
+<li><p>Sometimes olddefconfig is unable to locate the .config file for your running
+kernel and will use defaults, as briefly outlined in the guide. In that case
+check if your distribution ships the configuration somewhere and manually put
+it in the right place (e.g. '~/linux/.config') if it does. On distributions
+where /proc/config.gz exists this can be achieved using this command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>zcat /proc/config.gz &gt; .config
+</pre></div>
+</div>
+<p>Once you put it there, run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">olddefconfig</span></code> again to adjust it to the
+needs of the kernel about to be built.</p>
+</li>
+</ul>
+<p>Note, the olddefconfig target will set any undefined build options to their
+default value. If you prefer to set such configuration options manually, use
+<code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">oldconfig</span></code> instead. Then for each undefined configuration option you
+will be asked how to proceed; in case you are unsure what to answer, simply hit
+'enter' to apply the default value. Note though that for bisections you normally
+want to go with the defaults, as you otherwise might enable a new feature that
+causes a problem looking like regressions (for example due to security
+restrictions).</p>
+<p>Occasionally odd things happen when trying to use a config file prepared for one
+kernel (say 6.1) on an older mainline release -- especially if it is much older
+(say 5.15). That's one of the reasons why the previous step in the guide told
+you to boot the kernel where everything works. If you manually add a .config
+file you thus want to ensure it's from the working kernel and not from a one
+that shows the regression.</p>
+<p>In case you want to build kernels for another machine, locate its kernel build
+configuration; usually <code class="docutils literal notranslate"><span class="pre">ls</span> <span class="pre">/boot/config-$(uname</span> <span class="pre">-r)</span></code> will print its name. Copy
+that file to the build machine and store it as ~/linux/.config; afterwards run
+<code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">olddefconfig</span></code> to adjust it.</p>
+<p>[<a class="reference internal" href="#oldconfig-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="trim-the-build-configuration-for-your-kernel">
+<span id="localmodconfig-bisref"></span><h4>Trim the build configuration for your kernel<a class="headerlink" href="#trim-the-build-configuration-for-your-kernel" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Disable any kernel modules apparently superfluous for your setup.</em>
+[<a class="reference internal" href="#localmodconfig-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>As explained briefly in the step-by-step guide already: with localmodconfig it
+can easily happen that your self-built kernels will lack modules for tasks you
+did not perform at least once before utilizing this make target. That happens
+when a task requires kernel modules which are only autoloaded when you execute
+it for the first time. So when you never performed that task since starting your
+kernel the modules will not have been loaded -- and from localmodconfig's point
+of view look superfluous, which thus disables them to reduce the amount of code
+to be compiled.</p>
+<p>You can try to avoid this by performing typical tasks that often will autoload
+additional kernel modules: start a VM, establish VPN connections, loop-mount a
+CD/DVD ISO, mount network shares (CIFS, NFS, ...), and connect all external
+devices (2FA keys, headsets, webcams, ...) as well as storage devices with file
+systems you otherwise do not utilize (btrfs, ext4, FAT, NTFS, XFS, ...). But it
+is hard to think of everything that might be needed -- even kernel developers
+often forget one thing or another at this point.</p>
+<p>Do not let that risk bother you, especially when compiling a kernel only for
+testing purposes: everything typically crucial will be there. And if you forget
+something important you can turn on a missing feature manually later and quickly
+run the commands again to compile and install a kernel that has everything you
+need.</p>
+<p>But if you plan to build and use self-built kernels regularly, you might want to
+reduce the risk by recording which modules your system loads over the course of
+a few weeks. You can automate this with <a class="reference external" href="https://github.com/graysky2/modprobed-db">modprobed-db</a>. Afterwards use <code class="docutils literal notranslate"><span class="pre">LSMOD=&lt;path&gt;</span></code> to
+point localmodconfig to the list of modules modprobed-db noticed being used:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>yes &#39;&#39; | make LSMOD=&#39;${HOME}&#39;/.config/modprobed.db localmodconfig
+</pre></div>
+</div>
+<p>That parameter also allows you to build trimmed kernels for another machine in
+case you copied a suitable .config over to use as base (see previous step). Just
+run <code class="docutils literal notranslate"><span class="pre">lsmod</span> <span class="pre">&gt;</span> <span class="pre">lsmod_foo-machine</span></code> on that system and copy the generated file to
+your build's host home directory. Then run these commands instead of the one the
+step-by-step guide mentions:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>yes &#39;&#39; | make LSMOD=~/lsmod_foo-machine localmodconfig
+</pre></div>
+</div>
+<p>[<a class="reference internal" href="#localmodconfig-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="tag-the-kernels-about-to-be-build">
+<span id="tagging-bisref"></span><h4>Tag the kernels about to be build<a class="headerlink" href="#tag-the-kernels-about-to-be-build" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Ensure all the kernels you will build are clearly identifiable using a
+special tag and a unique version identifier.</em> [<a class="reference internal" href="#tagging-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>This allows you to differentiate your distribution's kernels from those created
+during this process, as the file or directories for the latter will contain
+'-local' in the name; it also helps picking the right entry in the boot menu and
+not lose track of you kernels, as their version numbers will look slightly
+confusing during the bisection.</p>
+<p>[<a class="reference internal" href="#tagging-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="decide-to-enable-or-disable-debug-symbols">
+<span id="debugsymbols-bisref"></span><h4>Decide to enable or disable debug symbols<a class="headerlink" href="#decide-to-enable-or-disable-debug-symbols" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Decide how to handle debug symbols.</em> [<a class="reference internal" href="#debugsymbols-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>Having debug symbols available can be important when your kernel throws a
+'panic', 'Oops', 'warning', or 'BUG' later when running, as then you will be
+able to find the exact place where the problem occurred in the code. But
+collecting and embedding the needed debug information takes time and consumes
+quite a bit of space: in late 2022 the build artifacts for a typical x86 kernel
+trimmed with localmodconfig consumed around 5 Gigabyte of space with debug
+symbols, but less than 1 when they were disabled. The resulting kernel image and
+modules are bigger as well, which increases storage requirements for /boot/ and
+load times.</p>
+<p>In case you want a small kernel and are unlikely to decode a stack trace later,
+you thus might want to disable debug symbols to avoid those downsides. If it
+later turns out that you need them, just enable them as shown and rebuild the
+kernel.</p>
+<p>You on the other hand definitely want to enable them for this process, if there
+is a decent chance that you need to decode a stack trace later. The section
+'Decode failure messages' in <a class="reference internal" href="reporting-issues.html"><span class="doc">Reporting issues</span></a>
+explains this process in more detail.</p>
+<p>[<a class="reference internal" href="#debugsymbols-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="adjust-build-configuration">
+<span id="configmods-bisref"></span><h4>Adjust build configuration<a class="headerlink" href="#adjust-build-configuration" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Check if you may want or need to adjust some other kernel configuration
+options:</em></p>
+</div></blockquote>
+<p>Depending on your needs you at this point might want or have to adjust some
+kernel configuration options.</p>
+<section id="distro-specific-adjustments">
+<span id="configmods-distros-bisref"></span><h5>Distro specific adjustments<a class="headerlink" href="#distro-specific-adjustments" title="連結到這個標頭">¶</a></h5>
+<blockquote>
+<div><p><em>Are you running</em> [<a class="reference internal" href="#configmods-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>The following sections help you to avoid build problems that are known to occur
+when following this guide on a few commodity distributions.</p>
+<p><strong>Debian:</strong></p>
+<ul>
+<li><p>Remove a stale reference to a certificate file that would cause your build to
+fail:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>./scripts/config --set-str SYSTEM_TRUSTED_KEYS &#39;&#39;
+</pre></div>
+</div>
+<p>Alternatively, download the needed certificate and make that configuration
+option point to it, as <a class="reference external" href="https://debian-handbook.info/browse/stable/sect.kernel-compilation.html">the Debian handbook explains in more detail</a>
+-- or generate your own, as explained in
+<a class="reference internal" href="module-signing.html"><span class="doc">Kernel module signing facility</span></a>.</p>
+</li>
+</ul>
+<p>[<a class="reference internal" href="#configmods-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="individual-adjustments">
+<span id="configmods-individual-bisref"></span><h5>Individual adjustments<a class="headerlink" href="#individual-adjustments" title="連結到這個標頭">¶</a></h5>
+<blockquote>
+<div><p><em>If you want to influence the other aspects of the configuration, do so
+now.</em> [<a class="reference internal" href="#configmods-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>At this point you can use a command like <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">menuconfig</span></code> or <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">nconfig</span></code>
+to enable or disable certain features using a text-based user interface; to use
+a graphical configuration utility, run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">xconfig</span></code> instead. Both of them
+require development libraries from toolkits they are rely on (ncurses
+respectively Qt5 or Qt6); an error message will tell you if something required
+is missing.</p>
+<p>[<a class="reference internal" href="#configmods-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+</section>
+<section id="put-the-config-file-aside">
+<span id="saveconfig-bisref"></span><h4>Put the .config file aside<a class="headerlink" href="#put-the-config-file-aside" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Reprocess the .config after the latest changes and store it in a safe place.</em>
+[<a class="reference internal" href="#saveconfig-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>Put the .config you prepared aside, as you want to copy it back to the build
+directory every time during this guide before you start building another
+kernel. That's because going back and forth between different versions can alter
+.config files in odd ways; those occasionally cause side effects that could
+confuse testing or in some cases render the result of your bisection
+meaningless.</p>
+<p>[<a class="reference internal" href="#saveconfig-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+</section>
+<section id="try-to-reproduce-the-problem-with-the-latest-codebase">
+<span id="introlatestcheck-bisref"></span><h3>Try to reproduce the problem with the latest codebase<a class="headerlink" href="#try-to-reproduce-the-problem-with-the-latest-codebase" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p><em>Verify the regression is not caused by some .config change and check if it
+still occurs with the latest codebase.</em> [<a class="reference internal" href="#introlatestcheck-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>For some readers it might seem unnecessary to check the latest codebase at this
+point, especially if you did that already with a kernel prepared by your
+distributor or face a regression within a stable/longterm series. But it's
+highly recommended for these reasons:</p>
+<ul>
+<li><p>You will run into any problems caused by your setup before you actually begin
+a bisection. That will make it a lot easier to differentiate between 'this
+most likely is some problem in my setup' and 'this change needs to be skipped
+during the bisection, as the kernel sources at that stage contain an unrelated
+problem that causes building or booting to fail'.</p></li>
+<li><p>These steps will rule out if your problem is caused by some change in the
+build configuration between the 'working' and the 'broken' kernel. This for
+example can happen when your distributor enabled an additional security
+feature in the newer kernel which was disabled or not yet supported by the
+older kernel. That security feature might get into the way of something you
+do -- in which case your problem from the perspective of the Linux kernel
+upstream developers is not a regression, as
+<a class="reference internal" href="reporting-regressions.html"><span class="doc">Reporting regressions</span></a> explains in more detail.
+You thus would waste your time if you'd try to bisect this.</p></li>
+<li><p>If the cause for your regression was already fixed in the latest mainline
+codebase, you'd perform the bisection for nothing. This holds true for a
+regression you encountered with a stable/longterm release as well, as they are
+often caused by problems in mainline changes that were backported -- in which
+case the problem will have to be fixed in mainline first. Maybe it already was
+fixed there and the fix is already in the process of being backported.</p></li>
+<li><p>For regressions within a stable/longterm series it's furthermore crucial to
+know if the issue is specific to that series or also happens in the mainline
+kernel, as the report needs to be sent to different people:</p>
+<ul class="simple">
+<li><p>Regressions specific to a stable/longterm series are the stable team's
+responsibility; mainline Linux developers might or might not care.</p></li>
+<li><p>Regressions also happening in mainline are something the regular Linux
+developers and maintainers have to handle; the stable team does not care
+and does not need to be involved in the report, they just should be told
+to backport the fix once it's ready.</p></li>
+</ul>
+<p>Your report might be ignored if you send it to the wrong party -- and even
+when you get a reply there is a decent chance that developers tell you to
+evaluate which of the two cases it is before they take a closer look.</p>
+</li>
+</ul>
+<p>[<a class="reference internal" href="#introlatestcheck-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+<section id="check-out-the-latest-linux-codebase">
+<span id="checkoutmaster-bisref"></span><h4>Check out the latest Linux codebase<a class="headerlink" href="#check-out-the-latest-linux-codebase" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Check out the latest Linux codebase.</em>
+[<a class="reference internal" href="#checkoutmaster-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>In case you later want to recheck if an ever newer codebase might fix the
+problem, remember to run that <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">fetch</span> <span class="pre">--shallow-exclude</span> <span class="pre">[...]</span></code> command
+again mentioned earlier to update your local Git repository.</p>
+<p>[<a class="reference internal" href="#checkoutmaster-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="build-your-kernel">
+<span id="build-bisref"></span><h4>Build your kernel<a class="headerlink" href="#build-your-kernel" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Build the image and the modules of your first kernel using the config file
+you prepared.</em> [<a class="reference internal" href="#build-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>A lot can go wrong at this stage, but the instructions below will help you help
+yourself. Another subsection explains how to directly package your kernel up as
+deb, rpm or tar file.</p>
+<section id="dealing-with-build-errors">
+<h5>Dealing with build errors<a class="headerlink" href="#dealing-with-build-errors" title="連結到這個標頭">¶</a></h5>
+<p>When a build error occurs, it might be caused by some aspect of your machine's
+setup that often can be fixed quickly; other times though the problem lies in
+the code and can only be fixed by a developer. A close examination of the
+failure messages coupled with some research on the internet will often tell you
+which of the two it is. To perform such investigation, restart the build
+process like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>make V=1
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">V=1</span></code> activates verbose output, which might be needed to see the actual
+error. To make it easier to spot, this command also omits the <code class="docutils literal notranslate"><span class="pre">-j</span> <span class="pre">$(nproc</span>
+<span class="pre">--all)</span></code> used earlier to utilize every CPU core in the system for the job -- but
+this parallelism also results in some clutter when failures occur.</p>
+<p>After a few seconds the build process should run into the error again. Now try
+to find the most crucial line describing the problem. Then search the internet
+for the most important and non-generic section of that line (say 4 to 8 words);
+avoid or remove anything that looks remotely system-specific, like your username
+or local path names like <code class="docutils literal notranslate"><span class="pre">/home/username/linux/</span></code>. First try your regular
+internet search engine with that string, afterwards search Linux kernel mailing
+lists via <a class="reference external" href="https://lore.kernel.org/all/">lore.kernel.org/all/</a>.</p>
+<p>This most of the time will find something that will explain what is wrong; quite
+often one of the hits will provide a solution for your problem, too. If you
+do not find anything that matches your problem, try again from a different angle
+by modifying your search terms or using another line from the error messages.</p>
+<p>In the end, most issues you run into have likely been encountered and
+reported by others already. That includes issues where the cause is not your
+system, but lies in the code. If you run into one of those, you might thus find
+a solution (e.g. a patch) or workaround for your issue, too.</p>
+</section>
+<section id="package-your-kernel-up">
+<h5>Package your kernel up<a class="headerlink" href="#package-your-kernel-up" title="連結到這個標頭">¶</a></h5>
+<p>The step-by-step guide uses the default make targets (e.g. 'bzImage' and
+'modules' on x86) to build the image and the modules of your kernel, which later
+steps of the guide then install. You instead can also directly build everything
+and directly package it up by using one of the following targets:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">-j</span> <span class="pre">$(nproc</span> <span class="pre">--all)</span> <span class="pre">bindeb-pkg</span></code> to generate a deb package</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">-j</span> <span class="pre">$(nproc</span> <span class="pre">--all)</span> <span class="pre">binrpm-pkg</span></code> to generate a rpm package</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">-j</span> <span class="pre">$(nproc</span> <span class="pre">--all)</span> <span class="pre">tarbz2-pkg</span></code> to generate a bz2 compressed tarball</p></li>
+</ul>
+<p>This is just a selection of available make targets for this purpose, see
+<code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">help</span></code> for others. You can also use these targets after running
+<code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">-j</span> <span class="pre">$(nproc</span> <span class="pre">--all)</span></code>, as they will pick up everything already built.</p>
+<p>If you employ the targets to generate deb or rpm packages, ignore the
+step-by-step guide's instructions on installing and removing your kernel;
+instead install and remove the packages using the package utility for the format
+(e.g. dpkg and rpm) or a package management utility build on top of them (apt,
+aptitude, dnf/yum, zypper, ...). Be aware that the packages generated using
+these two make targets are designed to work on various distributions utilizing
+those formats, they thus will sometimes behave differently than your
+distribution's kernel packages.</p>
+<p>[<a class="reference internal" href="#build-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+</section>
+<section id="put-the-kernel-in-place">
+<span id="install-bisref"></span><h4>Put the kernel in place<a class="headerlink" href="#put-the-kernel-in-place" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Install the kernel you just built.</em> [<a class="reference internal" href="#install-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>What you need to do after executing the command in the step-by-step guide
+depends on the existence and the implementation of <code class="docutils literal notranslate"><span class="pre">/sbin/installkernel</span></code>
+executable on your distribution.</p>
+<p>If installkernel is found, the kernel's build system will delegate the actual
+installation of your kernel image to this executable, which then performs some
+or all of these tasks:</p>
+<ul class="simple">
+<li><p>On almost all Linux distributions installkernel will store your kernel's
+image in /boot/, usually as '/boot/vmlinuz-&lt;kernelrelease_id&gt;'; often it will
+put a 'System.map-&lt;kernelrelease_id&gt;' alongside it.</p></li>
+<li><p>On most distributions installkernel will then generate an 'initramfs'
+(sometimes also called 'initrd'), which usually are stored as
+'/boot/initramfs-&lt;kernelrelease_id&gt;.img' or
+'/boot/initrd-&lt;kernelrelease_id&gt;'. Commodity distributions rely on this file
+for booting, hence ensure to execute the make target 'modules_install' first,
+as your distribution's initramfs generator otherwise will be unable to find
+the modules that go into the image.</p></li>
+<li><p>On some distributions installkernel will then add an entry for your kernel
+to your bootloader's configuration.</p></li>
+</ul>
+<p>You have to take care of some or all of the tasks yourself, if your
+distribution lacks an installkernel script or does only handle part of them.
+Consult the distribution's documentation for details. If in doubt, install the
+kernel manually:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo install -m 0600 $(make -s image_name) /boot/vmlinuz-$(make -s kernelrelease)
+sudo install -m 0600 System.map /boot/System.map-$(make -s kernelrelease)
+</pre></div>
+</div>
+<p>Now generate your initramfs using the tools your distribution provides for this
+process. Afterwards add your kernel to your bootloader configuration and reboot.</p>
+<p>[<a class="reference internal" href="#install-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="storage-requirements-per-kernel">
+<span id="storagespace-bisref"></span><h4>Storage requirements per kernel<a class="headerlink" href="#storage-requirements-per-kernel" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Check how much storage space the kernel, its modules, and other related files
+like the initramfs consume.</em> [<a class="reference internal" href="#storagespace-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>The kernels built during a bisection consume quite a bit of space in /boot/ and
+/lib/modules/, especially if you enabled debug symbols. That makes it easy to
+fill up volumes during a bisection -- and due to that even kernels which used to
+work earlier might fail to boot. To prevent that you will need to know how much
+space each installed kernel typically requires.</p>
+<p>Note, most of the time the pattern '/boot/<em>$(make -s kernelrelease)</em>' used in
+the guide will match all files needed to boot your kernel -- but neither the
+path nor the naming scheme are mandatory. On some distributions you thus will
+need to look in different places.</p>
+<p>[<a class="reference internal" href="#storagespace-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="check-if-your-newly-built-kernel-considers-itself-tainted">
+<span id="tainted-bisref"></span><h4>Check if your newly built kernel considers itself 'tainted'<a class="headerlink" href="#check-if-your-newly-built-kernel-considers-itself-tainted" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Check if the kernel marked itself as 'tainted'.</em>
+[<a class="reference internal" href="#tainted-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>Linux marks itself as tainted when something happens that potentially leads to
+follow-up errors that look totally unrelated. That is why developers might
+ignore or react scantly to reports from tainted kernels -- unless of course the
+kernel set the flag right when the reported bug occurred.</p>
+<p>That's why you want check why a kernel is tainted as explained in
+<a class="reference internal" href="tainted-kernels.html"><span class="doc">Tainted kernels</span></a>; doing so is also in your own
+interest, as your testing might be flawed otherwise.</p>
+<p>[<a class="reference internal" href="#tainted-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="check-the-kernel-built-from-a-recent-mainline-codebase">
+<span id="recheckbroken-bisref"></span><h4>Check the kernel built from a recent mainline codebase<a class="headerlink" href="#check-the-kernel-built-from-a-recent-mainline-codebase" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Verify if your bug occurs with the newly built kernel.</em>
+[<a class="reference internal" href="#recheckbroken-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>There are a couple of reasons why your bug or regression might not show up with
+the kernel you built from the latest codebase. These are the most frequent:</p>
+<ul class="simple">
+<li><p>The bug was fixed meanwhile.</p></li>
+<li><p>What you suspected to be a regression was caused by a change in the build
+configuration the provider of your kernel carried out.</p></li>
+<li><p>Your problem might be a race condition that does not show up with your kernel;
+the trimmed build configuration, a different setting for debug symbols, the
+compiler used, and various other things can cause this.</p></li>
+<li><p>In case you encountered the regression with a stable/longterm kernel it might
+be a problem that is specific to that series; the next step in this guide will
+check this.</p></li>
+</ul>
+<p>[<a class="reference internal" href="#recheckbroken-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="check-the-kernel-built-from-the-latest-stable-longterm-codebase">
+<span id="recheckstablebroken-bisref"></span><h4>Check the kernel built from the latest stable/longterm codebase<a class="headerlink" href="#check-the-kernel-built-from-the-latest-stable-longterm-codebase" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Are you facing a regression within a stable/longterm release, but failed to
+reproduce it with the kernel you just built using the latest mainline sources?
+Then check if the latest codebase for the particular series might already fix
+the problem.</em> [<a class="reference internal" href="#recheckstablebroken-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>If this kernel does not show the regression either, there most likely is no need
+for a bisection.</p>
+<p>[<a class="reference internal" href="#recheckstablebroken-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+</section>
+<section id="ensure-the-good-version-is-really-working-well">
+<span id="introworkingcheck-bisref"></span><h3>Ensure the 'good' version is really working well<a class="headerlink" href="#ensure-the-good-version-is-really-working-well" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p><em>Check if the kernels you build work fine.</em>
+[<a class="reference internal" href="#introworkingcheck-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>This section will reestablish a known working base. Skipping it might be
+appealing, but is usually a bad idea, as it does something important:</p>
+<p>It will ensure the .config file you prepared earlier actually works as expected.
+That is in your own interest, as trimming the configuration is not foolproof --
+and you might be building and testing ten or more kernels for nothing before
+starting to suspect something might be wrong with the build configuration.</p>
+<p>That alone is reason enough to spend the time on this, but not the only reason.</p>
+<p>Many readers of this guide normally run kernels that are patched, use add-on
+modules, or both. Those kernels thus are not considered 'vanilla' -- therefore
+it's possible that the thing that regressed might never have worked in vanilla
+builds of the 'good' version in the first place.</p>
+<p>There is a third reason for those that noticed a regression between
+stable/longterm kernels of different series (e.g. 6.0.13..6.1.5): it will
+ensure the kernel version you assumed to be 'good' earlier in the process (e.g.
+6.0) actually is working.</p>
+<p>[<a class="reference internal" href="#introworkingcheck-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+<section id="build-your-own-version-of-the-good-kernel">
+<span id="recheckworking-bisref"></span><h4>Build your own version of the 'good' kernel<a class="headerlink" href="#build-your-own-version-of-the-good-kernel" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Build your own variant of the working kernel and check if the feature that
+regressed works as expected with it.</em> [<a class="reference internal" href="#recheckworking-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>In case the feature that broke with newer kernels does not work with your first
+self-built kernel, find and resolve the cause before moving on. There are a
+multitude of reasons why this might happen. Some ideas where to look:</p>
+<ul class="simple">
+<li><p>Check the taint status and the output of <code class="docutils literal notranslate"><span class="pre">dmesg</span></code>, maybe something unrelated
+went wrong.</p></li>
+<li><p>Maybe localmodconfig did something odd and disabled the module required to
+test the feature? Then you might want to recreate a .config file based on the
+one from the last working kernel and skip trimming it down; manually disabling
+some features in the .config might work as well to reduce the build time.</p></li>
+<li><p>Maybe it's not a kernel regression and something that is caused by some fluke,
+a broken initramfs (also known as initrd), new firmware files, or an updated
+userland software?</p></li>
+<li><p>Maybe it was a feature added to your distributor's kernel which vanilla Linux
+at that point never supported?</p></li>
+</ul>
+<p>Note, if you found and fixed problems with the .config file, you want to use it
+to build another kernel from the latest codebase, as your earlier tests with
+mainline and the latest version from an affected stable/longterm series were
+most likely flawed.</p>
+<p>[<a class="reference internal" href="#recheckworking-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+</section>
+<section id="perform-a-bisection-and-validate-the-result">
+<h3>Perform a bisection and validate the result<a class="headerlink" href="#perform-a-bisection-and-validate-the-result" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p><em>With all the preparations and precaution builds taken care of, you are now
+ready to begin the bisection.</em> [<a class="reference internal" href="#introbisect-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>The steps in this segment perform and validate the bisection.</p>
+<p>[<a class="reference internal" href="#introbisect-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>].</p>
+<section id="start-the-bisection">
+<span id="bisectstart-bisref"></span><h4>Start the bisection<a class="headerlink" href="#start-the-bisection" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Start the bisection and tell Git about the versions earlier established as
+'good' and 'bad'.</em> [<a class="reference internal" href="#bisectstart-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>This will start the bisection process; the last of the commands will make Git
+check out a commit round about half-way between the 'good' and the 'bad' changes
+for you to test.</p>
+<p>[<a class="reference internal" href="#bisectstart-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="build-a-kernel-from-the-bisection-point">
+<span id="bisectbuild-bisref"></span><h4>Build a kernel from the bisection point<a class="headerlink" href="#build-a-kernel-from-the-bisection-point" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Build, install, and boot a kernel from the code Git checked out using the
+same commands you used earlier.</em> [<a class="reference internal" href="#bisectbuild-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>There are two things worth of note here:</p>
+<ul>
+<li><p>Occasionally building the kernel will fail or it might not boot due some
+problem in the code at the bisection point. In that case run this command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git bisect skip
+</pre></div>
+</div>
+<p>Git will then check out another commit nearby which with a bit of luck should
+work better. Afterwards restart executing this step.</p>
+</li>
+<li><p>Those slightly odd looking version identifiers can happen during bisections,
+because the Linux kernel subsystems prepare their changes for a new mainline
+release (say 6.2) before its predecessor (e.g. 6.1) is finished. They thus
+base them on a somewhat earlier point like 6.1-rc1 or even 6.0 -- and then
+get merged for 6.2 without rebasing nor squashing them once 6.1 is out. This
+leads to those slightly odd looking version identifiers coming up during
+bisections.</p></li>
+</ul>
+<p>[<a class="reference internal" href="#bisectbuild-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="bisection-checkpoint">
+<span id="bisecttest-bisref"></span><h4>Bisection checkpoint<a class="headerlink" href="#bisection-checkpoint" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Check if the feature that regressed works in the kernel you just built.</em>
+[<a class="reference internal" href="#bisecttest-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>Ensure what you tell Git is accurate: getting it wrong just one time will bring
+the rest of the bisection totally off course, hence all testing after that point
+will be for nothing.</p>
+<p>[<a class="reference internal" href="#bisecttest-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="put-the-bisection-log-away">
+<span id="bisectlog-bisref"></span><h4>Put the bisection log away<a class="headerlink" href="#put-the-bisection-log-away" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Store Git's bisection log and the current .config file in a safe place.</em>
+[<a class="reference internal" href="#bisectlog-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>As indicated above: declaring just one kernel wrongly as 'good' or 'bad' will
+render the end result of a bisection useless. In that case you'd normally have
+to restart the bisection from scratch. The log can prevent that, as it might
+allow someone to point out where a bisection likely went sideways -- and then
+instead of testing ten or more kernels you might only have to build a few to
+resolve things.</p>
+<p>The .config file is put aside, as there is a decent chance that developers might
+ask for it after you report the regression.</p>
+<p>[<a class="reference internal" href="#bisectlog-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="try-reverting-the-culprit">
+<span id="revert-bisref"></span><h4>Try reverting the culprit<a class="headerlink" href="#try-reverting-the-culprit" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>Try reverting the culprit on top of the latest codebase to see if this fixes
+your regression.</em> [<a class="reference internal" href="#revert-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>This is an optional step, but whenever possible one you should try: there is a
+decent chance that developers will ask you to perform this step when you bring
+the bisection result up. So give it a try, you are in the flow already, building
+one more kernel shouldn't be a big deal at this point.</p>
+<p>The step-by-step guide covers everything relevant already except one slightly
+rare thing: did you bisected a regression that also happened with mainline using
+a stable/longterm series, but Git failed to revert the commit in mainline? Then
+try to revert the culprit in the affected stable/longterm series -- and if that
+succeeds, test that kernel version instead.</p>
+<p>[<a class="reference internal" href="#revert-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+</section>
+<section id="cleanup-steps-during-and-after-following-this-guide">
+<h3>Cleanup steps during and after following this guide<a class="headerlink" href="#cleanup-steps-during-and-after-following-this-guide" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p><em>During and after following this guide you might want or need to remove some
+of the kernels you installed.</em> [<a class="reference internal" href="#introclosure-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>The steps in this section describe clean-up procedures.</p>
+<p>[<a class="reference internal" href="#introclosure-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>].</p>
+<section id="cleaning-up-during-the-bisection">
+<span id="makeroom-bisref"></span><h4>Cleaning up during the bisection<a class="headerlink" href="#cleaning-up-during-the-bisection" title="連結到這個標頭">¶</a></h4>
+<blockquote>
+<div><p><em>To remove one of the kernels you installed, look up its 'kernelrelease'
+identifier.</em> [<a class="reference internal" href="#makeroom-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>The kernels you install during this process are easy to remove later, as its
+parts are only stored in two places and clearly identifiable. You thus do not
+need to worry to mess up your machine when you install a kernel manually (and
+thus bypass your distribution's packaging system): all parts of your kernels are
+relatively easy to remove later.</p>
+<p>One of the two places is a directory in /lib/modules/, which holds the modules
+for each installed kernel. This directory is named after the kernel's release
+identifier; hence, to remove all modules for one of the kernels you built,
+simply remove its modules directory in /lib/modules/.</p>
+<p>The other place is /boot/, where typically two up to five files will be placed
+during installation of a kernel. All of them usually contain the release name in
+their file name, but how many files and their exact names depend somewhat on
+your distribution's installkernel executable and its initramfs generator. On
+some distributions the <code class="docutils literal notranslate"><span class="pre">kernel-install</span> <span class="pre">remove...</span></code> command mentioned in the
+step-by-step guide will delete all of these files for you while also removing
+the menu entry for the kernel from your bootloader configuration. On others you
+have to take care of these two tasks yourself. The following command should
+interactively remove the three main files of a kernel with the release name
+'6.0-rc1-local-gcafec0cacaca0':</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>rm -i /boot/{System.map,vmlinuz,initr}-6.0-rc1-local-gcafec0cacaca0
+</pre></div>
+</div>
+<p>Afterwards check for other files in /boot/ that have
+'6.0-rc1-local-gcafec0cacaca0' in their name and consider deleting them as well.
+Now remove the boot entry for the kernel from your bootloader's configuration;
+the steps to do that vary quite a bit between Linux distributions.</p>
+<p>Note, be careful with wildcards like '*' when deleting files or directories
+for kernels manually: you might accidentally remove files of a 6.0.13 kernel
+when all you want is to remove 6.0 or 6.0.1.</p>
+<p>[<a class="reference internal" href="#makeroom-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+<section id="cleaning-up-after-the-bisection">
+<h4>Cleaning up after the bisection<a class="headerlink" href="#cleaning-up-after-the-bisection" title="連結到這個標頭">¶</a></h4>
+<blockquote id="finishingtouch-bisref">
+<div><p><em>Once you have finished the bisection, do not immediately remove anything
+you set up, as you might need a few things again.</em>
+[<a class="reference internal" href="#finishingtouch-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>When you are really short of storage space removing the kernels as described in
+the step-by-step guide might not free as much space as you would like. In that
+case consider running <code class="docutils literal notranslate"><span class="pre">rm</span> <span class="pre">-rf</span> <span class="pre">~/linux/*</span></code> as well now. This will remove the
+build artifacts and the Linux sources, but will leave the Git repository
+(~/linux/.git/) behind -- a simple <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">reset</span> <span class="pre">--hard</span></code> thus will bring the
+sources back.</p>
+<p>Removing the repository as well would likely be unwise at this point: there
+is a decent chance developers will ask you to build another kernel to
+perform additional tests -- like testing a debug patch or a proposed fix.
+Details on how to perform those can be found in the section <a class="reference internal" href="#introoptional-bissbs"><span class="std std-ref">Optional
+tasks: test reverts, patches, or later versions</span></a>.</p>
+<p>Additional tests are also the reason why you want to keep the
+~/kernel-config-working file around for a few weeks.</p>
+<p>[<a class="reference internal" href="#finishingtouch-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>]</p>
+</section>
+</section>
+<section id="test-reverts-patches-or-later-versions">
+<span id="introoptional-bisref"></span><h3>Test reverts, patches, or later versions<a class="headerlink" href="#test-reverts-patches-or-later-versions" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p><em>While or after reporting a bug, you might want or potentially will be asked
+to test reverts, patches, proposed fixes, or other versions.</em>
+[<a class="reference internal" href="#introoptional-bissbs"><span class="std std-ref">...</span></a>]</p>
+</div></blockquote>
+<p>All the commands used in this section should be pretty straight forward, so
+there is not much to add except one thing: when setting a kernel tag as
+instructed, ensure it is not much longer than the one used in the example, as
+problems will arise if the kernelrelease identifier exceeds 63 characters.</p>
+<p>[<a class="reference internal" href="#introoptional-bissbs"><span class="std std-ref">back to step-by-step guide</span></a>].</p>
+</section>
+</section>
+<section id="additional-information">
+<h2>Additional information<a class="headerlink" href="#additional-information" title="連結到這個標頭">¶</a></h2>
+<section id="build-kernels-on-a-different-machine">
+<span id="buildhost-bis"></span><h3>Build kernels on a different machine<a class="headerlink" href="#build-kernels-on-a-different-machine" title="連結到這個標頭">¶</a></h3>
+<p>To compile kernels on another system, slightly alter the step-by-step guide's
+instructions:</p>
+<ul>
+<li><p>Start following the guide on the machine where you want to install and test
+the kernels later.</p></li>
+<li><p>After executing '<a class="reference internal" href="#bootworking-bissbs"><span class="std std-ref">Boot into the working kernel and briefly use the
+apparently broken feature</span></a>', save the list of loaded
+modules to a file using <code class="docutils literal notranslate"><span class="pre">lsmod</span> <span class="pre">&gt;</span> <span class="pre">~/test-machine-lsmod</span></code>. Then locate the
+build configuration for the running kernel (see '<a class="reference internal" href="#oldconfig-bisref"><span class="std std-ref">Start defining the
+build configuration for your kernel</span></a>' for hints on where
+to find it) and store it as '~/test-machine-config-working'. Transfer both
+files to the home directory of your build host.</p></li>
+<li><p>Continue the guide on the build host (e.g. with '<a class="reference internal" href="#diskspace-bissbs"><span class="std std-ref">Ensure to have enough
+free space for building [...]</span></a>').</p></li>
+<li><p>When you reach '<a class="reference internal" href="#oldconfig-bissbs"><span class="std std-ref">Start preparing a kernel build configuration[...]</span></a>': before running <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">olddefconfig</span></code> for the first time,
+execute the following command to base your configuration on the one from the
+test machine's 'working' kernel:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cp ~/test-machine-config-working ~/linux/.config
+</pre></div>
+</div>
+</li>
+<li><p>During the next step to '<a class="reference internal" href="#localmodconfig-bissbs"><span class="std std-ref">disable any apparently superfluous kernel
+modules</span></a>' use the following command instead:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>yes &#39;&#39; | make localmodconfig LSMOD=~/lsmod_foo-machine localmodconfig
+</pre></div>
+</div>
+</li>
+<li><p>Continue the guide, but ignore the instructions outlining how to compile,
+install, and reboot into a kernel every time they come up. Instead build
+like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cp ~/kernel-config-working .config
+make olddefconfig &amp;&amp;
+make -j $(nproc --all) targz-pkg
+</pre></div>
+</div>
+<p>This will generate a gzipped tar file whose name is printed in the last
+line shown; for example, a kernel with the kernelrelease identifier
+'6.0.0-rc1-local-g928a87efa423' built for x86 machines usually will
+be stored as '~/linux/linux-6.0.0-rc1-local-g928a87efa423-x86.tar.gz'.</p>
+<p>Copy that file to your test machine's home directory.</p>
+</li>
+<li><p>Switch to the test machine to check if you have enough space to hold another
+kernel. Then extract the file you transferred:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo tar -xvzf ~/linux-6.0.0-rc1-local-g928a87efa423-x86.tar.gz -C /
+</pre></div>
+</div>
+<p>Afterwards <a class="reference internal" href="#install-bisref"><span class="std std-ref">generate the initramfs and add the kernel to your boot
+loader's configuration</span></a>; on some distributions the following
+command will take care of both these tasks:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo /sbin/installkernel 6.0.0-rc1-local-g928a87efa423 /boot/vmlinuz-6.0.0-rc1-local-g928a87efa423
+</pre></div>
+</div>
+<p>Now reboot and ensure you started the intended kernel.</p>
+</li>
+</ul>
+<p>This approach even works when building for another architecture: just install
+cross-compilers and add the appropriate parameters to every invocation of make
+(e.g. <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">ARCH=arm64</span> <span class="pre">CROSS_COMPILE=aarch64-linux-gnu-</span> <span class="pre">[...]</span></code>).</p>
+</section>
+<section id="additional-reading-material">
+<h3>Additional reading material<a class="headerlink" href="#additional-reading-material" title="連結到這個標頭">¶</a></h3>
+<ul class="simple">
+<li><p>The <a class="reference external" href="https://git-scm.com/docs/git-bisect">man page for 'git bisect'</a> and
+<a class="reference external" href="https://git-scm.com/docs/git-bisect-lk2009.html">fighting regressions with 'git bisect'</a>
+in the Git documentation.</p></li>
+<li><p><a class="reference external" href="https://nathanchance.dev/posts/working-with-git-bisect/">Working with git bisect</a>
+from kernel developer Nathan Chancellor.</p></li>
+<li><p><a class="reference external" href="http://webchick.net/node/99">Using Git bisect to figure out when brokenness was introduced</a>.</p></li>
+<li><p><a class="reference external" href="https://lwn.net/Articles/317154">Fully automated bisecting with 'git bisect run'</a>.</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/admin-guide/verify-bugs-and-bisect-regressions.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

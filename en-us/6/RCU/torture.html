@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>RCU Torture Test Operation &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/RCU/torture.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Using RCU’s CPU Stall Detector" href="stallwarn.html" />
+    <link rel="prev" title="Reference-count design for elements of lists/arrays protected by RCU" href="rcuref.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core-api/index.html">Core API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-entry-and-exit">Low level entry and exit</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../core-api/index.html#concurrency-primitives">Concurrency primitives</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/refcount-vs-atomic.html">refcount_t API compared to atomic_t</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/irq/index.html">IRQs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/local_ops.html">Semantics and Behavior of Local Atomic Operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/padata.html">The padata parallel execution mechanism</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">RCU Handbook</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/wrappers/memory-barriers.html">Linux kernel memory barriers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#memory-management">Memory management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/RCU/torture.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="rcu-torture-test-operation">
+<h1>RCU Torture Test Operation<a class="headerlink" href="#rcu-torture-test-operation" title="Link to this heading">¶</a></h1>
+<section id="config-rcu-torture-test">
+<h2>CONFIG_RCU_TORTURE_TEST<a class="headerlink" href="#config-rcu-torture-test" title="Link to this heading">¶</a></h2>
+<p>The CONFIG_RCU_TORTURE_TEST config option is available for all RCU
+implementations.  It creates an rcutorture kernel module that can
+be loaded to run a torture test.  The test periodically outputs
+status messages via <a class="reference internal" href="../core-api/printk-basics.html#c.printk" title="printk"><code class="xref c c-func docutils literal notranslate"><span class="pre">printk()</span></code></a>, which can be examined via the dmesg
+command (perhaps grepping for “torture”).  The test is started
+when the module is loaded, and stops when the module is unloaded.</p>
+<p>Module parameters are prefixed by “rcutorture.” in
+<a class="reference internal" href="../admin-guide/kernel-parameters.html"><span class="doc">The kernel’s command-line parameters</span></a>.</p>
+</section>
+<section id="output">
+<h2>Output<a class="headerlink" href="#output" title="Link to this heading">¶</a></h2>
+<p>The statistics output is as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>rcu-torture:--- Start of test: nreaders=16 nfakewriters=4 stat_interval=30 verbose=0 test_no_idle_hz=1 shuffle_interval=3 stutter=5 irqreader=1 fqs_duration=0 fqs_holdoff=0 fqs_stutter=3 test_boost=1/0 test_boost_interval=7 test_boost_duration=4
+rcu-torture: rtc:           (null) ver: 155441 tfle: 0 rta: 155441 rtaf: 8884 rtf: 155440 rtmbe: 0 rtbe: 0 rtbke: 0 rtbre: 0 rtbf: 0 rtb: 0 nt: 3055767
+rcu-torture: Reader Pipe:  727860534 34213 0 0 0 0 0 0 0 0 0
+rcu-torture: Reader Batch:  727877838 17003 0 0 0 0 0 0 0 0 0
+rcu-torture: Free-Block Circulation:  155440 155440 155440 155440 155440 155440 155440 155440 155440 155440 0
+rcu-torture:--- End of test: SUCCESS: nreaders=16 nfakewriters=4 stat_interval=30 verbose=0 test_no_idle_hz=1 shuffle_interval=3 stutter=5 irqreader=1 fqs_duration=0 fqs_holdoff=0 fqs_stutter=3 test_boost=1/0 test_boost_interval=7 test_boost_duration=4
+</pre></div>
+</div>
+<p>The command “dmesg | grep torture:” will extract this information on
+most systems.  On more esoteric configurations, it may be necessary to
+use other commands to access the output of the <a class="reference internal" href="../core-api/printk-basics.html#c.printk" title="printk"><code class="xref c c-func docutils literal notranslate"><span class="pre">printk()</span></code></a>s used by
+the RCU torture test.  The <a class="reference internal" href="../core-api/printk-basics.html#c.printk" title="printk"><code class="xref c c-func docutils literal notranslate"><span class="pre">printk()</span></code></a>s use KERN_ALERT, so they should
+be evident.  ;-)</p>
+<p>The first and last lines show the rcutorture module parameters, and the
+last line shows either “SUCCESS” or “FAILURE”, based on rcutorture’s
+automatic determination as to whether RCU operated correctly.</p>
+<p>The entries are as follows:</p>
+<ul>
+<li><p>“rtc”: The hexadecimal address of the structure currently visible
+to readers.</p></li>
+<li><p>“ver”: The number of times since boot that the RCU writer task
+has changed the structure visible to readers.</p></li>
+<li><p>“tfle”: If non-zero, indicates that the “torture freelist”
+containing structures to be placed into the “rtc” area is empty.
+This condition is important, since it can fool you into thinking
+that RCU is working when it is not.  :-/</p></li>
+<li><p>“rta”: Number of structures allocated from the torture freelist.</p></li>
+<li><p>“rtaf”: Number of allocations from the torture freelist that have
+failed due to the list being empty.  It is not unusual for this
+to be non-zero, but it is bad for it to be a large fraction of
+the value indicated by “rta”.</p></li>
+<li><p>“rtf”: Number of frees into the torture freelist.</p></li>
+<li><p>“rtmbe”: A non-zero value indicates that rcutorture believes that
+<a class="reference internal" href="../core-api/kernel-api.html#c.rcu_assign_pointer" title="rcu_assign_pointer"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_assign_pointer()</span></code></a> and <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> are not working
+correctly.  This value should be zero.</p></li>
+<li><p>“rtbe”: A non-zero value indicates that one of the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a>
+family of functions is not working correctly.</p></li>
+<li><p>“rtbke”: rcutorture was unable to create the real-time kthreads
+used to force RCU priority inversion.  This value should be zero.</p></li>
+<li><p>“rtbre”: Although rcutorture successfully created the kthreads
+used to force RCU priority inversion, it was unable to set them
+to the real-time priority level of 1.  This value should be zero.</p></li>
+<li><p>“rtbf”: The number of times that RCU priority boosting failed
+to resolve RCU priority inversion.</p></li>
+<li><p>“rtb”: The number of times that rcutorture attempted to force
+an RCU priority inversion condition.  If you are testing RCU
+priority boosting via the “test_boost” module parameter, this
+value should be non-zero.</p></li>
+<li><p>“nt”: The number of times rcutorture ran RCU read-side code from
+within a timer handler.  This value should be non-zero only
+if you specified the “irqreader” module parameter.</p></li>
+<li><p>“Reader Pipe”: Histogram of “ages” of structures seen by readers.
+If any entries past the first two are non-zero, RCU is broken.
+And rcutorture prints the error flag string “!!!” to make sure
+you notice.  The age of a newly allocated structure is zero,
+it becomes one when removed from reader visibility, and is
+incremented once per grace period subsequently -- and is freed
+after passing through (RCU_TORTURE_PIPE_LEN-2) grace periods.</p>
+<p>The output displayed above was taken from a correctly working
+RCU.  If you want to see what it looks like when broken, break
+it yourself.  ;-)</p>
+</li>
+<li><p>“Reader Batch”: Another histogram of “ages” of structures seen
+by readers, but in terms of counter flips (or batches) rather
+than in terms of grace periods.  The legal number of non-zero
+entries is again two.  The reason for this separate view is that
+it is sometimes easier to get the third entry to show up in the
+“Reader Batch” list than in the “Reader Pipe” list.</p></li>
+<li><p>“Free-Block Circulation”: Shows the number of torture structures
+that have reached a given point in the pipeline.  The first element
+should closely correspond to the number of structures allocated,
+the second to the number that have been removed from reader view,
+and all but the last remaining to the corresponding number of
+passes through a grace period.  The last entry should be zero,
+as it is only incremented if a torture structure’s counter
+somehow gets incremented farther than it should.</p></li>
+</ul>
+<p>Different implementations of RCU can provide implementation-specific
+additional information.  For example, Tree SRCU provides the following
+additional line:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>srcud-torture: Tree SRCU per-CPU(idx=0): 0(35,-21) 1(-4,24) 2(1,1) 3(-26,20) 4(28,-47) 5(-9,4) 6(-10,14) 7(-14,11) T(1,6)
+</pre></div>
+</div>
+<p>This line shows the per-CPU counter state, in this case for Tree SRCU
+using a dynamically allocated srcu_struct (hence “srcud-” rather than
+“srcu-“).  The numbers in parentheses are the values of the “old” and
+“current” counters for the corresponding CPU.  The “idx” value maps the
+“old” and “current” values to the underlying array, and is useful for
+debugging.  The final “T” entry contains the totals of the counters.</p>
+</section>
+<section id="usage-on-specific-kernel-builds">
+<h2>Usage on Specific Kernel Builds<a class="headerlink" href="#usage-on-specific-kernel-builds" title="Link to this heading">¶</a></h2>
+<p>It is sometimes desirable to torture RCU on a specific kernel build,
+for example, when preparing to put that kernel build into production.
+In that case, the kernel should be built with CONFIG_RCU_TORTURE_TEST=m
+so that the test can be started using modprobe and terminated using rmmod.</p>
+<p>For example, the following script may be used to torture RCU:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#!/bin/sh
+
+modprobe rcutorture
+sleep 3600
+rmmod rcutorture
+dmesg | grep torture:
+</pre></div>
+</div>
+<p>The output can be manually inspected for the error flag of “!!!”.
+One could of course create a more elaborate script that automatically
+checked for such errors.  The “rmmod” command forces a “SUCCESS”,
+“FAILURE”, or “RCU_HOTPLUG” indication to be <a class="reference internal" href="../core-api/printk-basics.html#c.printk" title="printk"><code class="xref c c-func docutils literal notranslate"><span class="pre">printk()</span></code></a>ed.  The first
+two are self-explanatory, while the last indicates that while there
+were no RCU failures, CPU-hotplug problems were detected.</p>
+</section>
+<section id="usage-on-mainline-kernels">
+<h2>Usage on Mainline Kernels<a class="headerlink" href="#usage-on-mainline-kernels" title="Link to this heading">¶</a></h2>
+<p>When using rcutorture to test changes to RCU itself, it is often
+necessary to build a number of kernels in order to test that change
+across a broad range of combinations of the relevant Kconfig options
+and of the relevant kernel boot parameters.  In this situation, use
+of modprobe and rmmod can be quite time-consuming and error-prone.</p>
+<p>Therefore, the tools/testing/selftests/rcutorture/bin/kvm.sh
+script is available for mainline testing for x86, arm64, and
+powerpc.  By default, it will run the series of tests specified by
+tools/testing/selftests/rcutorture/configs/rcu/CFLIST, with each test
+running for 30 minutes within a guest OS using a minimal userspace
+supplied by an automatically generated initrd.  After the tests are
+complete, the resulting build products and console output are analyzed
+for errors and the results of the runs are summarized.</p>
+<p>On larger systems, rcutorture testing can be accelerated by passing the
+--cpus argument to kvm.sh.  For example, on a 64-CPU system, “--cpus 43”
+would use up to 43 CPUs to run tests concurrently, which as of v5.4 would
+complete all the scenarios in two batches, reducing the time to complete
+from about eight hours to about one hour (not counting the time to build
+the sixteen kernels).  The “--dryrun sched” argument will not run tests,
+but rather tell you how the tests would be scheduled into batches.  This
+can be useful when working out how many CPUs to specify in the --cpus
+argument.</p>
+<p>Not all changes require that all scenarios be run.  For example, a change
+to Tree SRCU might run only the SRCU-N and SRCU-P scenarios using the
+--configs argument to kvm.sh as follows:  “--configs ‘SRCU-N SRCU-P’”.
+Large systems can run multiple copies of the full set of scenarios,
+for example, a system with 448 hardware threads can run five instances
+of the full set concurrently.  To make this happen:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kvm.sh --cpus 448 --configs &#39;5*CFLIST&#39;
+</pre></div>
+</div>
+<p>Alternatively, such a system can run 56 concurrent instances of a single
+eight-CPU scenario:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kvm.sh --cpus 448 --configs &#39;56*TREE04&#39;
+</pre></div>
+</div>
+<p>Or 28 concurrent instances of each of two eight-CPU scenarios:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kvm.sh --cpus 448 --configs &#39;28*TREE03 28*TREE04&#39;
+</pre></div>
+</div>
+<p>Of course, each concurrent instance will use memory, which can be
+limited using the --memory argument, which defaults to 512M.  Small
+values for memory may require disabling the callback-flooding tests
+using the --bootargs parameter discussed below.</p>
+<p>Sometimes additional debugging is useful, and in such cases the --kconfig
+parameter to kvm.sh may be used, for example, <code class="docutils literal notranslate"><span class="pre">--kconfig</span> <span class="pre">'CONFIG_RCU_EQS_DEBUG=y'</span></code>.
+In addition, there are the --gdb, --kasan, and --kcsan parameters.
+Note that --gdb limits you to one scenario per kvm.sh run and requires
+that you have another window open from which to run <code class="docutils literal notranslate"><span class="pre">gdb</span></code> as instructed
+by the script.</p>
+<p>Kernel boot arguments can also be supplied, for example, to control
+rcutorture’s module parameters.  For example, to test a change to RCU’s
+CPU stall-warning code, use “--bootargs ‘rcutorture.stall_cpu=30’”.
+This will of course result in the scripting reporting a failure, namely
+the resulting RCU CPU stall warning.  As noted above, reducing memory may
+require disabling rcutorture’s callback-flooding tests:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kvm.sh --cpus 448 --configs &#39;56*TREE04&#39; --memory 128M \
+        --bootargs &#39;rcutorture.fwd_progress=0&#39;
+</pre></div>
+</div>
+<p>Sometimes all that is needed is a full set of kernel builds.  This is
+what the --buildonly parameter does.</p>
+<p>The --duration parameter can override the default run time of 30 minutes.
+For example, <code class="docutils literal notranslate"><span class="pre">--duration</span> <span class="pre">2d</span></code> would run for two days, <code class="docutils literal notranslate"><span class="pre">--duration</span> <span class="pre">3h</span></code>
+would run for three hours, <code class="docutils literal notranslate"><span class="pre">--duration</span> <span class="pre">5m</span></code> would run for five minutes,
+and <code class="docutils literal notranslate"><span class="pre">--duration</span> <span class="pre">45s</span></code> would run for 45 seconds.  This last can be useful
+for tracking down rare boot-time failures.</p>
+<p>Finally, the --trust-make parameter allows each kernel build to reuse what
+it can from the previous kernel build.  Please note that without the
+--trust-make parameter, your tags files may be demolished.</p>
+<p>There are additional more arcane arguments that are documented in the
+source code of the kvm.sh script.</p>
+<p>If a run contains failures, the number of buildtime and runtime failures
+is listed at the end of the kvm.sh output, which you really should redirect
+to a file.  The build products and console output of each run is kept in
+tools/testing/selftests/rcutorture/res in timestamped directories.  A
+given directory can be supplied to kvm-find-errors.sh in order to have
+it cycle you through summaries of errors and full error logs.  For example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>tools/testing/selftests/rcutorture/bin/kvm-find-errors.sh \
+        tools/testing/selftests/rcutorture/res/2020.01.20-15.54.23
+</pre></div>
+</div>
+<p>However, it is often more convenient to access the files directly.
+Files pertaining to all scenarios in a run reside in the top-level
+directory (2020.01.20-15.54.23 in the example above), while per-scenario
+files reside in a subdirectory named after the scenario (for example,
+“TREE04”).  If a given scenario ran more than once (as in “--configs
+‘56*TREE04’” above), the directories corresponding to the second and
+subsequent runs of that scenario include a sequence number, for example,
+“TREE04.2”, “TREE04.3”, and so on.</p>
+<p>The most frequently used file in the top-level directory is testid.txt.
+If the test ran in a git repository, then this file contains the commit
+that was tested and any uncommitted changes in diff format.</p>
+<p>The most frequently used files in each per-scenario-run directory are:</p>
+<dl class="simple">
+<dt>.config:</dt><dd><p>This file contains the Kconfig options.</p>
+</dd>
+<dt>Make.out:</dt><dd><p>This contains build output for a specific scenario.</p>
+</dd>
+<dt>console.log:</dt><dd><p>This contains the console output for a specific scenario.
+This file may be examined once the kernel has booted, but
+it might not exist if the build failed.</p>
+</dd>
+<dt>vmlinux:</dt><dd><p>This contains the kernel, which can be useful with tools like
+objdump and gdb.</p>
+</dd>
+</dl>
+<p>A number of additional files are available, but are less frequently used.
+Many are intended for debugging of rcutorture itself or of its scripting.</p>
+<p>As of v5.4, a successful run with the default set of scenarios produces
+the following summary at the end of the run on a 12-CPU system:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>SRCU-N ------- 804233 GPs (148.932/s) [srcu: g10008272 f0x0 ]
+SRCU-P ------- 202320 GPs (37.4667/s) [srcud: g1809476 f0x0 ]
+SRCU-t ------- 1122086 GPs (207.794/s) [srcu: g0 f0x0 ]
+SRCU-u ------- 1111285 GPs (205.794/s) [srcud: g1 f0x0 ]
+TASKS01 ------- 19666 GPs (3.64185/s) [tasks: g0 f0x0 ]
+TASKS02 ------- 20541 GPs (3.80389/s) [tasks: g0 f0x0 ]
+TASKS03 ------- 19416 GPs (3.59556/s) [tasks: g0 f0x0 ]
+TINY01 ------- 836134 GPs (154.84/s) [rcu: g0 f0x0 ] n_max_cbs: 34198
+TINY02 ------- 850371 GPs (157.476/s) [rcu: g0 f0x0 ] n_max_cbs: 2631
+TREE01 ------- 162625 GPs (30.1157/s) [rcu: g1124169 f0x0 ]
+TREE02 ------- 333003 GPs (61.6672/s) [rcu: g2647753 f0x0 ] n_max_cbs: 35844
+TREE03 ------- 306623 GPs (56.782/s) [rcu: g2975325 f0x0 ] n_max_cbs: 1496497
+CPU count limited from 16 to 12
+TREE04 ------- 246149 GPs (45.5831/s) [rcu: g1695737 f0x0 ] n_max_cbs: 434961
+TREE05 ------- 314603 GPs (58.2598/s) [rcu: g2257741 f0x2 ] n_max_cbs: 193997
+TREE07 ------- 167347 GPs (30.9902/s) [rcu: g1079021 f0x0 ] n_max_cbs: 478732
+CPU count limited from 16 to 12
+TREE09 ------- 752238 GPs (139.303/s) [rcu: g13075057 f0x0 ] n_max_cbs: 99011
+</pre></div>
+</div>
+</section>
+<section id="repeated-runs">
+<h2>Repeated Runs<a class="headerlink" href="#repeated-runs" title="Link to this heading">¶</a></h2>
+<p>Suppose that you are chasing down a rare boot-time failure.  Although you
+could use kvm.sh, doing so will rebuild the kernel on each run.  If you
+need (say) 1,000 runs to have confidence that you have fixed the bug,
+these pointless rebuilds can become extremely annoying.</p>
+<p>This is why kvm-again.sh exists.</p>
+<p>Suppose that a previous kvm.sh run left its output in this directory:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>tools/testing/selftests/rcutorture/res/2022.11.03-11.26.28
+</pre></div>
+</div>
+<p>Then this run can be re-run without rebuilding as follow:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kvm-again.sh tools/testing/selftests/rcutorture/res/2022.11.03-11.26.28
+</pre></div>
+</div>
+<p>A few of the original run’s kvm.sh parameters may be overridden, perhaps
+most notably --duration and --bootargs.  For example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kvm-again.sh tools/testing/selftests/rcutorture/res/2022.11.03-11.26.28 \
+        --duration 45s
+</pre></div>
+</div>
+<p>would re-run the previous test, but for only 45 seconds, thus facilitating
+tracking down the aforementioned rare boot-time failure.</p>
+</section>
+<section id="distributed-runs">
+<h2>Distributed Runs<a class="headerlink" href="#distributed-runs" title="Link to this heading">¶</a></h2>
+<p>Although kvm.sh is quite useful, its testing is confined to a single
+system.  It is not all that hard to use your favorite framework to cause
+(say) 5 instances of kvm.sh to run on your 5 systems, but this will very
+likely unnecessarily rebuild kernels.  In addition, manually distributing
+the desired rcutorture scenarios across the available systems can be
+painstaking and error-prone.</p>
+<p>And this is why the kvm-remote.sh script exists.</p>
+<p>If the following command works:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ssh system0 date
+</pre></div>
+</div>
+<p>and if it also works for system1, system2, system3, system4, and system5,
+and all of these systems have 64 CPUs, you can type:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kvm-remote.sh &quot;system0 system1 system2 system3 system4 system5&quot; \
+        --cpus 64 --duration 8h --configs &quot;5*CFLIST&quot;
+</pre></div>
+</div>
+<p>This will build each default scenario’s kernel on the local system, then
+spread each of five instances of each scenario over the systems listed,
+running each scenario for eight hours.  At the end of the runs, the
+results will be gathered, recorded, and printed.  Most of the parameters
+that kvm.sh will accept can be passed to kvm-remote.sh, but the list of
+systems must come first.</p>
+<p>The kvm.sh <code class="docutils literal notranslate"><span class="pre">--dryrun</span> <span class="pre">scenarios</span></code> argument is useful for working out
+how many scenarios may be run in one batch across a group of systems.</p>
+<p>You can also re-run a previous remote run in a manner similar to kvm.sh:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kvm-remote.sh &quot;system0 system1 system2 system3 system4 system5&quot; \
+        tools/testing/selftests/rcutorture/res/2022.11.03-11.26.28-remote \
+        --duration 24h
+</pre></div>
+</div>
+<p>In this case, most of the kvm-again.sh parameters may be supplied following
+the pathname of the old run-results directory.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/RCU/torture.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

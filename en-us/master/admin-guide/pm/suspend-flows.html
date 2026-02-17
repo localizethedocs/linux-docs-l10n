@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>System Suspend Code Flows &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/pm/suspend-flows.html" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Working-State Power Management" href="working-state.html" />
+    <link rel="prev" title="System Sleep States" href="sleep-states.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#core-kernel-subsystems">Core-kernel subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v2.html">Control Group v2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v1/index.html">Control Groups version 1</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cpu-load.html">CPU load</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../module-signing.html">Kernel module signing facility</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../namespaces/index.html">Namespaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../numastat.html">Numa policy hit/miss statistics</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../syscall-user-dispatch.html">Syscall User Dispatch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../binfmt-misc.html">Kernel Support for miscellaneous Binary Formats (binfmt_misc)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../java.html">Java(tm) Binary Kernel Support for Linux v1.03</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mono.html">Mono(tm) Binary Kernel Support for Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/admin-guide/pm/suspend-flows.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="system-suspend-code-flows">
+<h1>System Suspend Code Flows<a class="headerlink" href="#system-suspend-code-flows" title="Link to this heading">¶</a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">Copyright<span class="colon">:</span></dt>
+<dd class="field-odd"><p>© 2020 Intel Corporation</p>
+</dd>
+<dt class="field-even">Author<span class="colon">:</span></dt>
+<dd class="field-even"><p>Rafael J. Wysocki &lt;<a class="reference external" href="mailto:rafael&#46;j&#46;wysocki&#37;&#52;&#48;intel&#46;com">rafael<span>&#46;</span>j<span>&#46;</span>wysocki<span>&#64;</span>intel<span>&#46;</span>com</a>&gt;</p>
+</dd>
+</dl>
+<p>At least one global system-wide transition needs to be carried out for the
+system to get from the working state into one of the supported
+<a class="reference internal" href="sleep-states.html"><span class="doc">sleep states</span></a>.  Hibernation requires more than one
+transition to occur for this purpose, but the other sleep states, commonly
+referred to as <em>system-wide suspend</em> (or simply <em>system suspend</em>) states, need
+only one.</p>
+<p>For those sleep states, the transition from the working state of the system into
+the target sleep state is referred to as <em>system suspend</em> too (in the majority
+of cases, whether this means a transition or a sleep state of the system should
+be clear from the context) and the transition back from the sleep state into the
+working state is referred to as <em>system resume</em>.</p>
+<p>The kernel code flows associated with the suspend and resume transitions for
+different sleep states of the system are quite similar, but there are some
+significant differences between the <a class="reference internal" href="sleep-states.html#s2idle"><span class="std std-ref">suspend-to-idle</span></a> code flows
+and the code flows related to the <a class="reference internal" href="sleep-states.html#s2ram"><span class="std std-ref">suspend-to-RAM</span></a> and
+<a class="reference internal" href="sleep-states.html#standby"><span class="std std-ref">standby</span></a> sleep states.</p>
+<p>The <a class="reference internal" href="sleep-states.html#s2ram"><span class="std std-ref">suspend-to-RAM</span></a> and <a class="reference internal" href="sleep-states.html#standby"><span class="std std-ref">standby</span></a> sleep states
+cannot be implemented without platform support and the difference between them
+boils down to the platform-specific actions carried out by the suspend and
+resume hooks that need to be provided by the platform driver to make them
+available.  Apart from that, the suspend and resume code flows for these sleep
+states are mostly identical, so they both together will be referred to as
+<em>platform-dependent suspend</em> states in what follows.</p>
+<section id="suspend-to-idle-suspend-code-flow">
+<span id="s2idle-suspend"></span><h2>Suspend-to-idle Suspend Code Flow<a class="headerlink" href="#suspend-to-idle-suspend-code-flow" title="Link to this heading">¶</a></h2>
+<p>The following steps are taken in order to transition the system from the working
+state to the <a class="reference internal" href="sleep-states.html#s2idle"><span class="std std-ref">suspend-to-idle</span></a> sleep state:</p>
+<blockquote>
+<div><ol class="arabic">
+<li><p>Invoking system-wide suspend notifiers.</p>
+<p>Kernel subsystems can register callbacks to be invoked when the suspend
+transition is about to occur and when the resume transition has finished.</p>
+<p>That allows them to prepare for the change of the system state and to clean
+up after getting back to the working state.</p>
+</li>
+<li><p>Freezing tasks.</p>
+<p>Tasks are frozen primarily in order to avoid unchecked hardware accesses
+from user space through MMIO regions or I/O registers exposed directly to
+it and to prevent user space from entering the kernel while the next step
+of the transition is in progress (which might have been problematic for
+various reasons).</p>
+<p>All user space tasks are intercepted as though they were sent a signal and
+put into uninterruptible sleep until the end of the subsequent system resume
+transition.</p>
+<p>The kernel threads that choose to be frozen during system suspend for
+specific reasons are frozen subsequently, but they are not intercepted.
+Instead, they are expected to periodically check whether or not they need
+to be frozen and to put themselves into uninterruptible sleep if so.  [Note,
+however, that kernel threads can use locking and other concurrency controls
+available in kernel space to synchronize themselves with system suspend and
+resume, which can be much more precise than the freezing, so the latter is
+not a recommended option for kernel threads.]</p>
+</li>
+<li><p>Suspending devices and reconfiguring IRQs.</p>
+<p>Devices are suspended in four phases called <em>prepare</em>, <em>suspend</em>,
+<em>late suspend</em> and <em>noirq suspend</em> (see <a class="reference internal" href="../../driver-api/pm/devices.html#driverapi-pm-devices"><span class="std std-ref">Device Power Management Basics</span></a> for more
+information on what exactly happens in each phase).</p>
+<p>Every device is visited in each phase, but typically it is not physically
+accessed in more than two of them.</p>
+<p>The runtime PM API is disabled for every device during the <em>late</em> suspend
+phase and high-level (“action”) interrupt handlers are prevented from being
+invoked before the <em>noirq</em> suspend phase.</p>
+<p>Interrupts are still handled after that, but they are only acknowledged to
+interrupt controllers without performing any device-specific actions that
+would be triggered in the working state of the system (those actions are
+deferred till the subsequent system resume transition as described
+<a class="reference internal" href="#s2idle-resume">below</a>).</p>
+<p>IRQs associated with system wakeup devices are “armed” so that the resume
+transition of the system is started when one of them signals an event.</p>
+</li>
+<li><p>Freezing the scheduler tick and suspending timekeeping.</p>
+<p>When all devices have been suspended, CPUs enter the idle loop and are put
+into the deepest available idle state.  While doing that, each of them
+“freezes” its own scheduler tick so that the timer events associated with
+the tick do not occur until the CPU is woken up by another interrupt source.</p>
+<p>The last CPU to enter the idle state also stops the timekeeping which
+(among other things) prevents high resolution timers from triggering going
+forward until the first CPU that is woken up restarts the timekeeping.
+That allows the CPUs to stay in the deep idle state relatively long in one
+go.</p>
+<p>From this point on, the CPUs can only be woken up by non-timer hardware
+interrupts.  If that happens, they go back to the idle state unless the
+interrupt that woke up one of them comes from an IRQ that has been armed for
+system wakeup, in which case the system resume transition is started.</p>
+</li>
+</ol>
+</div></blockquote>
+</section>
+<section id="suspend-to-idle-resume-code-flow">
+<span id="s2idle-resume"></span><h2>Suspend-to-idle Resume Code Flow<a class="headerlink" href="#suspend-to-idle-resume-code-flow" title="Link to this heading">¶</a></h2>
+<p>The following steps are taken in order to transition the system from the
+<a class="reference internal" href="sleep-states.html#s2idle"><span class="std std-ref">suspend-to-idle</span></a> sleep state into the working state:</p>
+<blockquote>
+<div><ol class="arabic">
+<li><p>Resuming timekeeping and unfreezing the scheduler tick.</p>
+<p>When one of the CPUs is woken up (by a non-timer hardware interrupt), it
+leaves the idle state entered in the last step of the preceding suspend
+transition, restarts the timekeeping (unless it has been restarted already
+by another CPU that woke up earlier) and the scheduler tick on that CPU is
+unfrozen.</p>
+<p>If the interrupt that has woken up the CPU was armed for system wakeup,
+the system resume transition begins.</p>
+</li>
+<li><p>Resuming devices and restoring the working-state configuration of IRQs.</p>
+<p>Devices are resumed in four phases called <em>noirq resume</em>, <em>early resume</em>,
+<em>resume</em> and <em>complete</em> (see <a class="reference internal" href="../../driver-api/pm/devices.html#driverapi-pm-devices"><span class="std std-ref">Device Power Management Basics</span></a> for more
+information on what exactly happens in each phase).</p>
+<p>Every device is visited in each phase, but typically it is not physically
+accessed in more than two of them.</p>
+<p>The working-state configuration of IRQs is restored after the <em>noirq</em> resume
+phase and the runtime PM API is re-enabled for every device whose driver
+supports it during the <em>early</em> resume phase.</p>
+</li>
+<li><p>Thawing tasks.</p>
+<p>Tasks frozen in step 2 of the preceding <a class="reference internal" href="#s2idle-suspend">suspend</a>
+transition are “thawed”, which means that they are woken up from the
+uninterruptible sleep that they went into at that time and user space tasks
+are allowed to exit the kernel.</p>
+</li>
+<li><p>Invoking system-wide resume notifiers.</p>
+<p>This is analogous to step 1 of the <a class="reference internal" href="#s2idle-suspend">suspend</a> transition
+and the same set of callbacks is invoked at this point, but a different
+“notification type” parameter value is passed to them.</p>
+</li>
+</ol>
+</div></blockquote>
+</section>
+<section id="platform-dependent-suspend-code-flow">
+<h2>Platform-dependent Suspend Code Flow<a class="headerlink" href="#platform-dependent-suspend-code-flow" title="Link to this heading">¶</a></h2>
+<p>The following steps are taken in order to transition the system from the working
+state to platform-dependent suspend state:</p>
+<blockquote>
+<div><ol class="arabic">
+<li><p>Invoking system-wide suspend notifiers.</p>
+<p>This step is the same as step 1 of the suspend-to-idle suspend transition
+described <a class="reference internal" href="#s2idle-suspend">above</a>.</p>
+</li>
+<li><p>Freezing tasks.</p>
+<p>This step is the same as step 2 of the suspend-to-idle suspend transition
+described <a class="reference internal" href="#s2idle-suspend">above</a>.</p>
+</li>
+<li><p>Suspending devices and reconfiguring IRQs.</p>
+<p>This step is analogous to step 3 of the suspend-to-idle suspend transition
+described <a class="reference internal" href="#s2idle-suspend">above</a>, but the arming of IRQs for system
+wakeup generally does not have any effect on the platform.</p>
+<p>There are platforms that can go into a very deep low-power state internally
+when all CPUs in them are in sufficiently deep idle states and all I/O
+devices have been put into low-power states.  On those platforms,
+suspend-to-idle can reduce system power very effectively.</p>
+<p>On the other platforms, however, low-level components (like interrupt
+controllers) need to be turned off in a platform-specific way (implemented
+in the hooks provided by the platform driver) to achieve comparable power
+reduction.</p>
+<p>That usually prevents in-band hardware interrupts from waking up the system,
+which must be done in a special platform-dependent way.  Then, the
+configuration of system wakeup sources usually starts when system wakeup
+devices are suspended and is finalized by the platform suspend hooks later
+on.</p>
+</li>
+<li><p>Disabling non-boot CPUs.</p>
+<p>On some platforms the suspend hooks mentioned above must run in a one-CPU
+configuration of the system (in particular, the hardware cannot be accessed
+by any code running in parallel with the platform suspend hooks that may,
+and often do, trap into the platform firmware in order to finalize the
+suspend transition).</p>
+<p>For this reason, the CPU offline/online (CPU hotplug) framework is used
+to take all of the CPUs in the system, except for one (the boot CPU),
+offline (typically, the CPUs that have been taken offline go into deep idle
+states).</p>
+<p>This means that all tasks are migrated away from those CPUs and all IRQs are
+rerouted to the only CPU that remains online.</p>
+</li>
+<li><p>Suspending core system components.</p>
+<p>This prepares the core system components for (possibly) losing power going
+forward and suspends the timekeeping.</p>
+</li>
+<li><p>Platform-specific power removal.</p>
+<p>This is expected to remove power from all of the system components except
+for the memory controller and RAM (in order to preserve the contents of the
+latter) and some devices designated for system wakeup.</p>
+<p>In many cases control is passed to the platform firmware which is expected
+to finalize the suspend transition as needed.</p>
+</li>
+</ol>
+</div></blockquote>
+</section>
+<section id="platform-dependent-resume-code-flow">
+<h2>Platform-dependent Resume Code Flow<a class="headerlink" href="#platform-dependent-resume-code-flow" title="Link to this heading">¶</a></h2>
+<p>The following steps are taken in order to transition the system from a
+platform-dependent suspend state into the working state:</p>
+<blockquote>
+<div><ol class="arabic">
+<li><p>Platform-specific system wakeup.</p>
+<p>The platform is woken up by a signal from one of the designated system
+wakeup devices (which need not be an in-band hardware interrupt)  and
+control is passed back to the kernel (the working configuration of the
+platform may need to be restored by the platform firmware before the
+kernel gets control again).</p>
+</li>
+<li><p>Resuming core system components.</p>
+<p>The suspend-time configuration of the core system components is restored and
+the timekeeping is resumed.</p>
+</li>
+<li><p>Re-enabling non-boot CPUs.</p>
+<p>The CPUs disabled in step 4 of the preceding suspend transition are taken
+back online and their suspend-time configuration is restored.</p>
+</li>
+<li><p>Resuming devices and restoring the working-state configuration of IRQs.</p>
+<p>This step is the same as step 2 of the suspend-to-idle suspend transition
+described <a class="reference internal" href="#s2idle-resume">above</a>.</p>
+</li>
+<li><p>Thawing tasks.</p>
+<p>This step is the same as step 3 of the suspend-to-idle suspend transition
+described <a class="reference internal" href="#s2idle-resume">above</a>.</p>
+</li>
+<li><p>Invoking system-wide resume notifiers.</p>
+<p>This step is the same as step 4 of the suspend-to-idle suspend transition
+described <a class="reference internal" href="#s2idle-resume">above</a>.</p>
+</li>
+</ol>
+</div></blockquote>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/admin-guide/pm/suspend-flows.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Using gcov with the Linux kernel &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/dev-tools/gcov.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Kernel Address Sanitizer (KASAN)" href="kasan.html" />
+    <link rel="prev" title="KCOV: code coverage for fuzzing" href="kcov.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Development tools</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="testing-overview.html">Kernel Testing Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checkpatch.html">Checkpatch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clang-format.html">clang-format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="coccinelle.html">Coccinelle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sparse.html">Sparse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kcov.html">KCOV: code coverage for fuzzing</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Using gcov with the Linux kernel</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#preparation">Preparation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#customization">Customization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-specific-configs">Module specific configs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#files">Files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#modules">Modules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#separated-build-and-test-machines">Separated build and test machines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#note-on-compilers">Note on compilers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#appendix-a-gather-on-build-sh">Appendix A: gather_on_build.sh</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#appendix-b-gather-on-test-sh">Appendix B: gather_on_test.sh</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="kasan.html">Kernel Address Sanitizer (KASAN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kmsan.html">Kernel Memory Sanitizer (KMSAN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ubsan.html">Undefined Behavior Sanitizer - UBSAN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kmemleak.html">Kernel Memory Leak Detector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kcsan.html">Kernel Concurrency Sanitizer (KCSAN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lkmm/index.html">Linux Kernel Memory Consistency Model (LKMM)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfence.html">Kernel Electric-Fence (KFENCE)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kselftest.html">Linux Kernel Selftests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kunit/index.html">KUnit - Linux Kernel Unit Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ktap.html">The Kernel Test Anything Protocol (KTAP), version 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checkuapi.html">UAPI Checker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gpio-sloppy-logic-analyzer.html">Linux Kernel GPIO based sloppy logic analyzer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autofdo.html">Using AutoFDO with the Linux kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="propeller.html">Using Propeller with the Linux kernel</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/dev-tools/gcov.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="using-gcov-with-the-linux-kernel">
+<h1>Using gcov with the Linux kernel<a class="headerlink" href="#using-gcov-with-the-linux-kernel" title="Link to this heading">¶</a></h1>
+<p>gcov profiling kernel support enables the use of GCC’s coverage testing
+tool <a class="reference external" href="https://gcc.gnu.org/onlinedocs/gcc/Gcov.html">gcov</a> with the Linux kernel. Coverage data of a running kernel
+is exported in gcov-compatible format via the “gcov” debugfs directory.
+To get coverage data for a specific file, change to the kernel build
+directory and use gcov with the <code class="docutils literal notranslate"><span class="pre">-o</span></code> option as follows (requires root):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># cd /tmp/linux-out
+# gcov -o /sys/kernel/debug/gcov/tmp/linux-out/kernel spinlock.c
+</pre></div>
+</div>
+<p>This will create source code files annotated with execution counts
+in the current directory. In addition, graphical gcov front-ends such
+as <a class="reference external" href="https://github.com/linux-test-project/lcov">lcov</a> can be used to automate the process of collecting data
+for the entire kernel and provide coverage overviews in HTML format.</p>
+<p>Possible uses:</p>
+<ul class="simple">
+<li><p>debugging (has this line been reached at all?)</p></li>
+<li><p>test improvement (how do I change my test to cover these lines?)</p></li>
+<li><p>minimizing kernel configurations (do I need this option if the
+associated code is never run?)</p></li>
+</ul>
+<section id="preparation">
+<h2>Preparation<a class="headerlink" href="#preparation" title="Link to this heading">¶</a></h2>
+<p>Configure the kernel with:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>CONFIG_DEBUG_FS=y
+CONFIG_GCOV_KERNEL=y
+</pre></div>
+</div>
+<p>and to get coverage data for the entire kernel:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>CONFIG_GCOV_PROFILE_ALL=y
+</pre></div>
+</div>
+<p>Note that kernels compiled with profiling flags will be significantly
+larger and run slower. Also CONFIG_GCOV_PROFILE_ALL may not be supported
+on all architectures.</p>
+<p>Profiling data will only become accessible once debugfs has been
+mounted:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>mount -t debugfs none /sys/kernel/debug
+</pre></div>
+</div>
+</section>
+<section id="customization">
+<h2>Customization<a class="headerlink" href="#customization" title="Link to this heading">¶</a></h2>
+<p>To enable profiling for specific files or directories, add a line
+similar to the following to the respective kernel Makefile:</p>
+<ul>
+<li><p>For a single file (e.g. main.o):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>GCOV_PROFILE_main.o := y
+</pre></div>
+</div>
+</li>
+<li><p>For all files in one directory:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>GCOV_PROFILE := y
+</pre></div>
+</div>
+</li>
+</ul>
+<p>To exclude files from being profiled even when CONFIG_GCOV_PROFILE_ALL
+is specified, use:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>GCOV_PROFILE_main.o := n
+</pre></div>
+</div>
+<p>and:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>GCOV_PROFILE := n
+</pre></div>
+</div>
+<p>Only files which are linked to the main kernel image or are compiled as
+kernel modules are supported by this mechanism.</p>
+</section>
+<section id="module-specific-configs">
+<h2>Module specific configs<a class="headerlink" href="#module-specific-configs" title="Link to this heading">¶</a></h2>
+<p>Gcov kernel configs for specific modules are described below:</p>
+<dl class="simple">
+<dt>CONFIG_GCOV_PROFILE_RDS:</dt><dd><p>Enables GCOV profiling on RDS for checking which functions or
+lines are executed. This config is used by the rds selftest to
+generate coverage reports. If left unset the report is omitted.</p>
+</dd>
+</dl>
+</section>
+<section id="files">
+<h2>Files<a class="headerlink" href="#files" title="Link to this heading">¶</a></h2>
+<p>The gcov kernel support creates the following files in debugfs:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">/sys/kernel/debug/gcov</span></code></dt><dd><p>Parent directory for all gcov-related files.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">/sys/kernel/debug/gcov/reset</span></code></dt><dd><p>Global reset file: resets all coverage data to zero when
+written to.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">/sys/kernel/debug/gcov/path/to/compile/dir/file.gcda</span></code></dt><dd><p>The actual gcov data file as understood by the gcov
+tool. Resets file coverage data to zero when written to.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">/sys/kernel/debug/gcov/path/to/compile/dir/file.gcno</span></code></dt><dd><p>Symbolic link to a static data file required by the gcov
+tool. This file is generated by gcc when compiling with
+option <code class="docutils literal notranslate"><span class="pre">-ftest-coverage</span></code>.</p>
+</dd>
+</dl>
+</section>
+<section id="modules">
+<h2>Modules<a class="headerlink" href="#modules" title="Link to this heading">¶</a></h2>
+<p>Kernel modules may contain cleanup code which is only run during
+module unload time. The gcov mechanism provides a means to collect
+coverage data for such code by keeping a copy of the data associated
+with the unloaded module. This data remains available through debugfs.
+Once the module is loaded again, the associated coverage counters are
+initialized with the data from its previous instantiation.</p>
+<p>This behavior can be deactivated by specifying the gcov_persist kernel
+parameter:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>gcov_persist=0
+</pre></div>
+</div>
+<p>At run-time, a user can also choose to discard data for an unloaded
+module by writing to its data file or the global reset file.</p>
+</section>
+<section id="separated-build-and-test-machines">
+<h2>Separated build and test machines<a class="headerlink" href="#separated-build-and-test-machines" title="Link to this heading">¶</a></h2>
+<p>The gcov kernel profiling infrastructure is designed to work out-of-the
+box for setups where kernels are built and run on the same machine. In
+cases where the kernel runs on a separate machine, special preparations
+must be made, depending on where the gcov tool is used:</p>
+<ol class="loweralpha" id="gcov-test">
+<li><p>gcov is run on the TEST machine</p>
+<blockquote>
+<div><p>The gcov tool version on the test machine must be compatible with the
+gcc version used for kernel build. Also the following files need to be
+copied from build to test machine:</p>
+<dl class="simple">
+<dt>from the source tree:</dt><dd><ul class="simple">
+<li><p>all C source files + headers</p></li>
+</ul>
+</dd>
+<dt>from the build tree:</dt><dd><ul class="simple">
+<li><p>all C source files + headers</p></li>
+<li><p>all .gcda and .gcno files</p></li>
+<li><p>all links to directories</p></li>
+</ul>
+</dd>
+</dl>
+<p>It is important to note that these files need to be placed into the
+exact same file system location on the test machine as on the build
+machine. If any of the path components is symbolic link, the actual
+directory needs to be used instead (due to make’s CURDIR handling).</p>
+</div></blockquote>
+</li>
+</ol>
+<ol class="loweralpha" id="gcov-build" start="2">
+<li><p>gcov is run on the BUILD machine</p>
+<blockquote>
+<div><p>The following files need to be copied after each test case from test
+to build machine:</p>
+<dl class="simple">
+<dt>from the gcov directory in sysfs:</dt><dd><ul class="simple">
+<li><p>all .gcda files</p></li>
+<li><p>all links to .gcno files</p></li>
+</ul>
+</dd>
+</dl>
+<p>These files can be copied to any location on the build machine. gcov
+must then be called with the -o option pointing to that directory.</p>
+<p>Example directory setup on the build machine:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/tmp/linux:    kernel source tree
+/tmp/out:      kernel build directory as specified by make O=
+/tmp/coverage: location of the files copied from the test machine
+
+[user@build] cd /tmp/out
+[user@build] gcov -o /tmp/coverage/tmp/out/init main.c
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ol>
+</section>
+<section id="note-on-compilers">
+<h2>Note on compilers<a class="headerlink" href="#note-on-compilers" title="Link to this heading">¶</a></h2>
+<p>GCC and LLVM gcov tools are not necessarily compatible. Use <a class="reference external" href="https://gcc.gnu.org/onlinedocs/gcc/Gcov.html">gcov</a> to work with
+GCC-generated .gcno and .gcda files, and use <a class="reference external" href="https://llvm.org/docs/CommandGuide/llvm-cov.html">llvm-cov</a> for Clang.</p>
+<p>Build differences between GCC and Clang gcov are handled by Kconfig. It
+automatically selects the appropriate gcov format depending on the detected
+toolchain.</p>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading">¶</a></h2>
+<dl class="simple">
+<dt>Problem</dt><dd><p>Compilation aborts during linker step.</p>
+</dd>
+<dt>Cause</dt><dd><p>Profiling flags are specified for source files which are not
+linked to the main kernel or which are linked by a custom
+linker procedure.</p>
+</dd>
+<dt>Solution</dt><dd><p>Exclude affected source files from profiling by specifying
+<code class="docutils literal notranslate"><span class="pre">GCOV_PROFILE</span> <span class="pre">:=</span> <span class="pre">n</span></code> or <code class="docutils literal notranslate"><span class="pre">GCOV_PROFILE_basename.o</span> <span class="pre">:=</span> <span class="pre">n</span></code> in the
+corresponding Makefile.</p>
+</dd>
+<dt>Problem</dt><dd><p>Files copied from sysfs appear empty or incomplete.</p>
+</dd>
+<dt>Cause</dt><dd><p>Due to the way seq_file works, some tools such as cp or tar
+may not correctly copy files from sysfs.</p>
+</dd>
+<dt>Solution</dt><dd><p>Use <code class="docutils literal notranslate"><span class="pre">cat</span></code> to read <code class="docutils literal notranslate"><span class="pre">.gcda</span></code> files and <code class="docutils literal notranslate"><span class="pre">cp</span> <span class="pre">-d</span></code> to copy links.
+Alternatively use the mechanism shown in Appendix B.</p>
+</dd>
+</dl>
+</section>
+<section id="appendix-a-gather-on-build-sh">
+<h2>Appendix A: gather_on_build.sh<a class="headerlink" href="#appendix-a-gather-on-build-sh" title="Link to this heading">¶</a></h2>
+<p>Sample script to gather coverage meta files on the build machine
+(see <a class="reference internal" href="#gcov-test"><span class="std std-ref">Separated build and test machines a.</span></a>):</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/bash</span>
+
+<span class="nv">KSRC</span><span class="o">=</span><span class="nv">$1</span>
+<span class="nv">KOBJ</span><span class="o">=</span><span class="nv">$2</span>
+<span class="nv">DEST</span><span class="o">=</span><span class="nv">$3</span>
+
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-z<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$KSRC</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-z<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$KOBJ</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-z<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DEST</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Usage: </span><span class="nv">$0</span><span class="s2"> &lt;ksrc directory&gt; &lt;kobj directory&gt; &lt;output.tar.gz&gt;&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">  </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="nv">KSRC</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span><span class="w"> </span><span class="nv">$KSRC</span><span class="p">;</span><span class="w"> </span><span class="nb">printf</span><span class="w"> </span><span class="s2">&quot;all:\n\t@echo \${CURDIR}\n&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>make<span class="w"> </span>-f<span class="w"> </span>-<span class="k">)</span>
+<span class="nv">KOBJ</span><span class="o">=</span><span class="k">$(</span><span class="nb">cd</span><span class="w"> </span><span class="nv">$KOBJ</span><span class="p">;</span><span class="w"> </span><span class="nb">printf</span><span class="w"> </span><span class="s2">&quot;all:\n\t@echo \${CURDIR}\n&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>make<span class="w"> </span>-f<span class="w"> </span>-<span class="k">)</span>
+
+find<span class="w"> </span><span class="nv">$KSRC</span><span class="w"> </span><span class="nv">$KOBJ</span><span class="w"> </span><span class="se">\(</span><span class="w"> </span>-name<span class="w"> </span><span class="s1">&#39;*.gcno&#39;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s1">&#39;*.[ch]&#39;</span><span class="w"> </span>-o<span class="w"> </span>-type<span class="w"> </span>l<span class="w"> </span><span class="se">\)</span><span class="w"> </span>-a<span class="w"> </span><span class="se">\</span>
+<span class="w">                 </span>-perm<span class="w"> </span>/u+r,g+r<span class="w"> </span><span class="p">|</span><span class="w"> </span>tar<span class="w"> </span>cfz<span class="w"> </span><span class="nv">$DEST</span><span class="w"> </span>-P<span class="w"> </span>-T<span class="w"> </span>-
+
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$?</span><span class="w"> </span>-eq<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DEST</span><span class="s2"> successfully created, copy to test system and unpack with:&quot;</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;  tar xfz </span><span class="nv">$DEST</span><span class="s2"> -P&quot;</span>
+<span class="k">else</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Could not create file </span><span class="nv">$DEST</span><span class="s2">&quot;</span>
+<span class="k">fi</span>
+</pre></div>
+</div>
+</section>
+<section id="appendix-b-gather-on-test-sh">
+<h2>Appendix B: gather_on_test.sh<a class="headerlink" href="#appendix-b-gather-on-test-sh" title="Link to this heading">¶</a></h2>
+<p>Sample script to gather coverage data files on the test machine
+(see <a class="reference internal" href="#gcov-build"><span class="std std-ref">Separated build and test machines b.</span></a>):</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/bash -e</span>
+
+<span class="nv">DEST</span><span class="o">=</span><span class="nv">$1</span>
+<span class="nv">GCDA</span><span class="o">=</span>/sys/kernel/debug/gcov
+
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-z<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DEST</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Usage: </span><span class="nv">$0</span><span class="s2"> &lt;output.tar.gz&gt;&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">  </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="nv">TEMPDIR</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="w"> </span>-d<span class="k">)</span>
+<span class="nb">echo</span><span class="w"> </span>Collecting<span class="w"> </span>data..
+find<span class="w"> </span><span class="nv">$GCDA</span><span class="w"> </span>-type<span class="w"> </span>d<span class="w"> </span>-exec<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="nv">$TEMPDIR</span>/<span class="se">\{\}</span><span class="w"> </span><span class="se">\;</span>
+find<span class="w"> </span><span class="nv">$GCDA</span><span class="w"> </span>-name<span class="w"> </span><span class="s1">&#39;*.gcda&#39;</span><span class="w"> </span>-exec<span class="w"> </span>sh<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;cat &lt; $0 &gt; &#39;</span><span class="nv">$TEMPDIR</span><span class="s1">&#39;/$0&#39;</span><span class="w"> </span><span class="o">{}</span><span class="w"> </span><span class="se">\;</span>
+find<span class="w"> </span><span class="nv">$GCDA</span><span class="w"> </span>-name<span class="w"> </span><span class="s1">&#39;*.gcno&#39;</span><span class="w"> </span>-exec<span class="w"> </span>sh<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;cp -d $0 &#39;</span><span class="nv">$TEMPDIR</span><span class="s1">&#39;/$0&#39;</span><span class="w"> </span><span class="o">{}</span><span class="w"> </span><span class="se">\;</span>
+tar<span class="w"> </span>czf<span class="w"> </span><span class="nv">$DEST</span><span class="w"> </span>-C<span class="w"> </span><span class="nv">$TEMPDIR</span><span class="w"> </span>sys
+rm<span class="w"> </span>-rf<span class="w"> </span><span class="nv">$TEMPDIR</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DEST</span><span class="s2"> successfully created, copy to build system and unpack with:&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;  tar xfz </span><span class="nv">$DEST</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/dev-tools/gcov.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

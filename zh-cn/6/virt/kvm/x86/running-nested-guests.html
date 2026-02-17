@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Running nested guests with KVM &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/virt/kvm/x86/running-nested-guests.html" />
+    <link rel="index" title="索引" href="../../../genindex.html" />
+    <link rel="search" title="搜索" href="../../../search.html" />
+    <link rel="next" title="Timekeeping Virtualization for X86-Based Architectures" href="timekeeping.html" />
+    <link rel="prev" title="Nested VMX" href="nested-vmx.html" />
+
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../../subsystem-apis.html#core-subsystems">Core subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../../../subsystem-apis.html#other-subsystems">Other subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../../accounting/index.html">Accounting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../cpu-freq/index.html">CPUFreq - CPU frequency and voltage scaling code in the Linux(TM) kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../edac/index.html">EDAC Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../fpga/index.html">FPGA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../i2c/index.html">I2C/SMBus Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../iio/index.html">Industrial I/O</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../pcmcia/index.html">PCMCIA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../spi/index.html">Serial Peripheral Interface (SPI)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../w1/index.html">1-Wire Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../watchdog/index.html">Watchdog Support</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../../index.html">Virtualization Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../hwmon/index.html">Hardware Monitoring</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../accel/index.html">Compute Accelerators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../security/index.html">Security Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../crypto/index.html">Crypto API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../bpf/index.html">BPF Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../usb/index.html">USB support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../PCI/index.html">PCI Bus Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../misc-devices/index.html">Assorted Miscellaneous Devices Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../peci/index.html">PECI Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../wmi/index.html">WMI Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../tee/index.html">TEE Subsystem</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../_sources/virt/kvm/x86/running-nested-guests.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="running-nested-guests-with-kvm">
+<h1>Running nested guests with KVM<a class="headerlink" href="#running-nested-guests-with-kvm" title="Link to this heading">¶</a></h1>
+<p>A nested guest is the ability to run a guest inside another guest (it
+can be KVM-based or a different hypervisor).  The straightforward
+example is a KVM guest that in turn runs on a KVM guest (the rest of
+this document is built on this example):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>        .----------------.  .----------------.
+        |                |  |                |
+        |      L2        |  |      L2        |
+        | (Nested Guest) |  | (Nested Guest) |
+        |                |  |                |
+        |----------------&#39;--&#39;----------------|
+        |                                    |
+        |       L1 (Guest Hypervisor)        |
+        |          KVM (/dev/kvm)            |
+        |                                    |
+.------------------------------------------------------.
+|                 L0 (Host Hypervisor)                 |
+|                    KVM (/dev/kvm)                    |
+|------------------------------------------------------|
+|        Hardware (with virtualization extensions)     |
+&#39;------------------------------------------------------&#39;
+</pre></div>
+</div>
+<p>Terminology:</p>
+<ul class="simple">
+<li><p>L0 – level-0; the bare metal host, running KVM</p></li>
+<li><p>L1 – level-1 guest; a VM running on L0; also called the &quot;guest
+hypervisor&quot;, as it itself is capable of running KVM.</p></li>
+<li><p>L2 – level-2 guest; a VM running on L1, this is the &quot;nested guest&quot;</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">备注</p>
+<p>The above diagram is modelled after the x86 architecture;
+s390x, ppc64 and other architectures are likely to have
+a different design for nesting.</p>
+<p>For example, s390x always has an LPAR (LogicalPARtition)
+hypervisor running on bare metal, adding another layer and
+resulting in at least four levels in a nested setup — L0 (bare
+metal, running the LPAR hypervisor), L1 (host hypervisor), L2
+(guest hypervisor), L3 (nested guest).</p>
+<p>This document will stick with the three-level terminology (L0,
+L1, and L2) for all architectures; and will largely focus on
+x86.</p>
+</div>
+<section id="use-cases">
+<h2>Use Cases<a class="headerlink" href="#use-cases" title="Link to this heading">¶</a></h2>
+<p>There are several scenarios where nested KVM can be useful, to name a
+few:</p>
+<ul class="simple">
+<li><p>As a developer, you want to test your software on different operating
+systems (OSes).  Instead of renting multiple VMs from a Cloud
+Provider, using nested KVM lets you rent a large enough &quot;guest
+hypervisor&quot; (level-1 guest).  This in turn allows you to create
+multiple nested guests (level-2 guests), running different OSes, on
+which you can develop and test your software.</p></li>
+<li><p>Live migration of &quot;guest hypervisors&quot; and their nested guests, for
+load balancing, disaster recovery, etc.</p></li>
+<li><p>VM image creation tools (e.g. <code class="docutils literal notranslate"><span class="pre">virt-install</span></code>,  etc) often run
+their own VM, and users expect these to work inside a VM.</p></li>
+<li><p>Some OSes use virtualization internally for security (e.g. to let
+applications run safely in isolation).</p></li>
+</ul>
+</section>
+<section id="enabling-nested-x86">
+<h2>Enabling &quot;nested&quot; (x86)<a class="headerlink" href="#enabling-nested-x86" title="Link to this heading">¶</a></h2>
+<p>From Linux kernel v4.20 onwards, the <code class="docutils literal notranslate"><span class="pre">nested</span></code> KVM parameter is enabled
+by default for Intel and AMD.  (Though your Linux distribution might
+override this default.)</p>
+<p>In case you are running a Linux kernel older than v4.19, to enable
+nesting, set the <code class="docutils literal notranslate"><span class="pre">nested</span></code> KVM module parameter to <code class="docutils literal notranslate"><span class="pre">Y</span></code> or <code class="docutils literal notranslate"><span class="pre">1</span></code>.  To
+persist this setting across reboots, you can add it in a config file, as
+shown below:</p>
+<ol class="arabic">
+<li><p>On the bare metal host (L0), list the kernel modules and ensure that
+the KVM modules:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ lsmod | grep -i kvm
+kvm_intel             133627  0
+kvm                   435079  1 kvm_intel
+</pre></div>
+</div>
+</li>
+<li><p>Show information for <code class="docutils literal notranslate"><span class="pre">kvm_intel</span></code> module:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ modinfo kvm_intel | grep -i nested
+parm:           nested:bool
+</pre></div>
+</div>
+</li>
+<li><p>For the nested KVM configuration to persist across reboots, place the
+below in <code class="docutils literal notranslate"><span class="pre">/etc/modprobed/kvm_intel.conf</span></code> (create the file if it
+doesn't exist):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ cat /etc/modprobe.d/kvm_intel.conf
+options kvm-intel nested=y
+</pre></div>
+</div>
+</li>
+<li><p>Unload and re-load the KVM Intel module:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo rmmod kvm-intel
+$ sudo modprobe kvm-intel
+</pre></div>
+</div>
+</li>
+<li><p>Verify if the <code class="docutils literal notranslate"><span class="pre">nested</span></code> parameter for KVM is enabled:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ cat /sys/module/kvm_intel/parameters/nested
+Y
+</pre></div>
+</div>
+</li>
+</ol>
+<p>For AMD hosts, the process is the same as above, except that the module
+name is <code class="docutils literal notranslate"><span class="pre">kvm-amd</span></code>.</p>
+</section>
+<section id="additional-nested-related-kernel-parameters-x86">
+<h2>Additional nested-related kernel parameters (x86)<a class="headerlink" href="#additional-nested-related-kernel-parameters-x86" title="Link to this heading">¶</a></h2>
+<p>If your hardware is sufficiently advanced (Intel Haswell processor or
+higher, which has newer hardware virt extensions), the following
+additional features will also be enabled by default: &quot;Shadow VMCS
+(Virtual Machine Control Structure)&quot;, APIC Virtualization on your bare
+metal host (L0).  Parameters for Intel hosts:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ cat /sys/module/kvm_intel/parameters/enable_shadow_vmcs
+Y
+
+$ cat /sys/module/kvm_intel/parameters/enable_apicv
+Y
+
+$ cat /sys/module/kvm_intel/parameters/ept
+Y
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">备注</p>
+<p>If you suspect your L2 (i.e. nested guest) is running slower,
+ensure the above are enabled (particularly
+<code class="docutils literal notranslate"><span class="pre">enable_shadow_vmcs</span></code> and <code class="docutils literal notranslate"><span class="pre">ept</span></code>).</p>
+</div>
+</section>
+<section id="starting-a-nested-guest-x86">
+<h2>Starting a nested guest (x86)<a class="headerlink" href="#starting-a-nested-guest-x86" title="Link to this heading">¶</a></h2>
+<p>Once your bare metal host (L0) is configured for nesting, you should be
+able to start an L1 guest with:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ qemu-kvm -cpu host [...]
+</pre></div>
+</div>
+<p>The above will pass through the host CPU's capabilities as-is to the
+guest, or for better live migration compatibility, use a named CPU
+model supported by QEMU. e.g.:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ qemu-kvm -cpu Haswell-noTSX-IBRS,vmx=on
+</pre></div>
+</div>
+<p>then the guest hypervisor will subsequently be capable of running a
+nested guest with accelerated KVM.</p>
+</section>
+<section id="enabling-nested-s390x">
+<h2>Enabling &quot;nested&quot; (s390x)<a class="headerlink" href="#enabling-nested-s390x" title="Link to this heading">¶</a></h2>
+<ol class="arabic">
+<li><p>On the host hypervisor (L0), enable the <code class="docutils literal notranslate"><span class="pre">nested</span></code> parameter on
+s390x:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ rmmod kvm
+$ modprobe kvm nested=1
+</pre></div>
+</div>
+</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">备注</p>
+<p>On s390x, the kernel parameter <code class="docutils literal notranslate"><span class="pre">hpage</span></code> is mutually exclusive
+with the <code class="docutils literal notranslate"><span class="pre">nested</span></code> parameter — i.e. to be able to enable
+<code class="docutils literal notranslate"><span class="pre">nested</span></code>, the <code class="docutils literal notranslate"><span class="pre">hpage</span></code> parameter <em>must</em> be disabled.</p>
+</div>
+<ol class="arabic" start="2">
+<li><p>The guest hypervisor (L1) must be provided with the <code class="docutils literal notranslate"><span class="pre">sie</span></code> CPU
+feature — with QEMU, this can be done by using &quot;host passthrough&quot;
+(via the command-line <code class="docutils literal notranslate"><span class="pre">-cpu</span> <span class="pre">host</span></code>).</p></li>
+<li><p>Now the KVM module can be loaded in the L1 (guest hypervisor):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ modprobe kvm
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="live-migration-with-nested-kvm">
+<h2>Live migration with nested KVM<a class="headerlink" href="#live-migration-with-nested-kvm" title="Link to this heading">¶</a></h2>
+<p>Migrating an L1 guest, with a  <em>live</em> nested guest in it, to another
+bare metal host, works as of Linux kernel 5.3 and QEMU 4.2.0 for
+Intel x86 systems, and even on older versions for s390x.</p>
+<p>On AMD systems, once an L1 guest has started an L2 guest, the L1 guest
+should no longer be migrated or saved (refer to QEMU documentation on
+&quot;savevm&quot;/&quot;loadvm&quot;) until the L2 guest shuts down.  Attempting to migrate
+or save-and-load an L1 guest while an L2 guest is running will result in
+undefined behavior.  You might see a <code class="docutils literal notranslate"><span class="pre">kernel</span> <span class="pre">BUG!</span></code> entry in <code class="docutils literal notranslate"><span class="pre">dmesg</span></code>, a
+kernel 'oops', or an outright kernel panic.  Such a migrated or loaded L1
+guest can no longer be considered stable or secure, and must be restarted.
+Migrating an L1 guest merely configured to support nesting, while not
+actually running L2 guests, is expected to function normally even on AMD
+systems but may fail once guests are started.</p>
+<p>Migrating an L2 guest is always expected to succeed, so all the following
+scenarios should work even on AMD systems:</p>
+<ul class="simple">
+<li><p>Migrating a nested guest (L2) to another L1 guest on the <em>same</em> bare
+metal host.</p></li>
+<li><p>Migrating a nested guest (L2) to another L1 guest on a <em>different</em>
+bare metal host.</p></li>
+<li><p>Migrating a nested guest (L2) to a bare metal host.</p></li>
+</ul>
+</section>
+<section id="reporting-bugs-from-nested-setups">
+<h2>Reporting bugs from nested setups<a class="headerlink" href="#reporting-bugs-from-nested-setups" title="Link to this heading">¶</a></h2>
+<p>Debugging &quot;nested&quot; problems can involve sifting through log files across
+L0, L1 and L2; this can result in tedious back-n-forth between the bug
+reporter and the bug fixer.</p>
+<ul class="simple">
+<li><p>Mention that you are in a &quot;nested&quot; setup.  If you are running any kind
+of &quot;nesting&quot; at all, say so.  Unfortunately, this needs to be called
+out because when reporting bugs, people tend to forget to even
+<em>mention</em> that they're using nested virtualization.</p></li>
+<li><p>Ensure you are actually running KVM on KVM.  Sometimes people do not
+have KVM enabled for their guest hypervisor (L1), which results in
+them running with pure emulation or what QEMU calls it as &quot;TCG&quot;, but
+they think they're running nested KVM.  Thus confusing &quot;nested Virt&quot;
+(which could also mean, QEMU on KVM) with &quot;nested KVM&quot; (KVM on KVM).</p></li>
+</ul>
+<section id="information-to-collect-generic">
+<h3>Information to collect (generic)<a class="headerlink" href="#information-to-collect-generic" title="Link to this heading">¶</a></h3>
+<p>The following is not an exhaustive list, but a very good starting point:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Kernel, libvirt, and QEMU version from L0</p></li>
+<li><p>Kernel, libvirt and QEMU version from L1</p></li>
+<li><p>QEMU command-line of L1 -- when using libvirt, you'll find it here:
+<code class="docutils literal notranslate"><span class="pre">/var/log/libvirt/qemu/instance.log</span></code></p></li>
+<li><p>QEMU command-line of L2 -- as above, when using libvirt, get the
+complete libvirt-generated QEMU command-line</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cat</span> <span class="pre">/sys/cpuinfo</span></code> from L0</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cat</span> <span class="pre">/sys/cpuinfo</span></code> from L1</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lscpu</span></code> from L0</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lscpu</span></code> from L1</p></li>
+<li><p>Full <code class="docutils literal notranslate"><span class="pre">dmesg</span></code> output from L0</p></li>
+<li><p>Full <code class="docutils literal notranslate"><span class="pre">dmesg</span></code> output from L1</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="x86-specific-info-to-collect">
+<h3>x86-specific info to collect<a class="headerlink" href="#x86-specific-info-to-collect" title="Link to this heading">¶</a></h3>
+<p>Both the below commands, <code class="docutils literal notranslate"><span class="pre">x86info</span></code> and <code class="docutils literal notranslate"><span class="pre">dmidecode</span></code>, should be
+available on most Linux distributions with the same name:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Output of: <code class="docutils literal notranslate"><span class="pre">x86info</span> <span class="pre">-a</span></code> from L0</p></li>
+<li><p>Output of: <code class="docutils literal notranslate"><span class="pre">x86info</span> <span class="pre">-a</span></code> from L1</p></li>
+<li><p>Output of: <code class="docutils literal notranslate"><span class="pre">dmidecode</span></code> from L0</p></li>
+<li><p>Output of: <code class="docutils literal notranslate"><span class="pre">dmidecode</span></code> from L1</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="s390x-specific-info-to-collect">
+<h3>s390x-specific info to collect<a class="headerlink" href="#s390x-specific-info-to-collect" title="Link to this heading">¶</a></h3>
+<p>Along with the earlier mentioned generic details, the below is
+also recommended:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">/proc/sysinfo</span></code> from L1; this will also include the info from L0</p></li>
+</ul>
+</div></blockquote>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../../_sources/virt/kvm/x86/running-nested-guests.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

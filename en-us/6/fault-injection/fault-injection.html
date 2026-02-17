@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Fault injection capabilities infrastructure &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/fault-injection/fault-injection.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Notifier error injection" href="notifier-error-inject.html" />
+    <link rel="prev" title="Fault-injection" href="index.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Fault injection</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Fault injection capabilities infrastructure</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#available-fault-injection-capabilities">Available fault injection capabilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configure-fault-injection-capabilities-behavior">Configure fault-injection capabilities behavior</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#error-injectable-functions">Error Injectable Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#how-to-add-new-fault-injection-capability">How to add new fault injection capability</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#application-examples">Application Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tool-to-run-command-with-failslab-or-fail-page-alloc">Tool to run command with failslab or fail_page_alloc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#systematic-faults-using-fail-nth">Systematic faults using fail-nth</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="notifier-error-inject.html">Notifier error injection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nvme-fault-injection.html">NVMe Fault Injection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="provoke-crashes.html">Provoking crashes with Linux Kernel Dump Test Module (LKDTM)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/fault-injection/fault-injection.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="fault-injection-capabilities-infrastructure">
+<h1>Fault injection capabilities infrastructure<a class="headerlink" href="#fault-injection-capabilities-infrastructure" title="Link to this heading">¶</a></h1>
+<p>See also “every_nth” module option for scsi_debug.</p>
+<section id="available-fault-injection-capabilities">
+<h2>Available fault injection capabilities<a class="headerlink" href="#available-fault-injection-capabilities" title="Link to this heading">¶</a></h2>
+<ul>
+<li><p>failslab</p>
+<p>injects slab allocation failures. (<a class="reference internal" href="../core-api/mm-api.html#c.kmalloc" title="kmalloc"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmalloc()</span></code></a>, <a class="reference internal" href="../core-api/mm-api.html#c.kmem_cache_alloc" title="kmem_cache_alloc"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmem_cache_alloc()</span></code></a>, ...)</p>
+</li>
+<li><p>fail_page_alloc</p>
+<p>injects page allocation failures. (<a class="reference internal" href="../core-api/mm-api.html#c.alloc_pages" title="alloc_pages"><code class="xref c c-func docutils literal notranslate"><span class="pre">alloc_pages()</span></code></a>, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">get_free_pages()</span></code>, ...)</p>
+</li>
+<li><p>fail_usercopy</p>
+<p>injects failures in user memory access functions. (<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">copy_from_user()</span></code>, <a class="reference internal" href="../core-api/mm-api.html#c.get_user" title="get_user"><code class="xref c c-func docutils literal notranslate"><span class="pre">get_user()</span></code></a>, ...)</p>
+</li>
+<li><p>fail_futex</p>
+<p>injects futex deadlock and uaddr fault errors.</p>
+</li>
+<li><p>fail_sunrpc</p>
+<p>injects kernel RPC client and server failures.</p>
+</li>
+<li><p>fail_make_request</p>
+<p>injects disk IO errors on devices permitted by setting
+/sys/block/&lt;device&gt;/make-it-fail or
+/sys/block/&lt;device&gt;/&lt;partition&gt;/make-it-fail. (<a class="reference internal" href="../core-api/kernel-api.html#c.submit_bio_noacct" title="submit_bio_noacct"><code class="xref c c-func docutils literal notranslate"><span class="pre">submit_bio_noacct()</span></code></a>)</p>
+</li>
+<li><p>fail_mmc_request</p>
+<p>injects MMC data errors on devices permitted by setting
+debugfs entries under /sys/kernel/debug/mmc0/fail_mmc_request</p>
+</li>
+<li><p>fail_function</p>
+<p>injects error return on specific functions, which are marked by
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">ALLOW_ERROR_INJECTION()</span></code> macro, by setting debugfs entries
+under /sys/kernel/debug/fail_function. No boot option supported.</p>
+</li>
+<li><p>fail_skb_realloc</p>
+<p>inject skb (socket buffer) reallocation events into the network path. The
+primary goal is to identify and prevent issues related to pointer
+mismanagement in the network subsystem.  By forcing skb reallocation at
+strategic points, this feature creates scenarios where existing pointers to
+skb headers become invalid.</p>
+<p>When the fault is injected and the reallocation is triggered, cached pointers
+to skb headers and data no longer reference valid memory locations. This
+deliberate invalidation helps expose code paths where proper pointer updating
+is neglected after a reallocation event.</p>
+<p>By creating these controlled fault scenarios, the system can catch instances
+where stale pointers are used, potentially leading to memory corruption or
+system instability.</p>
+<p>To select the interface to act on, write the network name to
+/sys/kernel/debug/fail_skb_realloc/devname.
+If this field is left empty (which is the default value), skb reallocation
+will be forced on all network interfaces.</p>
+<p>The effectiveness of this fault detection is enhanced when KASAN is
+enabled, as it helps identify invalid memory references and use-after-free
+(UAF) issues.</p>
+</li>
+<li><p>NVMe fault injection</p>
+<p>inject NVMe status code and retry flag on devices permitted by setting
+debugfs entries under /sys/kernel/debug/nvme*/fault_inject. The default
+status code is NVME_SC_INVALID_OPCODE with no retry. The status code and
+retry flag can be set via the debugfs.</p>
+</li>
+<li><p>Null test block driver fault injection</p>
+<p>inject IO timeouts by setting config items under
+/sys/kernel/config/nullb/&lt;disk&gt;/timeout_inject,
+inject requeue requests by setting config items under
+/sys/kernel/config/nullb/&lt;disk&gt;/requeue_inject, and
+inject <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">init_hctx()</span></code> errors by setting config items under
+/sys/kernel/config/nullb/&lt;disk&gt;/init_hctx_fault_inject.</p>
+</li>
+</ul>
+</section>
+<section id="configure-fault-injection-capabilities-behavior">
+<h2>Configure fault-injection capabilities behavior<a class="headerlink" href="#configure-fault-injection-capabilities-behavior" title="Link to this heading">¶</a></h2>
+<section id="debugfs-entries">
+<h3>debugfs entries<a class="headerlink" href="#debugfs-entries" title="Link to this heading">¶</a></h3>
+<p>fault-inject-debugfs kernel module provides some debugfs entries for runtime
+configuration of fault-injection capabilities.</p>
+<ul>
+<li><p>/sys/kernel/debug/fail*/probability:</p>
+<blockquote>
+<div><p>likelihood of failure injection, in percent.</p>
+<p>Format: &lt;percent&gt;</p>
+<p>Note that one-failure-per-hundred is a very high error rate
+for some testcases.  Consider setting probability=100 and configure
+/sys/kernel/debug/fail*/interval for such testcases.</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail*/interval:</p>
+<blockquote>
+<div><p>specifies the interval between failures, for calls to
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">should_fail()</span></code> that pass all the other tests.</p>
+<p>Note that if you enable this, by setting interval&gt;1, you will
+probably want to set probability=100.</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail*/times:</p>
+<blockquote>
+<div><p>specifies how many times failures may happen at most. A value of -1
+means “no limit”.</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail*/space:</p>
+<blockquote>
+<div><p>specifies an initial resource “budget”, decremented by “size”
+on each call to should_fail(,size).  Failure injection is
+suppressed until “space” reaches zero.</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail*/verbose</p>
+<blockquote>
+<div><p>Format: { 0 | 1 | 2 }</p>
+<p>specifies the verbosity of the messages when failure is
+injected.  ‘0’ means no messages; ‘1’ will print only a single
+log line per failure; ‘2’ will print a call trace too -- useful
+to debug the problems revealed by fault injection.</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail*/task-filter:</p>
+<blockquote>
+<div><p>Format: { ‘Y’ | ‘N’ }</p>
+<p>A value of ‘N’ disables filtering by process (default).
+Any positive value limits failures to only processes indicated by
+/proc/&lt;pid&gt;/make-it-fail==1.</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail*/require-start,
+/sys/kernel/debug/fail*/require-end,
+/sys/kernel/debug/fail*/reject-start,
+/sys/kernel/debug/fail*/reject-end:</p>
+<blockquote>
+<div><p>specifies the range of virtual addresses tested during
+stacktrace walking.  Failure is injected only if some caller
+in the walked stacktrace lies within the required range, and
+none lies within the rejected range.
+Default required range is [0,ULONG_MAX) (whole of virtual address space).
+Default rejected range is [0,0).</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail*/stacktrace-depth:</p>
+<blockquote>
+<div><p>specifies the maximum stacktrace depth walked during search
+for a caller within [require-start,require-end) OR
+[reject-start,reject-end).</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail_page_alloc/ignore-gfp-highmem:</p>
+<blockquote>
+<div><p>Format: { ‘Y’ | ‘N’ }</p>
+<p>default is ‘Y’, setting it to ‘N’ will also inject failures into
+highmem/user allocations (__GFP_HIGHMEM allocations).</p>
+</div></blockquote>
+</li>
+<li><dl>
+<dt>/sys/kernel/debug/failslab/cache-filter</dt><dd><p>Format: { ‘Y’ | ‘N’ }</p>
+<p>default is ‘N’, setting it to ‘Y’ will only inject failures when
+objects are requests from certain caches.</p>
+<p>Select the cache by writing ‘1’ to /sys/kernel/slab/&lt;cache&gt;/failslab:</p>
+</dd>
+</dl>
+</li>
+<li><p>/sys/kernel/debug/failslab/ignore-gfp-wait:</p></li>
+<li><p>/sys/kernel/debug/fail_page_alloc/ignore-gfp-wait:</p>
+<blockquote>
+<div><p>Format: { ‘Y’ | ‘N’ }</p>
+<p>default is ‘Y’, setting it to ‘N’ will also inject failures
+into allocations that can sleep (__GFP_DIRECT_RECLAIM allocations).</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail_page_alloc/min-order:</p>
+<blockquote>
+<div><p>specifies the minimum page allocation order to be injected
+failures.</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail_futex/ignore-private:</p>
+<blockquote>
+<div><p>Format: { ‘Y’ | ‘N’ }</p>
+<p>default is ‘N’, setting it to ‘Y’ will disable failure injections
+when dealing with private (address space) futexes.</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail_sunrpc/ignore-client-disconnect:</p>
+<blockquote>
+<div><p>Format: { ‘Y’ | ‘N’ }</p>
+<p>default is ‘N’, setting it to ‘Y’ will disable disconnect
+injection on the RPC client.</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail_sunrpc/ignore-server-disconnect:</p>
+<blockquote>
+<div><p>Format: { ‘Y’ | ‘N’ }</p>
+<p>default is ‘N’, setting it to ‘Y’ will disable disconnect
+injection on the RPC server.</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail_sunrpc/ignore-cache-wait:</p>
+<blockquote>
+<div><p>Format: { ‘Y’ | ‘N’ }</p>
+<p>default is ‘N’, setting it to ‘Y’ will disable cache wait
+injection on the RPC server.</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail_function/inject:</p>
+<blockquote>
+<div><p>Format: { ‘function-name’ | ‘!function-name’ | ‘’ }</p>
+<p>specifies the target function of error injection by name.
+If the function name leads ‘!’ prefix, given function is
+removed from injection list. If nothing specified (‘’)
+injection list is cleared.</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail_function/injectable:</p>
+<blockquote>
+<div><p>(read only) shows error injectable functions and what type of
+error values can be specified. The error type will be one of
+below;
+- NULL: retval must be 0.
+- ERRNO: retval must be -1 to -MAX_ERRNO (-4096).
+- ERR_NULL: retval must be 0 or -1 to -MAX_ERRNO (-4096).</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail_function/&lt;function-name&gt;/retval:</p>
+<blockquote>
+<div><p>specifies the “error” return value to inject to the given function.
+This will be created when the user specifies a new injection entry.
+Note that this file only accepts unsigned values. So, if you want to
+use a negative errno, you better use ‘printf’ instead of ‘echo’, e.g.:
+$ printf %#x -12 &gt; retval</p>
+</div></blockquote>
+</li>
+<li><p>/sys/kernel/debug/fail_skb_realloc/devname:</p>
+<blockquote>
+<div><p>Specifies the network interface on which to force SKB reallocation.  If
+left empty, SKB reallocation will be applied to all network interfaces.</p>
+<p>Example usage:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># Force skb reallocation on eth0
+echo &quot;eth0&quot; &gt; /sys/kernel/debug/fail_skb_realloc/devname
+
+# Clear the selection and force skb reallocation on all interfaces
+echo &quot;&quot; &gt; /sys/kernel/debug/fail_skb_realloc/devname
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</section>
+<section id="boot-option">
+<h3>Boot option<a class="headerlink" href="#boot-option" title="Link to this heading">¶</a></h3>
+<p>In order to inject faults while debugfs is not available (early boot time),
+use the boot option:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>failslab=
+fail_page_alloc=
+fail_usercopy=
+fail_make_request=
+fail_futex=
+fail_skb_realloc=
+mmc_core.fail_request=&lt;interval&gt;,&lt;probability&gt;,&lt;space&gt;,&lt;times&gt;
+</pre></div>
+</div>
+</section>
+<section id="proc-entries">
+<h3>proc entries<a class="headerlink" href="#proc-entries" title="Link to this heading">¶</a></h3>
+<ul>
+<li><p>/proc/&lt;pid&gt;/fail-nth,
+/proc/self/task/&lt;tid&gt;/fail-nth:</p>
+<blockquote>
+<div><p>Write to this file of integer N makes N-th call in the task fail.
+Read from this file returns a integer value. A value of ‘0’ indicates
+that the fault setup with a previous write to this file was injected.
+A positive integer N indicates that the fault wasn’t yet injected.
+Note that this file enables all types of faults (slab, futex, etc).
+This setting takes precedence over all other generic debugfs settings
+like probability, interval, times, etc. But per-capability settings
+(e.g. fail_futex/ignore-private) take precedence over it.</p>
+<p>This feature is intended for systematic testing of faults in a single
+system call. See an example below.</p>
+</div></blockquote>
+</li>
+</ul>
+</section>
+</section>
+<section id="error-injectable-functions">
+<h2>Error Injectable Functions<a class="headerlink" href="#error-injectable-functions" title="Link to this heading">¶</a></h2>
+<p>This part is for the kernel developers considering to add a function to
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">ALLOW_ERROR_INJECTION()</span></code> macro.</p>
+<section id="requirements-for-the-error-injectable-functions">
+<h3>Requirements for the Error Injectable Functions<a class="headerlink" href="#requirements-for-the-error-injectable-functions" title="Link to this heading">¶</a></h3>
+<p>Since the function-level error injection forcibly changes the code path
+and returns an error even if the input and conditions are proper, this can
+cause unexpected kernel crash if you allow error injection on the function
+which is NOT error injectable. Thus, you (and reviewers) must ensure;</p>
+<ul class="simple">
+<li><p>The function returns an error code if it fails, and the callers must check
+it correctly (need to recover from it).</p></li>
+<li><p>The function does not execute any code which can change any state before
+the first error return. The state includes global or local, or input
+variable. For example, clear output address storage (e.g. <cite>*ret = NULL</cite>),
+increments/decrements counter, set a flag, preempt/irq disable or get
+a lock (if those are recovered before returning error, that will be OK.)</p></li>
+</ul>
+<p>The first requirement is important, and it will result in that the release
+(free objects) functions are usually harder to inject errors than allocate
+functions. If errors of such release functions are not correctly handled
+it will cause a memory leak easily (the caller will confuse that the object
+has been released or corrupted.)</p>
+<p>The second one is for the caller which expects the function should always
+does something. Thus if the function error injection skips whole of the
+function, the expectation is betrayed and causes an unexpected error.</p>
+</section>
+<section id="type-of-the-error-injectable-functions">
+<h3>Type of the Error Injectable Functions<a class="headerlink" href="#type-of-the-error-injectable-functions" title="Link to this heading">¶</a></h3>
+<p>Each error injectable functions will have the error type specified by the
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">ALLOW_ERROR_INJECTION()</span></code> macro. You have to choose it carefully if you add
+a new error injectable function. If the wrong error type is chosen, the
+kernel may crash because it may not be able to handle the error.
+There are 4 types of errors defined in include/asm-generic/error-injection.h</p>
+<dl class="simple">
+<dt>EI_ETYPE_NULL</dt><dd><p>This function will return <cite>NULL</cite> if it fails. e.g. return an allocated
+object address.</p>
+</dd>
+<dt>EI_ETYPE_ERRNO</dt><dd><p>This function will return an <cite>-errno</cite> error code if it fails. e.g. return
+-EINVAL if the input is wrong. This will include the functions which will
+return an address which encodes <cite>-errno</cite> by <a class="reference internal" href="../core-api/kernel-api.html#c.ERR_PTR" title="ERR_PTR"><code class="xref c c-func docutils literal notranslate"><span class="pre">ERR_PTR()</span></code></a> macro.</p>
+</dd>
+<dt>EI_ETYPE_ERRNO_NULL</dt><dd><p>This function will return an <cite>-errno</cite> or <cite>NULL</cite> if it fails. If the caller
+of this function checks the return value with <a class="reference internal" href="../core-api/kernel-api.html#c.IS_ERR_OR_NULL" title="IS_ERR_OR_NULL"><code class="xref c c-func docutils literal notranslate"><span class="pre">IS_ERR_OR_NULL()</span></code></a> macro, this
+type will be appropriate.</p>
+</dd>
+<dt>EI_ETYPE_TRUE</dt><dd><p>This function will return <cite>true</cite> (non-zero positive value) if it fails.</p>
+</dd>
+</dl>
+<p>If you specifies a wrong type, for example, EI_TYPE_ERRNO for the function
+which returns an allocated object, it may cause a problem because the returned
+value is not an object address and the caller can not access to the address.</p>
+</section>
+</section>
+<section id="how-to-add-new-fault-injection-capability">
+<h2>How to add new fault injection capability<a class="headerlink" href="#how-to-add-new-fault-injection-capability" title="Link to this heading">¶</a></h2>
+<ul>
+<li><p>#include &lt;linux/fault-inject.h&gt;</p></li>
+<li><p>define the fault attributes</p>
+<p>DECLARE_FAULT_ATTR(name);</p>
+<p>Please see the definition of <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">fault_attr</span></code> in fault-inject.h
+for details.</p>
+</li>
+<li><p>provide a way to configure fault attributes</p></li>
+<li><p>boot option</p>
+<p>If you need to enable the fault injection capability from boot time, you can
+provide boot option to configure it. There is a helper function for it:</p>
+<blockquote>
+<div><p>setup_fault_attr(attr, str);</p>
+</div></blockquote>
+</li>
+<li><p>debugfs entries</p>
+<p>failslab, fail_page_alloc, fail_usercopy, and fail_make_request use this way.
+Helper functions:</p>
+<blockquote>
+<div><p>fault_create_debugfs_attr(name, parent, attr);</p>
+</div></blockquote>
+</li>
+<li><p>module parameters</p>
+<p>If the scope of the fault injection capability is limited to a
+single kernel module, it is better to provide module parameters to
+configure the fault attributes.</p>
+</li>
+<li><p>add a hook to insert failures</p>
+<p>Upon <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">should_fail()</span></code> returning true, client code should inject a failure:</p>
+<blockquote>
+<div><p>should_fail(attr, size);</p>
+</div></blockquote>
+</li>
+</ul>
+</section>
+<section id="application-examples">
+<h2>Application Examples<a class="headerlink" href="#application-examples" title="Link to this heading">¶</a></h2>
+<ul>
+<li><p>Inject slab allocation failures into module init/exit code:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#!/bin/bash
+
+FAILTYPE=failslab
+echo Y &gt; /sys/kernel/debug/$FAILTYPE/task-filter
+echo 10 &gt; /sys/kernel/debug/$FAILTYPE/probability
+echo 100 &gt; /sys/kernel/debug/$FAILTYPE/interval
+echo -1 &gt; /sys/kernel/debug/$FAILTYPE/times
+echo 0 &gt; /sys/kernel/debug/$FAILTYPE/space
+echo 2 &gt; /sys/kernel/debug/$FAILTYPE/verbose
+echo Y &gt; /sys/kernel/debug/$FAILTYPE/ignore-gfp-wait
+
+faulty_system()
+{
+    bash -c &quot;echo 1 &gt; /proc/self/make-it-fail &amp;&amp; exec $*&quot;
+}
+
+if [ $# -eq 0 ]
+then
+    echo &quot;Usage: $0 modulename [ modulename ... ]&quot;
+    exit 1
+fi
+
+for m in $*
+do
+    echo inserting $m...
+    faulty_system modprobe $m
+
+    echo removing $m...
+    faulty_system modprobe -r $m
+done
+</pre></div>
+</div>
+</li>
+</ul>
+<hr class="docutils" />
+<ul>
+<li><p>Inject page allocation failures only for a specific module:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#!/bin/bash
+
+FAILTYPE=fail_page_alloc
+module=$1
+
+if [ -z $module ]
+then
+    echo &quot;Usage: $0 &lt;modulename&gt;&quot;
+    exit 1
+fi
+
+modprobe $module
+
+if [ ! -d /sys/module/$module/sections ]
+then
+    echo Module $module is not loaded
+    exit 1
+fi
+
+cat /sys/module/$module/sections/.text &gt; /sys/kernel/debug/$FAILTYPE/require-start
+cat /sys/module/$module/sections/.data &gt; /sys/kernel/debug/$FAILTYPE/require-end
+
+echo N &gt; /sys/kernel/debug/$FAILTYPE/task-filter
+echo 10 &gt; /sys/kernel/debug/$FAILTYPE/probability
+echo 100 &gt; /sys/kernel/debug/$FAILTYPE/interval
+echo -1 &gt; /sys/kernel/debug/$FAILTYPE/times
+echo 0 &gt; /sys/kernel/debug/$FAILTYPE/space
+echo 2 &gt; /sys/kernel/debug/$FAILTYPE/verbose
+echo Y &gt; /sys/kernel/debug/$FAILTYPE/ignore-gfp-wait
+echo Y &gt; /sys/kernel/debug/$FAILTYPE/ignore-gfp-highmem
+echo 10 &gt; /sys/kernel/debug/$FAILTYPE/stacktrace-depth
+
+trap &quot;echo 0 &gt; /sys/kernel/debug/$FAILTYPE/probability&quot; SIGINT SIGTERM EXIT
+
+echo &quot;Injecting errors into the module $module... (interrupt to stop)&quot;
+sleep 1000000
+</pre></div>
+</div>
+</li>
+</ul>
+<hr class="docutils" />
+<ul>
+<li><p>Inject open_ctree error while btrfs mount:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#!/bin/bash
+
+rm -f testfile.img
+dd if=/dev/zero of=testfile.img bs=1M seek=1000 count=1
+DEVICE=$(losetup --show -f testfile.img)
+mkfs.btrfs -f $DEVICE
+mkdir -p tmpmnt
+
+FAILTYPE=fail_function
+FAILFUNC=open_ctree
+echo $FAILFUNC &gt; /sys/kernel/debug/$FAILTYPE/inject
+printf %#x -12 &gt; /sys/kernel/debug/$FAILTYPE/$FAILFUNC/retval
+echo N &gt; /sys/kernel/debug/$FAILTYPE/task-filter
+echo 100 &gt; /sys/kernel/debug/$FAILTYPE/probability
+echo 0 &gt; /sys/kernel/debug/$FAILTYPE/interval
+echo -1 &gt; /sys/kernel/debug/$FAILTYPE/times
+echo 0 &gt; /sys/kernel/debug/$FAILTYPE/space
+echo 1 &gt; /sys/kernel/debug/$FAILTYPE/verbose
+
+mount -t btrfs $DEVICE tmpmnt
+if [ $? -ne 0 ]
+then
+    echo &quot;SUCCESS!&quot;
+else
+    echo &quot;FAILED!&quot;
+    umount tmpmnt
+fi
+
+echo &gt; /sys/kernel/debug/$FAILTYPE/inject
+
+rmdir tmpmnt
+losetup -d $DEVICE
+rm testfile.img
+</pre></div>
+</div>
+</li>
+</ul>
+<hr class="docutils" />
+<ul>
+<li><p>Inject only skbuff allocation failures</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># mark skbuff_head_cache as faulty
+echo 1 &gt; /sys/kernel/slab/skbuff_head_cache/failslab
+# Turn on cache filter (off by default)
+echo 1 &gt; /sys/kernel/debug/failslab/cache-filter
+# Turn on fault injection
+echo 1 &gt; /sys/kernel/debug/failslab/times
+echo 1 &gt; /sys/kernel/debug/failslab/probability
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
+<section id="tool-to-run-command-with-failslab-or-fail-page-alloc">
+<h2>Tool to run command with failslab or fail_page_alloc<a class="headerlink" href="#tool-to-run-command-with-failslab-or-fail-page-alloc" title="Link to this heading">¶</a></h2>
+<p>In order to make it easier to accomplish the tasks mentioned above, we can use
+tools/testing/fault-injection/failcmd.sh.  Please run a command
+“./tools/testing/fault-injection/failcmd.sh --help” for more information and
+see the following examples.</p>
+<p>Examples:</p>
+<p>Run a command “make -C tools/testing/selftests/ run_tests” with injecting slab
+allocation failure:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># ./tools/testing/fault-injection/failcmd.sh \
+        -- make -C tools/testing/selftests/ run_tests
+</pre></div>
+</div>
+<p>Same as above except to specify 100 times failures at most instead of one time
+at most by default:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># ./tools/testing/fault-injection/failcmd.sh --times=100 \
+        -- make -C tools/testing/selftests/ run_tests
+</pre></div>
+</div>
+<p>Same as above except to inject page allocation failure instead of slab
+allocation failure:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># env FAILCMD_TYPE=fail_page_alloc \
+        ./tools/testing/fault-injection/failcmd.sh --times=100 \
+        -- make -C tools/testing/selftests/ run_tests
+</pre></div>
+</div>
+</section>
+<section id="systematic-faults-using-fail-nth">
+<h2>Systematic faults using fail-nth<a class="headerlink" href="#systematic-faults-using-fail-nth" title="Link to this heading">¶</a></h2>
+<p>The following code systematically faults 0-th, 1-st, 2-nd and so on
+capabilities in the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">socketpair()</span></code> system call:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;sys/types.h&gt;
+#include &lt;sys/stat.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;sys/syscall.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;string.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;errno.h&gt;
+
+int main()
+{
+      int i, err, res, fail_nth, fds[2];
+      char buf[128];
+
+      system(&quot;echo N &gt; /sys/kernel/debug/failslab/ignore-gfp-wait&quot;);
+      sprintf(buf, &quot;/proc/self/task/%ld/fail-nth&quot;, syscall(SYS_gettid));
+      fail_nth = open(buf, O_RDWR);
+      for (i = 1;; i++) {
+              sprintf(buf, &quot;%d&quot;, i);
+              write(fail_nth, buf, strlen(buf));
+              res = socketpair(AF_LOCAL, SOCK_STREAM, 0, fds);
+              err = errno;
+              pread(fail_nth, buf, sizeof(buf), 0);
+              if (res == 0) {
+                      close(fds[0]);
+                      close(fds[1]);
+              }
+              printf(&quot;%d-th fault %c: res=%d/%d\n&quot;, i, atoi(buf) ? &#39;N&#39; : &#39;Y&#39;,
+                      res, err);
+              if (atoi(buf))
+                      break;
+      }
+      return 0;
+}
+</pre></div>
+</div>
+<p>An example output:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>1-th fault Y: res=-1/23
+2-th fault Y: res=-1/23
+3-th fault Y: res=-1/12
+4-th fault Y: res=-1/12
+5-th fault Y: res=-1/23
+6-th fault Y: res=-1/23
+7-th fault Y: res=-1/23
+8-th fault Y: res=-1/12
+9-th fault Y: res=-1/12
+10-th fault Y: res=-1/12
+11-th fault Y: res=-1/12
+12-th fault Y: res=-1/12
+13-th fault Y: res=-1/12
+14-th fault Y: res=-1/12
+15-th fault Y: res=-1/12
+16-th fault N: res=0/12
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/fault-injection/fault-injection.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

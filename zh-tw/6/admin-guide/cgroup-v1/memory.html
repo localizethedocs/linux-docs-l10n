@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Memory Resource Controller &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/cgroup-v1/memory.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜尋" href="../../search.html" />
+    <link rel="next" title="Misc controller" href="misc.html" />
+    <link rel="prev" title="Memory Resource Controller(Memcg) Implementation Memo" href="memcg_test.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#core-kernel-subsystems">Core-kernel subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v2.html">Control Group v2</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Control Groups version 1</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cpu-load.html">CPU load</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">記憶體管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../module-signing.html">Kernel module signing facility</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../namespaces/index.html">Namespaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../numastat.html">Numa policy hit/miss statistics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pm/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../syscall-user-dispatch.html">Syscall User Dispatch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../binfmt-misc.html">Kernel Support for miscellaneous Binary Formats (binfmt_misc)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../java.html">Java(tm) Binary Kernel Support for Linux v1.03</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mono.html">Mono(tm) Binary Kernel Support for Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/admin-guide/cgroup-v1/memory.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="memory-resource-controller">
+<h1>Memory Resource Controller<a class="headerlink" href="#memory-resource-controller" title="連結到這個標頭">¶</a></h1>
+<div class="admonition caution">
+<p class="admonition-title">警示</p>
+<p>This document is hopelessly outdated and it asks for a complete
+rewrite. It still contains a useful information so we are keeping it
+here but make sure to check the current code if you need a deeper
+understanding.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>The Memory Resource Controller has generically been referred to as the
+memory controller in this document. Do not confuse memory controller
+used here with the memory controller that is used in hardware.</p>
+</div>
+<div class="admonition hint">
+<p class="admonition-title">提示</p>
+<p>When we mention a cgroup (cgroupfs's directory) with memory controller,
+we call it &quot;memory cgroup&quot;. When you see git-log and source code, you'll
+see patch's title and function names tend to use &quot;memcg&quot;.
+In this document, we avoid using it.</p>
+</div>
+<section id="benefits-and-purpose-of-the-memory-controller">
+<h2>Benefits and Purpose of the memory controller<a class="headerlink" href="#benefits-and-purpose-of-the-memory-controller" title="連結到這個標頭">¶</a></h2>
+<p>The memory controller isolates the memory behaviour of a group of tasks
+from the rest of the system. The article on LWN <a class="footnote-reference brackets" href="#id14" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>12<span class="fn-bracket">]</span></a> mentions some probable
+uses of the memory controller. The memory controller can be used to</p>
+<ol class="loweralpha simple">
+<li><p>Isolate an application or a group of applications
+Memory-hungry applications can be isolated and limited to a smaller
+amount of memory.</p></li>
+<li><p>Create a cgroup with a limited amount of memory; this can be used
+as a good alternative to booting with mem=XXXX.</p></li>
+<li><p>Virtualization solutions can control the amount of memory they want
+to assign to a virtual machine instance.</p></li>
+<li><p>A CD/DVD burner could control the amount of memory used by the
+rest of the system to ensure that burning does not fail due to lack
+of available memory.</p></li>
+<li><p>There are several other use cases; find one or use the controller just
+for fun (to learn and hack on the VM subsystem).</p></li>
+</ol>
+<p>Current Status: linux-2.6.34-mmotm(development version of 2010/April)</p>
+<p>Features:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>accounting anonymous pages, file caches, swap caches usage and limiting them.</p></li>
+<li><p>pages are linked to per-memcg LRU exclusively, and there is no global LRU.</p></li>
+<li><p>optionally, memory+swap usage can be accounted and limited.</p></li>
+<li><p>hierarchical accounting</p></li>
+<li><p>soft limit</p></li>
+<li><p>moving (recharging) account at moving a task is selectable.</p></li>
+<li><p>usage threshold notifier</p></li>
+<li><p>memory pressure notifier</p></li>
+<li><p>oom-killer disable knob and oom-notifier</p></li>
+<li><p>Root cgroup has no limit controls.</p></li>
+</ul>
+<p>Kernel memory support is a work in progress, and the current version provides
+basically functionality. (See <a class="reference internal" href="#cgroup-v1-memory-kernel-extension"><span class="std std-ref">section 2.7</span></a>)</p>
+</div></blockquote>
+<p>Brief summary of control files.</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>tasks</p></td>
+<td><p>attach a task(thread) and show list of
+threads</p></td>
+</tr>
+<tr class="row-even"><td><p>cgroup.procs</p></td>
+<td><p>show list of processes</p></td>
+</tr>
+<tr class="row-odd"><td><p>cgroup.event_control</p></td>
+<td><p>an interface for <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">event_fd()</span></code>
+This knob is not available on CONFIG_PREEMPT_RT systems.</p></td>
+</tr>
+<tr class="row-even"><td><p>memory.usage_in_bytes</p></td>
+<td><p>show current usage for memory
+(See 5.5 for details)</p></td>
+</tr>
+<tr class="row-odd"><td><p>memory.memsw.usage_in_bytes</p></td>
+<td><p>show current usage for memory+Swap
+(See 5.5 for details)</p></td>
+</tr>
+<tr class="row-even"><td><p>memory.limit_in_bytes</p></td>
+<td><p>set/show limit of memory usage</p></td>
+</tr>
+<tr class="row-odd"><td><p>memory.memsw.limit_in_bytes</p></td>
+<td><p>set/show limit of memory+Swap usage</p></td>
+</tr>
+<tr class="row-even"><td><p>memory.failcnt</p></td>
+<td><p>show the number of memory usage hits limits</p></td>
+</tr>
+<tr class="row-odd"><td><p>memory.memsw.failcnt</p></td>
+<td><p>show the number of memory+Swap hits limits</p></td>
+</tr>
+<tr class="row-even"><td><p>memory.max_usage_in_bytes</p></td>
+<td><p>show max memory usage recorded</p></td>
+</tr>
+<tr class="row-odd"><td><p>memory.memsw.max_usage_in_bytes</p></td>
+<td><p>show max memory+Swap usage recorded</p></td>
+</tr>
+<tr class="row-even"><td><p>memory.soft_limit_in_bytes</p></td>
+<td><p>set/show soft limit of memory usage
+This knob is not available on CONFIG_PREEMPT_RT systems.
+This knob is deprecated and shouldn't be
+used.</p></td>
+</tr>
+<tr class="row-odd"><td><p>memory.stat</p></td>
+<td><p>show various statistics</p></td>
+</tr>
+<tr class="row-even"><td><p>memory.use_hierarchy</p></td>
+<td><p>set/show hierarchical account enabled
+This knob is deprecated and shouldn't be
+used.</p></td>
+</tr>
+<tr class="row-odd"><td><p>memory.force_empty</p></td>
+<td><p>trigger forced page reclaim</p></td>
+</tr>
+<tr class="row-even"><td><p>memory.pressure_level</p></td>
+<td><p>set memory pressure notifications
+This knob is deprecated and shouldn't be
+used.</p></td>
+</tr>
+<tr class="row-odd"><td><p>memory.swappiness</p></td>
+<td><p>set/show swappiness parameter of vmscan
+(See sysctl's vm.swappiness)
+Per memcg knob does not exist in cgroup v2.</p></td>
+</tr>
+<tr class="row-even"><td><p>memory.move_charge_at_immigrate</p></td>
+<td><p>This knob is deprecated.</p></td>
+</tr>
+<tr class="row-odd"><td><p>memory.oom_control</p></td>
+<td><p>set/show oom controls.
+This knob is deprecated and shouldn't be
+used.</p></td>
+</tr>
+<tr class="row-even"><td><p>memory.numa_stat</p></td>
+<td><p>show the number of memory usage per numa
+node</p></td>
+</tr>
+<tr class="row-odd"><td><p>memory.kmem.limit_in_bytes</p></td>
+<td><p>Deprecated knob to set and read the kernel
+memory hard limit. Kernel hard limit is not
+supported since 5.16. Writing any value to
+do file will not have any effect same as if
+nokmem kernel parameter was specified.
+Kernel memory is still charged and reported
+by memory.kmem.usage_in_bytes.</p></td>
+</tr>
+<tr class="row-even"><td><p>memory.kmem.usage_in_bytes</p></td>
+<td><p>show current kernel memory allocation</p></td>
+</tr>
+<tr class="row-odd"><td><p>memory.kmem.failcnt</p></td>
+<td><p>show the number of kernel memory usage
+hits limits</p></td>
+</tr>
+<tr class="row-even"><td><p>memory.kmem.max_usage_in_bytes</p></td>
+<td><p>show max kernel memory usage recorded</p></td>
+</tr>
+<tr class="row-odd"><td><p>memory.kmem.tcp.limit_in_bytes</p></td>
+<td><p>set/show hard limit for tcp buf memory
+This knob is deprecated and shouldn't be
+used.</p></td>
+</tr>
+<tr class="row-even"><td><p>memory.kmem.tcp.usage_in_bytes</p></td>
+<td><p>show current tcp buf memory allocation
+This knob is deprecated and shouldn't be
+used.</p></td>
+</tr>
+<tr class="row-odd"><td><p>memory.kmem.tcp.failcnt</p></td>
+<td><p>show the number of tcp buf memory usage
+hits limits
+This knob is deprecated and shouldn't be
+used.</p></td>
+</tr>
+<tr class="row-even"><td><p>memory.kmem.tcp.max_usage_in_bytes</p></td>
+<td><p>show max tcp buf memory usage recorded
+This knob is deprecated and shouldn't be
+used.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="history">
+<h2>1. History<a class="headerlink" href="#history" title="連結到這個標頭">¶</a></h2>
+<p>The memory controller has a long history. A request for comments for the memory
+controller was posted by Balbir Singh <a class="footnote-reference brackets" href="#id8" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>. At the time the RFC was posted
+there were several implementations for memory control. The goal of the
+RFC was to build consensus and agreement for the minimal features required
+for memory control. The first RSS controller was posted by Balbir Singh <a class="footnote-reference brackets" href="#id9" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>
+in Feb 2007. Pavel Emelianov <a class="footnote-reference brackets" href="#id10" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a> <a class="footnote-reference brackets" href="#id11" id="id5" role="doc-noteref"><span class="fn-bracket">[</span>4<span class="fn-bracket">]</span></a> <a class="footnote-reference brackets" href="#id12" id="id6" role="doc-noteref"><span class="fn-bracket">[</span>5<span class="fn-bracket">]</span></a> has since posted three versions
+of the RSS controller. At OLS, at the resource management BoF, everyone
+suggested that we handle both page cache and RSS together. Another request was
+raised to allow user space handling of OOM. The current memory controller is
+at version 6; it combines both mapped (RSS) and unmapped Page
+Cache Control <a class="footnote-reference brackets" href="#id13" id="id7" role="doc-noteref"><span class="fn-bracket">[</span>11<span class="fn-bracket">]</span></a>.</p>
+</section>
+<section id="memory-control">
+<h2>2. Memory Control<a class="headerlink" href="#memory-control" title="連結到這個標頭">¶</a></h2>
+<p>Memory is a unique resource in the sense that it is present in a limited
+amount. If a task requires a lot of CPU processing, the task can spread
+its processing over a period of hours, days, months or years, but with
+memory, the same physical memory needs to be reused to accomplish the task.</p>
+<p>The memory controller implementation has been divided into phases. These
+are:</p>
+<ol class="arabic simple">
+<li><p>Memory controller</p></li>
+<li><p>mlock(2) controller</p></li>
+<li><p>Kernel user memory accounting and slab control</p></li>
+<li><p>user mappings length controller</p></li>
+</ol>
+<p>The memory controller is the first controller developed.</p>
+<section id="design">
+<h3>2.1. Design<a class="headerlink" href="#design" title="連結到這個標頭">¶</a></h3>
+<p>The core of the design is a counter called the page_counter. The
+page_counter tracks the current memory usage and limit of the group of
+processes associated with the controller. Each cgroup has a memory controller
+specific data structure (mem_cgroup) associated with it.</p>
+</section>
+<section id="accounting">
+<h3>2.2. Accounting<a class="headerlink" href="#accounting" title="連結到這個標頭">¶</a></h3>
+<div class="literal-block-wrapper docutils container" id="id15">
+<div class="code-block-caption"><span class="caption-text">Figure 1: Hierarchy of Accounting</span><a class="headerlink" href="#id15" title="連結到這個程式碼">¶</a></div>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>             +--------------------+
+             |  mem_cgroup        |
+             |  (page_counter)    |
+             +--------------------+
+              /            ^      \
+             /             |       \
+        +---------------+  |        +---------------+
+        | mm_struct     |  |....    | mm_struct     |
+        |               |  |        |               |
+        +---------------+  |        +---------------+
+                           |
+                           + --------------+
+                                           |
+        +---------------+           +------+--------+
+        | page          +----------&gt;  page_cgroup|
+        |               |           |               |
+        +---------------+           +---------------+
+</pre></div>
+</div>
+</div>
+<p>Figure 1 shows the important aspects of the controller</p>
+<ol class="arabic simple">
+<li><p>Accounting happens per cgroup</p></li>
+<li><p>Each mm_struct knows about which cgroup it belongs to</p></li>
+<li><p>Each page has a pointer to the page_cgroup, which in turn knows the
+cgroup it belongs to</p></li>
+</ol>
+<p>The accounting is done as follows: <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">mem_cgroup_charge_common()</span></code> is invoked to
+set up the necessary data structures and check if the cgroup that is being
+charged is over its limit. If it is, then reclaim is invoked on the cgroup.
+More details can be found in the reclaim section of this document.
+If everything goes well, a page meta-data-structure called page_cgroup is
+updated. page_cgroup has its own LRU on cgroup.
+(*) page_cgroup structure is allocated at boot/memory-hotplug time.</p>
+</section>
+<section id="accounting-details">
+<h3>2.2.1 Accounting details<a class="headerlink" href="#accounting-details" title="連結到這個標頭">¶</a></h3>
+<p>All mapped anon pages (RSS) and cache pages (Page Cache) are accounted.
+Some pages which are never reclaimable and will not be on the LRU
+are not accounted. We just account pages under usual VM management.</p>
+<p>RSS pages are accounted at page_fault unless they've already been accounted
+for earlier. A file page will be accounted for as Page Cache when it's
+inserted into inode (xarray). While it's mapped into the page tables of
+processes, duplicate accounting is carefully avoided.</p>
+<p>An RSS page is unaccounted when it's fully unmapped. A PageCache page is
+unaccounted when it's removed from xarray. Even if RSS pages are fully
+unmapped (by kswapd), they may exist as SwapCache in the system until they
+are really freed. Such SwapCaches are also accounted.
+A swapped-in page is accounted after adding into swapcache.</p>
+<p>Note: The kernel does swapin-readahead and reads multiple swaps at once.
+Since page's memcg recorded into swap whatever memsw enabled, the page will
+be accounted after swapin.</p>
+<p>At page migration, accounting information is kept.</p>
+<p>Note: we just account pages-on-LRU because our purpose is to control amount
+of used pages; not-on-LRU pages tend to be out-of-control from VM view.</p>
+</section>
+<section id="shared-page-accounting">
+<h3>2.3 Shared Page Accounting<a class="headerlink" href="#shared-page-accounting" title="連結到這個標頭">¶</a></h3>
+<p>Shared pages are accounted on the basis of the first touch approach. The
+cgroup that first touches a page is accounted for the page. The principle
+behind this approach is that a cgroup that aggressively uses a shared
+page will eventually get charged for it (once it is uncharged from
+the cgroup that brought it in -- this will happen on memory pressure).</p>
+</section>
+<section id="swap-extension">
+<h3>2.4 Swap Extension<a class="headerlink" href="#swap-extension" title="連結到這個標頭">¶</a></h3>
+<p>Swap usage is always recorded for each of cgroup. Swap Extension allows you to
+read and limit it.</p>
+<p>When CONFIG_SWAP is enabled, following files are added.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>memory.memsw.usage_in_bytes.</p></li>
+<li><p>memory.memsw.limit_in_bytes.</p></li>
+</ul>
+</div></blockquote>
+<p>memsw means memory+swap. Usage of memory+swap is limited by
+memsw.limit_in_bytes.</p>
+<p>Example: Assume a system with 4G of swap. A task which allocates 6G of memory
+(by mistake) under 2G memory limitation will use all swap.
+In this case, setting memsw.limit_in_bytes=3G will prevent bad use of swap.
+By using the memsw limit, you can avoid system OOM which can be caused by swap
+shortage.</p>
+<section id="why-memory-swap-rather-than-swap">
+<h4>2.4.1 why 'memory+swap' rather than swap<a class="headerlink" href="#why-memory-swap-rather-than-swap" title="連結到這個標頭">¶</a></h4>
+<p>The global LRU(kswapd) can swap out arbitrary pages. Swap-out means
+to move account from memory to swap...there is no change in usage of
+memory+swap. In other words, when we want to limit the usage of swap without
+affecting global LRU, memory+swap limit is better than just limiting swap from
+an OS point of view.</p>
+</section>
+<section id="what-happens-when-a-cgroup-hits-memory-memsw-limit-in-bytes">
+<h4>2.4.2. What happens when a cgroup hits memory.memsw.limit_in_bytes<a class="headerlink" href="#what-happens-when-a-cgroup-hits-memory-memsw-limit-in-bytes" title="連結到這個標頭">¶</a></h4>
+<p>When a cgroup hits memory.memsw.limit_in_bytes, it's useless to do swap-out
+in this cgroup. Then, swap-out will not be done by cgroup routine and file
+caches are dropped. But as mentioned above, global LRU can do swapout memory
+from it for sanity of the system's memory management state. You can't forbid
+it by cgroup.</p>
+</section>
+</section>
+<section id="reclaim">
+<h3>2.5 Reclaim<a class="headerlink" href="#reclaim" title="連結到這個標頭">¶</a></h3>
+<p>Each cgroup maintains a per cgroup LRU which has the same structure as
+global VM. When a cgroup goes over its limit, we first try
+to reclaim memory from the cgroup so as to make space for the new
+pages that the cgroup has touched. If the reclaim is unsuccessful,
+an OOM routine is invoked to select and kill the bulkiest task in the
+cgroup. (See <a class="reference internal" href="#cgroup-v1-memory-oom-control"><span class="std std-ref">10. OOM Control</span></a> below.)</p>
+<p>The reclaim algorithm has not been modified for cgroups, except that
+pages that are selected for reclaiming come from the per-cgroup LRU
+list.</p>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>Reclaim does not work for the root cgroup, since we cannot set any
+limits on the root cgroup.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>When panic_on_oom is set to &quot;2&quot;, the whole system will panic.</p>
+</div>
+<p>When oom event notifier is registered, event will be delivered.
+(See <a class="reference internal" href="#cgroup-v1-memory-oom-control"><span class="std std-ref">oom_control</span></a> section)</p>
+</section>
+<section id="locking">
+<h3>2.6 Locking<a class="headerlink" href="#locking" title="連結到這個標頭">¶</a></h3>
+<p>Lock order is as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>folio_lock
+  mm-&gt;page_table_lock or split pte_lock
+    folio_memcg_lock (memcg-&gt;move_lock)
+      mapping-&gt;i_pages lock
+        lruvec-&gt;lru_lock.
+</pre></div>
+</div>
+<p>Per-node-per-memcgroup LRU (cgroup's private LRU) is guarded by
+lruvec-&gt;lru_lock; the folio LRU flag is cleared before
+isolating a page from its LRU under lruvec-&gt;lru_lock.</p>
+</section>
+<section id="kernel-memory-extension">
+<span id="cgroup-v1-memory-kernel-extension"></span><h3>2.7 Kernel Memory Extension<a class="headerlink" href="#kernel-memory-extension" title="連結到這個標頭">¶</a></h3>
+<p>With the Kernel memory extension, the Memory Controller is able to limit
+the amount of kernel memory used by the system. Kernel memory is fundamentally
+different than user memory, since it can't be swapped out, which makes it
+possible to DoS the system by consuming too much of this precious resource.</p>
+<p>Kernel memory accounting is enabled for all memory cgroups by default. But
+it can be disabled system-wide by passing cgroup.memory=nokmem to the kernel
+at boot time. In this case, kernel memory will not be accounted at all.</p>
+<p>Kernel memory limits are not imposed for the root cgroup. Usage for the root
+cgroup may or may not be accounted. The memory used is accumulated into
+memory.kmem.usage_in_bytes, or in a separate counter when it makes sense.
+(currently only for tcp).</p>
+<p>The main &quot;kmem&quot; counter is fed into the main counter, so kmem charges will
+also be visible from the user counter.</p>
+<p>Currently no soft limit is implemented for kernel memory. It is future work
+to trigger slab reclaim when those limits are reached.</p>
+</section>
+<section id="current-kernel-memory-resources-accounted">
+<h3>2.7.1 Current Kernel Memory resources accounted<a class="headerlink" href="#current-kernel-memory-resources-accounted" title="連結到這個標頭">¶</a></h3>
+<dl class="simple">
+<dt>stack pages:</dt><dd><p>every process consumes some stack pages. By accounting into
+kernel memory, we prevent new processes from being created when the kernel
+memory usage is too high.</p>
+</dd>
+<dt>slab pages:</dt><dd><p>pages allocated by the SLAB or SLUB allocator are tracked. A copy
+of each kmem_cache is created every time the cache is touched by the first time
+from inside the memcg. The creation is done lazily, so some objects can still be
+skipped while the cache is being created. All objects in a slab page should
+belong to the same memcg. This only fails to hold when a task is migrated to a
+different memcg during the page allocation by the cache.</p>
+</dd>
+<dt>sockets memory pressure:</dt><dd><p>some sockets protocols have memory pressure
+thresholds. The Memory Controller allows them to be controlled individually
+per cgroup, instead of globally.</p>
+</dd>
+<dt>tcp memory pressure:</dt><dd><p>sockets memory pressure for the tcp protocol.</p>
+</dd>
+</dl>
+</section>
+<section id="common-use-cases">
+<h3>2.7.2 Common use cases<a class="headerlink" href="#common-use-cases" title="連結到這個標頭">¶</a></h3>
+<p>Because the &quot;kmem&quot; counter is fed to the main user counter, kernel memory can
+never be limited completely independently of user memory. Say &quot;U&quot; is the user
+limit, and &quot;K&quot; the kernel limit. There are three possible ways limits can be
+set:</p>
+<dl>
+<dt>U != 0, K = unlimited:</dt><dd><p>This is the standard memcg limitation mechanism already present before kmem
+accounting. Kernel memory is completely ignored.</p>
+</dd>
+<dt>U != 0, K &lt; U:</dt><dd><p>Kernel memory is a subset of the user memory. This setup is useful in
+deployments where the total amount of memory per-cgroup is overcommitted.
+Overcommitting kernel memory limits is definitely not recommended, since the
+box can still run out of non-reclaimable memory.
+In this case, the admin could set up K so that the sum of all groups is
+never greater than the total memory, and freely set U at the cost of his
+QoS.</p>
+<div class="admonition warning">
+<p class="admonition-title">警告</p>
+<p>In the current implementation, memory reclaim will NOT be triggered for
+a cgroup when it hits K while staying below U, which makes this setup
+impractical.</p>
+</div>
+</dd>
+<dt>U != 0, K &gt;= U:</dt><dd><p>Since kmem charges will also be fed to the user counter and reclaim will be
+triggered for the cgroup for both kinds of memory. This setup gives the
+admin a unified view of memory, and it is also useful for people who just
+want to track kernel memory usage.</p>
+</dd>
+</dl>
+</section>
+</section>
+<section id="user-interface">
+<h2>3. User Interface<a class="headerlink" href="#user-interface" title="連結到這個標頭">¶</a></h2>
+<p>To use the user interface:</p>
+<ol class="arabic">
+<li><p>Enable CONFIG_CGROUPS and CONFIG_MEMCG options</p></li>
+<li><p>Prepare the cgroups (see <a class="reference internal" href="cgroups.html#cgroups-why-needed"><span class="std std-ref">Why are cgroups needed?</span></a> for the background information):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># mount -t tmpfs none /sys/fs/cgroup
+# mkdir /sys/fs/cgroup/memory
+# mount -t cgroup none /sys/fs/cgroup/memory -o memory
+</pre></div>
+</div>
+</li>
+<li><p>Make the new group and move bash into it:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># mkdir /sys/fs/cgroup/memory/0
+# echo $$ &gt; /sys/fs/cgroup/memory/0/tasks
+</pre></div>
+</div>
+</li>
+<li><p>Since now we're in the 0 cgroup, we can alter the memory limit:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo 4M &gt; /sys/fs/cgroup/memory/0/memory.limit_in_bytes
+</pre></div>
+</div>
+<p>The limit can now be queried:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># cat /sys/fs/cgroup/memory/0/memory.limit_in_bytes
+4194304
+</pre></div>
+</div>
+</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>We can use a suffix (k, K, m, M, g or G) to indicate values in kilo,
+mega or gigabytes. (Here, Kilo, Mega, Giga are Kibibytes, Mebibytes,
+Gibibytes.)</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>We can write &quot;-1&quot; to reset the <code class="docutils literal notranslate"><span class="pre">*.limit_in_bytes(unlimited)</span></code>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>We cannot set limits on the root cgroup any more.</p>
+</div>
+<p>We can check the usage:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># cat /sys/fs/cgroup/memory/0/memory.usage_in_bytes
+1216512
+</pre></div>
+</div>
+<p>A successful write to this file does not guarantee a successful setting of
+this limit to the value written into the file. This can be due to a
+number of factors, such as rounding up to page boundaries or the total
+availability of memory on the system. The user is required to re-read
+this file after a write to guarantee the value committed by the kernel:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo 1 &gt; memory.limit_in_bytes
+# cat memory.limit_in_bytes
+4096
+</pre></div>
+</div>
+<p>The memory.failcnt field gives the number of times that the cgroup limit was
+exceeded.</p>
+<p>The memory.stat file gives accounting information. Now, the number of
+caches, RSS and Active pages/Inactive pages are shown.</p>
+</section>
+<section id="testing">
+<h2>4. Testing<a class="headerlink" href="#testing" title="連結到這個標頭">¶</a></h2>
+<p>For testing features and implementation, see <a class="reference internal" href="memcg_test.html"><span class="doc">Memory Resource Controller(Memcg) Implementation Memo</span></a>.</p>
+<p>Performance test is also important. To see pure memory controller's overhead,
+testing on tmpfs will give you good numbers of small overheads.
+Example: do kernel make on tmpfs.</p>
+<p>Page-fault scalability is also important. At measuring parallel
+page fault test, multi-process test may be better than multi-thread
+test because it has noise of shared objects/status.</p>
+<p>But the above two are testing extreme situations.
+Trying usual test under memory controller is always helpful.</p>
+<section id="troubleshooting">
+<span id="cgroup-v1-memory-test-troubleshoot"></span><h3>4.1 Troubleshooting<a class="headerlink" href="#troubleshooting" title="連結到這個標頭">¶</a></h3>
+<p>Sometimes a user might find that the application under a cgroup is
+terminated by the OOM killer. There are several causes for this:</p>
+<ol class="arabic simple">
+<li><p>The cgroup limit is too low (just too low to do anything useful)</p></li>
+<li><p>The user is using anonymous memory and swap is turned off or too low</p></li>
+</ol>
+<p>A sync followed by echo 1 &gt; /proc/sys/vm/drop_caches will help get rid of
+some of the pages cached in the cgroup (page cache pages).</p>
+<p>To know what happens, disabling OOM_Kill as per <a class="reference internal" href="#cgroup-v1-memory-oom-control"><span class="std std-ref">&quot;10. OOM Control&quot;</span></a> (below) and seeing what happens will be
+helpful.</p>
+</section>
+<section id="task-migration">
+<span id="cgroup-v1-memory-test-task-migration"></span><h3>4.2 Task migration<a class="headerlink" href="#task-migration" title="連結到這個標頭">¶</a></h3>
+<p>When a task migrates from one cgroup to another, its charge is not
+carried forward by default. The pages allocated from the original cgroup still
+remain charged to it, the charge is dropped when the page is freed or
+reclaimed.</p>
+<p>You can move charges of a task along with task migration.
+See <a class="reference internal" href="#cgroup-v1-memory-move-charges"><span class="std std-ref">8. &quot;Move charges at task migration&quot;</span></a></p>
+</section>
+<section id="removing-a-cgroup">
+<h3>4.3 Removing a cgroup<a class="headerlink" href="#removing-a-cgroup" title="連結到這個標頭">¶</a></h3>
+<p>A cgroup can be removed by rmdir, but as discussed in <a class="reference internal" href="#cgroup-v1-memory-test-troubleshoot"><span class="std std-ref">sections 4.1</span></a> and <a class="reference internal" href="#cgroup-v1-memory-test-task-migration"><span class="std std-ref">4.2</span></a>, a cgroup might have some charge
+associated with it, even though all tasks have migrated away from it. (because
+we charge against pages, not against tasks.)</p>
+<p>We move the stats to parent, and no change on the charge except uncharging
+from the child.</p>
+<p>Charges recorded in swap information is not updated at removal of cgroup.
+Recorded information is discarded and a cgroup which uses swap (swapcache)
+will be charged as a new owner of it.</p>
+</section>
+</section>
+<section id="misc-interfaces">
+<h2>5. Misc. interfaces<a class="headerlink" href="#misc-interfaces" title="連結到這個標頭">¶</a></h2>
+<section id="force-empty">
+<h3>5.1 force_empty<a class="headerlink" href="#force-empty" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p>memory.force_empty interface is provided to make cgroup's memory usage empty.
+When writing anything to this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo 0 &gt; memory.force_empty
+</pre></div>
+</div>
+<p>the cgroup will be reclaimed and as many pages reclaimed as possible.</p>
+<p>The typical use case for this interface is before calling <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rmdir()</span></code>.
+Though <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rmdir()</span></code> offlines memcg, but the memcg may still stay there due to
+charged file caches. Some out-of-use page caches may keep charged until
+memory pressure happens. If you want to avoid that, force_empty will be useful.</p>
+</div></blockquote>
+</section>
+<section id="stat-file">
+<h3>5.2 stat file<a class="headerlink" href="#stat-file" title="連結到這個標頭">¶</a></h3>
+<p>memory.stat file includes following statistics:</p>
+<blockquote>
+<div><ul>
+<li><p>per-memory cgroup local status</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>cache</p></td>
+<td><p># of bytes of page cache memory.</p></td>
+</tr>
+<tr class="row-even"><td><p>rss</p></td>
+<td><p># of bytes of anonymous and swap cache memory (includes
+transparent hugepages).</p></td>
+</tr>
+<tr class="row-odd"><td><p>rss_huge</p></td>
+<td><p># of bytes of anonymous transparent hugepages.</p></td>
+</tr>
+<tr class="row-even"><td><p>mapped_file</p></td>
+<td><p># of bytes of mapped file (includes tmpfs/shmem)</p></td>
+</tr>
+<tr class="row-odd"><td><p>pgpgin</p></td>
+<td><p># of charging events to the memory cgroup. The charging
+event happens each time a page is accounted as either mapped
+anon page(RSS) or cache page(Page Cache) to the cgroup.</p></td>
+</tr>
+<tr class="row-even"><td><p>pgpgout</p></td>
+<td><p># of uncharging events to the memory cgroup. The uncharging
+event happens each time a page is unaccounted from the
+cgroup.</p></td>
+</tr>
+<tr class="row-odd"><td><p>swap</p></td>
+<td><p># of bytes of swap usage</p></td>
+</tr>
+<tr class="row-even"><td><p>swapcached</p></td>
+<td><p># of bytes of swap cached in memory</p></td>
+</tr>
+<tr class="row-odd"><td><p>dirty</p></td>
+<td><p># of bytes that are waiting to get written back to the disk.</p></td>
+</tr>
+<tr class="row-even"><td><p>writeback</p></td>
+<td><p># of bytes of file/anon cache that are queued for syncing to
+disk.</p></td>
+</tr>
+<tr class="row-odd"><td><p>inactive_anon</p></td>
+<td><p># of bytes of anonymous and swap cache memory on inactive
+LRU list.</p></td>
+</tr>
+<tr class="row-even"><td><p>active_anon</p></td>
+<td><p># of bytes of anonymous and swap cache memory on active
+LRU list.</p></td>
+</tr>
+<tr class="row-odd"><td><p>inactive_file</p></td>
+<td><p># of bytes of file-backed memory and MADV_FREE anonymous
+memory (LazyFree pages) on inactive LRU list.</p></td>
+</tr>
+<tr class="row-even"><td><p>active_file</p></td>
+<td><p># of bytes of file-backed memory on active LRU list.</p></td>
+</tr>
+<tr class="row-odd"><td><p>unevictable</p></td>
+<td><p># of bytes of memory that cannot be reclaimed (mlocked etc).</p></td>
+</tr>
+</tbody>
+</table>
+</li>
+<li><p>status considering hierarchy (see memory.use_hierarchy settings):</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>hierarchical_memory_limit</p></td>
+<td><p># of bytes of memory limit with regard to
+hierarchy
+under which the memory cgroup is</p></td>
+</tr>
+<tr class="row-even"><td><p>hierarchical_memsw_limit</p></td>
+<td><p># of bytes of memory+swap limit with regard to
+hierarchy under which memory cgroup is.</p></td>
+</tr>
+<tr class="row-odd"><td><p>total_&lt;counter&gt;</p></td>
+<td><p># hierarchical version of &lt;counter&gt;, which in
+addition to the cgroup's own value includes the
+sum of all hierarchical children's values of
+&lt;counter&gt;, i.e. total_cache</p></td>
+</tr>
+</tbody>
+</table>
+</li>
+<li><p>additional vm parameters (depends on CONFIG_DEBUG_VM):</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>recent_rotated_anon</p></td>
+<td><p>VM internal parameter. (see mm/vmscan.c)</p></td>
+</tr>
+<tr class="row-even"><td><p>recent_rotated_file</p></td>
+<td><p>VM internal parameter. (see mm/vmscan.c)</p></td>
+</tr>
+<tr class="row-odd"><td><p>recent_scanned_anon</p></td>
+<td><p>VM internal parameter. (see mm/vmscan.c)</p></td>
+</tr>
+<tr class="row-even"><td><p>recent_scanned_file</p></td>
+<td><p>VM internal parameter. (see mm/vmscan.c)</p></td>
+</tr>
+</tbody>
+</table>
+</li>
+</ul>
+</div></blockquote>
+<div class="admonition hint">
+<p class="admonition-title">提示</p>
+<p>recent_rotated means recent frequency of LRU rotation.
+recent_scanned means recent # of scans to LRU.
+showing for better debug please see the code for meanings.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>Only anonymous and swap cache memory is listed as part of 'rss' stat.
+This should not be confused with the true 'resident set size' or the
+amount of physical memory used by the cgroup.</p>
+<p>'rss + mapped_file&quot; will give you resident set size of cgroup.</p>
+<p>Note that some kernel configurations might account complete larger
+allocations (e.g., THP) towards 'rss' and 'mapped_file', even if
+only some, but not all that memory is mapped.</p>
+<p>(Note: file and shmem may be shared among other cgroups. In that case,
+mapped_file is accounted only when the memory cgroup is owner of page
+cache.)</p>
+</div>
+</section>
+<section id="swappiness">
+<h3>5.3 swappiness<a class="headerlink" href="#swappiness" title="連結到這個標頭">¶</a></h3>
+<p>Overrides /proc/sys/vm/swappiness for the particular group. The tunable
+in the root cgroup corresponds to the global swappiness setting.</p>
+<p>Please note that unlike during the global reclaim, limit reclaim
+enforces that 0 swappiness really prevents from any swapping even if
+there is a swap storage available. This might lead to memcg OOM killer
+if there are no file pages to reclaim.</p>
+</section>
+<section id="failcnt">
+<h3>5.4 failcnt<a class="headerlink" href="#failcnt" title="連結到這個標頭">¶</a></h3>
+<p>A memory cgroup provides memory.failcnt and memory.memsw.failcnt files.
+This failcnt(== failure count) shows the number of times that a usage counter
+hit its limit. When a memory cgroup hits a limit, failcnt increases and
+memory under it will be reclaimed.</p>
+<p>You can reset failcnt by writing 0 to failcnt file:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo 0 &gt; .../memory.failcnt
+</pre></div>
+</div>
+</section>
+<section id="usage-in-bytes">
+<h3>5.5 usage_in_bytes<a class="headerlink" href="#usage-in-bytes" title="連結到這個標頭">¶</a></h3>
+<p>For efficiency, as other kernel components, memory cgroup uses some optimization
+to avoid unnecessary cacheline false sharing. usage_in_bytes is affected by the
+method and doesn't show 'exact' value of memory (and swap) usage, it's a fuzz
+value for efficient access. (Of course, when necessary, it's synchronized.)
+If you want to know more exact memory usage, you should use RSS+CACHE(+SWAP)
+value in memory.stat(see 5.2).</p>
+</section>
+<section id="numa-stat">
+<h3>5.6 numa_stat<a class="headerlink" href="#numa-stat" title="連結到這個標頭">¶</a></h3>
+<p>This is similar to numa_maps but operates on a per-memcg basis.  This is
+useful for providing visibility into the numa locality information within
+an memcg since the pages are allowed to be allocated from any physical
+node.  One of the use cases is evaluating application performance by
+combining this information with the application's CPU allocation.</p>
+<p>Each memcg's numa_stat file includes &quot;total&quot;, &quot;file&quot;, &quot;anon&quot; and &quot;unevictable&quot;
+per-node page counts including &quot;hierarchical_&lt;counter&gt;&quot; which sums up all
+hierarchical children's values in addition to the memcg's own value.</p>
+<p>The output format of memory.numa_stat is:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>total=&lt;total pages&gt; N0=&lt;node 0 pages&gt; N1=&lt;node 1 pages&gt; ...
+file=&lt;total file pages&gt; N0=&lt;node 0 pages&gt; N1=&lt;node 1 pages&gt; ...
+anon=&lt;total anon pages&gt; N0=&lt;node 0 pages&gt; N1=&lt;node 1 pages&gt; ...
+unevictable=&lt;total anon pages&gt; N0=&lt;node 0 pages&gt; N1=&lt;node 1 pages&gt; ...
+hierarchical_&lt;counter&gt;=&lt;counter pages&gt; N0=&lt;node 0 pages&gt; N1=&lt;node 1 pages&gt; ...
+</pre></div>
+</div>
+<p>The &quot;total&quot; count is sum of file + anon + unevictable.</p>
+</section>
+</section>
+<section id="hierarchy-support">
+<h2>6. Hierarchy support<a class="headerlink" href="#hierarchy-support" title="連結到這個標頭">¶</a></h2>
+<p>The memory controller supports a deep hierarchy and hierarchical accounting.
+The hierarchy is created by creating the appropriate cgroups in the
+cgroup filesystem. Consider for example, the following cgroup filesystem
+hierarchy:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>    root
+  /  |   \
+ /   |    \
+a    b     c
+           | \
+           |  \
+           d   e
+</pre></div>
+</div>
+<p>In the diagram above, with hierarchical accounting enabled, all memory
+usage of e, is accounted to its ancestors up until the root (i.e, c and root).
+If one of the ancestors goes over its limit, the reclaim algorithm reclaims
+from the tasks in the ancestor and the children of the ancestor.</p>
+<section id="hierarchical-accounting-and-reclaim">
+<h3>6.1 Hierarchical accounting and reclaim<a class="headerlink" href="#hierarchical-accounting-and-reclaim" title="連結到這個標頭">¶</a></h3>
+<p>Hierarchical accounting is enabled by default. Disabling the hierarchical
+accounting is deprecated. An attempt to do it will result in a failure
+and a warning printed to dmesg.</p>
+<p>For compatibility reasons writing 1 to memory.use_hierarchy will always pass:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo 1 &gt; memory.use_hierarchy
+</pre></div>
+</div>
+</section>
+</section>
+<section id="soft-limits-deprecated">
+<h2>7. Soft limits (DEPRECATED)<a class="headerlink" href="#soft-limits-deprecated" title="連結到這個標頭">¶</a></h2>
+<p>THIS IS DEPRECATED!</p>
+<p>Soft limits allow for greater sharing of memory. The idea behind soft limits
+is to allow control groups to use as much of the memory as needed, provided</p>
+<ol class="loweralpha simple">
+<li><p>There is no memory contention</p></li>
+<li><p>They do not exceed their hard limit</p></li>
+</ol>
+<p>When the system detects memory contention or low memory, control groups
+are pushed back to their soft limits. If the soft limit of each control
+group is very high, they are pushed back as much as possible to make
+sure that one control group does not starve the others of memory.</p>
+<p>Please note that soft limits is a best-effort feature; it comes with
+no guarantees, but it does its best to make sure that when memory is
+heavily contended for, memory is allocated based on the soft limit
+hints/setup. Currently soft limit based reclaim is set up such that
+it gets invoked from balance_pgdat (kswapd).</p>
+<section id="interface">
+<h3>7.1 Interface<a class="headerlink" href="#interface" title="連結到這個標頭">¶</a></h3>
+<p>Soft limits can be setup by using the following commands (in this example we
+assume a soft limit of 256 MiB):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo 256M &gt; memory.soft_limit_in_bytes
+</pre></div>
+</div>
+<p>If we want to change this to 1G, we can at any time use:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo 1G &gt; memory.soft_limit_in_bytes
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>Soft limits take effect over a long period of time, since they involve
+reclaiming memory for balancing between memory cgroups</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>It is recommended to set the soft limit always below the hard limit,
+otherwise the hard limit will take precedence.</p>
+</div>
+</section>
+</section>
+<section id="move-charges-at-task-migration-deprecated">
+<span id="cgroup-v1-memory-move-charges"></span><h2>8. Move charges at task migration (DEPRECATED!)<a class="headerlink" href="#move-charges-at-task-migration-deprecated" title="連結到這個標頭">¶</a></h2>
+<p>THIS IS DEPRECATED!</p>
+<p>Reading memory.move_charge_at_immigrate will always return 0 and writing
+to it will always return -EINVAL.</p>
+</section>
+<section id="memory-thresholds">
+<h2>9. Memory thresholds<a class="headerlink" href="#memory-thresholds" title="連結到這個標頭">¶</a></h2>
+<p>Memory cgroup implements memory thresholds using the cgroups notification
+API (see <a class="reference internal" href="cgroups.html"><span class="doc">Control Groups</span></a>). It allows to register multiple memory and memsw
+thresholds and gets notifications when it crosses.</p>
+<p>To register a threshold, an application must:</p>
+<ul class="simple">
+<li><p>create an eventfd using eventfd(2);</p></li>
+<li><p>open memory.usage_in_bytes or memory.memsw.usage_in_bytes;</p></li>
+<li><p>write string like &quot;&lt;event_fd&gt; &lt;fd of memory.usage_in_bytes&gt; &lt;threshold&gt;&quot; to
+cgroup.event_control.</p></li>
+</ul>
+<p>Application will be notified through eventfd when memory usage crosses
+threshold in any direction.</p>
+<p>It's applicable for root and non-root cgroup.</p>
+</section>
+<section id="oom-control-deprecated">
+<span id="cgroup-v1-memory-oom-control"></span><h2>10. OOM Control (DEPRECATED)<a class="headerlink" href="#oom-control-deprecated" title="連結到這個標頭">¶</a></h2>
+<p>THIS IS DEPRECATED!</p>
+<p>memory.oom_control file is for OOM notification and other controls.</p>
+<p>Memory cgroup implements OOM notifier using the cgroup notification
+API (See <a class="reference internal" href="cgroups.html"><span class="doc">Control Groups</span></a>). It allows to register multiple OOM notification
+delivery and gets notification when OOM happens.</p>
+<p>To register a notifier, an application must:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>create an eventfd using eventfd(2)</p></li>
+<li><p>open memory.oom_control file</p></li>
+<li><p>write string like &quot;&lt;event_fd&gt; &lt;fd of memory.oom_control&gt;&quot; to
+cgroup.event_control</p></li>
+</ul>
+</div></blockquote>
+<p>The application will be notified through eventfd when OOM happens.
+OOM notification doesn't work for the root cgroup.</p>
+<p>You can disable the OOM-killer by writing &quot;1&quot; to memory.oom_control file, as:</p>
+<blockquote>
+<div><p>#echo 1 &gt; memory.oom_control</p>
+</div></blockquote>
+<p>If OOM-killer is disabled, tasks under cgroup will hang/sleep
+in memory cgroup's OOM-waitqueue when they request accountable memory.</p>
+<p>For running them, you have to relax the memory cgroup's OOM status by</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>enlarge limit or reduce usage.</p></li>
+</ul>
+</div></blockquote>
+<p>To reduce usage,</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>kill some tasks.</p></li>
+<li><p>move some tasks to other group with account migration.</p></li>
+<li><p>remove some files (on tmpfs?)</p></li>
+</ul>
+</div></blockquote>
+<p>Then, stopped tasks will work again.</p>
+<p>At reading, current status of OOM is shown.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>oom_kill_disable 0 or 1
+(if 1, oom-killer is disabled)</p></li>
+<li><p>under_oom        0 or 1
+(if 1, the memory cgroup is under OOM, tasks may be stopped.)</p></li>
+<li><p>oom_kill         integer counter
+The number of processes belonging to this cgroup killed by any
+kind of OOM killer.</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="memory-pressure-deprecated">
+<h2>11. Memory Pressure (DEPRECATED)<a class="headerlink" href="#memory-pressure-deprecated" title="連結到這個標頭">¶</a></h2>
+<p>THIS IS DEPRECATED!</p>
+<p>The pressure level notifications can be used to monitor the memory
+allocation cost; based on the pressure, applications can implement
+different strategies of managing their memory resources. The pressure
+levels are defined as following:</p>
+<p>The &quot;low&quot; level means that the system is reclaiming memory for new
+allocations. Monitoring this reclaiming activity might be useful for
+maintaining cache level. Upon notification, the program (typically
+&quot;Activity Manager&quot;) might analyze vmstat and act in advance (i.e.
+prematurely shutdown unimportant services).</p>
+<p>The &quot;medium&quot; level means that the system is experiencing medium memory
+pressure, the system might be making swap, paging out active file caches,
+etc. Upon this event applications may decide to further analyze
+vmstat/zoneinfo/memcg or internal memory usage statistics and free any
+resources that can be easily reconstructed or re-read from a disk.</p>
+<p>The &quot;critical&quot; level means that the system is actively thrashing, it is
+about to out of memory (OOM) or even the in-kernel OOM killer is on its
+way to trigger. Applications should do whatever they can to help the
+system. It might be too late to consult with vmstat or any other
+statistics, so it's advisable to take an immediate action.</p>
+<p>By default, events are propagated upward until the event is handled, i.e. the
+events are not pass-through. For example, you have three cgroups: A-&gt;B-&gt;C. Now
+you set up an event listener on cgroups A, B and C, and suppose group C
+experiences some pressure. In this situation, only group C will receive the
+notification, i.e. groups A and B will not receive it. This is done to avoid
+excessive &quot;broadcasting&quot; of messages, which disturbs the system and which is
+especially bad if we are low on memory or thrashing. Group B, will receive
+notification only if there are no event listeners for group C.</p>
+<p>There are three optional modes that specify different propagation behavior:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>&quot;default&quot;: this is the default behavior specified above. This mode is the
+same as omitting the optional mode parameter, preserved by backwards
+compatibility.</p></li>
+<li><p>&quot;hierarchy&quot;: events always propagate up to the root, similar to the default
+behavior, except that propagation continues regardless of whether there are
+event listeners at each level, with the &quot;hierarchy&quot; mode. In the above
+example, groups A, B, and C will receive notification of memory pressure.</p></li>
+<li><p>&quot;local&quot;: events are pass-through, i.e. they only receive notifications when
+memory pressure is experienced in the memcg for which the notification is
+registered. In the above example, group C will receive notification if
+registered for &quot;local&quot; notification and the group experiences memory
+pressure. However, group B will never receive notification, regardless if
+there is an event listener for group C or not, if group B is registered for
+local notification.</p></li>
+</ul>
+</div></blockquote>
+<p>The level and event notification mode (&quot;hierarchy&quot; or &quot;local&quot;, if necessary) are
+specified by a comma-delimited string, i.e. &quot;low,hierarchy&quot; specifies
+hierarchical, pass-through, notification for all ancestor memcgs. Notification
+that is the default, non pass-through behavior, does not specify a mode.
+&quot;medium,local&quot; specifies pass-through notification for the medium level.</p>
+<p>The file memory.pressure_level is only used to setup an eventfd. To
+register a notification, an application must:</p>
+<ul class="simple">
+<li><p>create an eventfd using eventfd(2);</p></li>
+<li><p>open memory.pressure_level;</p></li>
+<li><p>write string as &quot;&lt;event_fd&gt; &lt;fd of memory.pressure_level&gt; &lt;level[,mode]&gt;&quot;
+to cgroup.event_control.</p></li>
+</ul>
+<p>Application will be notified through eventfd when memory pressure is at
+the specific level (or higher). Read/write operations to
+memory.pressure_level are no implemented.</p>
+<p>Test:</p>
+<blockquote>
+<div><p>Here is a small script example that makes a new cgroup, sets up a
+memory limit, sets up a notification in the cgroup and then makes child
+cgroup experience a critical pressure:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># cd /sys/fs/cgroup/memory/
+# mkdir foo
+# cd foo
+# cgroup_event_listener memory.pressure_level low,hierarchy &amp;
+# echo 8000000 &gt; memory.limit_in_bytes
+# echo 8000000 &gt; memory.memsw.limit_in_bytes
+# echo $$ &gt; tasks
+# dd if=/dev/zero | read x
+</pre></div>
+</div>
+<p>(Expect a bunch of notifications, and eventually, the oom-killer will
+trigger.)</p>
+</div></blockquote>
+</section>
+<section id="todo">
+<h2>12. TODO<a class="headerlink" href="#todo" title="連結到這個標頭">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Make per-cgroup scanner reclaim not-shared pages first</p></li>
+<li><p>Teach controller to account for shared-pages</p></li>
+<li><p>Start reclamation in the background when the limit is
+not yet hit but the usage is getting closer</p></li>
+</ol>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="連結到這個標頭">¶</a></h2>
+<p>Overall, the memory controller has been a stable controller and has been
+commented and discussed quite extensively in the community.</p>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="連結到這個標頭">¶</a></h2>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id8" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">1</a><span class="fn-bracket">]</span></span>
+<p>Singh, Balbir. RFC: Memory Controller, <a class="reference external" href="http://lwn.net/Articles/206697/">http://lwn.net/Articles/206697/</a></p>
+</aside>
+<aside class="footnote brackets" id="id9" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">2</a><span class="fn-bracket">]</span></span>
+<p>Singh, Balbir. Memory Controller (RSS Control),
+<a class="reference external" href="http://lwn.net/Articles/222762/">http://lwn.net/Articles/222762/</a></p>
+</aside>
+<aside class="footnote brackets" id="id10" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id4">3</a><span class="fn-bracket">]</span></span>
+<p>Emelianov, Pavel. Resource controllers based on process cgroups
+<a class="reference external" href="https://lore.kernel.org/r/45ED7DEC.7010403&#64;sw.ru">https://lore.kernel.org/r/45ED7DEC.7010403&#64;sw.ru</a></p>
+</aside>
+<aside class="footnote brackets" id="id11" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id5">4</a><span class="fn-bracket">]</span></span>
+<p>Emelianov, Pavel. RSS controller based on process cgroups (v2)
+<a class="reference external" href="https://lore.kernel.org/r/461A3010.90403&#64;sw.ru">https://lore.kernel.org/r/461A3010.90403&#64;sw.ru</a></p>
+</aside>
+<aside class="footnote brackets" id="id12" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id6">5</a><span class="fn-bracket">]</span></span>
+<p>Emelianov, Pavel. RSS controller based on process cgroups (v3)
+<a class="reference external" href="https://lore.kernel.org/r/465D9739.8070209&#64;openvz.org">https://lore.kernel.org/r/465D9739.8070209&#64;openvz.org</a></p>
+</aside>
+</aside>
+<ol class="arabic simple" start="6">
+<li><p>Menage, Paul. Control Groups v10, <a class="reference external" href="http://lwn.net/Articles/236032/">http://lwn.net/Articles/236032/</a></p></li>
+<li><p>Vaidyanathan, Srinivasan, Control Groups: Pagecache accounting and control
+subsystem (v3), <a class="reference external" href="http://lwn.net/Articles/235534/">http://lwn.net/Articles/235534/</a></p></li>
+<li><p>Singh, Balbir. RSS controller v2 test results (lmbench),
+<a class="reference external" href="https://lore.kernel.org/r/464C95D4.7070806&#64;linux.vnet.ibm.com">https://lore.kernel.org/r/464C95D4.7070806&#64;linux.vnet.ibm.com</a></p></li>
+<li><p>Singh, Balbir. RSS controller v2 AIM9 results
+<a class="reference external" href="https://lore.kernel.org/r/464D267A.50107&#64;linux.vnet.ibm.com">https://lore.kernel.org/r/464D267A.50107&#64;linux.vnet.ibm.com</a></p></li>
+<li><p>Singh, Balbir. Memory controller v6 test results,
+<a class="reference external" href="https://lore.kernel.org/r/20070819094658.654.84837.sendpatchset&#64;balbir-laptop">https://lore.kernel.org/r/20070819094658.654.84837.sendpatchset&#64;balbir-laptop</a></p></li>
+</ol>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id13" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id7">11</a><span class="fn-bracket">]</span></span>
+<p>Singh, Balbir. Memory controller introduction (v6),
+<a class="reference external" href="https://lore.kernel.org/r/20070817084228.26003.12568.sendpatchset&#64;balbir-laptop">https://lore.kernel.org/r/20070817084228.26003.12568.sendpatchset&#64;balbir-laptop</a></p>
+</aside>
+<aside class="footnote brackets" id="id14" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">12</a><span class="fn-bracket">]</span></span>
+<p>Corbet, Jonathan, Controlling memory use in cgroups,
+<a class="reference external" href="http://lwn.net/Articles/243795/">http://lwn.net/Articles/243795/</a></p>
+</aside>
+</aside>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/admin-guide/cgroup-v1/memory.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

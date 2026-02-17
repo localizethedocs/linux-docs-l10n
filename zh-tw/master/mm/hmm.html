@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Heterogeneous Memory Management (HMM) &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/mm/hmm.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="hwpoison" href="hwpoison.html" />
+    <link rel="prev" title="Free Page Reporting" href="free_page_reporting.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/mm/hmm.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="heterogeneous-memory-management-hmm">
+<h1>Heterogeneous Memory Management (HMM)<a class="headerlink" href="#heterogeneous-memory-management-hmm" title="連結到這個標頭">¶</a></h1>
+<p>Provide infrastructure and helpers to integrate non-conventional memory (device
+memory like GPU on board memory) into regular kernel path, with the cornerstone
+of this being specialized <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> for such memory (see sections 5 to 7 of
+this document).</p>
+<p>HMM also provides optional helpers for SVM (Share Virtual Memory), i.e.,
+allowing a device to transparently access program addresses coherently with
+the CPU meaning that any valid pointer on the CPU is also a valid pointer
+for the device. This is becoming mandatory to simplify the use of advanced
+heterogeneous computing where GPU, DSP, or FPGA are used to perform various
+computations on behalf of a process.</p>
+<p>This document is divided as follows: in the first section I expose the problems
+related to using device specific memory allocators. In the second section, I
+expose the hardware limitations that are inherent to many platforms. The third
+section gives an overview of the HMM design. The fourth section explains how
+CPU page-table mirroring works and the purpose of HMM in this context. The
+fifth section deals with how device memory is represented inside the kernel.
+Finally, the last section presents a new migration helper that allows
+leveraging the device DMA engine.</p>
+<nav class="contents local" id="id1">
+<ul class="simple">
+<li><p><a class="reference internal" href="#problems-of-using-a-device-specific-memory-allocator" id="id2">Problems of using a device specific memory allocator</a></p></li>
+<li><p><a class="reference internal" href="#i-o-bus-device-memory-characteristics" id="id3">I/O bus, device memory characteristics</a></p></li>
+<li><p><a class="reference internal" href="#shared-address-space-and-migration" id="id4">Shared address space and migration</a></p></li>
+<li><p><a class="reference internal" href="#address-space-mirroring-implementation-and-api" id="id5">Address space mirroring implementation and API</a></p></li>
+<li><p><a class="reference internal" href="#leverage-default-flags-and-pfn-flags-mask" id="id6">Leverage default_flags and pfn_flags_mask</a></p></li>
+<li><p><a class="reference internal" href="#represent-and-manage-device-memory-from-core-kernel-point-of-view" id="id7">Represent and manage device memory from core kernel point of view</a></p></li>
+<li><p><a class="reference internal" href="#migration-to-and-from-device-memory" id="id8">Migration to and from device memory</a></p></li>
+<li><p><a class="reference internal" href="#exclusive-access-memory" id="id9">Exclusive access memory</a></p></li>
+<li><p><a class="reference internal" href="#memory-cgroup-memcg-and-rss-accounting" id="id10">Memory cgroup (memcg) and rss accounting</a></p></li>
+</ul>
+</nav>
+<section id="problems-of-using-a-device-specific-memory-allocator">
+<h2><a class="toc-backref" href="#id2" role="doc-backlink">Problems of using a device specific memory allocator</a><a class="headerlink" href="#problems-of-using-a-device-specific-memory-allocator" title="連結到這個標頭">¶</a></h2>
+<p>Devices with a large amount of on board memory (several gigabytes) like GPUs
+have historically managed their memory through dedicated driver specific APIs.
+This creates a disconnect between memory allocated and managed by a device
+driver and regular application memory (private anonymous, shared memory, or
+regular file backed memory). From here on I will refer to this aspect as split
+address space. I use shared address space to refer to the opposite situation:
+i.e., one in which any application memory region can be used by a device
+transparently.</p>
+<p>Split address space happens because devices can only access memory allocated
+through a device specific API. This implies that all memory objects in a program
+are not equal from the device point of view which complicates large programs
+that rely on a wide set of libraries.</p>
+<p>Concretely, this means that code that wants to leverage devices like GPUs needs
+to copy objects between generically allocated memory (malloc, mmap private, mmap
+share) and memory allocated through the device driver API (this still ends up
+with an mmap but of the device file).</p>
+<p>For flat data sets (array, grid, image, ...) this isn't too hard to achieve but
+for complex data sets (list, tree, ...) it's hard to get right. Duplicating a
+complex data set needs to re-map all the pointer relations between each of its
+elements. This is error prone and programs get harder to debug because of the
+duplicate data set and addresses.</p>
+<p>Split address space also means that libraries cannot transparently use data
+they are getting from the core program or another library and thus each library
+might have to duplicate its input data set using the device specific memory
+allocator. Large projects suffer from this and waste resources because of the
+various memory copies.</p>
+<p>Duplicating each library API to accept as input or output memory allocated by
+each device specific allocator is not a viable option. It would lead to a
+combinatorial explosion in the library entry points.</p>
+<p>Finally, with the advance of high level language constructs (in C++ but in
+other languages too) it is now possible for the compiler to leverage GPUs and
+other devices without programmer knowledge. Some compiler identified patterns
+are only doable with a shared address space. It is also more reasonable to use
+a shared address space for all other patterns.</p>
+</section>
+<section id="i-o-bus-device-memory-characteristics">
+<h2><a class="toc-backref" href="#id3" role="doc-backlink">I/O bus, device memory characteristics</a><a class="headerlink" href="#i-o-bus-device-memory-characteristics" title="連結到這個標頭">¶</a></h2>
+<p>I/O buses cripple shared address spaces due to a few limitations. Most I/O
+buses only allow basic memory access from device to main memory; even cache
+coherency is often optional. Access to device memory from a CPU is even more
+limited. More often than not, it is not cache coherent.</p>
+<p>If we only consider the PCIE bus, then a device can access main memory (often
+through an IOMMU) and be cache coherent with the CPUs. However, it only allows
+a limited set of atomic operations from the device on main memory. This is worse
+in the other direction: the CPU can only access a limited range of the device
+memory and cannot perform atomic operations on it. Thus device memory cannot
+be considered the same as regular memory from the kernel point of view.</p>
+<p>Another crippling factor is the limited bandwidth (~32GBytes/s with PCIE 4.0
+and 16 lanes). This is 33 times less than the fastest GPU memory (1 TBytes/s).
+The final limitation is latency. Access to main memory from the device has an
+order of magnitude higher latency than when the device accesses its own memory.</p>
+<p>Some platforms are developing new I/O buses or additions/modifications to PCIE
+to address some of these limitations (OpenCAPI, CCIX). They mainly allow
+two-way cache coherency between CPU and device and allow all atomic operations the
+architecture supports. Sadly, not all platforms are following this trend and
+some major architectures are left without hardware solutions to these problems.</p>
+<p>So for shared address space to make sense, not only must we allow devices to
+access any memory but we must also permit any memory to be migrated to device
+memory while the device is using it (blocking CPU access while it happens).</p>
+</section>
+<section id="shared-address-space-and-migration">
+<h2><a class="toc-backref" href="#id4" role="doc-backlink">Shared address space and migration</a><a class="headerlink" href="#shared-address-space-and-migration" title="連結到這個標頭">¶</a></h2>
+<p>HMM intends to provide two main features. The first one is to share the address
+space by duplicating the CPU page table in the device page table so the same
+address points to the same physical memory for any valid main memory address in
+the process address space.</p>
+<p>To achieve this, HMM offers a set of helpers to populate the device page table
+while keeping track of CPU page table updates. Device page table updates are
+not as easy as CPU page table updates. To update the device page table, you must
+allocate a buffer (or use a pool of pre-allocated buffers) and write GPU
+specific commands in it to perform the update (unmap, cache invalidations, and
+flush, ...). This cannot be done through common code for all devices. Hence
+why HMM provides helpers to factor out everything that can be while leaving the
+hardware specific details to the device driver.</p>
+<p>The second mechanism HMM provides is a new kind of ZONE_DEVICE memory that
+allows allocating a <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> for each page of device memory. Those pages
+are special because the CPU cannot map them. However, they allow migrating
+main memory to device memory using existing migration mechanisms and everything
+looks like a page that is swapped out to disk from the CPU point of view. Using a
+<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> gives the easiest and cleanest integration with existing mm
+mechanisms. Here again, HMM only provides helpers, first to hotplug new ZONE_DEVICE
+memory for the device memory and second to perform migration. Policy decisions
+of what and when to migrate is left to the device driver.</p>
+<p>Note that any CPU access to a device page triggers a page fault and a migration
+back to main memory. For example, when a page backing a given CPU address A is
+migrated from a main memory page to a device page, then any CPU access to
+address A triggers a page fault and initiates a migration back to main memory.</p>
+<p>With these two features, HMM not only allows a device to mirror process address
+space and keeps both CPU and device page tables synchronized, but also
+leverages device memory by migrating the part of the data set that is actively being
+used by the device.</p>
+</section>
+<section id="address-space-mirroring-implementation-and-api">
+<h2><a class="toc-backref" href="#id5" role="doc-backlink">Address space mirroring implementation and API</a><a class="headerlink" href="#address-space-mirroring-implementation-and-api" title="連結到這個標頭">¶</a></h2>
+<p>Address space mirroring's main objective is to allow duplication of a range of
+CPU page table into a device page table; HMM helps keep both synchronized. A
+device driver that wants to mirror a process address space must start with the
+registration of a mmu_interval_notifier:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int mmu_interval_notifier_insert(struct mmu_interval_notifier *interval_sub,
+                                 struct mm_struct *mm, unsigned long start,
+                                 unsigned long length,
+                                 const struct mmu_interval_notifier_ops *ops);
+</pre></div>
+</div>
+<p>During the ops-&gt;<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">invalidate()</span></code> callback the device driver must perform the
+update action to the range (mark range read only, or fully unmap, etc.). The
+device must complete the update before the driver callback returns.</p>
+<p>When the device driver wants to populate a range of virtual addresses, it can
+use:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int hmm_range_fault(struct hmm_range *range);
+</pre></div>
+</div>
+<p>It will trigger a page fault on missing or read-only entries if write access is
+requested (see below). Page faults use the generic mm page fault code path just
+like a CPU page fault. The usage pattern is:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int driver_populate_range(...)
+{
+     struct hmm_range range;
+     ...
+
+     range.notifier = &amp;interval_sub;
+     range.start = ...;
+     range.end = ...;
+     range.hmm_pfns = ...;
+
+     if (!mmget_not_zero(interval_sub-&gt;notifier.mm))
+         return -EFAULT;
+
+again:
+     range.notifier_seq = mmu_interval_read_begin(&amp;interval_sub);
+     mmap_read_lock(mm);
+     ret = hmm_range_fault(&amp;range);
+     if (ret) {
+         mmap_read_unlock(mm);
+         if (ret == -EBUSY)
+                goto again;
+         return ret;
+     }
+     mmap_read_unlock(mm);
+
+     take_lock(driver-&gt;update);
+     if (mmu_interval_read_retry(&amp;ni, range.notifier_seq) {
+         release_lock(driver-&gt;update);
+         goto again;
+     }
+
+     /* Use pfns array content to update device page table,
+      * under the update lock */
+
+     release_lock(driver-&gt;update);
+     return 0;
+}
+</pre></div>
+</div>
+<p>The driver-&gt;update lock is the same lock that the driver takes inside its
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">invalidate()</span></code> callback. That lock must be held before calling
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">mmu_interval_read_retry()</span></code> to avoid any race with a concurrent CPU page table
+update.</p>
+</section>
+<section id="leverage-default-flags-and-pfn-flags-mask">
+<h2><a class="toc-backref" href="#id6" role="doc-backlink">Leverage default_flags and pfn_flags_mask</a><a class="headerlink" href="#leverage-default-flags-and-pfn-flags-mask" title="連結到這個標頭">¶</a></h2>
+<p>The hmm_range <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">has</span></code> 2 fields, default_flags and pfn_flags_mask, that specify
+fault or snapshot policy for the whole range instead of having to set them
+for each entry in the pfns array.</p>
+<p>For instance if the device driver wants pages for a range with at least read
+permission, it sets:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>range-&gt;default_flags = HMM_PFN_REQ_FAULT;
+range-&gt;pfn_flags_mask = 0;
+</pre></div>
+</div>
+<p>and calls <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">hmm_range_fault()</span></code> as described above. This will fill fault all pages
+in the range with at least read permission.</p>
+<p>Now let's say the driver wants to do the same except for one page in the range for
+which it wants to have write permission. Now driver set:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>range-&gt;default_flags = HMM_PFN_REQ_FAULT;
+range-&gt;pfn_flags_mask = HMM_PFN_REQ_WRITE;
+range-&gt;pfns[index_of_write] = HMM_PFN_REQ_WRITE;
+</pre></div>
+</div>
+<p>With this, HMM will fault in all pages with at least read (i.e., valid) and for the
+address == range-&gt;start + (index_of_write &lt;&lt; PAGE_SHIFT) it will fault with
+write permission i.e., if the CPU pte does not have write permission set then HMM
+will call <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">handle_mm_fault()</span></code>.</p>
+<p>After hmm_range_fault completes the flag bits are set to the current state of
+the page tables, ie HMM_PFN_VALID | HMM_PFN_WRITE will be set if the page is
+writable.</p>
+</section>
+<section id="represent-and-manage-device-memory-from-core-kernel-point-of-view">
+<h2><a class="toc-backref" href="#id7" role="doc-backlink">Represent and manage device memory from core kernel point of view</a><a class="headerlink" href="#represent-and-manage-device-memory-from-core-kernel-point-of-view" title="連結到這個標頭">¶</a></h2>
+<p>Several different designs were tried to support device memory. The first one
+used a device specific data structure to keep information about migrated memory
+and HMM hooked itself in various places of mm code to handle any access to
+addresses that were backed by device memory. It turns out that this ended up
+replicating most of the fields of <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> and also needed many kernel code
+paths to be updated to understand this new kind of memory.</p>
+<p>Most kernel code paths never try to access the memory behind a page
+but only care about <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> contents. Because of this, HMM switched to
+directly using <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> for device memory which left most kernel code paths
+unaware of the difference. We only need to make sure that no one ever tries to
+map those pages from the CPU side.</p>
+</section>
+<section id="migration-to-and-from-device-memory">
+<h2><a class="toc-backref" href="#id8" role="doc-backlink">Migration to and from device memory</a><a class="headerlink" href="#migration-to-and-from-device-memory" title="連結到這個標頭">¶</a></h2>
+<p>Because the CPU cannot access device memory directly, the device driver must
+use hardware DMA or device specific load/store instructions to migrate data.
+The <a class="reference internal" href="../core-api/mm-api.html#c.migrate_vma_setup" title="migrate_vma_setup"><code class="xref c c-func docutils literal notranslate"><span class="pre">migrate_vma_setup()</span></code></a>, <a class="reference internal" href="../core-api/mm-api.html#c.migrate_vma_pages" title="migrate_vma_pages"><code class="xref c c-func docutils literal notranslate"><span class="pre">migrate_vma_pages()</span></code></a>, and <a class="reference internal" href="../core-api/mm-api.html#c.migrate_vma_finalize" title="migrate_vma_finalize"><code class="xref c c-func docutils literal notranslate"><span class="pre">migrate_vma_finalize()</span></code></a>
+functions are designed to make drivers easier to write and to centralize common
+code across drivers.</p>
+<p>Before migrating pages to device private memory, special device private
+<code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> needs to be created. These will be used as special &quot;swap&quot;
+page table entries so that a CPU process will fault if it tries to access
+a page that has been migrated to device private memory.</p>
+<p>These can be allocated and freed with:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct resource *res;
+struct dev_pagemap pagemap;
+
+res = request_free_mem_region(&amp;iomem_resource, /* number of bytes */,
+                              &quot;name of driver resource&quot;);
+pagemap.type = MEMORY_DEVICE_PRIVATE;
+pagemap.range.start = res-&gt;start;
+pagemap.range.end = res-&gt;end;
+pagemap.nr_range = 1;
+pagemap.ops = &amp;device_devmem_ops;
+memremap_pages(&amp;pagemap, numa_node_id());
+
+memunmap_pages(&amp;pagemap);
+release_mem_region(pagemap.range.start, range_len(&amp;pagemap.range));
+</pre></div>
+</div>
+<p>There are also <a class="reference internal" href="../core-api/kernel-api.html#c.devm_request_free_mem_region" title="devm_request_free_mem_region"><code class="xref c c-func docutils literal notranslate"><span class="pre">devm_request_free_mem_region()</span></code></a>, <a class="reference internal" href="../core-api/mm-api.html#c.devm_memremap_pages" title="devm_memremap_pages"><code class="xref c c-func docutils literal notranslate"><span class="pre">devm_memremap_pages()</span></code></a>,
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">devm_memunmap_pages()</span></code>, and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">devm_release_mem_region()</span></code> when the resources can
+be tied to a <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">device</span></code>.</p>
+<p>The overall migration steps are similar to migrating NUMA pages within system
+memory (see <a class="reference internal" href="page_migration.html"><span class="doc">Page migration</span></a>) but the steps are split
+between device driver specific code and shared common code:</p>
+<ol class="arabic">
+<li><p><code class="docutils literal notranslate"><span class="pre">mmap_read_lock()</span></code></p>
+<p>The device driver has to pass a <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">vm_area_struct</span></code> to
+<a class="reference internal" href="../core-api/mm-api.html#c.migrate_vma_setup" title="migrate_vma_setup"><code class="xref c c-func docutils literal notranslate"><span class="pre">migrate_vma_setup()</span></code></a> so the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">mmap_read_lock()</span></code> or <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">mmap_write_lock()</span></code> needs to
+be held for the duration of the migration.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">migrate_vma_setup(struct</span> <span class="pre">migrate_vma</span> <span class="pre">*args)</span></code></p>
+<p>The device driver initializes the <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">migrate_vma</span></code> fields and passes
+the pointer to <a class="reference internal" href="../core-api/mm-api.html#c.migrate_vma_setup" title="migrate_vma_setup"><code class="xref c c-func docutils literal notranslate"><span class="pre">migrate_vma_setup()</span></code></a>. The <code class="docutils literal notranslate"><span class="pre">args-&gt;flags</span></code> field is used to
+filter which source pages should be migrated. For example, setting
+<code class="docutils literal notranslate"><span class="pre">MIGRATE_VMA_SELECT_SYSTEM</span></code> will only migrate system memory and
+<code class="docutils literal notranslate"><span class="pre">MIGRATE_VMA_SELECT_DEVICE_PRIVATE</span></code> will only migrate pages residing in
+device private memory. If the latter flag is set, the <code class="docutils literal notranslate"><span class="pre">args-&gt;pgmap_owner</span></code>
+field is used to identify device private pages owned by the driver. This
+avoids trying to migrate device private pages residing in other devices.
+Currently only anonymous private VMA ranges can be migrated to or from
+system memory and device private memory.</p>
+<p>One of the first steps <a class="reference internal" href="../core-api/mm-api.html#c.migrate_vma_setup" title="migrate_vma_setup"><code class="xref c c-func docutils literal notranslate"><span class="pre">migrate_vma_setup()</span></code></a> does is to invalidate other
+device's MMUs with the <code class="docutils literal notranslate"><span class="pre">mmu_notifier_invalidate_range_start(()</span></code> and
+<code class="docutils literal notranslate"><span class="pre">mmu_notifier_invalidate_range_end()</span></code> calls around the page table
+walks to fill in the <code class="docutils literal notranslate"><span class="pre">args-&gt;src</span></code> array with PFNs to be migrated.
+The <code class="docutils literal notranslate"><span class="pre">invalidate_range_start()</span></code> callback is passed a
+<code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">mmu_notifier_range</span></code> with the <code class="docutils literal notranslate"><span class="pre">event</span></code> field set to
+<code class="docutils literal notranslate"><span class="pre">MMU_NOTIFY_MIGRATE</span></code> and the <code class="docutils literal notranslate"><span class="pre">owner</span></code> field set to
+the <code class="docutils literal notranslate"><span class="pre">args-&gt;pgmap_owner</span></code> field passed to <a class="reference internal" href="../core-api/mm-api.html#c.migrate_vma_setup" title="migrate_vma_setup"><code class="xref c c-func docutils literal notranslate"><span class="pre">migrate_vma_setup()</span></code></a>. This
+allows the device driver to skip the invalidation callback and only
+invalidate device private MMU mappings that are actually migrating.
+This is explained more in the next section.</p>
+<p>While walking the page tables, a <code class="docutils literal notranslate"><span class="pre">pte_none()</span></code> or <code class="docutils literal notranslate"><span class="pre">is_zero_pfn()</span></code>
+entry results in a valid &quot;zero&quot; PFN stored in the <code class="docutils literal notranslate"><span class="pre">args-&gt;src</span></code> array.
+This lets the driver allocate device private memory and clear it instead
+of copying a page of zeros. Valid PTE entries to system memory or
+device private <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">pages</span></code> will be locked with <code class="docutils literal notranslate"><span class="pre">lock_page()</span></code>, isolated
+from the LRU (if system memory since device private pages are not on
+the LRU), unmapped from the process, and a special migration PTE is
+inserted in place of the original PTE.
+<a class="reference internal" href="../core-api/mm-api.html#c.migrate_vma_setup" title="migrate_vma_setup"><code class="xref c c-func docutils literal notranslate"><span class="pre">migrate_vma_setup()</span></code></a> also clears the <code class="docutils literal notranslate"><span class="pre">args-&gt;dst</span></code> array.</p>
+</li>
+<li><p>The device driver allocates destination pages and copies source pages to
+destination pages.</p>
+<p>The driver checks each <code class="docutils literal notranslate"><span class="pre">src</span></code> entry to see if the <code class="docutils literal notranslate"><span class="pre">MIGRATE_PFN_MIGRATE</span></code>
+bit is set and skips entries that are not migrating. The device driver
+can also choose to skip migrating a page by not filling in the <code class="docutils literal notranslate"><span class="pre">dst</span></code>
+array for that page.</p>
+<p>The driver then allocates either a device private <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> or a
+system memory page, locks the page with <code class="docutils literal notranslate"><span class="pre">lock_page()</span></code>, and fills in the
+<code class="docutils literal notranslate"><span class="pre">dst</span></code> array entry with:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>dst[i] = migrate_pfn(page_to_pfn(dpage));
+</pre></div>
+</div>
+<p>Now that the driver knows that this page is being migrated, it can
+invalidate device private MMU mappings and copy device private memory
+to system memory or another device private page. The core Linux kernel
+handles CPU page table invalidations so the device driver only has to
+invalidate its own MMU mappings.</p>
+<p>The driver can use <code class="docutils literal notranslate"><span class="pre">migrate_pfn_to_page(src[i])</span></code> to get the
+<code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> of the source and either copy the source page to the
+destination or clear the destination device private memory if the pointer
+is <code class="docutils literal notranslate"><span class="pre">NULL</span></code> meaning the source page was not populated in system memory.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">migrate_vma_pages()</span></code></p>
+<p>This step is where the migration is actually &quot;committed&quot;.</p>
+<p>If the source page was a <code class="docutils literal notranslate"><span class="pre">pte_none()</span></code> or <code class="docutils literal notranslate"><span class="pre">is_zero_pfn()</span></code> page, this
+is where the newly allocated page is inserted into the CPU's page table.
+This can fail if a CPU thread faults on the same page. However, the page
+table is locked and only one of the new pages will be inserted.
+The device driver will see that the <code class="docutils literal notranslate"><span class="pre">MIGRATE_PFN_MIGRATE</span></code> bit is cleared
+if it loses the race.</p>
+<p>If the source page was locked, isolated, etc. the source <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code>
+information is now copied to destination <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> finalizing the
+migration on the CPU side.</p>
+</li>
+<li><p>Device driver updates device MMU page tables for pages still migrating,
+rolling back pages not migrating.</p>
+<p>If the <code class="docutils literal notranslate"><span class="pre">src</span></code> entry still has <code class="docutils literal notranslate"><span class="pre">MIGRATE_PFN_MIGRATE</span></code> bit set, the device
+driver can update the device MMU and set the write enable bit if the
+<code class="docutils literal notranslate"><span class="pre">MIGRATE_PFN_WRITE</span></code> bit is set.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">migrate_vma_finalize()</span></code></p>
+<p>This step replaces the special migration page table entry with the new
+page's page table entry and releases the reference to the source and
+destination <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code>.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mmap_read_unlock()</span></code></p>
+<p>The lock can now be released.</p>
+</li>
+</ol>
+</section>
+<section id="exclusive-access-memory">
+<h2><a class="toc-backref" href="#id9" role="doc-backlink">Exclusive access memory</a><a class="headerlink" href="#exclusive-access-memory" title="連結到這個標頭">¶</a></h2>
+<p>Some devices have features such as atomic PTE bits that can be used to implement
+atomic access to system memory. To support atomic operations to a shared virtual
+memory page such a device needs access to that page which is exclusive of any
+userspace access from the CPU. The <code class="docutils literal notranslate"><span class="pre">make_device_exclusive()</span></code> function
+can be used to make a memory range inaccessible from userspace.</p>
+<p>This replaces all mappings for pages in the given range with special swap
+entries. Any attempt to access the swap entry results in a fault which is
+resolved by replacing the entry with the original mapping. A driver gets
+notified that the mapping has been changed by MMU notifiers, after which point
+it will no longer have exclusive access to the page. Exclusive access is
+guaranteed to last until the driver drops the page lock and page reference, at
+which point any CPU faults on the page may proceed as described.</p>
+</section>
+<section id="memory-cgroup-memcg-and-rss-accounting">
+<h2><a class="toc-backref" href="#id10" role="doc-backlink">Memory cgroup (memcg) and rss accounting</a><a class="headerlink" href="#memory-cgroup-memcg-and-rss-accounting" title="連結到這個標頭">¶</a></h2>
+<p>For now, device memory is accounted as any regular page in rss counters (either
+anonymous if device page is used for anonymous, file if device page is used for
+file backed page, or shmem if device page is used for shared memory). This is a
+deliberate choice to keep existing applications, that might start using device
+memory without knowing about it, running unimpacted.</p>
+<p>A drawback is that the OOM killer might kill an application using a lot of
+device memory and not a lot of regular system memory and thus not freeing much
+system memory. We want to gather more real world experience on how applications
+and system react under memory pressure in the presence of device memory before
+deciding to account device memory differently.</p>
+<p>Same decision was made for memory cgroup. Device memory pages are accounted
+against same memory cgroup a regular page would be accounted to. This does
+simplify migration to and from device memory. This also means that migration
+back from device memory to regular memory cannot fail because it would
+go above memory cgroup limit. We might revisit this choice later on once we
+get more experience in how device memory is used and its impact on memory
+resource control.</p>
+<p>Note that device memory can never be pinned by a device driver nor through GUP
+and thus such memory is always free upon process exit. Or when last reference
+is dropped in case of shared memory or file backed memory.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/mm/hmm.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

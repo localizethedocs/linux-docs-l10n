@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Using RCU hlist_nulls to protect list and objects &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/RCU/rculist_nulls.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Reference-count design for elements of lists/arrays protected by RCU" href="rcuref.html" />
+    <link rel="prev" title="RCU Concepts" href="rcu.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core-api/index.html">Core API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-entry-and-exit">Low level entry and exit</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../core-api/index.html#concurrency-primitives">Concurrency primitives</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/refcount-vs-atomic.html">refcount_t API compared to atomic_t</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/irq/index.html">IRQs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/local_ops.html">Semantics and Behavior of Local Atomic Operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/padata.html">The padata parallel execution mechanism</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">RCU Handbook</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/wrappers/memory-barriers.html">Linux kernel memory barriers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#memory-management">Memory management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/RCU/rculist_nulls.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="using-rcu-hlist-nulls-to-protect-list-and-objects">
+<h1>Using RCU hlist_nulls to protect list and objects<a class="headerlink" href="#using-rcu-hlist-nulls-to-protect-list-and-objects" title="Link to this heading">¶</a></h1>
+<p>This section describes how to use hlist_nulls to
+protect read-mostly linked lists and
+objects using SLAB_TYPESAFE_BY_RCU allocations.</p>
+<p>Please read the basics in <a class="reference internal" href="listRCU.html"><span class="doc">Using RCU to Protect Read-Mostly Linked Lists</span></a>.</p>
+<section id="using-nulls">
+<h2>Using ‘nulls’<a class="headerlink" href="#using-nulls" title="Link to this heading">¶</a></h2>
+<p>Using special makers (called ‘nulls’) is a convenient way
+to solve following problem.</p>
+<p>Without ‘nulls’, a typical RCU linked list managing objects which are
+allocated with SLAB_TYPESAFE_BY_RCU kmem_cache can use the following
+algorithms.  Following examples assume ‘obj’ is a pointer to such
+objects, which is having below type.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct object {
+  struct hlist_node obj_node;
+  atomic_t refcnt;
+  unsigned int key;
+};
+</pre></div>
+</div>
+<section id="lookup-algorithm">
+<h3>1) Lookup algorithm<a class="headerlink" href="#lookup-algorithm" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>begin:
+rcu_read_lock();
+obj = lockless_lookup(key);
+if (obj) {
+  if (!try_get_ref(obj)) { // might fail for free objects
+    rcu_read_unlock();
+    goto begin;
+  }
+  /*
+  * Because a writer could delete object, and a writer could
+  * reuse these object before the RCU grace period, we
+  * must check key after getting the reference on object
+  */
+  if (obj-&gt;key != key) { // not the object we expected
+    put_ref(obj);
+    rcu_read_unlock();
+    goto begin;
+  }
+}
+rcu_read_unlock();
+</pre></div>
+</div>
+<p>Beware that lockless_lookup(key) cannot use traditional <a class="reference internal" href="../core-api/kernel-api.html#c.hlist_for_each_entry_rcu" title="hlist_for_each_entry_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">hlist_for_each_entry_rcu()</span></code></a>
+but a version with an additional memory barrier (<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">smp_rmb()</span></code>)</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>lockless_lookup(key)
+{
+  struct hlist_node *node, *next;
+  for (pos = rcu_dereference((head)-&gt;first);
+       pos &amp;&amp; ({ next = pos-&gt;next; smp_rmb(); prefetch(next); 1; }) &amp;&amp;
+       ({ obj = hlist_entry(pos, typeof(*obj), obj_node); 1; });
+       pos = rcu_dereference(next))
+    if (obj-&gt;key == key)
+      return obj;
+  return NULL;
+}
+</pre></div>
+</div>
+<p>And note the traditional <a class="reference internal" href="../core-api/kernel-api.html#c.hlist_for_each_entry_rcu" title="hlist_for_each_entry_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">hlist_for_each_entry_rcu()</span></code></a> misses this <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">smp_rmb()</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct hlist_node *node;
+for (pos = rcu_dereference((head)-&gt;first);
+     pos &amp;&amp; ({ prefetch(pos-&gt;next); 1; }) &amp;&amp;
+     ({ obj = hlist_entry(pos, typeof(*obj), obj_node); 1; });
+     pos = rcu_dereference(pos-&gt;next))
+  if (obj-&gt;key == key)
+    return obj;
+return NULL;
+</pre></div>
+</div>
+<p>Quoting Corey Minyard:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>&quot;If the object is moved from one list to another list in-between the
+time the hash is calculated and the next field is accessed, and the
+object has moved to the end of a new list, the traversal will not
+complete properly on the list it should have, since the object will
+be on the end of the new list and there&#39;s not a way to tell it&#39;s on a
+new list and restart the list traversal. I think that this can be
+solved by pre-fetching the &quot;next&quot; field (with proper barriers) before
+checking the key.&quot;
+</pre></div>
+</div>
+</section>
+<section id="insertion-algorithm">
+<h3>2) Insertion algorithm<a class="headerlink" href="#insertion-algorithm" title="Link to this heading">¶</a></h3>
+<p>We need to make sure a reader cannot read the new ‘obj-&gt;obj_node.next’ value
+and previous value of ‘obj-&gt;key’. Otherwise, an item could be deleted
+from a chain, and inserted into another chain. If new chain was empty
+before the move, ‘next’ pointer is NULL, and lockless reader can not
+detect the fact that it missed following items in original chain.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/*
+ * Please note that new inserts are done at the head of list,
+ * not in the middle or end.
+ */
+obj = kmem_cache_alloc(...);
+lock_chain(); // typically a spin_lock()
+obj-&gt;key = key;
+atomic_set_release(&amp;obj-&gt;refcnt, 1); // key before refcnt
+hlist_add_head_rcu(&amp;obj-&gt;obj_node, list);
+unlock_chain(); // typically a spin_unlock()
+</pre></div>
+</div>
+</section>
+<section id="removal-algorithm">
+<h3>3) Removal algorithm<a class="headerlink" href="#removal-algorithm" title="Link to this heading">¶</a></h3>
+<p>Nothing special here, we can use a standard RCU hlist deletion.
+But thanks to SLAB_TYPESAFE_BY_RCU, beware a deleted object can be reused
+very very fast (before the end of RCU grace period)</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>if (put_last_reference_on(obj) {
+  lock_chain(); // typically a spin_lock()
+  hlist_del_init_rcu(&amp;obj-&gt;obj_node);
+  unlock_chain(); // typically a spin_unlock()
+  kmem_cache_free(cachep, obj);
+}
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="avoiding-extra-smp-rmb">
+<h2>Avoiding extra smp_rmb()<a class="headerlink" href="#avoiding-extra-smp-rmb" title="Link to this heading">¶</a></h2>
+<p>With hlist_nulls we can avoid extra <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">smp_rmb()</span></code> in <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">lockless_lookup()</span></code>.</p>
+<p>For example, if we choose to store the slot number as the ‘nulls’
+end-of-list marker for each slot of the hash table, we can detect
+a race (some writer did a delete and/or a move of an object
+to another chain) checking the final ‘nulls’ value if
+the lookup met the end of chain. If final ‘nulls’ value
+is not the slot number, then we must restart the lookup at
+the beginning. If the object was moved to the same chain,
+then the reader doesn’t care: It might occasionally
+scan the list again without harm.</p>
+<p>Note that using hlist_nulls means the type of ‘obj_node’ field of
+‘<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">object</span></code>’ becomes ‘<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">hlist_nulls_node</span></code>’.</p>
+<section id="id1">
+<h3>1) lookup algorithm<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>head = &amp;table[slot];
+begin:
+rcu_read_lock();
+hlist_nulls_for_each_entry_rcu(obj, node, head, obj_node) {
+  if (obj-&gt;key == key) {
+    if (!try_get_ref(obj)) { // might fail for free objects
+      rcu_read_unlock();
+      goto begin;
+    }
+    if (obj-&gt;key != key) { // not the object we expected
+      put_ref(obj);
+      rcu_read_unlock();
+      goto begin;
+    }
+    goto out;
+  }
+}
+
+// If the nulls value we got at the end of this lookup is
+// not the expected one, we must restart lookup.
+// We probably met an item that was moved to another chain.
+if (get_nulls_value(node) != slot) {
+  put_ref(obj);
+  rcu_read_unlock();
+  goto begin;
+}
+obj = NULL;
+
+out:
+rcu_read_unlock();
+</pre></div>
+</div>
+</section>
+<section id="insert-algorithm">
+<h3>2) Insert algorithm<a class="headerlink" href="#insert-algorithm" title="Link to this heading">¶</a></h3>
+<p>Same to the above one, but uses <a class="reference internal" href="../core-api/kernel-api.html#c.hlist_nulls_add_head_rcu" title="hlist_nulls_add_head_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">hlist_nulls_add_head_rcu()</span></code></a> instead of
+<a class="reference internal" href="../core-api/kernel-api.html#c.hlist_add_head_rcu" title="hlist_add_head_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">hlist_add_head_rcu()</span></code></a>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/*
+ * Please note that new inserts are done at the head of list,
+ * not in the middle or end.
+ */
+obj = kmem_cache_alloc(cachep);
+lock_chain(); // typically a spin_lock()
+obj-&gt;key = key;
+atomic_set_release(&amp;obj-&gt;refcnt, 1); // key before refcnt
+/*
+ * insert obj in RCU way (readers might be traversing chain)
+ */
+hlist_nulls_add_head_rcu(&amp;obj-&gt;obj_node, list);
+unlock_chain(); // typically a spin_unlock()
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/RCU/rculist_nulls.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

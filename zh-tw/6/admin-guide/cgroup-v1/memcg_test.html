@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Memory Resource Controller(Memcg) Implementation Memo &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/cgroup-v1/memcg_test.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜尋" href="../../search.html" />
+    <link rel="next" title="Memory Resource Controller" href="memory.html" />
+    <link rel="prev" title="HugeTLB Controller" href="hugetlb.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#core-kernel-subsystems">Core-kernel subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v2.html">Control Group v2</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Control Groups version 1</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cpu-load.html">CPU load</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">記憶體管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../module-signing.html">Kernel module signing facility</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../namespaces/index.html">Namespaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../numastat.html">Numa policy hit/miss statistics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pm/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../syscall-user-dispatch.html">Syscall User Dispatch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../binfmt-misc.html">Kernel Support for miscellaneous Binary Formats (binfmt_misc)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../java.html">Java(tm) Binary Kernel Support for Linux v1.03</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mono.html">Mono(tm) Binary Kernel Support for Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/admin-guide/cgroup-v1/memcg_test.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="memory-resource-controller-memcg-implementation-memo">
+<h1>Memory Resource Controller(Memcg) Implementation Memo<a class="headerlink" href="#memory-resource-controller-memcg-implementation-memo" title="連結到這個標頭">¶</a></h1>
+<p>Last Updated: 2010/2</p>
+<p>Base Kernel Version: based on 2.6.33-rc7-mm(candidate for 34).</p>
+<p>Because VM is getting complex (one of reasons is memcg...), memcg's behavior
+is complex. This is a document for memcg's internal behavior.
+Please note that implementation details can be changed.</p>
+<p>(*) Topics on API should be in <a class="reference internal" href="memory.html"><span class="doc">Memory Resource Controller</span></a>)</p>
+<section id="how-to-record-usage">
+<h2>0. How to record usage ?<a class="headerlink" href="#how-to-record-usage" title="連結到這個標頭">¶</a></h2>
+<blockquote>
+<div><p>2 objects are used.</p>
+<p>page_cgroup ....an object per page.</p>
+<blockquote>
+<div><p>Allocated at boot or memory hotplug. Freed at memory hot removal.</p>
+</div></blockquote>
+<p>swap_cgroup ... an entry per swp_entry.</p>
+<blockquote>
+<div><p>Allocated at <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">swapon()</span></code>. Freed at <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">swapoff()</span></code>.</p>
+</div></blockquote>
+<p>The page_cgroup has USED bit and double count against a page_cgroup never
+occurs. swap_cgroup is used only when a charged page is swapped-out.</p>
+</div></blockquote>
+</section>
+<section id="charge">
+<h2>1. Charge<a class="headerlink" href="#charge" title="連結到這個標頭">¶</a></h2>
+<blockquote>
+<div><p>a page/swp_entry may be charged (usage += PAGE_SIZE) at</p>
+<blockquote>
+<div><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">mem_cgroup_try_charge()</span></code></p>
+</div></blockquote>
+</div></blockquote>
+</section>
+<section id="uncharge">
+<h2>2. Uncharge<a class="headerlink" href="#uncharge" title="連結到這個標頭">¶</a></h2>
+<blockquote>
+<div><p>a page/swp_entry may be uncharged (usage -= PAGE_SIZE) by</p>
+<blockquote>
+<div><dl class="simple">
+<dt>mem_cgroup_uncharge()</dt><dd><p>Called when a page's refcount goes down to 0.</p>
+</dd>
+<dt>mem_cgroup_uncharge_swap()</dt><dd><p>Called when swp_entry's refcnt goes down to 0. A charge against swap
+disappears.</p>
+</dd>
+</dl>
+</div></blockquote>
+</div></blockquote>
+</section>
+<section id="charge-commit-cancel">
+<h2>3. charge-commit-cancel<a class="headerlink" href="#charge-commit-cancel" title="連結到這個標頭">¶</a></h2>
+<blockquote>
+<div><p>Memcg pages are charged in two steps:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">mem_cgroup_try_charge()</span></code></p></li>
+<li><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">mem_cgroup_commit_charge()</span></code> or <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">mem_cgroup_cancel_charge()</span></code></p></li>
+</ul>
+</div></blockquote>
+<p>At <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">try_charge()</span></code>, there are no flags to say &quot;this page is charged&quot;.
+at this point, usage += PAGE_SIZE.</p>
+<p>At <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">commit()</span></code>, the page is associated with the memcg.</p>
+<p>At <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">cancel()</span></code>, simply usage -= PAGE_SIZE.</p>
+</div></blockquote>
+<p>Under below explanation, we assume CONFIG_SWAP=y.</p>
+</section>
+<section id="anonymous">
+<h2>4. Anonymous<a class="headerlink" href="#anonymous" title="連結到這個標頭">¶</a></h2>
+<blockquote>
+<div><dl class="simple">
+<dt>Anonymous page is newly allocated at</dt><dd><ul class="simple">
+<li><p>page fault into MAP_ANONYMOUS mapping.</p></li>
+<li><p>Copy-On-Write.</p></li>
+</ul>
+</dd>
+</dl>
+<p>4.1 Swap-in.
+At swap-in, the page is taken from swap-cache. There are 2 cases.</p>
+<ol class="loweralpha simple">
+<li><p>If the SwapCache is newly allocated and read, it has no charges.</p></li>
+<li><p>If the SwapCache has been mapped by processes, it has been
+charged already.</p></li>
+</ol>
+<p>4.2 Swap-out.
+At swap-out, typical state transition is below.</p>
+<ol class="loweralpha simple">
+<li><p>add to swap cache. (marked as SwapCache)
+swp_entry's refcnt += 1.</p></li>
+<li><p>fully unmapped.
+swp_entry's refcnt += # of ptes.</p></li>
+<li><p>write back to swap.</p></li>
+<li><p>delete from swap cache. (remove from SwapCache)
+swp_entry's refcnt -= 1.</p></li>
+</ol>
+<p>Finally, at task exit,
+(e) <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">zap_pte()</span></code> is called and swp_entry's refcnt -=1 -&gt; 0.</p>
+</div></blockquote>
+</section>
+<section id="page-cache">
+<h2>5. Page Cache<a class="headerlink" href="#page-cache" title="連結到這個標頭">¶</a></h2>
+<blockquote>
+<div><p>Page Cache is charged at
+- <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">filemap_add_folio()</span></code>.</p>
+<p>The logic is very clear. (About migration, see below)</p>
+<dl class="simple">
+<dt>Note:</dt><dd><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">__filemap_remove_folio()</span></code> is called by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">filemap_remove_folio()</span></code>
+and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">__remove_mapping()</span></code>.</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+<section id="shmem-tmpfs-page-cache">
+<h2>6. Shmem(tmpfs) Page Cache<a class="headerlink" href="#shmem-tmpfs-page-cache" title="連結到這個標頭">¶</a></h2>
+<blockquote>
+<div><p>The best way to understand shmem's page state transition is to read
+mm/shmem.c.</p>
+<p>But brief explanation of the behavior of memcg around shmem will be
+helpful to understand the logic.</p>
+<p>Shmem's page (just leaf page, not direct/indirect block) can be on</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>radix-tree of shmem's inode.</p></li>
+<li><p>SwapCache.</p></li>
+<li><p>Both on radix-tree and SwapCache. This happens at swap-in
+and swap-out,</p></li>
+</ul>
+</div></blockquote>
+<p>It's charged when...</p>
+<ul class="simple">
+<li><p>A new page is added to shmem's radix-tree.</p></li>
+<li><p>A swp page is read. (move a charge from swap_cgroup to page_cgroup)</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="page-migration">
+<h2>7. Page Migration<a class="headerlink" href="#page-migration" title="連結到這個標頭">¶</a></h2>
+<blockquote>
+<div><p><a class="reference internal" href="../../core-api/mm-api.html#c.mem_cgroup_migrate" title="mem_cgroup_migrate"><code class="xref c c-func docutils literal notranslate"><span class="pre">mem_cgroup_migrate()</span></code></a></p>
+</div></blockquote>
+</section>
+<section id="lru">
+<h2>8. LRU<a class="headerlink" href="#lru" title="連結到這個標頭">¶</a></h2>
+<blockquote>
+<div><p>Each memcg has its own vector of LRUs (inactive anon, active anon,
+inactive file, active file, unevictable) of pages from each node,
+each LRU handled under a single lru_lock for that memcg and node.</p>
+</div></blockquote>
+</section>
+<section id="typical-tests">
+<h2>9. Typical Tests.<a class="headerlink" href="#typical-tests" title="連結到這個標頭">¶</a></h2>
+<blockquote>
+<div><p>Tests for racy cases.</p>
+</div></blockquote>
+<section id="small-limit-to-memcg">
+<h3>9.1 Small limit to memcg.<a class="headerlink" href="#small-limit-to-memcg" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p>When you do test to do racy case, it's good test to set memcg's limit
+to be very small rather than GB. Many races found in the test under
+xKB or xxMB limits.</p>
+<p>(Memory behavior under GB and Memory behavior under MB shows very
+different situation.)</p>
+</div></blockquote>
+</section>
+<section id="shmem">
+<h3>9.2 Shmem<a class="headerlink" href="#shmem" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p>Historically, memcg's shmem handling was poor and we saw some amount
+of troubles here. This is because shmem is page-cache but can be
+SwapCache. Test with shmem/tmpfs is always good test.</p>
+</div></blockquote>
+</section>
+<section id="migration">
+<h3>9.3 Migration<a class="headerlink" href="#migration" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p>For NUMA, migration is an another special case. To do easy test, cpuset
+is useful. Following is a sample script to do migration:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>mount -t cgroup -o cpuset none /opt/cpuset
+
+mkdir /opt/cpuset/01
+echo 1 &gt; /opt/cpuset/01/cpuset.cpus
+echo 0 &gt; /opt/cpuset/01/cpuset.mems
+echo 1 &gt; /opt/cpuset/01/cpuset.memory_migrate
+mkdir /opt/cpuset/02
+echo 1 &gt; /opt/cpuset/02/cpuset.cpus
+echo 1 &gt; /opt/cpuset/02/cpuset.mems
+echo 1 &gt; /opt/cpuset/02/cpuset.memory_migrate
+</pre></div>
+</div>
+<p>In above set, when you moves a task from 01 to 02, page migration to
+node 0 to node 1 will occur. Following is a script to migrate all
+under cpuset.:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>--
+move_task()
+{
+for pid in $1
+do
+        /bin/echo $pid &gt;$2/tasks 2&gt;/dev/null
+        echo -n $pid
+        echo -n &quot; &quot;
+done
+echo END
+}
+
+G1_TASK=`cat ${G1}/tasks`
+G2_TASK=`cat ${G2}/tasks`
+move_task &quot;${G1_TASK}&quot; ${G2} &amp;
+--
+</pre></div>
+</div>
+</div></blockquote>
+</section>
+<section id="memory-hotplug">
+<h3>9.4 Memory hotplug<a class="headerlink" href="#memory-hotplug" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p>memory hotplug test is one of good test.</p>
+<p>to offline memory, do following:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo offline &gt; /sys/devices/system/memory/memoryXXX/state
+</pre></div>
+</div>
+<p>(XXX is the place of memory)</p>
+<p>This is an easy way to test page migration, too.</p>
+</div></blockquote>
+</section>
+<section id="nested-cgroups">
+<h3>9.5 nested cgroups<a class="headerlink" href="#nested-cgroups" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p>Use tests like the following for testing nested cgroups:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>mkdir /opt/cgroup/01/child_a
+mkdir /opt/cgroup/01/child_b
+
+set limit to 01.
+add limit to 01/child_b
+run jobs under child_a and child_b
+</pre></div>
+</div>
+<p>create/delete following groups at random while jobs are running:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/opt/cgroup/01/child_a/child_aa
+/opt/cgroup/01/child_b/child_bb
+/opt/cgroup/01/child_c
+</pre></div>
+</div>
+<p>running new jobs in new group is also good.</p>
+</div></blockquote>
+</section>
+<section id="mount-with-other-subsystems">
+<h3>9.6 Mount with other subsystems<a class="headerlink" href="#mount-with-other-subsystems" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p>Mounting with other subsystems is a good test because there is a
+race and lock dependency with other cgroup subsystems.</p>
+<p>example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># mount -t cgroup none /cgroup -o cpuset,memory,cpu,devices
+</pre></div>
+</div>
+<p>and do task move, mkdir, rmdir etc...under this.</p>
+</div></blockquote>
+</section>
+<section id="swapoff">
+<h3>9.7 swapoff<a class="headerlink" href="#swapoff" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p>Besides management of swap is one of complicated parts of memcg,
+call path of swap-in at swapoff is not same as usual swap-in path..
+It's worth to be tested explicitly.</p>
+<p>For example, test like following is good:</p>
+<p>(Shell-A):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># mount -t cgroup none /cgroup -o memory
+# mkdir /cgroup/test
+# echo 40M &gt; /cgroup/test/memory.limit_in_bytes
+# echo 0 &gt; /cgroup/test/tasks
+</pre></div>
+</div>
+<p>Run malloc(100M) program under this. You'll see 60M of swaps.</p>
+<p>(Shell-B):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># move all tasks in /cgroup/test to /cgroup
+# /sbin/swapoff -a
+# rmdir /cgroup/test
+# kill malloc task.
+</pre></div>
+</div>
+<p>Of course, tmpfs v.s. swapoff test should be tested, too.</p>
+</div></blockquote>
+</section>
+<section id="oom-killer">
+<h3>9.8 OOM-Killer<a class="headerlink" href="#oom-killer" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p>Out-of-memory caused by memcg's limit will kill tasks under
+the memcg. When hierarchy is used, a task under hierarchy
+will be killed by the kernel.</p>
+<p>In this case, panic_on_oom shouldn't be invoked and tasks
+in other groups shouldn't be killed.</p>
+<p>It's not difficult to cause OOM under memcg as following.</p>
+<p>Case A) when you can swapoff:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#swapoff -a
+#echo 50M &gt; /memory.limit_in_bytes
+</pre></div>
+</div>
+<p>run 51M of malloc</p>
+<p>Case B) when you use mem+swap limitation:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#echo 50M &gt; memory.limit_in_bytes
+#echo 50M &gt; memory.memsw.limit_in_bytes
+</pre></div>
+</div>
+<p>run 51M of malloc</p>
+</div></blockquote>
+</section>
+<section id="move-charges-at-task-migration">
+<h3>9.9 Move charges at task migration<a class="headerlink" href="#move-charges-at-task-migration" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p>Charges associated with a task can be moved along with task migration.</p>
+<p>(Shell-A):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#mkdir /cgroup/A
+#echo $$ &gt;/cgroup/A/tasks
+</pre></div>
+</div>
+<p>run some programs which uses some amount of memory in /cgroup/A.</p>
+<p>(Shell-B):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#mkdir /cgroup/B
+#echo 1 &gt;/cgroup/B/memory.move_charge_at_immigrate
+#echo &quot;pid of the program running in group A&quot; &gt;/cgroup/B/tasks
+</pre></div>
+</div>
+<p>You can see charges have been moved by reading <code class="docutils literal notranslate"><span class="pre">*.usage_in_bytes</span></code> or
+memory.stat of both A and B.</p>
+<p>See 8.2 of <a class="reference internal" href="memory.html"><span class="doc">Memory Resource Controller</span></a> to see what value should
+be written to move_charge_at_immigrate.</p>
+</div></blockquote>
+</section>
+<section id="memory-thresholds">
+<h3>9.10 Memory thresholds<a class="headerlink" href="#memory-thresholds" title="連結到這個標頭">¶</a></h3>
+<blockquote>
+<div><p>Memory controller implements memory thresholds using cgroups notification
+API. You can use tools/cgroup/cgroup_event_listener.c to test it.</p>
+<p>(Shell-A) Create cgroup and run event listener:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># mkdir /cgroup/A
+# ./cgroup_event_listener /cgroup/A/memory.usage_in_bytes 5M
+</pre></div>
+</div>
+<p>(Shell-B) Add task to cgroup and try to allocate and free memory:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo $$ &gt;/cgroup/A/tasks
+# a=&quot;$(dd if=/dev/zero bs=1M count=10)&quot;
+# a=
+</pre></div>
+</div>
+<p>You will see message from cgroup_event_listener every time you cross
+the thresholds.</p>
+<p>Use /cgroup/A/memory.memsw.usage_in_bytes to test memsw thresholds.</p>
+<p>It's good idea to test root cgroup as well.</p>
+</div></blockquote>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/admin-guide/cgroup-v1/memcg_test.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

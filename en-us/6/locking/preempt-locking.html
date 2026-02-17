@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Proper Locking Under a Preemptible Kernel: Keeping Kernel Code Preempt-Safe &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/locking/preempt-locking.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Lightweight PI-futexes" href="pi-futex.html" />
+    <link rel="prev" title="Wound/Wait Deadlock-Proof Mutex Design" href="ww-mutex-design.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Locking</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="locktypes.html">Lock types and their rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockdep-design.html">Runtime locking correctness validator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockstat.html">Lock Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="locktorture.html">Kernel Lock Torture Test Operation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mutex-design.html">Generic Mutex Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex-design.html">RT-mutex implementation design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex.html">RT-mutex subsystem with PI support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seqlock.html">Sequence counters and sequential locks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spinlocks.html">Locking lessons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ww-mutex-design.html">Wound/Wait Deadlock-Proof Mutex Design</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Proper Locking Under a Preemptible Kernel: Keeping Kernel Code Preempt-Safe</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#solution">Solution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#preventing-preemption-using-interrupt-disabling">Preventing preemption using interrupt disabling</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pi-futex.html">Lightweight PI-futexes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="futex-requeue-pi.html">Futex Requeue PI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hwspinlock.html">Hardware Spinlock Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="percpu-rw-semaphore.html">Percpu rw semaphores</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futexes.html">A description of what robust futexes are</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futex-ABI.html">The robust futex ABI</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/locking/preempt-locking.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="proper-locking-under-a-preemptible-kernel-keeping-kernel-code-preempt-safe">
+<h1>Proper Locking Under a Preemptible Kernel: Keeping Kernel Code Preempt-Safe<a class="headerlink" href="#proper-locking-under-a-preemptible-kernel-keeping-kernel-code-preempt-safe" title="Link to this heading">¶</a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">Author<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Robert Love &lt;<a class="reference external" href="mailto:rml&#37;&#52;&#48;tech9&#46;net">rml<span>&#64;</span>tech9<span>&#46;</span>net</a>&gt;</p>
+</dd>
+</dl>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading">¶</a></h2>
+<p>A preemptible kernel creates new locking issues.  The issues are the same as
+those under SMP: concurrency and reentrancy.  Thankfully, the Linux preemptible
+kernel model leverages existing SMP locking mechanisms.  Thus, the kernel
+requires explicit additional locking for very few additional situations.</p>
+<p>This document is for all kernel hackers.  Developing code in the kernel
+requires protecting these situations.</p>
+<section id="rule-1-per-cpu-data-structures-need-explicit-protection">
+<h3>RULE #1: Per-CPU data structures need explicit protection<a class="headerlink" href="#rule-1-per-cpu-data-structures-need-explicit-protection" title="Link to this heading">¶</a></h3>
+<p>Two similar problems arise. An example code snippet:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct this_needs_locking tux[NR_CPUS];
+tux[smp_processor_id()] = some_value;
+/* task is preempted here... */
+something = tux[smp_processor_id()];
+</pre></div>
+</div>
+<p>First, since the data is per-CPU, it may not have explicit SMP locking, but
+require it otherwise.  Second, when a preempted task is finally rescheduled,
+the previous value of smp_processor_id may not equal the current.  You must
+protect these situations by disabling preemption around them.</p>
+<p>You can also use <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">put_cpu()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">get_cpu()</span></code>, which will disable preemption.</p>
+</section>
+<section id="rule-2-cpu-state-must-be-protected">
+<h3>RULE #2: CPU state must be protected.<a class="headerlink" href="#rule-2-cpu-state-must-be-protected" title="Link to this heading">¶</a></h3>
+<p>Under preemption, the state of the CPU must be protected.  This is arch-
+dependent, but includes CPU structures and state not preserved over a context
+switch.  For example, on x86, entering and exiting FPU mode is now a critical
+section that must occur while preemption is disabled.  Think what would happen
+if the kernel is executing a floating-point instruction and is then preempted.
+Remember, the kernel does not save FPU state except for user tasks.  Therefore,
+upon preemption, the FPU registers will be sold to the lowest bidder.  Thus,
+preemption must be disabled around such regions.</p>
+<p>Note, some FPU functions are already explicitly preempt safe.  For example,
+kernel_fpu_begin and kernel_fpu_end will disable and enable preemption.</p>
+</section>
+<section id="rule-3-lock-acquire-and-release-must-be-performed-by-same-task">
+<h3>RULE #3: Lock acquire and release must be performed by same task<a class="headerlink" href="#rule-3-lock-acquire-and-release-must-be-performed-by-same-task" title="Link to this heading">¶</a></h3>
+<p>A lock acquired in one task must be released by the same task.  This
+means you can’t do oddball things like acquire a lock and go off to
+play while another task releases it.  If you want to do something
+like this, acquire and release the task in the same code path and
+have the caller wait on an event by the other task.</p>
+</section>
+</section>
+<section id="solution">
+<h2>Solution<a class="headerlink" href="#solution" title="Link to this heading">¶</a></h2>
+<p>Data protection under preemption is achieved by disabling preemption for the
+duration of the critical region.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>preempt_enable()              decrement the preempt counter
+preempt_disable()             increment the preempt counter
+preempt_enable_no_resched()   decrement, but do not immediately preempt
+preempt_check_resched()       if needed, reschedule
+preempt_count()               return the preempt counter
+</pre></div>
+</div>
+<p>The functions are nestable.  In other words, you can call preempt_disable
+n-times in a code path, and preemption will not be reenabled until the n-th
+call to preempt_enable.  The preempt statements define to nothing if
+preemption is not enabled.</p>
+<p>Note that you do not need to explicitly prevent preemption if you are holding
+any locks or interrupts are disabled, since preemption is implicitly disabled
+in those cases.</p>
+<p>But keep in mind that ‘irqs disabled’ is a fundamentally unsafe way of
+disabling preemption - any <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">cond_resched()</span></code> or <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">cond_resched_lock()</span></code> might trigger
+a reschedule if the preempt count is 0. A simple <a class="reference internal" href="../core-api/printk-basics.html#c.printk" title="printk"><code class="xref c c-func docutils literal notranslate"><span class="pre">printk()</span></code></a> might trigger a
+reschedule. So use this implicit preemption-disabling property only if you
+know that the affected codepath does not do any of this. Best policy is to use
+this only for small, atomic code that you wrote and which calls no complex
+functions.</p>
+<p>Example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cpucache_t *cc; /* this is per-CPU */
+preempt_disable();
+cc = cc_data(searchp);
+if (cc &amp;&amp; cc-&gt;avail) {
+        __free_block(searchp, cc_entry(cc), cc-&gt;avail);
+        cc-&gt;avail = 0;
+}
+preempt_enable();
+return 0;
+</pre></div>
+</div>
+<p>Notice how the preemption statements must encompass every reference of the
+critical variables.  Another example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int buf[NR_CPUS];
+set_cpu_val(buf);
+if (buf[smp_processor_id()] == -1) printf(KERN_INFO &quot;wee!\n&quot;);
+spin_lock(&amp;buf_lock);
+/* ... */
+</pre></div>
+</div>
+<p>This code is not preempt-safe, but see how easily we can fix it by simply
+moving the spin_lock up two lines.</p>
+</section>
+<section id="preventing-preemption-using-interrupt-disabling">
+<h2>Preventing preemption using interrupt disabling<a class="headerlink" href="#preventing-preemption-using-interrupt-disabling" title="Link to this heading">¶</a></h2>
+<p>It is possible to prevent a preemption event using local_irq_disable and
+local_irq_save.  Note, when doing so, you must be very careful to not cause
+an event that would set need_resched and result in a preemption check.  When
+in doubt, rely on locking or explicit preemption disabling.</p>
+<p>Note in 2.5 interrupt disabling is now only per-CPU (e.g. local).</p>
+<p>An additional concern is proper usage of local_irq_disable and local_irq_save.
+These may be used to protect from preemption, however, on exit, if preemption
+may be enabled, a test to see if preemption is required should be done.  If
+these are called from the spin_lock and read/write lock macros, the right thing
+is done.  They may also be called within a spin-lock protected region, however,
+if they are ever called outside of this context, a test for preemption should
+be made. Do note that calls from interrupt context or bottom half/ tasklets
+are also protected by preemption locks and so may use the versions which do
+not check preemption.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/locking/preempt-locking.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Atomic Replace &amp; Cumulative Patches &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/livepatch/cumulative-patches.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="Livepatch module ELF format" href="module-elf-format.html" />
+    <link rel="prev" title="(Un)patching Callbacks" href="callbacks.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Livepatching</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="livepatch.html">Livepatch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="callbacks.html">(Un)patching Callbacks</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Atomic Replace &amp; Cumulative Patches</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#features">Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#limitations">Limitations:</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="module-elf-format.html">Livepatch module ELF format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadow-vars.html">Shadow Variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="system-state.html">System State Changes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="reliable-stacktrace.html">Reliable Stacktrace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html">Livepatching APIs</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/livepatch/cumulative-patches.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="atomic-replace-cumulative-patches">
+<h1>Atomic Replace &amp; Cumulative Patches<a class="headerlink" href="#atomic-replace-cumulative-patches" title="Link to this heading">¶</a></h1>
+<p>There might be dependencies between livepatches. If multiple patches need
+to do different changes to the same function(s) then we need to define
+an order in which the patches will be installed. And function implementations
+from any newer livepatch must be done on top of the older ones.</p>
+<p>This might become a maintenance nightmare. Especially when more patches
+modified the same function in different ways.</p>
+<p>An elegant solution comes with the feature called &quot;Atomic Replace&quot;. It allows
+creation of so called &quot;Cumulative Patches&quot;. They include all wanted changes
+from all older livepatches and completely replace them in one transition.</p>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading">¶</a></h2>
+<p>The atomic replace can be enabled by setting &quot;replace&quot; flag in <a class="reference internal" href="api.html#c.klp_patch" title="klp_patch"><code class="xref c c-struct docutils literal notranslate"><span class="pre">struct</span> <span class="pre">klp_patch</span></code></a>,
+for example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static struct klp_patch patch = {
+        .mod = THIS_MODULE,
+        .objs = objs,
+        .replace = true,
+};
+</pre></div>
+</div>
+<p>All processes are then migrated to use the code only from the new patch.
+Once the transition is finished, all older patches are automatically
+disabled.</p>
+<p>Ftrace handlers are transparently removed from functions that are no
+longer modified by the new cumulative patch.</p>
+<p>As a result, the livepatch authors might maintain sources only for one
+cumulative patch. It helps to keep the patch consistent while adding or
+removing various fixes or features.</p>
+<p>Users could keep only the last patch installed on the system after
+the transition to has finished. It helps to clearly see what code is
+actually in use. Also the livepatch might then be seen as a &quot;normal&quot;
+module that modifies the kernel behavior. The only difference is that
+it can be updated at runtime without breaking its functionality.</p>
+</section>
+<section id="features">
+<h2>Features<a class="headerlink" href="#features" title="Link to this heading">¶</a></h2>
+<p>The atomic replace allows:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Atomically revert some functions in a previous patch while
+upgrading other functions.</p></li>
+<li><p>Remove eventual performance impact caused by core redirection
+for functions that are no longer patched.</p></li>
+<li><p>Decrease user confusion about dependencies between livepatches.</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="limitations">
+<h2>Limitations:<a class="headerlink" href="#limitations" title="Link to this heading">¶</a></h2>
+<blockquote>
+<div><ul>
+<li><p>Once the operation finishes, there is no straightforward way
+to reverse it and restore the replaced patches atomically.</p>
+<p>A good practice is to set .replace flag in any released livepatch.
+Then re-adding an older livepatch is equivalent to downgrading
+to that patch. This is safe as long as the livepatches do _not_ do
+extra modifications in (un)patching callbacks or in the <a class="reference internal" href="../driver-api/basics.html#c.module_init" title="module_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">module_init()</span></code></a>
+or <a class="reference internal" href="../driver-api/basics.html#c.module_exit" title="module_exit"><code class="xref c c-func docutils literal notranslate"><span class="pre">module_exit()</span></code></a> functions, see below.</p>
+<p>Also note that the replaced patch can be removed and loaded again
+only when the transition was not forced.</p>
+</li>
+<li><p>Only the (un)patching callbacks from the _new_ cumulative livepatch are
+executed. Any callbacks from the replaced patches are ignored.</p>
+<p>In other words, the cumulative patch is responsible for doing any actions
+that are necessary to properly replace any older patch.</p>
+<p>As a result, it might be dangerous to replace newer cumulative patches by
+older ones. The old livepatches might not provide the necessary callbacks.</p>
+<p>This might be seen as a limitation in some scenarios. But it makes life
+easier in many others. Only the new cumulative livepatch knows what
+fixes/features are added/removed and what special actions are necessary
+for a smooth transition.</p>
+<p>In any case, it would be a nightmare to think about the order of
+the various callbacks and their interactions if the callbacks from all
+enabled patches were called.</p>
+</li>
+<li><p>There is no special handling of shadow variables. Livepatch authors
+must create their own rules how to pass them from one cumulative
+patch to the other. Especially that they should not blindly remove
+them in <a class="reference internal" href="../driver-api/basics.html#c.module_exit" title="module_exit"><code class="xref c c-func docutils literal notranslate"><span class="pre">module_exit()</span></code></a> functions.</p>
+<p>A good practice might be to remove shadow variables in the post-unpatch
+callback. It is called only when the livepatch is properly disabled.</p>
+</li>
+</ul>
+</div></blockquote>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/livepatch/cumulative-patches.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

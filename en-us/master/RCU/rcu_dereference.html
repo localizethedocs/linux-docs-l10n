@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>PROPER CARE AND FEEDING OF RETURN VALUES FROM rcu_dereference() &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/RCU/rcu_dereference.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="What is RCU? -- “Read, Copy, Update”" href="whatisRCU.html" />
+    <link rel="prev" title="RCU and Unloadable Modules" href="rcubarrier.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core-api/index.html">Core API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-entry-and-exit">Low level entry and exit</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../core-api/index.html#concurrency-primitives">Concurrency primitives</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/refcount-vs-atomic.html">refcount_t API compared to atomic_t</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/irq/index.html">IRQs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/local_ops.html">Semantics and Behavior of Local Atomic Operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/padata.html">The padata parallel execution mechanism</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">RCU Handbook</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/wrappers/memory-barriers.html">Linux kernel memory barriers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#memory-management">Memory management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/RCU/rcu_dereference.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="proper-care-and-feeding-of-return-values-from-rcu-dereference">
+<span id="rcu-dereference-doc"></span><h1>PROPER CARE AND FEEDING OF RETURN VALUES FROM rcu_dereference()<a class="headerlink" href="#proper-care-and-feeding-of-return-values-from-rcu-dereference" title="Link to this heading">¶</a></h1>
+<p>Proper care and feeding of address and data dependencies is critically
+important to correct use of things like RCU.  To this end, the pointers
+returned from the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> family of primitives carry address and
+data dependencies.  These dependencies extend from the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>
+macro’s load of the pointer to the later use of that pointer to compute
+either the address of a later memory access (representing an address
+dependency) or the value written by a later memory access (representing
+a data dependency).</p>
+<p>Most of the time, these dependencies are preserved, permitting you to
+freely use values from <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>.  For example, dereferencing
+(prefix “*”), field selection (“-&gt;”), assignment (“=”), address-of
+(”&amp;”), casts, and addition or subtraction of constants all work quite
+naturally and safely.  However, because current compilers do not take
+either address or data dependencies into account it is still possible
+to get into trouble.</p>
+<p>Follow these rules to preserve the address and data dependencies emanating
+from your calls to <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> and friends, thus keeping your RCU
+readers working properly:</p>
+<ul>
+<li><p>You must use one of the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> family of primitives
+to load an RCU-protected pointer, otherwise CONFIG_PROVE_RCU
+will complain.  Worse yet, your code can see random memory-corruption
+bugs due to games that compilers and DEC Alpha can play.
+Without one of the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> primitives, compilers
+can reload the value, and won’t your code have fun with two
+different values for a single pointer!  Without <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>,
+DEC Alpha can load a pointer, dereference that pointer, and
+return data preceding initialization that preceded the store
+of the pointer.  (As noted later, in recent kernels <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">READ_ONCE()</span></code>
+also prevents DEC Alpha from playing these tricks.)</p>
+<p>In addition, the volatile cast in <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> prevents the
+compiler from deducing the resulting pointer value.  Please see
+the section entitled “EXAMPLE WHERE THE COMPILER KNOWS TOO MUCH”
+for an example where the compiler can in fact deduce the exact
+value of the pointer, and thus cause misordering.</p>
+</li>
+<li><p>In the special case where data is added but is never removed
+while readers are accessing the structure, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">READ_ONCE()</span></code> may be used
+instead of <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>.  In this case, use of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">READ_ONCE()</span></code>
+takes on the role of the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">lockless_dereference()</span></code> primitive that
+was removed in v4.15.</p></li>
+<li><p>You are only permitted to use <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> on pointer values.
+The compiler simply knows too much about integral values to
+trust it to carry dependencies through integer operations.
+There are a very few exceptions, namely that you can temporarily
+cast the pointer to uintptr_t in order to:</p>
+<ul class="simple">
+<li><p>Set bits and clear bits down in the must-be-zero low-order
+bits of that pointer.  This clearly means that the pointer
+must have alignment constraints, for example, this does
+<em>not</em> work in general for char* pointers.</p></li>
+<li><p>XOR bits to translate pointers, as is done in some
+classic buddy-allocator algorithms.</p></li>
+</ul>
+<p>It is important to cast the value back to pointer before
+doing much of anything else with it.</p>
+</li>
+<li><p>Avoid cancellation when using the “+” and “-” infix arithmetic
+operators.  For example, for a given variable “x”, avoid
+“(x-(uintptr_t)x)” for char* pointers.  The compiler is within its
+rights to substitute zero for this sort of expression, so that
+subsequent accesses no longer depend on the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>,
+again possibly resulting in bugs due to misordering.</p>
+<p>Of course, if “p” is a pointer from <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>, and “a”
+and “b” are integers that happen to be equal, the expression
+“p+a-b” is safe because its value still necessarily depends on
+the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>, thus maintaining proper ordering.</p>
+</li>
+<li><p>If you are using RCU to protect JITed functions, so that the
+“()” function-invocation operator is applied to a value obtained
+(directly or indirectly) from <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>, you may need to
+interact directly with the hardware to flush instruction caches.
+This issue arises on some systems when a newly JITed function is
+using the same memory that was used by an earlier JITed function.</p></li>
+<li><p>Do not use the results from relational operators (“==”, “!=”,
+“&gt;”, “&gt;=”, “&lt;”, or “&lt;=”) when dereferencing.  For example,
+the following (quite strange) code is buggy:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int *p;
+int *q;
+
+...
+
+p = rcu_dereference(gp)
+q = &amp;global_q;
+q += p &gt; &amp;oom_p;
+r1 = *q;  /* BUGGY!!! */
+</pre></div>
+</div>
+<p>As before, the reason this is buggy is that relational operators
+are often compiled using branches.  And as before, although
+weak-memory machines such as ARM or PowerPC do order stores
+after such branches, but can speculate loads, which can again
+result in misordering bugs.</p>
+</li>
+<li><p>Be very careful about comparing pointers obtained from
+<a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> against non-NULL values.  As Linus Torvalds
+explained, if the two pointers are equal, the compiler could
+substitute the pointer you are comparing against for the pointer
+obtained from <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>.  For example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>p = rcu_dereference(gp);
+if (p == &amp;default_struct)
+        do_default(p-&gt;a);
+</pre></div>
+</div>
+<p>Because the compiler now knows that the value of “p” is exactly
+the address of the variable “default_struct”, it is free to
+transform this code into the following:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>p = rcu_dereference(gp);
+if (p == &amp;default_struct)
+        do_default(default_struct.a);
+</pre></div>
+</div>
+<p>On ARM and Power hardware, the load from “default_struct.a”
+can now be speculated, such that it might happen before the
+<a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>.  This could result in bugs due to misordering.</p>
+<p>However, comparisons are OK in the following cases:</p>
+<ul>
+<li><p>The comparison was against the NULL pointer.  If the
+compiler knows that the pointer is NULL, you had better
+not be dereferencing it anyway.  If the comparison is
+non-equal, the compiler is none the wiser.  Therefore,
+it is safe to compare pointers from <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>
+against NULL pointers.</p></li>
+<li><p>The pointer is never dereferenced after being compared.
+Since there are no subsequent dereferences, the compiler
+cannot use anything it learned from the comparison
+to reorder the non-existent subsequent dereferences.
+This sort of comparison occurs frequently when scanning
+RCU-protected circular linked lists.</p>
+<p>Note that if the pointer comparison is done outside
+of an RCU read-side critical section, and the pointer
+is never dereferenced, <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_access_pointer" title="rcu_access_pointer"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_access_pointer()</span></code></a> should be
+used in place of <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>.  In most cases,
+it is best to avoid accidental dereferences by testing
+the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_access_pointer" title="rcu_access_pointer"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_access_pointer()</span></code></a> return value directly, without
+assigning it to a variable.</p>
+<p>Within an RCU read-side critical section, there is little
+reason to use <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_access_pointer" title="rcu_access_pointer"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_access_pointer()</span></code></a>.</p>
+</li>
+<li><p>The comparison is against a pointer that references memory
+that was initialized “a long time ago.”  The reason
+this is safe is that even if misordering occurs, the
+misordering will not affect the accesses that follow
+the comparison.  So exactly how long ago is “a long
+time ago”?  Here are some possibilities:</p>
+<ul class="simple">
+<li><p>Compile time.</p></li>
+<li><p>Boot time.</p></li>
+<li><p>Module-init time for module code.</p></li>
+<li><p>Prior to kthread creation for kthread code.</p></li>
+<li><p>During some prior acquisition of the lock that
+we now hold.</p></li>
+<li><p>Before <a class="reference internal" href="../driver-api/basics.html#c.mod_timer" title="mod_timer"><code class="xref c c-func docutils literal notranslate"><span class="pre">mod_timer()</span></code></a> time for a timer handler.</p></li>
+</ul>
+<p>There are many other possibilities involving the Linux
+kernel’s wide array of primitives that cause code to
+be invoked at a later time.</p>
+</li>
+<li><p>The pointer being compared against also came from
+<a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>.  In this case, both pointers depend
+on one <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> or another, so you get proper
+ordering either way.</p>
+<p>That said, this situation can make certain RCU usage
+bugs more likely to happen.  Which can be a good thing,
+at least if they happen during testing.  An example
+of such an RCU usage bug is shown in the section titled
+“EXAMPLE OF AMPLIFIED RCU-USAGE BUG”.</p>
+</li>
+<li><p>All of the accesses following the comparison are stores,
+so that a control dependency preserves the needed ordering.
+That said, it is easy to get control dependencies wrong.
+Please see the “CONTROL DEPENDENCIES” section of
+Documentation/memory-barriers.txt for more details.</p></li>
+<li><p>The pointers are not equal <em>and</em> the compiler does
+not have enough information to deduce the value of the
+pointer.  Note that the volatile cast in <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>
+will normally prevent the compiler from knowing too much.</p>
+<p>However, please note that if the compiler knows that the
+pointer takes on only one of two values, a not-equal
+comparison will provide exactly the information that the
+compiler needs to deduce the value of the pointer.</p>
+</li>
+</ul>
+</li>
+<li><p>Disable any value-speculation optimizations that your compiler
+might provide, especially if you are making use of feedback-based
+optimizations that take data collected from prior runs.  Such
+value-speculation optimizations reorder operations by design.</p>
+<p>There is one exception to this rule:  Value-speculation
+optimizations that leverage the branch-prediction hardware are
+safe on strongly ordered systems (such as x86), but not on weakly
+ordered systems (such as ARM or Power).  Choose your compiler
+command-line options wisely!</p>
+</li>
+</ul>
+<section id="example-of-amplified-rcu-usage-bug">
+<h2>EXAMPLE OF AMPLIFIED RCU-USAGE BUG<a class="headerlink" href="#example-of-amplified-rcu-usage-bug" title="Link to this heading">¶</a></h2>
+<p>Because updaters can run concurrently with RCU readers, RCU readers can
+see stale and/or inconsistent values.  If RCU readers need fresh or
+consistent values, which they sometimes do, they need to take proper
+precautions.  To see this, consider the following code fragment:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct foo {
+        int a;
+        int b;
+        int c;
+};
+struct foo *gp1;
+struct foo *gp2;
+
+void updater(void)
+{
+        struct foo *p;
+
+        p = kmalloc(...);
+        if (p == NULL)
+                deal_with_it();
+        p-&gt;a = 42;  /* Each field in its own cache line. */
+        p-&gt;b = 43;
+        p-&gt;c = 44;
+        rcu_assign_pointer(gp1, p);
+        p-&gt;b = 143;
+        p-&gt;c = 144;
+        rcu_assign_pointer(gp2, p);
+}
+
+void reader(void)
+{
+        struct foo *p;
+        struct foo *q;
+        int r1, r2;
+
+        rcu_read_lock();
+        p = rcu_dereference(gp2);
+        if (p == NULL)
+                return;
+        r1 = p-&gt;b;  /* Guaranteed to get 143. */
+        q = rcu_dereference(gp1);  /* Guaranteed non-NULL. */
+        if (p == q) {
+                /* The compiler decides that q-&gt;c is same as p-&gt;c. */
+                r2 = p-&gt;c; /* Could get 44 on weakly order system. */
+        } else {
+                r2 = p-&gt;c - r1; /* Unconditional access to p-&gt;c. */
+        }
+        rcu_read_unlock();
+        do_something_with(r1, r2);
+}
+</pre></div>
+</div>
+<p>You might be surprised that the outcome (r1 == 143 &amp;&amp; r2 == 44) is possible,
+but you should not be.  After all, the updater might have been invoked
+a second time between the time <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">reader()</span></code> loaded into “r1” and the time
+that it loaded into “r2”.  The fact that this same result can occur due
+to some reordering from the compiler and CPUs is beside the point.</p>
+<p>But suppose that the reader needs a consistent view?</p>
+<p>Then one approach is to use locking, for example, as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct foo {
+        int a;
+        int b;
+        int c;
+        spinlock_t lock;
+};
+struct foo *gp1;
+struct foo *gp2;
+
+void updater(void)
+{
+        struct foo *p;
+
+        p = kmalloc(...);
+        if (p == NULL)
+                deal_with_it();
+        spin_lock(&amp;p-&gt;lock);
+        p-&gt;a = 42;  /* Each field in its own cache line. */
+        p-&gt;b = 43;
+        p-&gt;c = 44;
+        spin_unlock(&amp;p-&gt;lock);
+        rcu_assign_pointer(gp1, p);
+        spin_lock(&amp;p-&gt;lock);
+        p-&gt;b = 143;
+        p-&gt;c = 144;
+        spin_unlock(&amp;p-&gt;lock);
+        rcu_assign_pointer(gp2, p);
+}
+
+void reader(void)
+{
+        struct foo *p;
+        struct foo *q;
+        int r1, r2;
+
+        rcu_read_lock();
+        p = rcu_dereference(gp2);
+        if (p == NULL)
+                return;
+        spin_lock(&amp;p-&gt;lock);
+        r1 = p-&gt;b;  /* Guaranteed to get 143. */
+        q = rcu_dereference(gp1);  /* Guaranteed non-NULL. */
+        if (p == q) {
+                /* The compiler decides that q-&gt;c is same as p-&gt;c. */
+                r2 = p-&gt;c; /* Locking guarantees r2 == 144. */
+        } else {
+                spin_lock(&amp;q-&gt;lock);
+                r2 = q-&gt;c - r1;
+                spin_unlock(&amp;q-&gt;lock);
+        }
+        rcu_read_unlock();
+        spin_unlock(&amp;p-&gt;lock);
+        do_something_with(r1, r2);
+}
+</pre></div>
+</div>
+<p>As always, use the right tool for the job!</p>
+</section>
+<section id="example-where-the-compiler-knows-too-much">
+<h2>EXAMPLE WHERE THE COMPILER KNOWS TOO MUCH<a class="headerlink" href="#example-where-the-compiler-knows-too-much" title="Link to this heading">¶</a></h2>
+<p>If a pointer obtained from <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> compares not-equal to some
+other pointer, the compiler normally has no clue what the value of the
+first pointer might be.  This lack of knowledge prevents the compiler
+from carrying out optimizations that otherwise might destroy the ordering
+guarantees that RCU depends on.  And the volatile cast in <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>
+should prevent the compiler from guessing the value.</p>
+<p>But without <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>, the compiler knows more than you might
+expect.  Consider the following code fragment:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct foo {
+        int a;
+        int b;
+};
+static struct foo variable1;
+static struct foo variable2;
+static struct foo *gp = &amp;variable1;
+
+void updater(void)
+{
+        initialize_foo(&amp;variable2);
+        rcu_assign_pointer(gp, &amp;variable2);
+        /*
+         * The above is the only store to gp in this translation unit,
+         * and the address of gp is not exported in any way.
+         */
+}
+
+int reader(void)
+{
+        struct foo *p;
+
+        p = gp;
+        barrier();
+        if (p == &amp;variable1)
+                return p-&gt;a; /* Must be variable1.a. */
+        else
+                return p-&gt;b; /* Must be variable2.b. */
+}
+</pre></div>
+</div>
+<p>Because the compiler can see all stores to “gp”, it knows that the only
+possible values of “gp” are “variable1” on the one hand and “variable2”
+on the other.  The comparison in <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">reader()</span></code> therefore tells the compiler
+the exact value of “p” even in the not-equals case.  This allows the
+compiler to make the return values independent of the load from “gp”,
+in turn destroying the ordering between this load and the loads of the
+return values.  This can result in “p-&gt;b” returning pre-initialization
+garbage values on weakly ordered systems.</p>
+<p>In short, <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> is <em>not</em> optional when you are going to
+dereference the resulting pointer.</p>
+</section>
+<section id="which-member-of-the-rcu-dereference-family-should-you-use">
+<h2>WHICH MEMBER OF THE rcu_dereference() FAMILY SHOULD YOU USE?<a class="headerlink" href="#which-member-of-the-rcu-dereference-family-should-you-use" title="Link to this heading">¶</a></h2>
+<p>First, please avoid using <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_dereference_raw()</span></code> and also please avoid
+using <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_check" title="rcu_dereference_check"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_check()</span></code></a> and <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_protected" title="rcu_dereference_protected"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_protected()</span></code></a> with a
+second argument with a constant value of 1 (or true, for that matter).
+With that caution out of the way, here is some guidance for which
+member of the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> to use in various situations:</p>
+<ol class="arabic">
+<li><p>If the access needs to be within an RCU read-side critical
+section, use <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>.  With the new consolidated
+RCU flavors, an RCU read-side critical section is entered
+using <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_read_lock" title="rcu_read_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_read_lock()</span></code></a>, anything that disables bottom halves,
+anything that disables interrupts, or anything that disables
+preemption.  Please note that spinlock critical sections
+are also implied RCU read-side critical sections, even when
+they are preemptible, as they are in kernels built with
+CONFIG_PREEMPT_RT=y.</p></li>
+<li><p>If the access might be within an RCU read-side critical section
+on the one hand, or protected by (say) my_lock on the other,
+use <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_check" title="rcu_dereference_check"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_check()</span></code></a>, for example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>p1 = rcu_dereference_check(p-&gt;rcu_protected_pointer,
+                           lockdep_is_held(&amp;my_lock));
+</pre></div>
+</div>
+</li>
+<li><p>If the access might be within an RCU read-side critical section
+on the one hand, or protected by either my_lock or your_lock on
+the other, again use <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_check" title="rcu_dereference_check"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_check()</span></code></a>, for example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>p1 = rcu_dereference_check(p-&gt;rcu_protected_pointer,
+                           lockdep_is_held(&amp;my_lock) ||
+                           lockdep_is_held(&amp;your_lock));
+</pre></div>
+</div>
+</li>
+<li><p>If the access is on the update side, so that it is always protected
+by my_lock, use <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_protected" title="rcu_dereference_protected"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_protected()</span></code></a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>p1 = rcu_dereference_protected(p-&gt;rcu_protected_pointer,
+                               lockdep_is_held(&amp;my_lock));
+</pre></div>
+</div>
+<p>This can be extended to handle multiple locks as in #3 above,
+and both can be extended to check other conditions as well.</p>
+</li>
+<li><p>If the protection is supplied by the caller, and is thus unknown
+to this code, that is the rare case when <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_dereference_raw()</span></code>
+is appropriate.  In addition, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_dereference_raw()</span></code> might be
+appropriate when the lockdep expression would be excessively
+complex, except that a better approach in that case might be to
+take a long hard look at your synchronization design.  Still,
+there are data-locking cases where any one of a very large number
+of locks or reference counters suffices to protect the pointer,
+so <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_dereference_raw()</span></code> does have its place.</p>
+<p>However, its place is probably quite a bit smaller than one
+might expect given the number of uses in the current kernel.
+Ditto for its synonym, rcu_dereference_check( ... , 1), and
+its close relative, rcu_dereference_protected(... , 1).</p>
+</li>
+</ol>
+</section>
+<section id="sparse-checking-of-rcu-protected-pointers">
+<h2>SPARSE CHECKING OF RCU-PROTECTED POINTERS<a class="headerlink" href="#sparse-checking-of-rcu-protected-pointers" title="Link to this heading">¶</a></h2>
+<p>The sparse static-analysis tool checks for non-RCU access to RCU-protected
+pointers, which can result in “interesting” bugs due to compiler
+optimizations involving invented loads and perhaps also load tearing.
+For example, suppose someone mistakenly does something like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>p = q-&gt;rcu_protected_pointer;
+do_something_with(p-&gt;a);
+do_something_else_with(p-&gt;b);
+</pre></div>
+</div>
+<p>If register pressure is high, the compiler might optimize “p” out
+of existence, transforming the code to something like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>do_something_with(q-&gt;rcu_protected_pointer-&gt;a);
+do_something_else_with(q-&gt;rcu_protected_pointer-&gt;b);
+</pre></div>
+</div>
+<p>This could fatally disappoint your code if q-&gt;rcu_protected_pointer
+changed in the meantime.  Nor is this a theoretical problem:  Exactly
+this sort of bug cost Paul E. McKenney (and several of his innocent
+colleagues) a three-day weekend back in the early 1990s.</p>
+<p>Load tearing could of course result in dereferencing a mashup of a pair
+of pointers, which also might fatally disappoint your code.</p>
+<p>These problems could have been avoided simply by making the code instead
+read as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>p = rcu_dereference(q-&gt;rcu_protected_pointer);
+do_something_with(p-&gt;a);
+do_something_else_with(p-&gt;b);
+</pre></div>
+</div>
+<p>Unfortunately, these sorts of bugs can be extremely hard to spot during
+review.  This is where the sparse tool comes into play, along with the
+“__rcu” marker.  If you mark a pointer declaration, whether in a structure
+or as a formal parameter, with “__rcu”, which tells sparse to complain if
+this pointer is accessed directly.  It will also cause sparse to complain
+if a pointer not marked with “__rcu” is accessed using <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>
+and friends.  For example, -&gt;rcu_protected_pointer might be declared as
+follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct foo __rcu *rcu_protected_pointer;
+</pre></div>
+</div>
+<p>Use of “__rcu” is opt-in.  If you choose not to use it, then you should
+ignore the sparse warnings.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/RCU/rcu_dereference.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
