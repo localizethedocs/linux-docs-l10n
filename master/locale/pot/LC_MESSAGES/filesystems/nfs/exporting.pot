@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"POT-Creation-Date: 2026-02-16 08:44+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -194,81 +194,172 @@ msgstr ""
 msgid ""
 "A file system implementation declares that instances of the filesystem are "
 "exportable by setting the s_export_op field in the struct super_block.  This "
-"field must point to a \"struct export_operations\" struct which has the "
-"following members:"
+"field must point to a struct export_operations which has the following "
+"members:"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:125
-msgid "encode_fh (mandatory)"
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:195
+msgid "for nfsd to communicate with file systems"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:126
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:199
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:222
+msgid "**Members**"
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:206
+msgid "``encode_fh``"
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:207
 msgid ""
-"Takes a dentry and creates a filehandle fragment which may later be used to "
-"find or create a dentry for the same object."
+"**encode_fh** should store in the file handle fragment **fh** (using at most "
+"**max_len** bytes) information that can be used by **decode_fh** to recover "
+"the file referred to by the :c:type:`struct dentry <dentry>` **de**.  If "
+"**flag** has CONNECTABLE bit set, the encode_fh() should store sufficient "
+"information so that a good attempt can be made to find not only the file but "
+"also it's place in the filesystem.   This typically means storing a "
+"reference to de->d_parent in the filehandle fragment.  encode_fh() should "
+"return the fileid_type on success and on error returns 255 (if the space "
+"needed to encode fh is greater than **max_len***4 bytes). On error "
+"**max_len** contains the minimum size(in 4 byte unit) needed to encode the "
+"file handle."
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:129
-msgid "fh_to_dentry (mandatory)"
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:218
+msgid "``fh_to_dentry``"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:130
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:219
 msgid ""
-"Given a filehandle fragment, this should find the implied object and create "
-"a dentry for it (possibly with d_obtain_alias)."
+"**fh_to_dentry** is given a :c:type:`struct super_block <super_block>` "
+"(**sb**) and a file handle fragment (**fh**, **fh_len**). It should return "
+"a :c:type:`struct dentry <dentry>` which refers to the same file that the "
+"file handle fragment refers to.  If it cannot, it should return a ``NULL`` "
+"pointer if the file cannot be found, or an ``ERR_PTR`` error code of "
+"``ENOMEM`` if a memory allocation failure occurred. Any other error code is "
+"treated like ``NULL``, and will cause an ``ESTALE`` error for callers of "
+"exportfs_decode_fh(). Any suitable dentry can be returned including, if "
+"necessary, a new dentry created with d_alloc_root.  The caller can then find "
+"any other extant dentries by following the d_alias links."
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:133
-msgid "fh_to_parent (optional but strongly recommended)"
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:230
+msgid "``fh_to_parent``"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:134
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:231
 msgid ""
-"Given a filehandle fragment, this should find the parent of the implied "
-"object and create a dentry for it (possibly with d_obtain_alias).  May fail "
-"if the filehandle fragment is too small."
+"Same as **fh_to_dentry**, except that it returns a pointer to the parent "
+"dentry if it was encoded into the filehandle fragment by **encode_fh**."
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:138
-msgid "get_parent (optional but strongly recommended)"
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:234
+msgid "``get_name``"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:139
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:235
 msgid ""
-"When given a dentry for a directory, this should return  a dentry for the "
-"parent.  Quite possibly the parent dentry will have been allocated by "
-"d_alloc_anon.  The default get_parent function just returns an error so any "
-"filehandle lookup that requires finding a parent will fail. ->lookup(\"..\") "
-"is *not* used as a default as it can leave \"..\" entries in the dcache "
-"which are too messy to work with."
+"**get_name** should find a name for the given **child** in the given "
+"**parent** directory.  The name should be stored in the **name** (with the "
+"understanding that it is already pointing to a ``NAME_MAX`` + 1 sized "
+"buffer.   get_name() should return ``0`` on success, a negative error code "
+"or error.  **get_name** will be called without **parent->i_rwsem** held."
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:146
-msgid "get_name (optional)"
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:241
+msgid "``get_parent``"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:147
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:242
 msgid ""
-"When given a parent dentry and a child dentry, this should find a name in "
-"the directory identified by the parent dentry, which leads to the object "
-"identified by the child dentry.  If no get_name function is supplied, a "
-"default implementation is provided which uses vfs_readdir to find potential "
-"names, and matches inode numbers to find the correct match."
+"**get_parent** should find the parent directory for the given **child** "
+"which is also a directory.  In the event that it cannot be found, or storage "
+"space cannot be allocated, a ``ERR_PTR`` should be returned."
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:154
-msgid "flags"
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:252
+msgid "``commit_metadata``"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:155
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:253
+msgid "**commit_metadata** should commit metadata changes to stable storage."
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:255
+msgid "``get_uuid``"
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:256
+msgid "Get a filesystem unique signature exposed to clients."
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:258
+msgid "``map_blocks``"
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:259
+msgid "Map and, if necessary, allocate blocks for a layout."
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:261
+msgid "``commit_blocks``"
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:262
+msgid "Commit blocks in a layout once the client is done with them."
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:246
+msgid "``permission``"
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:247
+msgid "Allow filesystems to specify a custom permission function."
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:249
+msgid "``open``"
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:250
+msgid "Allow filesystems to specify a custom open function."
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:264
+msgid "``flags``"
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:265
 msgid ""
-"Some filesystems may need to be handled differently than others. The "
-"export_operations struct also includes a flags field that allows the "
-"filesystem to communicate such information to nfsd. See the Export "
-"Operations Flags section below for more explanation."
+"Allows the filesystem to communicate to nfsd that it may want to do things "
+"differently when dealing with it."
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:160
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:269
+msgid "**Description**"
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:202
+msgid ""
+"See Documentation/filesystems/nfs/exporting.rst for details on how to use "
+"this interface correctly and the definition of the flags."
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:206
+msgid "Locking rules:"
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting:125: ../include/linux/exportfs.h:207
+msgid ""
+"get_parent is called with child->d_inode->i_rwsem down get_name is not "
+"(which is possibly inconsistent)"
+msgstr ""
+
+#: ../../../filesystems/nfs/exporting.rst:128
 msgid ""
 "A filehandle fragment consists of an array of 1 or more 4byte words, "
 "together with a one byte \"type\". The decode_fh routine should not depend "
@@ -279,11 +370,11 @@ msgid ""
 "it should be interpreted."
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:170
+#: ../../../filesystems/nfs/exporting.rst:138
 msgid "Export Operations Flags"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:171
+#: ../../../filesystems/nfs/exporting.rst:139
 msgid ""
 "In addition to the operation vector pointers, struct export_operations also "
 "contains a \"flags\" field that allows the filesystem to communicate to nfsd "
@@ -291,11 +382,11 @@ msgid ""
 "following flags are defined:"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:176
+#: ../../../filesystems/nfs/exporting.rst:144
 msgid "EXPORT_OP_NOWCC - disable NFSv3 WCC attributes on this filesystem"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:177
+#: ../../../filesystems/nfs/exporting.rst:145
 msgid ""
 "RFC 1813 recommends that servers always send weak cache consistency (WCC) "
 "data to the client after each operation. The server should atomically "
@@ -311,11 +402,11 @@ msgid ""
 "collection is impossible to guarantee."
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:191
+#: ../../../filesystems/nfs/exporting.rst:159
 msgid "EXPORT_OP_NOSUBTREECHK - disallow subtree checking on this fs"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:192
+#: ../../../filesystems/nfs/exporting.rst:160
 msgid ""
 "Many NFS operations deal with filehandles, which the server must then vet to "
 "ensure that they live inside of an exported tree. When the export consists "
@@ -328,12 +419,12 @@ msgid ""
 "to enable subtree checking on it."
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:203
+#: ../../../filesystems/nfs/exporting.rst:171
 msgid ""
 "EXPORT_OP_CLOSE_BEFORE_UNLINK - always close cached files before unlinking"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:204
+#: ../../../filesystems/nfs/exporting.rst:172
 msgid ""
 "On some exportable filesystems (such as NFS) unlinking a file that is still "
 "open can cause a fair bit of extra work. For instance, the NFS client will "
@@ -347,11 +438,11 @@ msgid ""
 "an existing file."
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:216
+#: ../../../filesystems/nfs/exporting.rst:184
 msgid "EXPORT_OP_REMOTE_FS - Backing storage for this filesystem is remote"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:217
+#: ../../../filesystems/nfs/exporting.rst:185
 msgid ""
 "PF_LOCAL_THROTTLE exists for loopback NFSD, where a thread needs to write to "
 "one bdi (the final bdi) in order to free up writes queued to another bdi "
@@ -362,12 +453,12 @@ msgid ""
 "EXPORT_OP_REMOTE_FS enables an export to disable writeback throttling."
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:226
+#: ../../../filesystems/nfs/exporting.rst:194
 msgid ""
 "EXPORT_OP_NOATOMIC_ATTR - Filesystem does not update attributes atomically"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:227
+#: ../../../filesystems/nfs/exporting.rst:195
 msgid ""
 "EXPORT_OP_NOATOMIC_ATTR indicates that the exported filesystem cannot "
 "provide the semantics required by the \"atomic\" boolean in NFSv4's "
@@ -376,11 +467,11 @@ msgid ""
 "requested metadata operation (UNLINK, OPEN/CREATE, MKDIR, etc)."
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:234
+#: ../../../filesystems/nfs/exporting.rst:202
 msgid "EXPORT_OP_FLUSH_ON_CLOSE - Filesystem flushes file data on close(2)"
 msgstr ""
 
-#: ../../../filesystems/nfs/exporting.rst:235
+#: ../../../filesystems/nfs/exporting.rst:203
 msgid ""
 "On most filesystems, inodes can remain under writeback after the file is "
 "closed. NFSD relies on client activity or local flusher threads to handle "
