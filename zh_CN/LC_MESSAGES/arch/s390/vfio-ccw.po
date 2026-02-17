@@ -1,0 +1,719 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel 6\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-30 08:40+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../arch/s390/vfio-ccw.rst:3
+msgid "vfio-ccw: the basic infrastructure"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:6
+msgid "Introduction"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:8
+msgid ""
+"Here we describe the vfio support for I/O subchannel devices for Linux/s390. "
+"Motivation for vfio-ccw is to passthrough subchannels to a virtual machine, "
+"while vfio is the means."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:12
+msgid ""
+"Different than other hardware architectures, s390 has defined a unified I/O "
+"access method, which is so called Channel I/O. It has its own access "
+"patterns:"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:16
+msgid "Channel programs run asynchronously on a separate (co)processor."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:17
+msgid ""
+"The channel subsystem will access any memory designated by the caller in the "
+"channel program directly, i.e. there is no iommu involved."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:20
+msgid ""
+"Thus when we introduce vfio support for these devices, we realize it with a "
+"mediated device (mdev) implementation. The vfio mdev will be added to an "
+"iommu group, so as to make itself able to be managed by the vfio framework. "
+"And we add read/write callbacks for special vfio I/O regions to pass the "
+"channel programs from the mdev to its parent device (the real I/O subchannel "
+"device) to do further address translation and to perform I/O instructions."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:28
+msgid ""
+"This document does not intend to explain the s390 I/O architecture in every "
+"detail. More information/reference could be found here:"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:31
+msgid ""
+"A good start to know Channel I/O in general: https://en.wikipedia.org/wiki/"
+"Channel_I/O"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:33
+msgid ""
+"s390 architecture: s390 Principles of Operation manual (IBM Form. No. "
+"SA22-7832)"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:35
+msgid ""
+"The existing QEMU code which implements a simple emulated channel subsystem "
+"could also be a good reference. It makes it easier to follow the flow. qemu/"
+"hw/s390x/css.c"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:40
+msgid ""
+"For vfio mediated device framework: - Documentation/driver-api/vfio-mediated-"
+"device.rst"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:44
+msgid "Motivation of vfio-ccw"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:46
+msgid ""
+"Typically, a guest virtualized via QEMU/KVM on s390 only sees "
+"paravirtualized virtio devices via the \"Virtio Over Channel I/O (virtio-"
+"ccw)\" transport. This makes virtio devices discoverable via standard "
+"operating system algorithms for handling channel devices."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:51
+msgid ""
+"However this is not enough. On s390 for the majority of devices, which use "
+"the standard Channel I/O based mechanism, we also need to provide the "
+"functionality of passing through them to a QEMU virtual machine. This "
+"includes devices that don't have a virtio counterpart (e.g. tape drives) or "
+"that have specific characteristics which guests want to exploit."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:58
+msgid ""
+"For passing a device to a guest, we want to use the same interface as "
+"everybody else, namely vfio. We implement this vfio support for channel "
+"devices via the vfio mediated device framework and the subchannel device "
+"driver \"vfio_ccw\"."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:64
+msgid "Access patterns of CCW devices"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:66
+msgid ""
+"s390 architecture has implemented a so called channel subsystem, that "
+"provides a unified view of the devices physically attached to the systems. "
+"Though the s390 hardware platform knows about a huge variety of different "
+"peripheral attachments like disk devices (aka. DASDs), tapes, communication "
+"controllers, etc. They can all be accessed by a well defined access method "
+"and they are presenting I/O completion a unified way: I/O interruptions."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:74
+msgid ""
+"All I/O requires the use of channel command words (CCWs). A CCW is an "
+"instruction to a specialized I/O channel processor. A channel program is a "
+"sequence of CCWs which are executed by the I/O channel subsystem.  To issue "
+"a channel program to the channel subsystem, it is required to build an "
+"operation request block (ORB), which can be used to point out the format of "
+"the CCW and other control information to the system. The operating system "
+"signals the I/O channel subsystem to begin executing the channel program "
+"with a SSCH (start sub-channel) instruction. The central processor is then "
+"free to proceed with non-I/O instructions until interrupted. The I/O "
+"completion result is received by the interrupt handler in the form of "
+"interrupt response block (IRB)."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:86
+msgid "Back to vfio-ccw, in short:"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:88
+msgid ""
+"ORBs and channel programs are built in guest kernel (with guest physical "
+"addresses)."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:90
+msgid "ORBs and channel programs are passed to the host kernel."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:91
+msgid ""
+"Host kernel translates the guest physical addresses to real addresses and "
+"starts the I/O with issuing a privileged Channel I/O instruction (e.g SSCH)."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:94
+msgid "channel programs run asynchronously on a separate processor."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:95
+msgid ""
+"I/O completion will be signaled to the host with I/O interruptions. And it "
+"will be copied as IRB to user space to pass it back to the guest."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:100
+msgid "Physical vfio ccw device and its child mdev"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:102
+msgid "As mentioned above, we realize vfio-ccw with a mdev implementation."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:104
+msgid ""
+"Channel I/O does not have IOMMU hardware support, so the physical vfio-ccw "
+"device does not have an IOMMU level translation or isolation."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:107
+msgid ""
+"Subchannel I/O instructions are all privileged instructions. When handling "
+"the I/O instruction interception, vfio-ccw has the software policing and "
+"translation how the channel program is programmed before it gets sent to "
+"hardware."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:112
+msgid ""
+"Within this implementation, we have two drivers for two types of devices:"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:115
+msgid ""
+"The vfio_ccw driver for the physical subchannel device. This is an I/O "
+"subchannel driver for the real subchannel device.  It realizes a group of "
+"callbacks and registers to the mdev framework as a parent (physical) device. "
+"As a consequence, mdev provides vfio_ccw a generic interface (sysfs) to "
+"create mdev devices. A vfio mdev could be created by vfio_ccw then and added "
+"to the mediated bus. It is the vfio device that added to an IOMMU group and "
+"a vfio group. vfio_ccw also provides an I/O region to accept channel program "
+"request from user space and store I/O interrupt result for user space to "
+"retrieve. To notify user space an I/O completion, it offers an interface to "
+"setup an eventfd fd for asynchronous signaling."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:127
+msgid ""
+"The vfio_mdev driver for the mediated vfio ccw device. This is provided by "
+"the mdev framework. It is a vfio device driver for the mdev that created by "
+"vfio_ccw. It realizes a group of vfio device driver callbacks, adds itself "
+"to a vfio group, and registers itself to the mdev framework as a mdev "
+"driver. It uses a vfio iommu backend that uses the existing map and unmap "
+"ioctls, but rather than programming them into an IOMMU for a device, it "
+"simply stores the translations for use by later requests. This means that a "
+"device programmed in a VM with guest physical addresses can have the vfio "
+"kernel convert that address to process virtual address, pin the page and "
+"program the hardware with the host physical address in one step. For a mdev, "
+"the vfio iommu backend will not pin the pages during the VFIO_IOMMU_MAP_DMA "
+"ioctl. Mdev framework will only maintain a database of the iova<->vaddr "
+"mappings in this operation. And they export a vfio_pin_pages and a "
+"vfio_unpin_pages interfaces from the vfio iommu backend for the physical "
+"devices to pin and unpin pages by demand."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:146
+msgid "Below is a high Level block diagram::"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:166
+msgid "The process of how these work together."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:168
+msgid ""
+"vfio_ccw.ko drives the physical I/O subchannel, and registers the physical "
+"device (with callbacks) to mdev framework. When vfio_ccw probing the "
+"subchannel device, it registers device pointer and callbacks to the mdev "
+"framework. Mdev related file nodes under the device node in sysfs would be "
+"created for the subchannel device, namely 'mdev_create', 'mdev_destroy' and "
+"'mdev_supported_types'."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:175
+msgid ""
+"Create a mediated vfio ccw device. Use the 'mdev_create' sysfs file, we need "
+"to manually create one (and only one for our case) mediated device."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:178
+msgid ""
+"vfio_mdev.ko drives the mediated ccw device. vfio_mdev is also the vfio "
+"device driver. It will probe the mdev and add it to an iommu_group and a "
+"vfio_group. Then we could pass through the mdev to a guest."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:185
+msgid "VFIO-CCW Regions"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:187
+msgid ""
+"The vfio-ccw driver exposes MMIO regions to accept requests from and return "
+"results to userspace."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:191
+msgid "vfio-ccw I/O region"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:193
+msgid ""
+"An I/O region is used to accept channel program request from user space and "
+"store I/O interrupt result for user space to retrieve. The definition of the "
+"region is::"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:207
+msgid "This region is always available."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:209
+msgid ""
+"While starting an I/O request, orb_area should be filled with the guest ORB, "
+"and scsw_area should be filled with the SCSW of the Virtual Subchannel."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:213
+msgid "irb_area stores the I/O result."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:215
+msgid ""
+"ret_code stores a return code for each access of the region. The following "
+"values may occur:"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:218 ../../../arch/s390/vfio-ccw.rst:266
+msgid "``0``"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:219 ../../../arch/s390/vfio-ccw.rst:267
+msgid "The operation was successful."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:221
+msgid "``-EOPNOTSUPP``"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:222
+msgid ""
+"The ORB specified transport mode or the SCSW specified a function other than "
+"the start function."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:225 ../../../arch/s390/vfio-ccw.rst:275
+msgid "``-EIO``"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:226
+msgid ""
+"A request was issued while the device was not in a state ready to accept "
+"requests, or an internal error occurred."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:229 ../../../arch/s390/vfio-ccw.rst:282
+msgid "``-EBUSY``"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:230
+msgid ""
+"The subchannel was status pending or busy, or a request is already active."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:232 ../../../arch/s390/vfio-ccw.rst:279
+msgid "``-EAGAIN``"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:233 ../../../arch/s390/vfio-ccw.rst:280
+msgid "A request was being processed, and the caller should retry."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:235
+msgid "``-EACCES``"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:236
+msgid "The channel path(s) used for the I/O were found to be not operational."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:238 ../../../arch/s390/vfio-ccw.rst:269
+msgid "``-ENODEV``"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:239 ../../../arch/s390/vfio-ccw.rst:270
+msgid "The device was found to be not operational."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:241 ../../../arch/s390/vfio-ccw.rst:272
+msgid "``-EINVAL``"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:242
+msgid ""
+"The orb specified a chain longer than 255 ccws, or an internal error "
+"occurred."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:247
+msgid "vfio-ccw cmd region"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:249
+msgid ""
+"The vfio-ccw cmd region is used to accept asynchronous instructions from "
+"userspace::"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:259
+msgid ""
+"This region is exposed via region type VFIO_REGION_SUBTYPE_CCW_ASYNC_CMD."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:261
+msgid "Currently, CLEAR SUBCHANNEL and HALT SUBCHANNEL use this region."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:263
+msgid ""
+"command specifies the command to be issued; ret_code stores a return code "
+"for each access of the region. The following values may occur:"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:273
+msgid "A command other than halt or clear was specified."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:276
+msgid ""
+"A request was issued while the device was not in a state ready to accept "
+"requests."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:283
+msgid ""
+"The subchannel was status pending or busy while processing a halt request."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:286
+msgid "vfio-ccw schib region"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:288
+msgid ""
+"The vfio-ccw schib region is used to return Subchannel-Information Block "
+"(SCHIB) data to userspace::"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:296
+msgid "This region is exposed via region type VFIO_REGION_SUBTYPE_CCW_SCHIB."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:298
+msgid ""
+"Reading this region triggers a STORE SUBCHANNEL to be issued to the "
+"associated hardware."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:302
+msgid "vfio-ccw crw region"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:304
+msgid ""
+"The vfio-ccw crw region is used to return Channel Report Word (CRW) data to "
+"userspace::"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:312
+msgid "This region is exposed via region type VFIO_REGION_SUBTYPE_CCW_CRW."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:314
+msgid ""
+"Reading this region returns a CRW if one that is relevant for this "
+"subchannel (e.g. one reporting changes in channel path state) is pending, or "
+"all zeroes if not. If multiple CRWs are pending (including possibly chained "
+"CRWs), reading this region again will return the next one, until no more "
+"CRWs are pending and zeroes are returned. This is similar to how STORE "
+"CHANNEL REPORT WORD works."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:322
+msgid "vfio-ccw operation details"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:324
+msgid ""
+"vfio-ccw follows what vfio-pci did on the s390 platform and uses vfio-iommu-"
+"type1 as the vfio iommu backend."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:327
+msgid ""
+"CCW translation APIs A group of APIs (start with `cp_`) to do CCW "
+"translation. The CCWs passed in by a user space program are organized with "
+"their guest physical memory addresses. These APIs will copy the CCWs into "
+"kernel space, and assemble a runnable kernel channel program by updating the "
+"guest physical addresses with their corresponding host physical addresses. "
+"Note that we have to use IDALs even for direct-access CCWs, as the "
+"referenced memory can be located anywhere, including above 2G."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:336
+msgid ""
+"vfio_ccw device driver This driver utilizes the CCW translation APIs and "
+"introduces vfio_ccw, which is the driver for the I/O subchannel devices you "
+"want to pass through. vfio_ccw implements the following vfio ioctls::"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:348
+msgid ""
+"This provides an I/O region, so that the user space program can pass a "
+"channel program to the kernel, to do further CCW translation before issuing "
+"them to a real device. This also provides the SET_IRQ ioctl to setup an "
+"event notifier to notify the user space program the I/O completion in an "
+"asynchronous way."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:355
+msgid ""
+"The use of vfio-ccw is not limited to QEMU, while QEMU is definitely a good "
+"example to get understand how these patches work. Here is a little bit more "
+"detail how an I/O request triggered by the QEMU guest will be handled "
+"(without error handling)."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:360
+msgid "Explanation:"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:362
+msgid "Q1-Q7: QEMU side process."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:363
+msgid "K1-K5: Kernel side process."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:365
+msgid "Q1."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:366
+msgid "Get I/O region info during initialization."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:368
+msgid "Q2."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:369
+msgid "Setup event notifier and handler to handle I/O completion."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:371 ../../../arch/s390/vfio-ccw.rst:391
+msgid "... ..."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:373
+msgid "Q3."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:374
+msgid "Intercept a ssch instruction."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:375
+msgid "Q4."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:376
+msgid "Write the guest channel program and ORB to the I/O region."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:378
+msgid "K1."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:379
+msgid "Copy from guest to kernel."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:380
+msgid "K2."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:381
+msgid ""
+"Translate the guest channel program to a host kernel space channel program, "
+"which becomes runnable for a real device."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:383
+msgid "K3."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:384
+msgid ""
+"With the necessary information contained in the orb passed in by QEMU, issue "
+"the ccwchain to the device."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:386
+msgid "K4."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:387
+msgid "Return the ssch CC code."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:388
+msgid "Q5."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:389
+msgid "Return the CC code to the guest."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:393
+msgid "K5."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:394
+msgid ""
+"Interrupt handler gets the I/O result and write the result to the I/O region."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:396
+msgid "K6."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:397
+msgid "Signal QEMU to retrieve the result."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:399
+msgid "Q6."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:400
+msgid ""
+"Get the signal and event handler reads out the result from the I/O region."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:402
+msgid "Q7."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:403
+msgid "Update the irb for the guest."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:406
+msgid "Limitations"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:408
+msgid ""
+"The current vfio-ccw implementation focuses on supporting basic commands "
+"needed to implement block device functionality (read/write) of DASD/ECKD "
+"device only. Some commands may need special handling in the future, for "
+"example, anything related to path grouping."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:413
+msgid ""
+"DASD is a kind of storage device. While ECKD is a data recording format. "
+"More information for DASD and ECKD could be found here: https://en.wikipedia."
+"org/wiki/Direct-access_storage_device https://en.wikipedia.org/wiki/"
+"Count_key_data"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:418
+msgid ""
+"Together with the corresponding work in QEMU, we can bring the passed "
+"through DASD/ECKD device online in a guest now and use it as a block device."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:422
+msgid ""
+"The current code allows the guest to start channel programs via START "
+"SUBCHANNEL, and to issue HALT SUBCHANNEL, CLEAR SUBCHANNEL, and STORE "
+"SUBCHANNEL."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:426
+msgid ""
+"Currently all channel programs are prefetched, regardless of the p-bit "
+"setting in the ORB.  As a result, self modifying channel programs are not "
+"supported.  For this reason, IPL has to be handled as a special case by a "
+"userspace/guest program; this has been implemented in QEMU's s390-ccw bios "
+"as of QEMU 4.1."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:432
+msgid ""
+"vfio-ccw supports classic (command mode) channel I/O only. Transport mode "
+"(HPF) is not supported."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:435
+msgid ""
+"QDIO subchannels are currently not supported. Classic devices other than "
+"DASD/ECKD might work, but have not been tested."
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:439
+msgid "Reference"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:440
+msgid "ESA/s390 Principles of Operation manual (IBM Form. No. SA22-7832)"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:441
+msgid "ESA/390 Common I/O Device Commands manual (IBM Form. No. SA22-7204)"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:442
+msgid "https://en.wikipedia.org/wiki/Channel_I/O"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:443
+msgid "Documentation/arch/s390/cds.rst"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:444
+msgid "Documentation/driver-api/vfio.rst"
+msgstr ""
+
+#: ../../../arch/s390/vfio-ccw.rst:445
+msgid "Documentation/driver-api/vfio-mediated-device.rst"
+msgstr ""
