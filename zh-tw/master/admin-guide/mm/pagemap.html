@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Examining Process Page Tables &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/mm/pagemap.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜尋" href="../../search.html" />
+    <link rel="next" title="Shrinker Debugfs Interface" href="shrinker_debugfs.html" />
+    <link rel="prev" title="NUMA Memory Performance" href="numaperf.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#core-kernel-subsystems">Core-kernel subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v2.html">Control Group v2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v1/index.html">Control Groups version 1</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cpu-load.html">CPU load</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">記憶體管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../module-signing.html">Kernel module signing facility</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../namespaces/index.html">Namespaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../numastat.html">Numa policy hit/miss statistics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pm/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../syscall-user-dispatch.html">Syscall User Dispatch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../binfmt-misc.html">Kernel Support for miscellaneous Binary Formats (binfmt_misc)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../java.html">Java(tm) Binary Kernel Support for Linux v1.03</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mono.html">Mono(tm) Binary Kernel Support for Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/admin-guide/mm/pagemap.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="examining-process-page-tables">
+<h1>Examining Process Page Tables<a class="headerlink" href="#examining-process-page-tables" title="連結到這個標頭">¶</a></h1>
+<p>pagemap is a new (as of 2.6.25) set of interfaces in the kernel that allow
+userspace programs to examine the page tables and related information by
+reading files in <code class="docutils literal notranslate"><span class="pre">/proc</span></code>.</p>
+<p>There are four components to pagemap:</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">/proc/pid/pagemap</span></code>.  This file lets a userspace process find out which
+physical frame each virtual page is mapped to.  It contains one 64-bit
+value for each virtual page, containing the following data (from
+<code class="docutils literal notranslate"><span class="pre">fs/proc/task_mmu.c</span></code>, above pagemap_read):</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Bits 0-54  page frame number (PFN) if present</p></li>
+<li><p>Bits 0-4   swap type if swapped</p></li>
+<li><p>Bits 5-54  swap offset if swapped</p></li>
+<li><p>Bit  55    pte is soft-dirty (see
+<a class="reference internal" href="soft-dirty.html"><span class="doc">Soft-Dirty PTEs</span></a>)</p></li>
+<li><p>Bit  56    page exclusively mapped (since 4.2)</p></li>
+<li><p>Bit  57    pte is uffd-wp write-protected (since 5.13) (see
+<a class="reference internal" href="userfaultfd.html"><span class="doc">Userfaultfd</span></a>)</p></li>
+<li><p>Bit  58    pte is a guard region (since 6.15) (see madvise (2) man page)</p></li>
+<li><p>Bits 59-60 zero</p></li>
+<li><p>Bit  61    page is file-page or shared-anon (since 3.5)</p></li>
+<li><p>Bit  62    page swapped</p></li>
+<li><p>Bit  63    page present</p></li>
+</ul>
+</div></blockquote>
+<p>Since Linux 4.0 only users with the CAP_SYS_ADMIN capability can get PFNs.
+In 4.0 and 4.1 opens by unprivileged fail with -EPERM.  Starting from
+4.2 the PFN field is zeroed if the user does not have CAP_SYS_ADMIN.
+Reason: information about PFNs helps in exploiting Rowhammer vulnerability.</p>
+<p>If the page is not present but in swap, then the PFN contains an
+encoding of the swap file number and the page's offset into the
+swap. Unmapped pages return a null PFN. This allows determining
+precisely which pages are mapped (or in swap) and comparing mapped
+pages between processes.</p>
+<p>Traditionally, bit 56 indicates that a page is mapped exactly once and bit
+56 is clear when a page is mapped multiple times, even when mapped in the
+same process multiple times. In some kernel configurations, the semantics
+for pages part of a larger allocation (e.g., THP) can differ: bit 56 is set
+if all pages part of the corresponding large allocation are <em>certainly</em>
+mapped in the same process, even if the page is mapped multiple times in that
+process. Bit 56 is clear when any page page of the larger allocation
+is <em>maybe</em> mapped in a different process. In some cases, a large allocation
+might be treated as &quot;maybe mapped by multiple processes&quot; even though this
+is no longer the case.</p>
+<p>Efficient users of this interface will use <code class="docutils literal notranslate"><span class="pre">/proc/pid/maps</span></code> to
+determine which areas of memory are actually mapped and llseek to
+skip over unmapped regions.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">/proc/kpagecount</span></code>.  This file contains a 64-bit count of the number of
+times each page is mapped, indexed by PFN. Some kernel configurations do
+not track the precise number of times a page part of a larger allocation
+(e.g., THP) is mapped. In these configurations, the average number of
+mappings per page in this larger allocation is returned instead. However,
+if any page of the large allocation is mapped, the returned value will
+be at least 1.</p></li>
+</ul>
+</div></blockquote>
+<p>The page-types tool in the tools/mm directory can be used to query the
+number of times a page is mapped.</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">/proc/kpageflags</span></code>.  This file contains a 64-bit set of flags for each
+page, indexed by PFN.</p>
+<p>The flags are (from <code class="docutils literal notranslate"><span class="pre">fs/proc/page.c</span></code>, above kpageflags_read):</p>
+<blockquote>
+<div><ol class="arabic simple" start="0">
+<li><p>LOCKED</p></li>
+<li><p>ERROR</p></li>
+<li><p>REFERENCED</p></li>
+<li><p>UPTODATE</p></li>
+<li><p>DIRTY</p></li>
+<li><p>LRU</p></li>
+<li><p>ACTIVE</p></li>
+<li><p>SLAB</p></li>
+<li><p>WRITEBACK</p></li>
+<li><p>RECLAIM</p></li>
+<li><p>BUDDY</p></li>
+<li><p>MMAP</p></li>
+<li><p>ANON</p></li>
+<li><p>SWAPCACHE</p></li>
+<li><p>SWAPBACKED</p></li>
+<li><p>COMPOUND_HEAD</p></li>
+<li><p>COMPOUND_TAIL</p></li>
+<li><p>HUGE</p></li>
+<li><p>UNEVICTABLE</p></li>
+<li><p>HWPOISON</p></li>
+<li><p>NOPAGE</p></li>
+<li><p>KSM</p></li>
+<li><p>THP</p></li>
+<li><p>OFFLINE</p></li>
+<li><p>ZERO_PAGE</p></li>
+<li><p>IDLE</p></li>
+<li><p>PGTABLE</p></li>
+</ol>
+</div></blockquote>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">/proc/kpagecgroup</span></code>.  This file contains a 64-bit inode number of the
+memory cgroup each page is charged to, indexed by PFN. Only available when
+CONFIG_MEMCG is set.</p></li>
+</ul>
+</div></blockquote>
+<section id="short-descriptions-to-the-page-flags">
+<h2>Short descriptions to the page flags<a class="headerlink" href="#short-descriptions-to-the-page-flags" title="連結到這個標頭">¶</a></h2>
+<dl class="simple">
+<dt>0 - LOCKED</dt><dd><p>The page is being locked for exclusive access, e.g. by undergoing read/write
+IO.</p>
+</dd>
+<dt>7 - SLAB</dt><dd><p>The page is managed by the SLAB/SLUB kernel memory allocator.
+When compound page is used, either will only set this flag on the head
+page.</p>
+</dd>
+<dt>10 - BUDDY</dt><dd><p>A free memory block managed by the buddy system allocator.
+The buddy system organizes free memory in blocks of various orders.
+An order N block has 2^N physically contiguous pages, with the BUDDY flag
+set for all pages.
+Before 4.6 only the first page of the block had the flag set.</p>
+</dd>
+<dt>15 - COMPOUND_HEAD</dt><dd><p>A compound page with order N consists of 2^N physically contiguous pages.
+A compound page with order 2 takes the form of &quot;HTTT&quot;, where H donates its
+head page and T donates its tail page(s).  The major consumers of compound
+pages are hugeTLB pages (<a class="reference internal" href="hugetlbpage.html"><span class="doc">HugeTLB Pages</span></a>),
+the SLUB etc.  memory allocators and various device drivers.
+However in this interface, only huge/giga pages are made visible
+to end users.</p>
+</dd>
+<dt>16 - COMPOUND_TAIL</dt><dd><p>A compound page tail (see description above).</p>
+</dd>
+<dt>17 - HUGE</dt><dd><p>This is an integral part of a HugeTLB page.</p>
+</dd>
+<dt>19 - HWPOISON</dt><dd><p>Hardware detected memory corruption on this page: don't touch the data!</p>
+</dd>
+<dt>20 - NOPAGE</dt><dd><p>No page frame exists at the requested address.</p>
+</dd>
+<dt>21 - KSM</dt><dd><p>Identical memory pages dynamically shared between one or more processes.</p>
+</dd>
+<dt>22 - THP</dt><dd><p>Contiguous pages which construct THP of any size and mapped by any granularity.</p>
+</dd>
+<dt>23 - OFFLINE</dt><dd><p>The page is logically offline.</p>
+</dd>
+<dt>24 - ZERO_PAGE</dt><dd><p>Zero page for pfn_zero or huge_zero page.</p>
+</dd>
+<dt>25 - IDLE</dt><dd><p>The page has not been accessed since it was marked idle (see
+<a class="reference internal" href="idle_page_tracking.html"><span class="doc">Idle Page Tracking</span></a>).
+Note that this flag may be stale in case the page was accessed via
+a PTE. To make sure the flag is up-to-date one has to read
+<code class="docutils literal notranslate"><span class="pre">/sys/kernel/mm/page_idle/bitmap</span></code> first.</p>
+</dd>
+<dt>26 - PGTABLE</dt><dd><p>The page is in use as a page table.</p>
+</dd>
+</dl>
+<section id="io-related-page-flags">
+<h3>IO related page flags<a class="headerlink" href="#io-related-page-flags" title="連結到這個標頭">¶</a></h3>
+<dl class="simple">
+<dt>1 - ERROR</dt><dd><p>IO error occurred.</p>
+</dd>
+<dt>3 - UPTODATE</dt><dd><p>The page has up-to-date data.
+ie. for file backed page: (in-memory data revision &gt;= on-disk one)</p>
+</dd>
+<dt>4 - DIRTY</dt><dd><p>The page has been written to, hence contains new data.
+i.e. for file backed page: (in-memory data revision &gt;  on-disk one)</p>
+</dd>
+<dt>8 - WRITEBACK</dt><dd><p>The page is being synced to disk.</p>
+</dd>
+</dl>
+</section>
+<section id="lru-related-page-flags">
+<h3>LRU related page flags<a class="headerlink" href="#lru-related-page-flags" title="連結到這個標頭">¶</a></h3>
+<dl class="simple">
+<dt>5 - LRU</dt><dd><p>The page is in one of the LRU lists.</p>
+</dd>
+<dt>6 - ACTIVE</dt><dd><p>The page is in the active LRU list.</p>
+</dd>
+<dt>18 - UNEVICTABLE</dt><dd><p>The page is in the unevictable (non-)LRU list It is somehow pinned and
+not a candidate for LRU page reclaims, e.g. ramfs pages,
+shmctl(SHM_LOCK) and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">mlock()</span></code> memory segments.</p>
+</dd>
+<dt>2 - REFERENCED</dt><dd><p>The page has been referenced since last LRU list enqueue/requeue.</p>
+</dd>
+<dt>9 - RECLAIM</dt><dd><p>The page will be reclaimed soon after its pageout IO completed.</p>
+</dd>
+<dt>11 - MMAP</dt><dd><p>A memory mapped page.</p>
+</dd>
+<dt>12 - ANON</dt><dd><p>A memory mapped page that is not part of a file.</p>
+</dd>
+<dt>13 - SWAPCACHE</dt><dd><p>The page is mapped to swap space, i.e. has an associated swap entry.</p>
+</dd>
+<dt>14 - SWAPBACKED</dt><dd><p>The page is backed by swap/RAM.</p>
+</dd>
+</dl>
+<p>The page-types tool in the tools/mm directory can be used to query the
+above flags.</p>
+</section>
+</section>
+<section id="exceptions-for-shared-memory">
+<h2>Exceptions for Shared Memory<a class="headerlink" href="#exceptions-for-shared-memory" title="連結到這個標頭">¶</a></h2>
+<p>Page table entries for shared pages are cleared when the pages are zapped or
+swapped out. This makes swapped out pages indistinguishable from never-allocated
+ones.</p>
+<p>In kernel space, the swap location can still be retrieved from the page cache.
+However, values stored only on the normal PTE get lost irretrievably when the
+page is swapped out (i.e. SOFT_DIRTY).</p>
+<p>In user space, whether the page is present, swapped or none can be deduced with
+the help of lseek and/or mincore system calls.</p>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">lseek()</span></code> can differentiate between accessed pages (present or swapped out) and
+holes (none/non-allocated) by specifying the SEEK_DATA flag on the file where
+the pages are backed. For anonymous shared pages, the file can be found in
+<code class="docutils literal notranslate"><span class="pre">/proc/pid/map_files/</span></code>.</p>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">mincore()</span></code> can differentiate between pages in memory (present, including swap
+cache) and out of memory (swapped out or none/non-allocated).</p>
+</section>
+<section id="other-notes">
+<h2>Other notes<a class="headerlink" href="#other-notes" title="連結到這個標頭">¶</a></h2>
+<p>Reading from any of the files will return -EINVAL if you are not starting
+the read on an 8-byte boundary (e.g., if you sought an odd number of bytes
+into the file), or if the size of the read is not a multiple of 8 bytes.</p>
+<p>Before Linux 3.11 pagemap bits 55-60 were used for &quot;page-shift&quot; (which is
+always 12 at most architectures). Since Linux 3.11 their meaning changes
+after first clear of soft-dirty bits. Since Linux 4.2 they are used for
+flags unconditionally.</p>
+</section>
+<section id="pagemap-scan-ioctl">
+<h2>Pagemap Scan IOCTL<a class="headerlink" href="#pagemap-scan-ioctl" title="連結到這個標頭">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">PAGEMAP_SCAN</span></code> IOCTL on the pagemap file can be used to get or optionally
+clear the info about page table entries. The following operations are supported
+in this IOCTL:</p>
+<ul class="simple">
+<li><p>Scan the address range and get the memory ranges matching the provided criteria.
+This is performed when the output buffer is specified.</p></li>
+<li><p>Write-protect the pages. The <code class="docutils literal notranslate"><span class="pre">PM_SCAN_WP_MATCHING</span></code> is used to write-protect
+the pages of interest. The <code class="docutils literal notranslate"><span class="pre">PM_SCAN_CHECK_WPASYNC</span></code> aborts the operation if
+non-Async Write Protected pages are found. The <code class="docutils literal notranslate"><span class="pre">PM_SCAN_WP_MATCHING</span></code> can be
+used with or without <code class="docutils literal notranslate"><span class="pre">PM_SCAN_CHECK_WPASYNC</span></code>.</p></li>
+<li><p>Both of those operations can be combined into one atomic operation where we can
+get and write protect the pages as well.</p></li>
+</ul>
+<p>Following flags about pages are currently supported:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">PAGE_IS_WPALLOWED</span></code> - Page has async-write-protection enabled</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PAGE_IS_WRITTEN</span></code> - Page has been written to from the time it was write protected</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PAGE_IS_FILE</span></code> - Page is file backed</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PAGE_IS_PRESENT</span></code> - Page is present in the memory</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PAGE_IS_SWAPPED</span></code> - Page is in swapped</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PAGE_IS_PFNZERO</span></code> - Page has zero PFN</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PAGE_IS_HUGE</span></code> - Page is PMD-mapped THP or Hugetlb backed</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PAGE_IS_SOFT_DIRTY</span></code> - Page is soft-dirty</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PAGE_IS_GUARD</span></code> - Page is a part of a guard region</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">pm_scan_arg</span></code> is used as the argument of the IOCTL.</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>The size of the <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">pm_scan_arg</span></code> must be specified in the <code class="docutils literal notranslate"><span class="pre">size</span></code>
+field. This field will be helpful in recognizing the structure if extensions
+are done later.</p></li>
+<li><p>The flags can be specified in the <code class="docutils literal notranslate"><span class="pre">flags</span></code> field. The <code class="docutils literal notranslate"><span class="pre">PM_SCAN_WP_MATCHING</span></code>
+and <code class="docutils literal notranslate"><span class="pre">PM_SCAN_CHECK_WPASYNC</span></code> are the only added flags at this time. The get
+operation is optionally performed depending upon if the output buffer is
+provided or not.</p></li>
+<li><p>The range is specified through <code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">end</span></code>.</p></li>
+<li><p>The walk can abort before visiting the complete range such as the user buffer
+can get full etc. The walk ending address is specified in``end_walk``.</p></li>
+<li><p>The output buffer of <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page_region</span></code> array and size is specified in
+<code class="docutils literal notranslate"><span class="pre">vec</span></code> and <code class="docutils literal notranslate"><span class="pre">vec_len</span></code>.</p></li>
+<li><p>The optional maximum requested pages are specified in the <code class="docutils literal notranslate"><span class="pre">max_pages</span></code>.</p></li>
+<li><p>The masks are specified in <code class="docutils literal notranslate"><span class="pre">category_mask</span></code>, <code class="docutils literal notranslate"><span class="pre">category_anyof_mask</span></code>,
+<code class="docutils literal notranslate"><span class="pre">category_inverted</span></code> and <code class="docutils literal notranslate"><span class="pre">return_mask</span></code>.</p></li>
+</ol>
+</div></blockquote>
+<p>Find pages which have been written and WP them as well:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct pm_scan_arg arg = {
+.size = sizeof(arg),
+.flags = PM_SCAN_CHECK_WPASYNC | PM_SCAN_CHECK_WPASYNC,
+..
+.category_mask = PAGE_IS_WRITTEN,
+.return_mask = PAGE_IS_WRITTEN,
+};
+</pre></div>
+</div>
+<p>Find pages which have been written, are file backed, not swapped and either
+present or huge:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct pm_scan_arg arg = {
+.size = sizeof(arg),
+.flags = 0,
+..
+.category_mask = PAGE_IS_WRITTEN | PAGE_IS_SWAPPED,
+.category_inverted = PAGE_IS_SWAPPED,
+.category_anyof_mask = PAGE_IS_PRESENT | PAGE_IS_HUGE,
+.return_mask = PAGE_IS_WRITTEN | PAGE_IS_SWAPPED |
+               PAGE_IS_PRESENT | PAGE_IS_HUGE,
+};
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">PAGE_IS_WRITTEN</span></code> flag can be considered as a better-performing alternative
+of soft-dirty flag. It doesn't get affected by VMA merging of the kernel and hence
+the user can find the true soft-dirty pages in case of normal pages. (There may
+still be extra dirty pages reported for THP or Hugetlb pages.)</p>
+<p>&quot;PAGE_IS_WRITTEN&quot; category is used with uffd write protect-enabled ranges to
+implement memory dirty tracking in userspace:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>The userfaultfd file descriptor is created with <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> syscall.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_WP_UNPOPULATED</span></code> and <code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_WP_ASYNC</span></code> features
+are set by <code class="docutils literal notranslate"><span class="pre">UFFDIO_API</span></code> IOCTL.</p></li>
+<li><p>The memory range is registered with <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_WP</span></code> mode
+through <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER</span></code> IOCTL.</p></li>
+<li><p>Then any part of the registered memory or the whole memory region must
+be write protected using <code class="docutils literal notranslate"><span class="pre">PAGEMAP_SCAN</span></code> IOCTL with flag <code class="docutils literal notranslate"><span class="pre">PM_SCAN_WP_MATCHING</span></code>
+or the <code class="docutils literal notranslate"><span class="pre">UFFDIO_WRITEPROTECT</span></code> IOCTL can be used. Both of these perform the
+same operation. The former is better in terms of performance.</p></li>
+<li><p>Now the <code class="docutils literal notranslate"><span class="pre">PAGEMAP_SCAN</span></code> IOCTL can be used to either just find pages which
+have been written to since they were last marked and/or optionally write protect
+the pages as well.</p></li>
+</ol>
+</div></blockquote>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/admin-guide/mm/pagemap.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

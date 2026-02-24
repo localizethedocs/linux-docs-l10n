@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Processor MMIO Stale Data Vulnerabilities &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/hw-vuln/processor_mmio_stale_data.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜尋" href="../../search.html" />
+    <link rel="next" title="Cross-Thread Return Address Predictions" href="cross-thread-rsb.html" />
+    <link rel="prev" title="L1D Flushing" href="l1d_flush.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Administration</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#general-guides-to-kernel-administration">General guides to kernel administration</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../README.html">Linux kernel release 6.x &lt;http://kernel.org/&gt;</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../devices.html">Linux allocated devices (4.x+ version)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features.html">Feature status on all architectures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../sysfs-rules.html">Rules on how to access information in sysfs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../sysctl/index.html">Documentation for /proc/sys</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cputopology.html">How CPU topology info is exported via sysfs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../abi.html">Linux ABI description</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Hardware vulnerabilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../LSM/index.html">Linux Security Module Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../perf-security.html">Perf events and tool security</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#core-kernel-subsystems">Core-kernel subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/admin-guide/hw-vuln/processor_mmio_stale_data.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="processor-mmio-stale-data-vulnerabilities">
+<h1>Processor MMIO Stale Data Vulnerabilities<a class="headerlink" href="#processor-mmio-stale-data-vulnerabilities" title="連結到這個標頭">¶</a></h1>
+<p>Processor MMIO Stale Data Vulnerabilities are a class of memory-mapped I/O
+(MMIO) vulnerabilities that can expose data. The sequences of operations for
+exposing data range from simple to very complex. Because most of the
+vulnerabilities require the attacker to have access to MMIO, many environments
+are not affected. System environments using virtualization where MMIO access is
+provided to untrusted guests may need mitigation. These vulnerabilities are
+not transient execution attacks. However, these vulnerabilities may propagate
+stale data into core fill buffers where the data can subsequently be inferred
+by an unmitigated transient execution attack. Mitigation for these
+vulnerabilities includes a combination of microcode update and software
+changes, depending on the platform and usage model. Some of these mitigations
+are similar to those used to mitigate Microarchitectural Data Sampling (MDS) or
+those used to mitigate Special Register Buffer Data Sampling (SRBDS).</p>
+<section id="data-propagators">
+<h2>Data Propagators<a class="headerlink" href="#data-propagators" title="連結到這個標頭">¶</a></h2>
+<p>Propagators are operations that result in stale data being copied or moved from
+one microarchitectural buffer or register to another. Processor MMIO Stale Data
+Vulnerabilities are operations that may result in stale data being directly
+read into an architectural, software-visible state or sampled from a buffer or
+register.</p>
+<section id="fill-buffer-stale-data-propagator-fbsdp">
+<h3>Fill Buffer Stale Data Propagator (FBSDP)<a class="headerlink" href="#fill-buffer-stale-data-propagator-fbsdp" title="連結到這個標頭">¶</a></h3>
+<p>Stale data may propagate from fill buffers (FB) into the non-coherent portion
+of the uncore on some non-coherent writes. Fill buffer propagation by itself
+does not make stale data architecturally visible. Stale data must be propagated
+to a location where it is subject to reading or sampling.</p>
+</section>
+<section id="sideband-stale-data-propagator-ssdp">
+<h3>Sideband Stale Data Propagator (SSDP)<a class="headerlink" href="#sideband-stale-data-propagator-ssdp" title="連結到這個標頭">¶</a></h3>
+<p>The sideband stale data propagator (SSDP) is limited to the client (including
+Intel Xeon server E3) uncore implementation. The sideband response buffer is
+shared by all client cores. For non-coherent reads that go to sideband
+destinations, the uncore logic returns 64 bytes of data to the core, including
+both requested data and unrequested stale data, from a transaction buffer and
+the sideband response buffer. As a result, stale data from the sideband
+response and transaction buffers may now reside in a core fill buffer.</p>
+</section>
+<section id="primary-stale-data-propagator-psdp">
+<h3>Primary Stale Data Propagator (PSDP)<a class="headerlink" href="#primary-stale-data-propagator-psdp" title="連結到這個標頭">¶</a></h3>
+<p>The primary stale data propagator (PSDP) is limited to the client (including
+Intel Xeon server E3) uncore implementation. Similar to the sideband response
+buffer, the primary response buffer is shared by all client cores. For some
+processors, MMIO primary reads will return 64 bytes of data to the core fill
+buffer including both requested data and unrequested stale data. This is
+similar to the sideband stale data propagator.</p>
+</section>
+</section>
+<section id="vulnerabilities">
+<h2>Vulnerabilities<a class="headerlink" href="#vulnerabilities" title="連結到這個標頭">¶</a></h2>
+<section id="device-register-partial-write-drpw-cve-2022-21166">
+<h3>Device Register Partial Write (DRPW) (CVE-2022-21166)<a class="headerlink" href="#device-register-partial-write-drpw-cve-2022-21166" title="連結到這個標頭">¶</a></h3>
+<p>Some endpoint MMIO registers incorrectly handle writes that are smaller than
+the register size. Instead of aborting the write or only copying the correct
+subset of bytes (for example, 2 bytes for a 2-byte write), more bytes than
+specified by the write transaction may be written to the register. On
+processors affected by FBSDP, this may expose stale data from the fill buffers
+of the core that created the write transaction.</p>
+</section>
+<section id="shared-buffers-data-sampling-sbds-cve-2022-21125">
+<h3>Shared Buffers Data Sampling (SBDS) (CVE-2022-21125)<a class="headerlink" href="#shared-buffers-data-sampling-sbds-cve-2022-21125" title="連結到這個標頭">¶</a></h3>
+<p>After propagators may have moved data around the uncore and copied stale data
+into client core fill buffers, processors affected by MFBDS can leak data from
+the fill buffer. It is limited to the client (including Intel Xeon server E3)
+uncore implementation.</p>
+</section>
+<section id="shared-buffers-data-read-sbdr-cve-2022-21123">
+<h3>Shared Buffers Data Read (SBDR) (CVE-2022-21123)<a class="headerlink" href="#shared-buffers-data-read-sbdr-cve-2022-21123" title="連結到這個標頭">¶</a></h3>
+<p>It is similar to Shared Buffer Data Sampling (SBDS) except that the data is
+directly read into the architectural software-visible state. It is limited to
+the client (including Intel Xeon server E3) uncore implementation.</p>
+</section>
+</section>
+<section id="affected-processors">
+<h2>Affected Processors<a class="headerlink" href="#affected-processors" title="連結到這個標頭">¶</a></h2>
+<p>Not all the CPUs are affected by all the variants. For instance, most
+processors for the server market (excluding Intel Xeon E3 processors) are
+impacted by only Device Register Partial Write (DRPW).</p>
+<p>Below is the list of affected Intel processors <a class="footnote-reference brackets" href="#f1" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>:</p>
+<blockquote>
+<div><table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Common name</p></th>
+<th class="head"><p>Family_Model</p></th>
+<th class="head"><p>Steppings</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>HASWELL_X</p></td>
+<td><p>06_3FH</p></td>
+<td><p>2,4</p></td>
+</tr>
+<tr class="row-odd"><td><p>SKYLAKE_L</p></td>
+<td><p>06_4EH</p></td>
+<td><p>3</p></td>
+</tr>
+<tr class="row-even"><td><p>BROADWELL_X</p></td>
+<td><p>06_4FH</p></td>
+<td><p>All</p></td>
+</tr>
+<tr class="row-odd"><td><p>SKYLAKE_X</p></td>
+<td><p>06_55H</p></td>
+<td><p>3,4,6,7,11</p></td>
+</tr>
+<tr class="row-even"><td><p>BROADWELL_D</p></td>
+<td><p>06_56H</p></td>
+<td><p>3,4,5</p></td>
+</tr>
+<tr class="row-odd"><td><p>SKYLAKE</p></td>
+<td><p>06_5EH</p></td>
+<td><p>3</p></td>
+</tr>
+<tr class="row-even"><td><p>ICELAKE_X</p></td>
+<td><p>06_6AH</p></td>
+<td><p>4,5,6</p></td>
+</tr>
+<tr class="row-odd"><td><p>ICELAKE_D</p></td>
+<td><p>06_6CH</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-even"><td><p>ICELAKE_L</p></td>
+<td><p>06_7EH</p></td>
+<td><p>5</p></td>
+</tr>
+<tr class="row-odd"><td><p>ATOM_TREMONT_D</p></td>
+<td><p>06_86H</p></td>
+<td><p>All</p></td>
+</tr>
+<tr class="row-even"><td><p>LAKEFIELD</p></td>
+<td><p>06_8AH</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-odd"><td><p>KABYLAKE_L</p></td>
+<td><p>06_8EH</p></td>
+<td><p>9 to 12</p></td>
+</tr>
+<tr class="row-even"><td><p>ATOM_TREMONT</p></td>
+<td><p>06_96H</p></td>
+<td><p>1</p></td>
+</tr>
+<tr class="row-odd"><td><p>ATOM_TREMONT_L</p></td>
+<td><p>06_9CH</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-even"><td><p>KABYLAKE</p></td>
+<td><p>06_9EH</p></td>
+<td><p>9 to 13</p></td>
+</tr>
+<tr class="row-odd"><td><p>COMETLAKE</p></td>
+<td><p>06_A5H</p></td>
+<td><p>2,3,5</p></td>
+</tr>
+<tr class="row-even"><td><p>COMETLAKE_L</p></td>
+<td><p>06_A6H</p></td>
+<td><p>0,1</p></td>
+</tr>
+<tr class="row-odd"><td><p>ROCKETLAKE</p></td>
+<td><p>06_A7H</p></td>
+<td><p>1</p></td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<p>If a CPU is in the affected processor list, but not affected by a variant, it
+is indicated by new bits in MSR IA32_ARCH_CAPABILITIES. As described in a later
+section, mitigation largely remains the same for all the variants, i.e. to
+clear the CPU fill buffers via VERW instruction.</p>
+</section>
+<section id="new-bits-in-msrs">
+<h2>New bits in MSRs<a class="headerlink" href="#new-bits-in-msrs" title="連結到這個標頭">¶</a></h2>
+<p>Newer processors and microcode update on existing affected processors added new
+bits to IA32_ARCH_CAPABILITIES MSR. These bits can be used to enumerate
+specific variants of Processor MMIO Stale Data vulnerabilities and mitigation
+capability.</p>
+<section id="msr-ia32-arch-capabilities">
+<h3>MSR IA32_ARCH_CAPABILITIES<a class="headerlink" href="#msr-ia32-arch-capabilities" title="連結到這個標頭">¶</a></h3>
+<dl class="simple">
+<dt>Bit 13 - SBDR_SSDP_NO - When set, processor is not affected by either the</dt><dd><p>Shared Buffers Data Read (SBDR) vulnerability or the sideband stale
+data propagator (SSDP).</p>
+</dd>
+<dt>Bit 14 - FBSDP_NO - When set, processor is not affected by the Fill Buffer</dt><dd><p>Stale Data Propagator (FBSDP).</p>
+</dd>
+<dt>Bit 15 - PSDP_NO - When set, processor is not affected by Primary Stale Data</dt><dd><p>Propagator (PSDP).</p>
+</dd>
+<dt>Bit 17 - FB_CLEAR - When set, VERW instruction will overwrite CPU fill buffer</dt><dd><p>values as part of MD_CLEAR operations. Processors that do not
+enumerate MDS_NO (meaning they are affected by MDS) but that do
+enumerate support for both L1D_FLUSH and MD_CLEAR implicitly enumerate
+FB_CLEAR as part of their MD_CLEAR support.</p>
+</dd>
+<dt>Bit 18 - FB_CLEAR_CTRL - Processor supports read and write to MSR</dt><dd><p>IA32_MCU_OPT_CTRL[FB_CLEAR_DIS]. On such processors, the FB_CLEAR_DIS
+bit can be set to cause the VERW instruction to not perform the
+FB_CLEAR action. Not all processors that support FB_CLEAR will support
+FB_CLEAR_CTRL.</p>
+</dd>
+</dl>
+</section>
+<section id="msr-ia32-mcu-opt-ctrl">
+<h3>MSR IA32_MCU_OPT_CTRL<a class="headerlink" href="#msr-ia32-mcu-opt-ctrl" title="連結到這個標頭">¶</a></h3>
+<p>Bit 3 - FB_CLEAR_DIS - When set, VERW instruction does not perform the FB_CLEAR
+action. This may be useful to reduce the performance impact of FB_CLEAR in
+cases where system software deems it warranted (for example, when performance
+is more critical, or the untrusted software has no MMIO access). Note that
+FB_CLEAR_DIS has no impact on enumeration (for example, it does not change
+FB_CLEAR or MD_CLEAR enumeration) and it may not be supported on all processors
+that enumerate FB_CLEAR.</p>
+</section>
+</section>
+<section id="mitigation">
+<h2>Mitigation<a class="headerlink" href="#mitigation" title="連結到這個標頭">¶</a></h2>
+<p>Like MDS, all variants of Processor MMIO Stale Data vulnerabilities  have the
+same mitigation strategy to force the CPU to clear the affected buffers before
+an attacker can extract the secrets.</p>
+<p>This is achieved by using the otherwise unused and obsolete VERW instruction in
+combination with a microcode update. The microcode clears the affected CPU
+buffers when the VERW instruction is executed.</p>
+<p>Kernel does the buffer clearing with <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">x86_clear_cpu_buffers()</span></code>.</p>
+<p>On MDS affected CPUs, the kernel already invokes CPU buffer clear on
+kernel/userspace, hypervisor/guest and C-state (idle) transitions. No
+additional mitigation is needed on such CPUs.</p>
+<p>For CPUs not affected by MDS or TAA, mitigation is needed only for the attacker
+with MMIO capability. Therefore, VERW is not required for kernel/userspace. For
+virtualization case, VERW is only needed at VMENTER for a guest with MMIO
+capability.</p>
+<section id="mitigation-points">
+<h3>Mitigation points<a class="headerlink" href="#mitigation-points" title="連結到這個標頭">¶</a></h3>
+<section id="return-to-user-space">
+<h4>Return to user space<a class="headerlink" href="#return-to-user-space" title="連結到這個標頭">¶</a></h4>
+<p>Same mitigation as MDS when affected by MDS/TAA, otherwise no mitigation
+needed.</p>
+</section>
+<section id="c-state-transition">
+<h4>C-State transition<a class="headerlink" href="#c-state-transition" title="連結到這個標頭">¶</a></h4>
+<p>Control register writes by CPU during C-state transition can propagate data
+from fill buffer to uncore buffers. Execute VERW before C-state transition to
+clear CPU fill buffers.</p>
+</section>
+<section id="guest-entry-point">
+<h4>Guest entry point<a class="headerlink" href="#guest-entry-point" title="連結到這個標頭">¶</a></h4>
+<p>Same mitigation as MDS when processor is also affected by MDS/TAA, otherwise
+execute VERW at VMENTER only for MMIO capable guests. On CPUs not affected by
+MDS/TAA, guest without MMIO access cannot extract secrets using Processor MMIO
+Stale Data vulnerabilities, so there is no need to execute VERW for such guests.</p>
+</section>
+</section>
+<section id="mitigation-control-on-the-kernel-command-line">
+<h3>Mitigation control on the kernel command line<a class="headerlink" href="#mitigation-control-on-the-kernel-command-line" title="連結到這個標頭">¶</a></h3>
+<p>The kernel command line allows to control the Processor MMIO Stale Data
+mitigations at boot time with the option &quot;mmio_stale_data=&quot;. The valid
+arguments for this option are:</p>
+<blockquote>
+<div><table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>full</p></td>
+<td><p>If the CPU is vulnerable, enable mitigation; CPU buffer clearing
+on exit to userspace and when entering a VM. Idle transitions are
+protected as well. It does not automatically disable SMT.</p></td>
+</tr>
+<tr class="row-even"><td><p>full,nosmt</p></td>
+<td><p>Same as full, with SMT disabled on vulnerable CPUs. This is the
+complete mitigation.</p></td>
+</tr>
+<tr class="row-odd"><td><p>off</p></td>
+<td><p>Disables mitigation completely.</p></td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<p>If the CPU is affected and mmio_stale_data=off is not supplied on the kernel
+command line, then the kernel selects the appropriate mitigation.</p>
+</section>
+<section id="mitigation-status-information">
+<h3>Mitigation status information<a class="headerlink" href="#mitigation-status-information" title="連結到這個標頭">¶</a></h3>
+<p>The Linux kernel provides a sysfs interface to enumerate the current
+vulnerability status of the system: whether the system is vulnerable, and
+which mitigations are active. The relevant sysfs file is:</p>
+<blockquote>
+<div><p>/sys/devices/system/cpu/vulnerabilities/mmio_stale_data</p>
+</div></blockquote>
+<p>The possible values in this file are:</p>
+<blockquote>
+<div><table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>'Not affected'</p></td>
+<td><p>The processor is not vulnerable</p></td>
+</tr>
+<tr class="row-even"><td><p>'Vulnerable'</p></td>
+<td><p>The processor is vulnerable, but no mitigation enabled</p></td>
+</tr>
+<tr class="row-odd"><td><p>'Vulnerable: Clear CPU buffers attempted, no microcode'</p></td>
+<td><p>The processor is vulnerable but microcode is not updated. The
+mitigation is enabled on a best effort basis.</p>
+<p>If the processor is vulnerable but the availability of the microcode
+based mitigation mechanism is not advertised via CPUID, the kernel
+selects a best effort mitigation mode. This mode invokes the mitigation
+instructions without a guarantee that they clear the CPU buffers.</p>
+<p>This is done to address virtualization scenarios where the host has the
+microcode update applied, but the hypervisor is not yet updated to
+expose the CPUID to the guest. If the host has updated microcode the
+protection takes effect; otherwise a few CPU cycles are wasted
+pointlessly.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p>'Mitigation: Clear CPU buffers'</p></td>
+<td><p>The processor is vulnerable and the CPU buffer clearing mitigation is
+enabled.</p></td>
+</tr>
+<tr class="row-odd"><td><p>'Unknown: No mitigations'</p></td>
+<td><p>The processor vulnerability status is unknown because it is
+out of Servicing period. Mitigation is not attempted.</p></td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</section>
+<section id="definitions">
+<h3>Definitions:<a class="headerlink" href="#definitions" title="連結到這個標頭">¶</a></h3>
+<p>Servicing period: The process of providing functional and security updates to
+Intel processors or platforms, utilizing the Intel Platform Update (IPU)
+process or other similar mechanisms.</p>
+<p>End of Servicing Updates (ESU): ESU is the date at which Intel will no
+longer provide Servicing, such as through IPU or other similar update
+processes. ESU dates will typically be aligned to end of quarter.</p>
+<p>If the processor is vulnerable then the following information is appended to
+the above information:</p>
+<blockquote>
+<div><table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>'SMT vulnerable'</p></td>
+<td><p>SMT is enabled</p></td>
+</tr>
+<tr class="row-even"><td><p>'SMT disabled'</p></td>
+<td><p>SMT is disabled</p></td>
+</tr>
+<tr class="row-odd"><td><p>'SMT Host state unknown'</p></td>
+<td><p>Kernel runs in a VM, Host SMT state unknown</p></td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</section>
+<section id="references">
+<h3>References<a class="headerlink" href="#references" title="連結到這個標頭">¶</a></h3>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="f1" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>Affected Processors
+<a class="reference external" href="https://www.intel.com/content/www/us/en/developer/topic-technology/software-security-guidance/processors-affected-consolidated-product-cpu-model.html">https://www.intel.com/content/www/us/en/developer/topic-technology/software-security-guidance/processors-affected-consolidated-product-cpu-model.html</a></p>
+</aside>
+</aside>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/admin-guide/hw-vuln/processor_mmio_stale_data.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

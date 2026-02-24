@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>A vmemmap diet for HugeTLB and Device DAX &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/mm/vmemmap_dedup.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="zsmalloc" href="zsmalloc.html" />
+    <link rel="prev" title="Virtually Mapped Kernel Stack Support" href="vmalloced-kernel-stacks.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/mm/vmemmap_dedup.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="a-vmemmap-diet-for-hugetlb-and-device-dax">
+<h1>A vmemmap diet for HugeTLB and Device DAX<a class="headerlink" href="#a-vmemmap-diet-for-hugetlb-and-device-dax" title="連結到這個標頭">¶</a></h1>
+<section id="hugetlb">
+<h2>HugeTLB<a class="headerlink" href="#hugetlb" title="連結到這個標頭">¶</a></h2>
+<p>This section is to explain how HugeTLB Vmemmap Optimization (HVO) works.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> structures are used to describe a physical page frame. By
+default, there is a one-to-one mapping from a page frame to its corresponding
+<code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code>.</p>
+<p>HugeTLB pages consist of multiple base page size pages and is supported by many
+architectures. See <a class="reference internal" href="../admin-guide/mm/hugetlbpage.html"><span class="doc">HugeTLB Pages</span></a> for more
+details. On the x86-64 architecture, HugeTLB pages of size 2MB and 1GB are
+currently supported. Since the base page size on x86 is 4KB, a 2MB HugeTLB page
+consists of 512 base pages and a 1GB HugeTLB page consists of 262144 base pages.
+For each base page, there is a corresponding <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code>.</p>
+<p>Within the HugeTLB subsystem, only the first 4 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> are used to
+contain unique information about a HugeTLB page. <code class="docutils literal notranslate"><span class="pre">__NR_USED_SUBPAGE</span></code> provides
+this upper limit. The only 'useful' information in the remaining <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code>
+is the compound_head field, and this field is the same for all tail pages.</p>
+<p>By removing redundant <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> for HugeTLB pages, memory can be returned
+to the buddy allocator for other uses.</p>
+<p>Different architectures support different HugeTLB pages. For example, the
+following table is the HugeTLB page size supported by x86 and arm64
+architectures. Because arm64 supports 4k, 16k, and 64k base pages and
+supports contiguous entries, so it supports many kinds of sizes of HugeTLB
+page.</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>架構</p></td>
+<td><p>Page Size</p></td>
+<td colspan="4"><p>HugeTLB Page Size</p></td>
+</tr>
+<tr class="row-even"><td><p>x86-64</p></td>
+<td><p>4KB</p></td>
+<td><p>2MB</p></td>
+<td><p>1GB</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td rowspan="3"><p>arm64</p></td>
+<td><p>4KB</p></td>
+<td><p>64KB</p></td>
+<td><p>2MB</p></td>
+<td><p>32MB</p></td>
+<td><p>1GB</p></td>
+</tr>
+<tr class="row-even"><td><p>16KB</p></td>
+<td><p>2MB</p></td>
+<td><p>32MB</p></td>
+<td><p>1GB</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>64KB</p></td>
+<td><p>2MB</p></td>
+<td><p>512MB</p></td>
+<td><p>16GB</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>When the system boot up, every HugeTLB page has more than one <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code>
+structs which size is (unit: pages):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct_size = HugeTLB_Size / PAGE_SIZE * sizeof(struct page) / PAGE_SIZE
+</pre></div>
+</div>
+<p>Where HugeTLB_Size is the size of the HugeTLB page. We know that the size
+of the HugeTLB page is always n times PAGE_SIZE. So we can get the following
+relationship:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>HugeTLB_Size = n * PAGE_SIZE
+</pre></div>
+</div>
+<p>Then:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct_size = n * PAGE_SIZE / PAGE_SIZE * sizeof(struct page) / PAGE_SIZE
+            = n * sizeof(struct page) / PAGE_SIZE
+</pre></div>
+</div>
+<p>We can use huge mapping at the pud/pmd level for the HugeTLB page.</p>
+<p>For the HugeTLB page of the pmd level mapping, then:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct_size = n * sizeof(struct page) / PAGE_SIZE
+            = PAGE_SIZE / sizeof(pte_t) * sizeof(struct page) / PAGE_SIZE
+            = sizeof(struct page) / sizeof(pte_t)
+            = 64 / 8
+            = 8 (pages)
+</pre></div>
+</div>
+<p>Where n is how many pte entries which one page can contains. So the value of
+n is (PAGE_SIZE / sizeof(pte_t)).</p>
+<p>This optimization only supports 64-bit system, so the value of sizeof(pte_t)
+is 8. And this optimization also applicable only when the size of <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code>
+is a power of two. In most cases, the size of <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> is 64 bytes (e.g.
+x86-64 and arm64). So if we use pmd level mapping for a HugeTLB page, the
+size of <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> structs of it is 8 page frames which size depends on the
+size of the base page.</p>
+<p>For the HugeTLB page of the pud level mapping, then:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct_size = PAGE_SIZE / sizeof(pmd_t) * struct_size(pmd)
+            = PAGE_SIZE / 8 * 8 (pages)
+            = PAGE_SIZE (pages)
+</pre></div>
+</div>
+<p>Where the struct_size(pmd) is the size of the <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> structs of a
+HugeTLB page of the pmd level mapping.</p>
+<p>E.g.: A 2MB HugeTLB page on x86_64 consists in 8 page frames while 1GB
+HugeTLB page consists in 4096.</p>
+<p>Next, we take the pmd level mapping of the HugeTLB page as an example to
+show the internal implementation of this optimization. There are 8 pages
+<code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> structs associated with a HugeTLB page which is pmd mapped.</p>
+<p>Here is how things look before optimization:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>   HugeTLB                  struct pages(8 pages)         page frame(8 pages)
++-----------+ ---virt_to_page---&gt; +-----------+   mapping to   +-----------+
+|           |                     |     0     | -------------&gt; |     0     |
+|           |                     +-----------+                +-----------+
+|           |                     |     1     | -------------&gt; |     1     |
+|           |                     +-----------+                +-----------+
+|           |                     |     2     | -------------&gt; |     2     |
+|           |                     +-----------+                +-----------+
+|           |                     |     3     | -------------&gt; |     3     |
+|           |                     +-----------+                +-----------+
+|           |                     |     4     | -------------&gt; |     4     |
+|    PMD    |                     +-----------+                +-----------+
+|   level   |                     |     5     | -------------&gt; |     5     |
+|  mapping  |                     +-----------+                +-----------+
+|           |                     |     6     | -------------&gt; |     6     |
+|           |                     +-----------+                +-----------+
+|           |                     |     7     | -------------&gt; |     7     |
+|           |                     +-----------+                +-----------+
+|           |
+|           |
+|           |
++-----------+
+</pre></div>
+</div>
+<p>The value of page-&gt;compound_head is the same for all tail pages. The first
+page of <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> (page 0) associated with the HugeTLB page contains the 4
+<code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> necessary to describe the HugeTLB. The only use of the remaining
+pages of <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> (page 1 to page 7) is to point to page-&gt;compound_head.
+Therefore, we can remap pages 1 to 7 to page 0. Only 1 page of <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code>
+will be used for each HugeTLB page. This will allow us to free the remaining
+7 pages to the buddy allocator.</p>
+<p>Here is how things look after remapping:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>   HugeTLB                  struct pages(8 pages)         page frame(8 pages)
++-----------+ ---virt_to_page---&gt; +-----------+   mapping to   +-----------+
+|           |                     |     0     | -------------&gt; |     0     |
+|           |                     +-----------+                +-----------+
+|           |                     |     1     | ---------------^ ^ ^ ^ ^ ^ ^
+|           |                     +-----------+                  | | | | | |
+|           |                     |     2     | -----------------+ | | | | |
+|           |                     +-----------+                    | | | | |
+|           |                     |     3     | -------------------+ | | | |
+|           |                     +-----------+                      | | | |
+|           |                     |     4     | ---------------------+ | | |
+|    PMD    |                     +-----------+                        | | |
+|   level   |                     |     5     | -----------------------+ | |
+|  mapping  |                     +-----------+                          | |
+|           |                     |     6     | -------------------------+ |
+|           |                     +-----------+                            |
+|           |                     |     7     | ---------------------------+
+|           |                     +-----------+
+|           |
+|           |
+|           |
++-----------+
+</pre></div>
+</div>
+<p>When a HugeTLB is freed to the buddy system, we should allocate 7 pages for
+vmemmap pages and restore the previous mapping relationship.</p>
+<p>For the HugeTLB page of the pud level mapping. It is similar to the former.
+We also can use this approach to free (PAGE_SIZE - 1) vmemmap pages.</p>
+<p>Apart from the HugeTLB page of the pmd/pud level mapping, some architectures
+(e.g. aarch64) provides a contiguous bit in the translation table entries
+that hints to the MMU to indicate that it is one of a contiguous set of
+entries that can be cached in a single TLB entry.</p>
+<p>The contiguous bit is used to increase the mapping size at the pmd and pte
+(last) level. So this type of HugeTLB page can be optimized only when its
+size of the <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> structs is greater than <strong>1</strong> page.</p>
+<p>Notice: The head vmemmap page is not freed to the buddy allocator and all
+tail vmemmap pages are mapped to the head vmemmap page frame. So we can see
+more than one <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">with</span></code> <code class="docutils literal notranslate"><span class="pre">PG_head</span></code> (e.g. 8 per 2 MB HugeTLB
+page) associated with each HugeTLB page. The <code class="docutils literal notranslate"><span class="pre">compound_head()</span></code> can handle
+this correctly. There is only <strong>one</strong> head <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code>, the tail
+<code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> with <code class="docutils literal notranslate"><span class="pre">PG_head</span></code> are fake head <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code>.  We need an
+approach to distinguish between those two different types of <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> so
+that <code class="docutils literal notranslate"><span class="pre">compound_head()</span></code> can return the real head <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> when the
+parameter is the tail <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> but with <code class="docutils literal notranslate"><span class="pre">PG_head</span></code>.</p>
+</section>
+<section id="device-dax">
+<h2>Device DAX<a class="headerlink" href="#device-dax" title="連結到這個標頭">¶</a></h2>
+<p>The device-dax interface uses the same tail deduplication technique explained
+in the previous chapter, except when used with the vmemmap in
+the device (altmap).</p>
+<p>The following page sizes are supported in DAX: PAGE_SIZE (4K on x86_64),
+PMD_SIZE (2M on x86_64) and PUD_SIZE (1G on x86_64).
+For powerpc equivalent details see <a class="reference internal" href="../arch/powerpc/vmemmap_dedup.html"><span class="doc">Device DAX</span></a></p>
+<p>The differences with HugeTLB are relatively minor.</p>
+<p>It only use 3 <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> for storing all information as opposed
+to 4 on HugeTLB pages.</p>
+<p>There's no remapping of vmemmap given that device-dax memory is not part of
+System RAM ranges initialized at boot. Thus the tail page deduplication
+happens at a later stage when we populate the sections. HugeTLB reuses the
+the head vmemmap page representing, whereas device-dax reuses the tail
+vmemmap page. This results in only half of the savings compared to HugeTLB.</p>
+<p>Deduplicated tail pages are not mapped read-only.</p>
+<p>Here's how things look like on device-dax after the sections are populated:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>+-----------+ ---virt_to_page---&gt; +-----------+   mapping to   +-----------+
+|           |                     |     0     | -------------&gt; |     0     |
+|           |                     +-----------+                +-----------+
+|           |                     |     1     | -------------&gt; |     1     |
+|           |                     +-----------+                +-----------+
+|           |                     |     2     | ----------------^ ^ ^ ^ ^ ^
+|           |                     +-----------+                   | | | | |
+|           |                     |     3     | ------------------+ | | | |
+|           |                     +-----------+                     | | | |
+|           |                     |     4     | --------------------+ | | |
+|    PMD    |                     +-----------+                       | | |
+|   level   |                     |     5     | ----------------------+ | |
+|  mapping  |                     +-----------+                         | |
+|           |                     |     6     | ------------------------+ |
+|           |                     +-----------+                           |
+|           |                     |     7     | --------------------------+
+|           |                     +-----------+
+|           |
+|           |
+|           |
++-----------+
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/mm/vmemmap_dedup.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

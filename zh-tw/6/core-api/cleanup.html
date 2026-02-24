@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Scope-based Cleanup Helpers &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/core-api/cleanup.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Generic Associative Array Implementation" href="assoc_array.html" />
+    <link rel="prev" title="Adding reference counters (krefs) to kernel objects" href="kref.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">核心 API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="kobject.html">Everything you never wanted to know about kobjects, ksets, and ktypes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kref.html">Adding reference counters (krefs) to kernel objects</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Scope-based Cleanup Helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="assoc_array.html">Generic Associative Array Implementation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="folio_queue.html">Folio Queue</a></li>
+<li class="toctree-l3"><a class="reference internal" href="xarray.html">XArray</a></li>
+<li class="toctree-l3"><a class="reference internal" href="maple_tree.html">Maple Tree</a></li>
+<li class="toctree-l3"><a class="reference internal" href="idr.html">ID Allocation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="circular-buffers.html">Circular Buffers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rbtree.html">Red-black Trees (rbtree) in Linux</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generic-radix-tree.html">Generic radix trees/sparse arrays</a></li>
+<li class="toctree-l3"><a class="reference internal" href="packing.html">Generic bitfield packing and unpacking functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="this_cpu_ops.html">this_cpu operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="timekeeping.html">ktime accessors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="errseq.html">The errseq_t datatype</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wrappers/atomic_t.html">Atomic types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wrappers/atomic_bitops.html">Atomic bitops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="floating-point.html">Floating-point API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="union_find.html">Union-Find in Linux</a></li>
+<li class="toctree-l3"><a class="reference internal" href="min_heap.html">Min Heap API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="parser.html">Generic parser</a></li>
+<li class="toctree-l3"><a class="reference internal" href="list.html">Linked Lists in Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#low-level-entry-and-exit">低階進入與退出</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#concurrency-primitives">Concurrency primitives</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#memory-management">記憶體管理</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/core-api/cleanup.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="scope-based-cleanup-helpers">
+<h1>Scope-based Cleanup Helpers<a class="headerlink" href="#scope-based-cleanup-helpers" title="連結到這個標頭">¶</a></h1>
+<p>The &quot;goto error&quot; pattern is notorious for introducing subtle resource
+leaks. It is tedious and error prone to add new resource acquisition
+constraints into code paths that already have several unwind
+conditions. The &quot;cleanup&quot; helpers enable the compiler to help with
+this tedium and can aid in maintaining LIFO (last in first out)
+unwind ordering to avoid unintentional leaks.</p>
+<p>As drivers make up the majority of the kernel code base, here is an
+example of using these helpers to clean up PCI drivers. The target of
+the cleanups are occasions where a goto is used to unwind a device
+reference (<a class="reference internal" href="../driver-api/pci/pci.html#c.pci_dev_put" title="pci_dev_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_dev_put()</span></code></a>), or unlock the device (<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pci_dev_unlock()</span></code>)
+before returning.</p>
+<p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">DEFINE_FREE()</span></code> macro can arrange for PCI device references to be
+dropped when the associated variable goes out of scope:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>DEFINE_FREE(pci_dev_put, struct pci_dev *, if (_T) pci_dev_put(_T))
+...
+struct pci_dev *dev __free(pci_dev_put) =
+        pci_get_slot(parent, PCI_DEVFN(0, 0));
+</pre></div>
+</div>
+<p>The above will automatically call <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_dev_put" title="pci_dev_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_dev_put()</span></code></a> if <strong>dev</strong> is non-NULL
+when <strong>dev</strong> goes out of scope (automatic variable scope). If a function
+wants to invoke <a class="reference internal" href="../driver-api/pci/pci.html#c.pci_dev_put" title="pci_dev_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">pci_dev_put()</span></code></a> on error, but return <strong>dev</strong> (i.e. without
+freeing it) on success, it can do:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>return no_free_ptr(dev);
+</pre></div>
+</div>
+<p>...or:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>return_ptr(dev);
+</pre></div>
+</div>
+<p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">DEFINE_GUARD()</span></code> macro can arrange for the PCI device lock to be
+dropped when the scope where <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">guard()</span></code> is invoked ends:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>DEFINE_GUARD(pci_dev, struct pci_dev *, pci_dev_lock(_T), pci_dev_unlock(_T))
+...
+guard(pci_dev)(dev);
+</pre></div>
+</div>
+<p>The lifetime of the lock obtained by the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">guard()</span></code> helper follows the
+scope of automatic variable declaration. Take the following example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>func(...)
+{
+        if (...) {
+                ...
+                guard(pci_dev)(dev); // pci_dev_lock() invoked here
+                ...
+        } // &lt;- implied pci_dev_unlock() triggered here
+}
+</pre></div>
+</div>
+<p>Observe the lock is held for the remainder of the &quot;if ()&quot; block not
+the remainder of &quot;<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">func()</span></code>&quot;.</p>
+<p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">ACQUIRE()</span></code> macro can be used in all places that <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">guard()</span></code> can be
+used and additionally support conditional locks:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>DEFINE_GUARD_COND(pci_dev, _try, pci_dev_trylock(_T))
+...
+ACQUIRE(pci_dev_try, lock)(dev);
+rc = ACQUIRE_ERR(pci_dev_try, &amp;lock);
+if (rc)
+        return rc;
+// @lock is held
+</pre></div>
+</div>
+<p>Now, when a function uses both <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">__free()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">guard()</span></code>/<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">ACQUIRE()</span></code>, or
+multiple instances of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">__free()</span></code>, the LIFO order of variable definition
+order matters. GCC documentation says:</p>
+<p>&quot;When multiple variables in the same scope have cleanup attributes,
+at exit from the scope their associated cleanup functions are run in
+reverse order of definition (last defined, first cleanup).&quot;</p>
+<p>When the unwind order matters it requires that variables be defined
+mid-function scope rather than at the top of the file.  Take the
+following example and notice the bug highlighted by &quot;!!&quot;:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>LIST_HEAD(list);
+DEFINE_MUTEX(lock);
+
+struct object {
+        struct list_head node;
+};
+
+static struct object *alloc_add(void)
+{
+        struct object *obj;
+
+        lockdep_assert_held(&amp;lock);
+        obj = kzalloc(sizeof(*obj), GFP_KERNEL);
+        if (obj) {
+                LIST_HEAD_INIT(&amp;obj-&gt;node);
+                list_add(obj-&gt;node, &amp;list):
+        }
+        return obj;
+}
+
+static void remove_free(struct object *obj)
+{
+        lockdep_assert_held(&amp;lock);
+        list_del(&amp;obj-&gt;node);
+        kfree(obj);
+}
+
+DEFINE_FREE(remove_free, struct object *, if (_T) remove_free(_T))
+static int init(void)
+{
+        struct object *obj __free(remove_free) = NULL;
+        int err;
+
+        guard(mutex)(&amp;lock);
+        obj = alloc_add();
+
+        if (!obj)
+                return -ENOMEM;
+
+        err = other_init(obj);
+        if (err)
+                return err; // remove_free() called without the lock!!
+
+        no_free_ptr(obj);
+        return 0;
+}
+</pre></div>
+</div>
+<p>That bug is fixed by changing <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">init()</span></code> to call <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">guard()</span></code> and define +
+initialize <strong>obj</strong> in this order:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>guard(mutex)(&amp;lock);
+struct object *obj __free(remove_free) = alloc_add();
+</pre></div>
+</div>
+<p>Given that the &quot;__free(...) = NULL&quot; pattern for variables defined at
+the top of the function poses this potential interdependency problem
+the recommendation is to always define and assign variables in one
+statement and not group variable definitions at the top of the
+function when <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">__free()</span></code> is used.</p>
+<p>Lastly, given that the benefit of cleanup helpers is removal of
+&quot;goto&quot;, and that the &quot;goto&quot; statement can jump between scopes, the
+expectation is that usage of &quot;goto&quot; and cleanup helpers is never
+mixed in the same function. I.e. for a given routine, convert all
+resources that need a &quot;goto&quot; cleanup to scope-based cleanup, or
+convert none of them.</p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/core-api/cleanup.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

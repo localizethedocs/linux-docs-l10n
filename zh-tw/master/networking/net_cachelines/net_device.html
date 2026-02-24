@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>net_device struct fast path usage breakdown &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/networking/net_cachelines/net_device.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜尋" href="../../search.html" />
+    <link rel="next" title="netns_ipv4 struct fast path usage breakdown" href="netns_ipv4_sysctl.html" />
+    <link rel="prev" title="inet_sock struct fast path usage breakdown" href="inet_sock.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../subsystem-apis.html#core-subsystems">Core subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../../subsystem-apis.html#networking-interfaces">Networking interfaces</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">Networking</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../netlabel/index.html">NetLabel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../infiniband/index.html">InfiniBand</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../isdn/index.html">ISDN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../mhi/index.html">MHI</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/networking/net_cachelines/net_device.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="net-device-struct-fast-path-usage-breakdown">
+<h1>net_device struct fast path usage breakdown<a class="headerlink" href="#net-device-struct-fast-path-usage-breakdown" title="連結到這個標頭">¶</a></h1>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Type</p></th>
+<th class="head"><p>Name</p></th>
+<th class="head"><p>fastpath_tx_access</p></th>
+<th class="head"><p>fastpath_rx_access</p></th>
+<th class="head"><p>Comments</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>unsigned_long:32</p></td>
+<td><p>priv_flags</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>__dev_queue_xmit(tx)</p></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_long:1</p></td>
+<td><p>lltx</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>HARD_TX_LOCK,HARD_TX_TRYLOCK,HARD_TX_UNLOCK(tx)</p></td>
+</tr>
+<tr class="row-even"><td><p>unsigned long:1</p></td>
+<td><p>netmem_tx:1;</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>char</p></td>
+<td><p>name[16]</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">netdev_name_node</span></code>*</p></td>
+<td><p>name_node</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dev_ifalias</span></code>*</p></td>
+<td><p>ifalias</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_long</p></td>
+<td><p>mem_end</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_long</p></td>
+<td><p>mem_start</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_long</p></td>
+<td><p>base_addr</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_long</p></td>
+<td><p>state</p></td>
+<td><p>read_mostly</p></td>
+<td><p>read_mostly</p></td>
+<td><p>netif_running(dev)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">list_head</span></code></p></td>
+<td><p>dev_list</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">list_head</span></code></p></td>
+<td><p>napi_list</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">list_head</span></code></p></td>
+<td><p>unreg_list</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">list_head</span></code></p></td>
+<td><p>close_list</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">list_head</span></code></p></td>
+<td><p>ptype_all</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>dev_nit_active(tx)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">list_head</span></code></p></td>
+<td><p>ptype_specific</p></td>
+<td></td>
+<td><p>read_mostly</p></td>
+<td><p>deliver_ptype_list_skb/__netif_receive_skb_core(rx)</p></td>
+</tr>
+<tr class="row-even"><td><p>struct</p></td>
+<td><p>adj_list</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_int</p></td>
+<td><p>flags</p></td>
+<td><p>read_mostly</p></td>
+<td><p>read_mostly</p></td>
+<td><p>__dev_queue_xmit,__dev_xmit_skb,ip6_output,__ip6_finish_output(tx);ip6_rcv_core(rx)</p></td>
+</tr>
+<tr class="row-even"><td><p>xdp_features_t</p></td>
+<td><p>xdp_features</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">net_device_ops</span></code>*</p></td>
+<td><p>netdev_ops</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>netdev_core_pick_tx,netdev_start_xmit(tx)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">xdp_metadata_ops</span></code>*</p></td>
+<td><p>xdp_metadata_ops</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>int</p></td>
+<td><p>ifindex</p></td>
+<td></td>
+<td><p>read_mostly</p></td>
+<td><p>ip6_rcv_core</p></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_short</p></td>
+<td><p>gflags</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_short</p></td>
+<td><p>hard_header_len</p></td>
+<td><p>read_mostly</p></td>
+<td><p>read_mostly</p></td>
+<td><p>ip6_xmit(tx);gro_list_prepare(rx)</p></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_int</p></td>
+<td><p>mtu</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>ip_finish_output2</p></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_short</p></td>
+<td><p>needed_headroom</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>LL_RESERVED_SPACE/ip_finish_output2</p></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_short</p></td>
+<td><p>needed_tailroom</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>netdev_features_t</p></td>
+<td><p>features</p></td>
+<td><p>read_mostly</p></td>
+<td><p>read_mostly</p></td>
+<td><p>HARD_TX_LOCK,netif_skb_features,sk_setup_caps(tx);netif_elide_gro(rx)</p></td>
+</tr>
+<tr class="row-even"><td><p>netdev_features_t</p></td>
+<td><p>hw_features</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>netdev_features_t</p></td>
+<td><p>wanted_features</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>netdev_features_t</p></td>
+<td><p>vlan_features</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>netdev_features_t</p></td>
+<td><p>hw_enc_features</p></td>
+<td></td>
+<td></td>
+<td><p>netif_skb_features</p></td>
+</tr>
+<tr class="row-even"><td><p>netdev_features_t</p></td>
+<td><p>mpls_features</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>netdev_features_t</p></td>
+<td><p>gso_partial_features</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>gso_features_check</p></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_int</p></td>
+<td><p>min_mtu</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_int</p></td>
+<td><p>max_mtu</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_short</p></td>
+<td><p>type</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_char</p></td>
+<td><p>min_header_len</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_char</p></td>
+<td><p>name_assign_type</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>int</p></td>
+<td><p>group</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">net_device_stats</span></code></p></td>
+<td><p>stats</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">net_device_core_stats</span></code>*</p></td>
+<td><p>core_stats</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>atomic_t</p></td>
+<td><p>carrier_up_count</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>atomic_t</p></td>
+<td><p>carrier_down_count</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">iw_handler_def</span></code>*</p></td>
+<td><p>wireless_handlers</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">ethtool_ops</span></code>*</p></td>
+<td><p>ethtool_ops</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">l3mdev_ops</span></code>*</p></td>
+<td><p>l3mdev_ops</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">ndisc_ops</span></code>*</p></td>
+<td><p>ndisc_ops</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">xfrmdev_ops</span></code>*</p></td>
+<td><p>xfrmdev_ops</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">tlsdev_ops</span></code>*</p></td>
+<td><p>tlsdev_ops</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">header_ops</span></code>*</p></td>
+<td><p>header_ops</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>ip_finish_output2,ip6_finish_output2(tx)</p></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_char</p></td>
+<td><p>operstate</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_char</p></td>
+<td><p>link_mode</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_char</p></td>
+<td><p>if_port</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_char</p></td>
+<td><p>dma</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_char</p></td>
+<td><p>perm_addr[32]</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_char</p></td>
+<td><p>addr_assign_type</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_char</p></td>
+<td><p>addr_len</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_char</p></td>
+<td><p>upper_level</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_char</p></td>
+<td><p>lower_level</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>u8</p></td>
+<td><p>threaded</p></td>
+<td></td>
+<td></td>
+<td><p>napi_poll(napi_enable,netif_set_threaded)</p></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_short</p></td>
+<td><p>neigh_priv_len</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_short</p></td>
+<td><p>padded</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_short</p></td>
+<td><p>dev_id</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_short</p></td>
+<td><p>dev_port</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>spinlock_t</p></td>
+<td><p>addr_list_lock</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>int</p></td>
+<td><p>irq</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">netdev_hw_addr_list</span></code></p></td>
+<td><p>uc</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">netdev_hw_addr_list</span></code></p></td>
+<td><p>mc</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">netdev_hw_addr_list</span></code></p></td>
+<td><p>dev_addrs</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kset</span></code>*</p></td>
+<td><p>queues_kset</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">list_head</span></code></p></td>
+<td><p>unlink_list</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_int</p></td>
+<td><p>promiscuity</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_int</p></td>
+<td><p>allmulti</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>bool</p></td>
+<td><p>uc_promisc</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_char</p></td>
+<td><p>nested_level</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">in_device</span></code>*</p></td>
+<td><p>ip_ptr</p></td>
+<td><p>read_mostly</p></td>
+<td><p>read_mostly</p></td>
+<td><p>__in_dev_get</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">hlist_head</span></code></p></td>
+<td><p>fib_nh_head</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">inet6_dev</span></code>*</p></td>
+<td><p>ip6_ptr</p></td>
+<td><p>read_mostly</p></td>
+<td><p>read_mostly</p></td>
+<td><p>__in6_dev_get</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">vlan_info</span></code>*</p></td>
+<td><p>vlan_info</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dsa_port</span></code>*</p></td>
+<td><p>dsa_ptr</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../tipc.html#c.tipc_bearer" title="tipc_bearer"><code class="xref c c-struct docutils literal notranslate"><span class="pre">struct</span> <span class="pre">tipc_bearer</span></code></a>*</p></td>
+<td><p>tipc_ptr</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>void*</p></td>
+<td><p>atalk_ptr</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>void*</p></td>
+<td><p>ax25_ptr</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../driver-api/80211/cfg80211.html#c.wireless_dev" title="wireless_dev"><code class="xref c c-struct docutils literal notranslate"><span class="pre">struct</span> <span class="pre">wireless_dev</span></code></a>*</p></td>
+<td><p>ieee80211_ptr</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">wpan_dev</span></code>*</p></td>
+<td><p>ieee802154_ptr</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">mpls_dev</span></code>*</p></td>
+<td><p>mpls_ptr</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">mctp_dev</span></code>*</p></td>
+<td><p>mctp_ptr</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_char*</p></td>
+<td><p>dev_addr</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">netdev_queue</span></code>*</p></td>
+<td><p>_rx</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>netdev_get_rx_queue(rx)</p></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_int</p></td>
+<td><p>num_rx_queues</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_int</p></td>
+<td><p>real_num_rx_queues</p></td>
+<td></td>
+<td><p>read_mostly</p></td>
+<td><p>get_rps_cpu</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">bpf_prog</span></code>*</p></td>
+<td><p>xdp_prog</p></td>
+<td></td>
+<td><p>read_mostly</p></td>
+<td><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">netif_elide_gro()</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_long</p></td>
+<td><p>gro_flush_timeout</p></td>
+<td></td>
+<td><p>read_mostly</p></td>
+<td><p>napi_complete_done</p></td>
+</tr>
+<tr class="row-even"><td><p>u32</p></td>
+<td><p>napi_defer_hard_irqs</p></td>
+<td></td>
+<td><p>read_mostly</p></td>
+<td><p>napi_complete_done</p></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_int</p></td>
+<td><p>gro_max_size</p></td>
+<td></td>
+<td><p>read_mostly</p></td>
+<td><p>skb_gro_receive</p></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_int</p></td>
+<td><p>gro_ipv4_max_size</p></td>
+<td></td>
+<td><p>read_mostly</p></td>
+<td><p>skb_gro_receive</p></td>
+</tr>
+<tr class="row-odd"><td><p>rx_handler_func_t*</p></td>
+<td><p>rx_handler</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>__netif_receive_skb_core</p></td>
+</tr>
+<tr class="row-even"><td><p>void*</p></td>
+<td><p>rx_handler_data</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">netdev_queue</span></code>*</p></td>
+<td><p>ingress_queue</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">bpf_mprog_entry</span></code></p></td>
+<td><p>tcx_ingress</p></td>
+<td></td>
+<td><p>read_mostly</p></td>
+<td><p>sch_handle_ingress</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">nf_hook_entries</span></code>*</p></td>
+<td><p>nf_hooks_ingress</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_char</p></td>
+<td><p>broadcast[32]</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">cpu_rmap</span></code>*</p></td>
+<td><p>rx_cpu_rmap</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">hlist_node</span></code></p></td>
+<td><p>index_hlist</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">netdev_queue</span></code>*</p></td>
+<td><p>_tx</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>netdev_get_tx_queue(tx)</p></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_int</p></td>
+<td><p>num_tx_queues</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_int</p></td>
+<td><p>real_num_tx_queues</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>skb_tx_hash,netdev_core_pick_tx(tx)</p></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_int</p></td>
+<td><p>tx_queue_len</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>spinlock_t</p></td>
+<td><p>tx_global_lock</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">xdp_dev_bulk_queue__percpu</span></code>*</p></td>
+<td><p>xdp_bulkq</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">xps_dev_maps</span></code>*</p></td>
+<td><p>xps_maps[2]</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>__netif_set_xps_queue</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">bpf_mprog_entry</span></code></p></td>
+<td><p>tcx_egress</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>sch_handle_egress</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">nf_hook_entries</span></code>*</p></td>
+<td><p>nf_hooks_egress</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">hlist_head</span></code></p></td>
+<td><p>qdisc_hash[16]</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">timer_list</span></code></p></td>
+<td><p>watchdog_timer</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>int</p></td>
+<td><p>watchdog_timeo</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>u32</p></td>
+<td><p>proto_down_reason</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">list_head</span></code></p></td>
+<td><p>todo_list</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>int__percpu*</p></td>
+<td><p>pcpu_refcnt</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>refcount_t</p></td>
+<td><p>dev_refcnt</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">ref_tracker_dir</span></code></p></td>
+<td><p>refcnt_tracker</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">list_head</span></code></p></td>
+<td><p>link_watch_list</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>enum:8</p></td>
+<td><p>reg_state</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>bool</p></td>
+<td><p>dismantle</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>bool</p></td>
+<td><p>rtnl_link_initilizing</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>bool</p></td>
+<td><p>needs_free_netdev</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>void*priv_destructor</p></td>
+<td><p><a class="reference internal" href="../kapi.html#c.net_device" title="net_device"><code class="xref c c-struct docutils literal notranslate"><span class="pre">struct</span> <span class="pre">net_device</span></code></a></p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">netpoll_info</span></code>*</p></td>
+<td><p>npinfo</p></td>
+<td></td>
+<td><p>read_mostly</p></td>
+<td><p>napi_poll/napi_poll_lock</p></td>
+</tr>
+<tr class="row-odd"><td><p>possible_net_t</p></td>
+<td><p>nd_net</p></td>
+<td></td>
+<td><p>read_mostly</p></td>
+<td><p>(dev_net)napi_busy_loop,tcp_v(4/6)_rcv,ip(v6)_rcv,ip(6)_input,ip(6)_input_finish</p></td>
+</tr>
+<tr class="row-even"><td><p>void*</p></td>
+<td><p>ml_priv</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>enum_netdev_ml_priv_type</p></td>
+<td><p>ml_priv_type</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">pcpu_lstats__percpu</span></code>*</p></td>
+<td><p>lstats</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dev_lstats_add()</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">pcpu_sw_netstats__percpu</span></code>*</p></td>
+<td><p>tstats</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dev_sw_netstats_tx_add()</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">pcpu_dstats__percpu</span></code>*</p></td>
+<td><p>dstats</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">garp_port</span></code>*</p></td>
+<td><p>garp_port</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">mrp_port</span></code>*</p></td>
+<td><p>mrp_port</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dm_hw_stat_delta</span></code>*</p></td>
+<td><p>dm_private</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../driver-api/infrastructure.html#c.device" title="device"><code class="xref c c-struct docutils literal notranslate"><span class="pre">struct</span> <span class="pre">device</span></code></a></p></td>
+<td><p>dev</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">attribute_group</span></code>*</p></td>
+<td><p>sysfs_groups[4]</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">attribute_group</span></code>*</p></td>
+<td><p>sysfs_rx_queue_group</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">rtnl_link_ops</span></code>*</p></td>
+<td><p>rtnl_link_ops</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_int</p></td>
+<td><p>gso_max_size</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>sk_dst_gso_max_size</p></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_int</p></td>
+<td><p>tso_max_size</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>u16</p></td>
+<td><p>gso_max_segs</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>gso_max_segs</p></td>
+</tr>
+<tr class="row-odd"><td><p>u16</p></td>
+<td><p>tso_max_segs</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_int</p></td>
+<td><p>gso_ipv4_max_size</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>sk_dst_gso_max_size</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dcbnl_rtnl_ops</span></code>*</p></td>
+<td><p>dcbnl_ops</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>s16</p></td>
+<td><p>num_tc</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>skb_tx_hash</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">netdev_tc_txq</span></code></p></td>
+<td><p>tc_to_txq[16]</p></td>
+<td><p>read_mostly</p></td>
+<td></td>
+<td><p>skb_tx_hash</p></td>
+</tr>
+<tr class="row-even"><td><p>u8</p></td>
+<td><p>prio_tc_map[16]</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_int</p></td>
+<td><p>fcoe_ddp_xid</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">netprio_map</span></code>*</p></td>
+<td><p>priomap</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../kapi.html#c.phy_device" title="phy_device"><code class="xref c c-struct docutils literal notranslate"><span class="pre">struct</span> <span class="pre">phy_device</span></code></a>*</p></td>
+<td><p>phydev</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../kapi.html#c.sfp_bus" title="sfp_bus"><code class="xref c c-struct docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sfp_bus</span></code></a>*</p></td>
+<td><p>sfp_bus</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">lock_class_key</span></code>*</p></td>
+<td><p>qdisc_tx_busylock</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>bool</p></td>
+<td><p>proto_down</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned:1</p></td>
+<td><p>wol_enabled</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_long:1</p></td>
+<td><p>see_all_hwtstamp_requests</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_long:1</p></td>
+<td><p>change_proto_down</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_long:1</p></td>
+<td><p>netns_immutable</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_long:1</p></td>
+<td><p>fcoe_mtu</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">list_head</span></code></p></td>
+<td><p>net_notifier_list</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">macsec_ops</span></code>*</p></td>
+<td><p>macsec_ops</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">udp_tunnel_nic_info</span></code>*</p></td>
+<td><p>udp_tunnel_nic_info</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">udp_tunnel_nic</span></code>*</p></td>
+<td><p>udp_tunnel_nic</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>unsigned_int</p></td>
+<td><p>xdp_zc_max_segs</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">bpf_xdp_entity</span></code></p></td>
+<td><p>xdp_state[3]</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>u8</p></td>
+<td><p>dev_addr_shadow[32]</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>netdevice_tracker</p></td>
+<td><p>linkwatch_dev_tracker</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>netdevice_tracker</p></td>
+<td><p>watchdog_dev_tracker</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>netdevice_tracker</p></td>
+<td><p>dev_registered_tracker</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">rtnl_hw_stats64</span></code>*</p></td>
+<td><p>offload_xstats_l3</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">devlink_port</span></code>*</p></td>
+<td><p>devlink_port</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dpll_pin</span></code>*</p></td>
+<td><p>dpll_pin</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">hlist_head</span></code></p></td>
+<td><p>page_pools</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../net_dim.html#c.dim_irq_moder" title="dim_irq_moder"><code class="xref c c-struct docutils literal notranslate"><span class="pre">struct</span> <span class="pre">dim_irq_moder</span></code></a>*</p></td>
+<td><p>irq_moder</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>u64</p></td>
+<td><p>max_pacing_offload_horizon</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>struct_napi_config*</p></td>
+<td><p>napi_config</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>unsigned_long</p></td>
+<td><p>gro_flush_timeout</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>u32</p></td>
+<td><p>napi_defer_hard_irqs</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">hlist_head</span></code></p></td>
+<td><p>neighbours[2]</p></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/networking/net_cachelines/net_device.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

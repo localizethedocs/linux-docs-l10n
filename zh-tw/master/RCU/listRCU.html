@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Using RCU to Protect Read-Mostly Linked Lists &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/RCU/listRCU.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Using RCU to Protect Dynamic NMI Handlers" href="NMI-RCU.html" />
+    <link rel="prev" title="Using RCU&#39;s CPU Stall Detector" href="stallwarn.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core-api/index.html">核心 API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-entry-and-exit">低階進入與退出</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../core-api/index.html#concurrency-primitives">Concurrency primitives</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/refcount-vs-atomic.html">refcount_t API compared to atomic_t</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/irq/index.html">IRQs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/local_ops.html">Semantics and Behavior of Local Atomic Operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/padata.html">The padata parallel execution mechanism</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">RCU Handbook</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/wrappers/memory-barriers.html">Linux kernel memory barriers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#memory-management">記憶體管理</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../core-api/index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/RCU/listRCU.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="using-rcu-to-protect-read-mostly-linked-lists">
+<span id="list-rcu-doc"></span><h1>Using RCU to Protect Read-Mostly Linked Lists<a class="headerlink" href="#using-rcu-to-protect-read-mostly-linked-lists" title="連結到這個標頭">¶</a></h1>
+<p>One of the most common uses of RCU is protecting read-mostly linked lists
+(<code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">list_head</span></code> in list.h).  One big advantage of this approach is
+that all of the required memory ordering is provided by the list macros.
+This document describes several list-based RCU use cases.</p>
+<p>When iterating a list while holding the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_read_lock" title="rcu_read_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_read_lock()</span></code></a>, writers may
+modify the list.  The reader is guaranteed to see all of the elements
+which were added to the list before they acquired the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_read_lock" title="rcu_read_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_read_lock()</span></code></a>
+and are still on the list when they drop the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_read_unlock" title="rcu_read_unlock"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_read_unlock()</span></code></a>.
+Elements which are added to, or removed from the list may or may not
+be seen.  If the writer calls <a class="reference internal" href="../core-api/kernel-api.html#c.list_replace_rcu" title="list_replace_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">list_replace_rcu()</span></code></a>, the reader may see
+either the old element or the new element; they will not see both,
+nor will they see neither.</p>
+<section id="example-1-read-mostly-list-deferred-destruction">
+<h2>Example 1: Read-mostly list: Deferred Destruction<a class="headerlink" href="#example-1-read-mostly-list-deferred-destruction" title="連結到這個標頭">¶</a></h2>
+<p>A widely used usecase for RCU lists in the kernel is lockless iteration over
+all processes in the system. <code class="docutils literal notranslate"><span class="pre">task_struct::tasks</span></code> represents the list node that
+links all the processes. The list can be traversed in parallel to any list
+additions or removals.</p>
+<p>The traversal of the list is done using <code class="docutils literal notranslate"><span class="pre">for_each_process()</span></code> which is defined
+by the 2 macros:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#define next_task(p) \
+        list_entry_rcu((p)-&gt;tasks.next, struct task_struct, tasks)
+
+#define for_each_process(p) \
+        for (p = &amp;init_task ; (p = next_task(p)) != &amp;init_task ; )
+</pre></div>
+</div>
+<p>The code traversing the list of all processes typically looks like:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>rcu_read_lock();
+for_each_process(p) {
+        /* Do something with p */
+}
+rcu_read_unlock();
+</pre></div>
+</div>
+<p>The simplified and heavily inlined code for removing a process from a
+task list is:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void release_task(struct task_struct *p)
+{
+        write_lock(&amp;tasklist_lock);
+        list_del_rcu(&amp;p-&gt;tasks);
+        write_unlock(&amp;tasklist_lock);
+        call_rcu(&amp;p-&gt;rcu, delayed_put_task_struct);
+}
+</pre></div>
+</div>
+<p>When a process exits, <code class="docutils literal notranslate"><span class="pre">release_task()</span></code> calls <code class="docutils literal notranslate"><span class="pre">list_del_rcu(&amp;p-&gt;tasks)</span></code>
+via <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">__exit_signal()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">__unhash_process()</span></code> under <code class="docutils literal notranslate"><span class="pre">tasklist_lock</span></code>
+writer lock protection.  The <a class="reference internal" href="../core-api/kernel-api.html#c.list_del_rcu" title="list_del_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">list_del_rcu()</span></code></a> invocation removes
+the task from the list of all tasks. The <code class="docutils literal notranslate"><span class="pre">tasklist_lock</span></code>
+prevents concurrent list additions/removals from corrupting the
+list. Readers using <code class="docutils literal notranslate"><span class="pre">for_each_process()</span></code> are not protected with the
+<code class="docutils literal notranslate"><span class="pre">tasklist_lock</span></code>. To prevent readers from noticing changes in the list
+pointers, the <code class="docutils literal notranslate"><span class="pre">task_struct</span></code> object is freed only after one or more
+grace periods elapse, with the help of <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a>, which is invoked via
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">put_task_struct_rcu_user()</span></code>. This deferring of destruction ensures that
+any readers traversing the list will see valid <code class="docutils literal notranslate"><span class="pre">p-&gt;tasks.next</span></code> pointers
+and deletion/freeing can happen in parallel with traversal of the list.
+This pattern is also called an <strong>existence lock</strong>, since RCU refrains
+from invoking the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">delayed_put_task_struct()</span></code> callback function until
+all existing readers finish, which guarantees that the <code class="docutils literal notranslate"><span class="pre">task_struct</span></code>
+object in question will remain in existence until after the completion
+of all RCU readers that might possibly have a reference to that object.</p>
+</section>
+<section id="example-2-read-side-action-taken-outside-of-lock-no-in-place-updates">
+<h2>Example 2: Read-Side Action Taken Outside of Lock: No In-Place Updates<a class="headerlink" href="#example-2-read-side-action-taken-outside-of-lock-no-in-place-updates" title="連結到這個標頭">¶</a></h2>
+<p>Some reader-writer locking use cases compute a value while holding
+the read-side lock, but continue to use that value after that lock is
+released.  These use cases are often good candidates for conversion
+to RCU.  One prominent example involves network packet routing.
+Because the packet-routing data tracks the state of equipment outside
+of the computer, it will at times contain stale data.  Therefore, once
+the route has been computed, there is no need to hold the routing table
+static during transmission of the packet.  After all, you can hold the
+routing table static all you want, but that won't keep the external
+Internet from changing, and it is the state of the external Internet
+that really matters.  In addition, routing entries are typically added
+or deleted, rather than being modified in place.  This is a rare example
+of the finite speed of light and the non-zero size of atoms actually
+helping make synchronization be lighter weight.</p>
+<p>A straightforward example of this type of RCU use case may be found in
+the system-call auditing support.  For example, a reader-writer locked
+implementation of <code class="docutils literal notranslate"><span class="pre">audit_filter_task()</span></code> might be as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static enum audit_state audit_filter_task(struct task_struct *tsk, char **key)
+{
+        struct audit_entry *e;
+        enum audit_state   state;
+
+        read_lock(&amp;auditsc_lock);
+        /* Note: audit_filter_mutex held by caller. */
+        list_for_each_entry(e, &amp;audit_tsklist, list) {
+                if (audit_filter_rules(tsk, &amp;e-&gt;rule, NULL, &amp;state)) {
+                        if (state == AUDIT_STATE_RECORD)
+                                *key = kstrdup(e-&gt;rule.filterkey, GFP_ATOMIC);
+                        read_unlock(&amp;auditsc_lock);
+                        return state;
+                }
+        }
+        read_unlock(&amp;auditsc_lock);
+        return AUDIT_BUILD_CONTEXT;
+}
+</pre></div>
+</div>
+<p>Here the list is searched under the lock, but the lock is dropped before
+the corresponding value is returned.  By the time that this value is acted
+on, the list may well have been modified.  This makes sense, since if
+you are turning auditing off, it is OK to audit a few extra system calls.</p>
+<p>This means that RCU can be easily applied to the read side, as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static enum audit_state audit_filter_task(struct task_struct *tsk, char **key)
+{
+        struct audit_entry *e;
+        enum audit_state   state;
+
+        rcu_read_lock();
+        /* Note: audit_filter_mutex held by caller. */
+        list_for_each_entry_rcu(e, &amp;audit_tsklist, list) {
+                if (audit_filter_rules(tsk, &amp;e-&gt;rule, NULL, &amp;state)) {
+                        if (state == AUDIT_STATE_RECORD)
+                                *key = kstrdup(e-&gt;rule.filterkey, GFP_ATOMIC);
+                        rcu_read_unlock();
+                        return state;
+                }
+        }
+        rcu_read_unlock();
+        return AUDIT_BUILD_CONTEXT;
+}
+</pre></div>
+</div>
+<p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">read_lock()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">read_unlock()</span></code> calls have become <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_read_lock" title="rcu_read_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_read_lock()</span></code></a>
+and <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_read_unlock" title="rcu_read_unlock"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_read_unlock()</span></code></a>, respectively, and the <a class="reference internal" href="../core-api/list.html#c.list_for_each_entry" title="list_for_each_entry"><code class="xref c c-func docutils literal notranslate"><span class="pre">list_for_each_entry()</span></code></a>
+has become <a class="reference internal" href="../core-api/kernel-api.html#c.list_for_each_entry_rcu" title="list_for_each_entry_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">list_for_each_entry_rcu()</span></code></a>.  The <strong><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">_rcu()</span></code></strong> list-traversal
+primitives add <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">READ_ONCE()</span></code> and diagnostic checks for incorrect use
+outside of an RCU read-side critical section.</p>
+<p>The changes to the update side are also straightforward. A reader-writer lock
+might be used as follows for deletion and insertion in these simplified
+versions of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">audit_del_rule()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">audit_add_rule()</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static inline int audit_del_rule(struct audit_rule *rule,
+                                 struct list_head *list)
+{
+        struct audit_entry *e;
+
+        write_lock(&amp;auditsc_lock);
+        list_for_each_entry(e, list, list) {
+                if (!audit_compare_rule(rule, &amp;e-&gt;rule)) {
+                        list_del(&amp;e-&gt;list);
+                        write_unlock(&amp;auditsc_lock);
+                        return 0;
+                }
+        }
+        write_unlock(&amp;auditsc_lock);
+        return -EFAULT;         /* No matching rule */
+}
+
+static inline int audit_add_rule(struct audit_entry *entry,
+                                 struct list_head *list)
+{
+        write_lock(&amp;auditsc_lock);
+        if (entry-&gt;rule.flags &amp; AUDIT_PREPEND) {
+                entry-&gt;rule.flags &amp;= ~AUDIT_PREPEND;
+                list_add(&amp;entry-&gt;list, list);
+        } else {
+                list_add_tail(&amp;entry-&gt;list, list);
+        }
+        write_unlock(&amp;auditsc_lock);
+        return 0;
+}
+</pre></div>
+</div>
+<p>Following are the RCU equivalents for these two functions:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static inline int audit_del_rule(struct audit_rule *rule,
+                                 struct list_head *list)
+{
+        struct audit_entry *e;
+
+        /* No need to use the _rcu iterator here, since this is the only
+         * deletion routine. */
+        list_for_each_entry(e, list, list) {
+                if (!audit_compare_rule(rule, &amp;e-&gt;rule)) {
+                        list_del_rcu(&amp;e-&gt;list);
+                        call_rcu(&amp;e-&gt;rcu, audit_free_rule);
+                        return 0;
+                }
+        }
+        return -EFAULT;         /* No matching rule */
+}
+
+static inline int audit_add_rule(struct audit_entry *entry,
+                                 struct list_head *list)
+{
+        if (entry-&gt;rule.flags &amp; AUDIT_PREPEND) {
+                entry-&gt;rule.flags &amp;= ~AUDIT_PREPEND;
+                list_add_rcu(&amp;entry-&gt;list, list);
+        } else {
+                list_add_tail_rcu(&amp;entry-&gt;list, list);
+        }
+        return 0;
+}
+</pre></div>
+</div>
+<p>Normally, the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">write_lock()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">write_unlock()</span></code> would be replaced by a
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">spin_lock()</span></code> and a <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">spin_unlock()</span></code>. But in this case, all callers hold
+<code class="docutils literal notranslate"><span class="pre">audit_filter_mutex</span></code>, so no additional locking is required. The
+auditsc_lock can therefore be eliminated, since use of RCU eliminates the
+need for writers to exclude readers.</p>
+<p>The <a class="reference internal" href="../core-api/list.html#c.list_del" title="list_del"><code class="xref c c-func docutils literal notranslate"><span class="pre">list_del()</span></code></a>, <a class="reference internal" href="../core-api/list.html#c.list_add" title="list_add"><code class="xref c c-func docutils literal notranslate"><span class="pre">list_add()</span></code></a>, and <a class="reference internal" href="../core-api/list.html#c.list_add_tail" title="list_add_tail"><code class="xref c c-func docutils literal notranslate"><span class="pre">list_add_tail()</span></code></a> primitives have been
+replaced by <a class="reference internal" href="../core-api/kernel-api.html#c.list_del_rcu" title="list_del_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">list_del_rcu()</span></code></a>, <a class="reference internal" href="../core-api/kernel-api.html#c.list_add_rcu" title="list_add_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">list_add_rcu()</span></code></a>, and <a class="reference internal" href="../core-api/kernel-api.html#c.list_add_tail_rcu" title="list_add_tail_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">list_add_tail_rcu()</span></code></a>.
+The <strong><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">_rcu()</span></code></strong> list-manipulation primitives add memory barriers that are
+needed on weakly ordered CPUs.  The <a class="reference internal" href="../core-api/kernel-api.html#c.list_del_rcu" title="list_del_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">list_del_rcu()</span></code></a> primitive omits the
+pointer poisoning debug-assist code that would otherwise cause concurrent
+readers to fail spectacularly.</p>
+<p>So, when readers can tolerate stale data and when entries are either added or
+deleted, without in-place modification, it is very easy to use RCU!</p>
+</section>
+<section id="example-3-handling-in-place-updates">
+<h2>Example 3: Handling In-Place Updates<a class="headerlink" href="#example-3-handling-in-place-updates" title="連結到這個標頭">¶</a></h2>
+<p>The system-call auditing code does not update auditing rules in place.  However,
+if it did, the reader-writer-locked code to do so might look as follows
+(assuming only <code class="docutils literal notranslate"><span class="pre">field_count</span></code> is updated, otherwise, the added fields would
+need to be filled in):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static inline int audit_upd_rule(struct audit_rule *rule,
+                                 struct list_head *list,
+                                 __u32 newaction,
+                                 __u32 newfield_count)
+{
+        struct audit_entry *e;
+        struct audit_entry *ne;
+
+        write_lock(&amp;auditsc_lock);
+        /* Note: audit_filter_mutex held by caller. */
+        list_for_each_entry(e, list, list) {
+                if (!audit_compare_rule(rule, &amp;e-&gt;rule)) {
+                        e-&gt;rule.action = newaction;
+                        e-&gt;rule.field_count = newfield_count;
+                        write_unlock(&amp;auditsc_lock);
+                        return 0;
+                }
+        }
+        write_unlock(&amp;auditsc_lock);
+        return -EFAULT;         /* No matching rule */
+}
+</pre></div>
+</div>
+<p>The RCU version creates a copy, updates the copy, then replaces the old
+entry with the newly updated entry.  This sequence of actions, allowing
+concurrent reads while making a copy to perform an update, is what gives
+RCU (<em>read-copy update</em>) its name.</p>
+<p>The RCU version of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">audit_upd_rule()</span></code> is as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static inline int audit_upd_rule(struct audit_rule *rule,
+                                 struct list_head *list,
+                                 __u32 newaction,
+                                 __u32 newfield_count)
+{
+        struct audit_entry *e;
+        struct audit_entry *ne;
+
+        list_for_each_entry(e, list, list) {
+                if (!audit_compare_rule(rule, &amp;e-&gt;rule)) {
+                        ne = kmalloc(sizeof(*entry), GFP_ATOMIC);
+                        if (ne == NULL)
+                                return -ENOMEM;
+                        audit_copy_rule(&amp;ne-&gt;rule, &amp;e-&gt;rule);
+                        ne-&gt;rule.action = newaction;
+                        ne-&gt;rule.field_count = newfield_count;
+                        list_replace_rcu(&amp;e-&gt;list, &amp;ne-&gt;list);
+                        call_rcu(&amp;e-&gt;rcu, audit_free_rule);
+                        return 0;
+                }
+        }
+        return -EFAULT;         /* No matching rule */
+}
+</pre></div>
+</div>
+<p>Again, this assumes that the caller holds <code class="docutils literal notranslate"><span class="pre">audit_filter_mutex</span></code>.  Normally, the
+writer lock would become a spinlock in this sort of code.</p>
+<p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">update_lsm_rule()</span></code> does something very similar, for those who would
+prefer to look at real Linux-kernel code.</p>
+<p>Another use of this pattern can be found in the openswitch driver's <em>connection
+tracking table</em> code in <code class="docutils literal notranslate"><span class="pre">ct_limit_set()</span></code>.  The table holds connection tracking
+entries and has a limit on the maximum entries.  There is one such table
+per-zone and hence one <em>limit</em> per zone.  The zones are mapped to their limits
+through a hashtable using an RCU-managed hlist for the hash chains. When a new
+limit is set, a new limit object is allocated and <code class="docutils literal notranslate"><span class="pre">ct_limit_set()</span></code> is called
+to replace the old limit object with the new one using <a class="reference internal" href="../core-api/kernel-api.html#c.list_replace_rcu" title="list_replace_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">list_replace_rcu()</span></code></a>.
+The old limit object is then freed after a grace period using <a class="reference internal" href="../core-api/kernel-api.html#c.kfree_rcu" title="kfree_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">kfree_rcu()</span></code></a>.</p>
+</section>
+<section id="example-4-eliminating-stale-data">
+<h2>Example 4: Eliminating Stale Data<a class="headerlink" href="#example-4-eliminating-stale-data" title="連結到這個標頭">¶</a></h2>
+<p>The auditing example above tolerates stale data, as do most algorithms
+that are tracking external state.  After all, given there is a delay
+from the time the external state changes before Linux becomes aware
+of the change, and so as noted earlier, a small quantity of additional
+RCU-induced staleness is generally not a problem.</p>
+<p>However, there are many examples where stale data cannot be tolerated.
+One example in the Linux kernel is the System V IPC (see the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">shm_lock()</span></code>
+function in ipc/shm.c).  This code checks a <em>deleted</em> flag under a
+per-entry spinlock, and, if the <em>deleted</em> flag is set, pretends that the
+entry does not exist.  For this to be helpful, the search function must
+return holding the per-entry spinlock, as <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">shm_lock()</span></code> does in fact do.</p>
+<dl class="simple" id="quick-quiz">
+<dt>Quick Quiz:</dt><dd><p>For the deleted-flag technique to be helpful, why is it necessary
+to hold the per-entry lock while returning from the search function?</p>
+</dd>
+</dl>
+<p><a class="reference internal" href="#quick-quiz-answer"><span class="std std-ref">Answer to Quick Quiz</span></a></p>
+<p>If the system-call audit module were to ever need to reject stale data, one way
+to accomplish this would be to add a <code class="docutils literal notranslate"><span class="pre">deleted</span></code> flag and a <code class="docutils literal notranslate"><span class="pre">lock</span></code> spinlock to the
+<code class="docutils literal notranslate"><span class="pre">audit_entry</span></code> structure, and modify <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">audit_filter_task()</span></code> as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static struct audit_entry *audit_filter_task(struct task_struct *tsk, char **key)
+{
+        struct audit_entry *e;
+        enum audit_state   state;
+
+        rcu_read_lock();
+        list_for_each_entry_rcu(e, &amp;audit_tsklist, list) {
+                if (audit_filter_rules(tsk, &amp;e-&gt;rule, NULL, &amp;state)) {
+                        spin_lock(&amp;e-&gt;lock);
+                        if (e-&gt;deleted) {
+                                spin_unlock(&amp;e-&gt;lock);
+                                rcu_read_unlock();
+                                return NULL;
+                        }
+                        rcu_read_unlock();
+                        if (state == AUDIT_STATE_RECORD)
+                                *key = kstrdup(e-&gt;rule.filterkey, GFP_ATOMIC);
+                        /* As long as e-&gt;lock is held, e is valid and
+                         * its value is not stale */
+                        return e;
+                }
+        }
+        rcu_read_unlock();
+        return NULL;
+}
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">audit_del_rule()</span></code> function would need to set the <code class="docutils literal notranslate"><span class="pre">deleted</span></code> flag under the
+spinlock as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static inline int audit_del_rule(struct audit_rule *rule,
+                                 struct list_head *list)
+{
+        struct audit_entry *e;
+
+        /* No need to use the _rcu iterator here, since this
+         * is the only deletion routine. */
+        list_for_each_entry(e, list, list) {
+                if (!audit_compare_rule(rule, &amp;e-&gt;rule)) {
+                        spin_lock(&amp;e-&gt;lock);
+                        list_del_rcu(&amp;e-&gt;list);
+                        e-&gt;deleted = 1;
+                        spin_unlock(&amp;e-&gt;lock);
+                        call_rcu(&amp;e-&gt;rcu, audit_free_rule);
+                        return 0;
+                }
+        }
+        return -EFAULT;         /* No matching rule */
+}
+</pre></div>
+</div>
+<p>This too assumes that the caller holds <code class="docutils literal notranslate"><span class="pre">audit_filter_mutex</span></code>.</p>
+<p>Note that this example assumes that entries are only added and deleted.
+Additional mechanism is required to deal correctly with the update-in-place
+performed by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">audit_upd_rule()</span></code>.  For one thing, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">audit_upd_rule()</span></code> would
+need to hold the locks of both the old <code class="docutils literal notranslate"><span class="pre">audit_entry</span></code> and its replacement
+while executing the <a class="reference internal" href="../core-api/kernel-api.html#c.list_replace_rcu" title="list_replace_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">list_replace_rcu()</span></code></a>.</p>
+</section>
+<section id="example-5-skipping-stale-objects">
+<h2>Example 5: Skipping Stale Objects<a class="headerlink" href="#example-5-skipping-stale-objects" title="連結到這個標頭">¶</a></h2>
+<p>For some use cases, reader performance can be improved by skipping
+stale objects during read-side list traversal, where stale objects
+are those that will be removed and destroyed after one or more grace
+periods. One such example can be found in the timerfd subsystem. When a
+<code class="docutils literal notranslate"><span class="pre">CLOCK_REALTIME</span></code> clock is reprogrammed (for example due to setting
+of the system time) then all programmed <code class="docutils literal notranslate"><span class="pre">timerfds</span></code> that depend on
+this clock get triggered and processes waiting on them are awakened in
+advance of their scheduled expiry. To facilitate this, all such timers
+are added to an RCU-managed <code class="docutils literal notranslate"><span class="pre">cancel_list</span></code> when they are setup in
+<code class="docutils literal notranslate"><span class="pre">timerfd_setup_cancel()</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static void timerfd_setup_cancel(struct timerfd_ctx *ctx, int flags)
+{
+        spin_lock(&amp;ctx-&gt;cancel_lock);
+        if ((ctx-&gt;clockid == CLOCK_REALTIME ||
+             ctx-&gt;clockid == CLOCK_REALTIME_ALARM) &amp;&amp;
+            (flags &amp; TFD_TIMER_ABSTIME) &amp;&amp; (flags &amp; TFD_TIMER_CANCEL_ON_SET)) {
+                if (!ctx-&gt;might_cancel) {
+                        ctx-&gt;might_cancel = true;
+                        spin_lock(&amp;cancel_lock);
+                        list_add_rcu(&amp;ctx-&gt;clist, &amp;cancel_list);
+                        spin_unlock(&amp;cancel_lock);
+                }
+        } else {
+                __timerfd_remove_cancel(ctx);
+        }
+        spin_unlock(&amp;ctx-&gt;cancel_lock);
+}
+</pre></div>
+</div>
+<p>When a timerfd is freed (fd is closed), then the <code class="docutils literal notranslate"><span class="pre">might_cancel</span></code>
+flag of the timerfd object is cleared, the object removed from the
+<code class="docutils literal notranslate"><span class="pre">cancel_list</span></code> and destroyed, as shown in this simplified and inlined
+version of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">timerfd_release()</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int timerfd_release(struct inode *inode, struct file *file)
+{
+        struct timerfd_ctx *ctx = file-&gt;private_data;
+
+        spin_lock(&amp;ctx-&gt;cancel_lock);
+        if (ctx-&gt;might_cancel) {
+                ctx-&gt;might_cancel = false;
+                spin_lock(&amp;cancel_lock);
+                list_del_rcu(&amp;ctx-&gt;clist);
+                spin_unlock(&amp;cancel_lock);
+        }
+        spin_unlock(&amp;ctx-&gt;cancel_lock);
+
+        if (isalarm(ctx))
+                alarm_cancel(&amp;ctx-&gt;t.alarm);
+        else
+                hrtimer_cancel(&amp;ctx-&gt;t.tmr);
+        kfree_rcu(ctx, rcu);
+        return 0;
+}
+</pre></div>
+</div>
+<p>If the <code class="docutils literal notranslate"><span class="pre">CLOCK_REALTIME</span></code> clock is set, for example by a time server, the
+hrtimer framework calls <code class="docutils literal notranslate"><span class="pre">timerfd_clock_was_set()</span></code> which walks the
+<code class="docutils literal notranslate"><span class="pre">cancel_list</span></code> and wakes up processes waiting on the timerfd. While iterating
+the <code class="docutils literal notranslate"><span class="pre">cancel_list</span></code>, the <code class="docutils literal notranslate"><span class="pre">might_cancel</span></code> flag is consulted to skip stale
+objects:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void timerfd_clock_was_set(void)
+{
+        ktime_t moffs = ktime_mono_to_real(0);
+        struct timerfd_ctx *ctx;
+        unsigned long flags;
+
+        rcu_read_lock();
+        list_for_each_entry_rcu(ctx, &amp;cancel_list, clist) {
+                if (!ctx-&gt;might_cancel)
+                        continue;
+                spin_lock_irqsave(&amp;ctx-&gt;wqh.lock, flags);
+                if (ctx-&gt;moffs != moffs) {
+                        ctx-&gt;moffs = KTIME_MAX;
+                        ctx-&gt;ticks++;
+                        wake_up_locked_poll(&amp;ctx-&gt;wqh, EPOLLIN);
+                }
+                spin_unlock_irqrestore(&amp;ctx-&gt;wqh.lock, flags);
+        }
+        rcu_read_unlock();
+}
+</pre></div>
+</div>
+<p>The key point is that because RCU-protected traversal of the
+<code class="docutils literal notranslate"><span class="pre">cancel_list</span></code> happens concurrently with object addition and removal,
+sometimes the traversal can access an object that has been removed from
+the list. In this example, a flag is used to skip such objects.</p>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="連結到這個標頭">¶</a></h2>
+<p>Read-mostly list-based data structures that can tolerate stale data are
+the most amenable to use of RCU.  The simplest case is where entries are
+either added or deleted from the data structure (or atomically modified
+in place), but non-atomic in-place modifications can be handled by making
+a copy, updating the copy, then replacing the original with the copy.
+If stale data cannot be tolerated, then a <em>deleted</em> flag may be used
+in conjunction with a per-entry spinlock in order to allow the search
+function to reject newly deleted data.</p>
+<dl id="quick-quiz-answer">
+<dt>Answer to Quick Quiz:</dt><dd><p>For the deleted-flag technique to be helpful, why is it necessary
+to hold the per-entry lock while returning from the search function?</p>
+<p>If the search function drops the per-entry lock before returning,
+then the caller will be processing stale data in any case.  If it
+is really OK to be processing stale data, then you don't need a
+<em>deleted</em> flag.  If processing stale data really is a problem,
+then you need to hold the per-entry lock across all of the code
+that uses the value that was returned.</p>
+</dd>
+</dl>
+<p><a class="reference internal" href="#quick-quiz"><span class="std std-ref">Back to Quick Quiz</span></a></p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/RCU/listRCU.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

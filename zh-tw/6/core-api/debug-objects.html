@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>The object-lifetime debugging infrastructure &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/core-api/debug-objects.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="The Linux Kernel Tracepoint API" href="tracepoint.html" />
+    <link rel="prev" title="KHO FDT" href="kho/fdt.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">核心 API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#low-level-entry-and-exit">低階進入與退出</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#concurrency-primitives">Concurrency primitives</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#memory-management">記憶體管理</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">The object-lifetime debugging infrastructure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tracepoint.html">The Linux Kernel Tracepoint API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="debugging-via-ohci1394.html">Using physical DMA provided by OHCI-1394 FireWire controllers for debugging</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/core-api/debug-objects.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="the-object-lifetime-debugging-infrastructure">
+<h1>The object-lifetime debugging infrastructure<a class="headerlink" href="#the-object-lifetime-debugging-infrastructure" title="連結到這個標頭">¶</a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">作者<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Thomas Gleixner</p>
+</dd>
+</dl>
+<section id="introduction">
+<h2>介紹<a class="headerlink" href="#introduction" title="連結到這個標頭">¶</a></h2>
+<p>debugobjects is a generic infrastructure to track the life time of
+kernel objects and validate the operations on those.</p>
+<p>debugobjects is useful to check for the following error patterns:</p>
+<ul class="simple">
+<li><p>Activation of uninitialized objects</p></li>
+<li><p>Initialization of active objects</p></li>
+<li><p>Usage of freed/destroyed objects</p></li>
+</ul>
+<p>debugobjects is not changing the data structure of the real object so it
+can be compiled in with a minimal runtime impact and enabled on demand
+with a kernel command line option.</p>
+</section>
+<section id="howto-use-debugobjects">
+<h2>Howto use debugobjects<a class="headerlink" href="#howto-use-debugobjects" title="連結到這個標頭">¶</a></h2>
+<p>A kernel subsystem needs to provide a data structure which describes the
+object type and add calls into the debug code at appropriate places. The
+data structure to describe the object type needs at minimum the name of
+the object type. Optional functions can and should be provided to fixup
+detected problems so the kernel can continue to work and the debug
+information can be retrieved from a live system instead of hard core
+debugging with serial consoles and stack trace transcripts from the
+monitor.</p>
+<p>The debug calls provided by debugobjects are:</p>
+<ul class="simple">
+<li><p>debug_object_init</p></li>
+<li><p>debug_object_init_on_stack</p></li>
+<li><p>debug_object_activate</p></li>
+<li><p>debug_object_deactivate</p></li>
+<li><p>debug_object_destroy</p></li>
+<li><p>debug_object_free</p></li>
+<li><p>debug_object_assert_init</p></li>
+</ul>
+<p>Each of these functions takes the address of the real object and a
+pointer to the object type specific debug description structure.</p>
+<p>Each detected error is reported in the statistics and a limited number
+of errors are printk'ed including a full stack trace.</p>
+<p>The statistics are available via /sys/kernel/debug/debug_objects/stats.
+They provide information about the number of warnings and the number of
+successful fixups along with information about the usage of the internal
+tracking objects and the state of the internal tracking objects pool.</p>
+</section>
+<section id="debug-functions">
+<h2>Debug functions<a class="headerlink" href="#debug-functions" title="連結到這個標頭">¶</a></h2>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.debug_object_init">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">debug_object_init</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">addr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.debug_obj_descr" title="debug_obj_descr"><span class="n"><span class="pre">debug_obj_descr</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">descr</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.debug_object_init" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>debug checks when an object is initialized</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*addr</span></code></dt><dd><p>address of the object</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">debug_obj_descr</span> <span class="pre">*descr</span></code></dt><dd><p>pointer to an object specific debug description structure</p>
+</dd>
+</dl>
+</div>
+<p>This function is called whenever the initialization function of a real
+object is called.</p>
+<p>When the real object is already tracked by debugobjects it is checked,
+whether the object can be initialized. Initializing is not allowed for
+active and destroyed objects. When debugobjects detects an error, then
+it calls the fixup_init function of the object type description
+structure if provided by the caller. The fixup function can correct the
+problem before the real initialization of the object happens. E.g. it
+can deactivate an active object in order to prevent damage to the
+subsystem.</p>
+<p>When the real object is not yet tracked by debugobjects, debugobjects
+allocates a tracker object for the real object and sets the tracker
+object state to ODEBUG_STATE_INIT. It verifies that the object is not
+on the callers stack. If it is on the callers stack then a limited
+number of warnings including a full stack trace is printk'ed. The
+calling code must use <a class="reference internal" href="#c.debug_object_init_on_stack" title="debug_object_init_on_stack"><code class="xref c c-func docutils literal notranslate"><span class="pre">debug_object_init_on_stack()</span></code></a> and remove the
+object before leaving the function which allocated it. See next section.</p>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.debug_object_init_on_stack">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">debug_object_init_on_stack</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">addr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.debug_obj_descr" title="debug_obj_descr"><span class="n"><span class="pre">debug_obj_descr</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">descr</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.debug_object_init_on_stack" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>debug checks when an object on stack is initialized</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*addr</span></code></dt><dd><p>address of the object</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">debug_obj_descr</span> <span class="pre">*descr</span></code></dt><dd><p>pointer to an object specific debug description structure</p>
+</dd>
+</dl>
+</div>
+<p>This function is called whenever the initialization function of a real
+object which resides on the stack is called.</p>
+<p>When the real object is already tracked by debugobjects it is checked,
+whether the object can be initialized. Initializing is not allowed for
+active and destroyed objects. When debugobjects detects an error, then
+it calls the fixup_init function of the object type description
+structure if provided by the caller. The fixup function can correct the
+problem before the real initialization of the object happens. E.g. it
+can deactivate an active object in order to prevent damage to the
+subsystem.</p>
+<p>When the real object is not yet tracked by debugobjects debugobjects
+allocates a tracker object for the real object and sets the tracker
+object state to ODEBUG_STATE_INIT. It verifies that the object is on
+the callers stack.</p>
+<p>An object which is on the stack must be removed from the tracker by
+calling <a class="reference internal" href="#c.debug_object_free" title="debug_object_free"><code class="xref c c-func docutils literal notranslate"><span class="pre">debug_object_free()</span></code></a> before the function which allocates the
+object returns. Otherwise we keep track of stale objects.</p>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.debug_object_activate">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">debug_object_activate</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">addr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.debug_obj_descr" title="debug_obj_descr"><span class="n"><span class="pre">debug_obj_descr</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">descr</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.debug_object_activate" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>debug checks when an object is activated</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*addr</span></code></dt><dd><p>address of the object</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">debug_obj_descr</span> <span class="pre">*descr</span></code></dt><dd><p>pointer to an object specific debug description structure
+Returns 0 for success, -EINVAL for check failed.</p>
+</dd>
+</dl>
+</div>
+<p>This function is called whenever the activation function of a real
+object is called.</p>
+<p>When the real object is already tracked by debugobjects it is checked,
+whether the object can be activated. Activating is not allowed for
+active and destroyed objects. When debugobjects detects an error, then
+it calls the fixup_activate function of the object type description
+structure if provided by the caller. The fixup function can correct the
+problem before the real activation of the object happens. E.g. it can
+deactivate an active object in order to prevent damage to the subsystem.</p>
+<p>When the real object is not yet tracked by debugobjects then the
+fixup_activate function is called if available. This is necessary to
+allow the legitimate activation of statically allocated and initialized
+objects. The fixup function checks whether the object is valid and calls
+the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">debug_objects_init()</span></code> function to initialize the tracking of this
+object.</p>
+<p>When the activation is legitimate, then the state of the associated
+tracker object is set to ODEBUG_STATE_ACTIVE.</p>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.debug_object_deactivate">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">debug_object_deactivate</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">addr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.debug_obj_descr" title="debug_obj_descr"><span class="n"><span class="pre">debug_obj_descr</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">descr</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.debug_object_deactivate" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>debug checks when an object is deactivated</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*addr</span></code></dt><dd><p>address of the object</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">debug_obj_descr</span> <span class="pre">*descr</span></code></dt><dd><p>pointer to an object specific debug description structure</p>
+</dd>
+</dl>
+</div>
+<p>This function is called whenever the deactivation function of a real
+object is called.</p>
+<p>When the real object is tracked by debugobjects it is checked, whether
+the object can be deactivated. Deactivating is not allowed for untracked
+or destroyed objects.</p>
+<p>When the deactivation is legitimate, then the state of the associated
+tracker object is set to ODEBUG_STATE_INACTIVE.</p>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.debug_object_destroy">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">debug_object_destroy</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">addr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.debug_obj_descr" title="debug_obj_descr"><span class="n"><span class="pre">debug_obj_descr</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">descr</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.debug_object_destroy" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>debug checks when an object is destroyed</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*addr</span></code></dt><dd><p>address of the object</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">debug_obj_descr</span> <span class="pre">*descr</span></code></dt><dd><p>pointer to an object specific debug description structure</p>
+</dd>
+</dl>
+</div>
+<p>This function is called to mark an object destroyed. This is useful to
+prevent the usage of invalid objects, which are still available in
+memory: either statically allocated objects or objects which are freed
+later.</p>
+<p>When the real object is tracked by debugobjects it is checked, whether
+the object can be destroyed. Destruction is not allowed for active and
+destroyed objects. When debugobjects detects an error, then it calls the
+fixup_destroy function of the object type description structure if
+provided by the caller. The fixup function can correct the problem
+before the real destruction of the object happens. E.g. it can
+deactivate an active object in order to prevent damage to the subsystem.</p>
+<p>When the destruction is legitimate, then the state of the associated
+tracker object is set to ODEBUG_STATE_DESTROYED.</p>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.debug_object_free">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">debug_object_free</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">addr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.debug_obj_descr" title="debug_obj_descr"><span class="n"><span class="pre">debug_obj_descr</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">descr</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.debug_object_free" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>debug checks when an object is freed</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*addr</span></code></dt><dd><p>address of the object</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">debug_obj_descr</span> <span class="pre">*descr</span></code></dt><dd><p>pointer to an object specific debug description structure</p>
+</dd>
+</dl>
+</div>
+<p>This function is called before an object is freed.</p>
+<p>When the real object is tracked by debugobjects it is checked, whether
+the object can be freed. Free is not allowed for active objects. When
+debugobjects detects an error, then it calls the fixup_free function of
+the object type description structure if provided by the caller. The
+fixup function can correct the problem before the real free of the
+object happens. E.g. it can deactivate an active object in order to
+prevent damage to the subsystem.</p>
+<p>Note that debug_object_free removes the object from the tracker. Later
+usage of the object is detected by the other debug checks.</p>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.debug_object_assert_init">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">debug_object_assert_init</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">addr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.debug_obj_descr" title="debug_obj_descr"><span class="n"><span class="pre">debug_obj_descr</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">descr</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.debug_object_assert_init" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>debug checks when object should be init-ed</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*addr</span></code></dt><dd><p>address of the object</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">debug_obj_descr</span> <span class="pre">*descr</span></code></dt><dd><p>pointer to an object specific debug description structure</p>
+</dd>
+</dl>
+</div>
+<p>This function is called to assert that an object has been initialized.</p>
+<p>When the real object is not tracked by debugobjects, it calls
+fixup_assert_init of the object type description structure provided by
+the caller, with the hardcoded object state ODEBUG_NOT_AVAILABLE. The
+fixup function can correct the problem by calling debug_object_init
+and other specific initializing functions.</p>
+<p>When the real object is already tracked by debugobjects it is ignored.</p>
+</section>
+<section id="fixup-functions">
+<h2>Fixup functions<a class="headerlink" href="#fixup-functions" title="連結到這個標頭">¶</a></h2>
+<section id="debug-object-type-description-structure">
+<h3>Debug object type description structure<a class="headerlink" href="#debug-object-type-description-structure" title="連結到這個標頭">¶</a></h3>
+<dl class="c struct">
+<dt class="sig sig-object c" id="c.debug_obj">
+<span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">debug_obj</span></span></span><a class="headerlink" href="#c.debug_obj" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>representation of an tracked object</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Definition</strong>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct debug_obj {
+    struct hlist_node               node;
+    enum debug_obj_state            state;
+    unsigned int                    astate;
+    union {
+        void *object;
+        struct hlist_node       *batch_last;
+    };
+    const struct debug_obj_descr *descr;
+};
+</pre></div>
+</div>
+<p><strong>Members</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">node</span></code></dt><dd><p>hlist node to link the object into the tracker list</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">state</span></code></dt><dd><p>tracked object state</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">astate</span></code></dt><dd><p>current active state</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">{unnamed_union}</span></code></dt><dd><p>anonymous</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">object</span></code></dt><dd><p>pointer to the real object</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">batch_last</span></code></dt><dd><p>pointer to the last hlist node in a batch</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">descr</span></code></dt><dd><p>pointer to an object type specific debug description structure</p>
+</dd>
+</dl>
+</div>
+<dl class="c struct">
+<dt class="sig sig-object c" id="c.debug_obj_descr">
+<span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">debug_obj_descr</span></span></span><a class="headerlink" href="#c.debug_obj_descr" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>object type specific debug description structure</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Definition</strong>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct debug_obj_descr {
+    const char              *name;
+    void *(*debug_hint)(void *addr);
+    bool (*is_static_object)(void *addr);
+    bool (*fixup_init)(void *addr, enum debug_obj_state state);
+    bool (*fixup_activate)(void *addr, enum debug_obj_state state);
+    bool (*fixup_destroy)(void *addr, enum debug_obj_state state);
+    bool (*fixup_free)(void *addr, enum debug_obj_state state);
+    bool (*fixup_assert_init)(void *addr, enum debug_obj_state state);
+};
+</pre></div>
+</div>
+<p><strong>Members</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">name</span></code></dt><dd><p>name of the object typee</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">debug_hint</span></code></dt><dd><p>function returning address, which have associated
+kernel symbol, to allow identify the object</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">is_static_object</span></code></dt><dd><p>return true if the obj is static, otherwise return false</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">fixup_init</span></code></dt><dd><p>fixup function, which is called when the init check
+fails. All fixup functions must return true if fixup
+was successful, otherwise return false</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">fixup_activate</span></code></dt><dd><p>fixup function, which is called when the activate check
+fails</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">fixup_destroy</span></code></dt><dd><p>fixup function, which is called when the destroy check
+fails</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">fixup_free</span></code></dt><dd><p>fixup function, which is called when the free check
+fails</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">fixup_assert_init</span></code></dt><dd><p>fixup function, which is called when the assert_init
+check fails</p>
+</dd>
+</dl>
+</div>
+</section>
+<section id="fixup-init">
+<h3>fixup_init<a class="headerlink" href="#fixup-init" title="連結到這個標頭">¶</a></h3>
+<p>This function is called from the debug code whenever a problem in
+debug_object_init is detected. The function takes the address of the
+object and the state which is currently recorded in the tracker.</p>
+<p>Called from debug_object_init when the object state is:</p>
+<ul class="simple">
+<li><p>ODEBUG_STATE_ACTIVE</p></li>
+</ul>
+<p>The function returns true when the fixup was successful, otherwise
+false. The return value is used to update the statistics.</p>
+<p>Note, that the function needs to call the <a class="reference internal" href="#c.debug_object_init" title="debug_object_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">debug_object_init()</span></code></a> function
+again, after the damage has been repaired in order to keep the state
+consistent.</p>
+</section>
+<section id="fixup-activate">
+<h3>fixup_activate<a class="headerlink" href="#fixup-activate" title="連結到這個標頭">¶</a></h3>
+<p>This function is called from the debug code whenever a problem in
+debug_object_activate is detected.</p>
+<p>Called from debug_object_activate when the object state is:</p>
+<ul class="simple">
+<li><p>ODEBUG_STATE_NOTAVAILABLE</p></li>
+<li><p>ODEBUG_STATE_ACTIVE</p></li>
+</ul>
+<p>The function returns true when the fixup was successful, otherwise
+false. The return value is used to update the statistics.</p>
+<p>Note that the function needs to call the <a class="reference internal" href="#c.debug_object_activate" title="debug_object_activate"><code class="xref c c-func docutils literal notranslate"><span class="pre">debug_object_activate()</span></code></a>
+function again after the damage has been repaired in order to keep the
+state consistent.</p>
+<p>The activation of statically initialized objects is a special case. When
+<a class="reference internal" href="#c.debug_object_activate" title="debug_object_activate"><code class="xref c c-func docutils literal notranslate"><span class="pre">debug_object_activate()</span></code></a> has no tracked object for this object address
+then <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">fixup_activate()</span></code> is called with object state
+ODEBUG_STATE_NOTAVAILABLE. The fixup function needs to check whether
+this is a legitimate case of a statically initialized object or not. In
+case it is it calls <a class="reference internal" href="#c.debug_object_init" title="debug_object_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">debug_object_init()</span></code></a> and <a class="reference internal" href="#c.debug_object_activate" title="debug_object_activate"><code class="xref c c-func docutils literal notranslate"><span class="pre">debug_object_activate()</span></code></a>
+to make the object known to the tracker and marked active. In this case
+the function should return false because this is not a real fixup.</p>
+</section>
+<section id="fixup-destroy">
+<h3>fixup_destroy<a class="headerlink" href="#fixup-destroy" title="連結到這個標頭">¶</a></h3>
+<p>This function is called from the debug code whenever a problem in
+debug_object_destroy is detected.</p>
+<p>Called from debug_object_destroy when the object state is:</p>
+<ul class="simple">
+<li><p>ODEBUG_STATE_ACTIVE</p></li>
+</ul>
+<p>The function returns true when the fixup was successful, otherwise
+false. The return value is used to update the statistics.</p>
+</section>
+<section id="fixup-free">
+<h3>fixup_free<a class="headerlink" href="#fixup-free" title="連結到這個標頭">¶</a></h3>
+<p>This function is called from the debug code whenever a problem in
+debug_object_free is detected. Further it can be called from the debug
+checks in kfree/vfree, when an active object is detected from the
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">debug_check_no_obj_freed()</span></code> sanity checks.</p>
+<p>Called from <a class="reference internal" href="#c.debug_object_free" title="debug_object_free"><code class="xref c c-func docutils literal notranslate"><span class="pre">debug_object_free()</span></code></a> or <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">debug_check_no_obj_freed()</span></code> when
+the object state is:</p>
+<ul class="simple">
+<li><p>ODEBUG_STATE_ACTIVE</p></li>
+</ul>
+<p>The function returns true when the fixup was successful, otherwise
+false. The return value is used to update the statistics.</p>
+</section>
+<section id="fixup-assert-init">
+<h3>fixup_assert_init<a class="headerlink" href="#fixup-assert-init" title="連結到這個標頭">¶</a></h3>
+<p>This function is called from the debug code whenever a problem in
+debug_object_assert_init is detected.</p>
+<p>Called from <a class="reference internal" href="#c.debug_object_assert_init" title="debug_object_assert_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">debug_object_assert_init()</span></code></a> with a hardcoded state
+ODEBUG_STATE_NOTAVAILABLE when the object is not found in the debug
+bucket.</p>
+<p>The function returns true when the fixup was successful, otherwise
+false. The return value is used to update the statistics.</p>
+<p>Note, this function should make sure <a class="reference internal" href="#c.debug_object_init" title="debug_object_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">debug_object_init()</span></code></a> is called
+before returning.</p>
+<p>The handling of statically initialized objects is a special case. The
+fixup function should check if this is a legitimate case of a statically
+initialized object or not. In this case only <a class="reference internal" href="#c.debug_object_init" title="debug_object_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">debug_object_init()</span></code></a>
+should be called to make the object known to the tracker. Then the
+function should return false because this is not a real fixup.</p>
+</section>
+</section>
+<section id="known-bugs-and-assumptions">
+<h2>Known Bugs And Assumptions<a class="headerlink" href="#known-bugs-and-assumptions" title="連結到這個標頭">¶</a></h2>
+<p>None (knock on wood).</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/core-api/debug-objects.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

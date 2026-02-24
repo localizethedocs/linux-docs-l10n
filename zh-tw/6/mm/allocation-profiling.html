@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>MEMORY ALLOCATION PROFILING &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/mm/allocation-profiling.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Architecture Page Table Helpers" href="arch_pgtable_helpers.html" />
+    <link rel="prev" title="Active MM" href="active_mm.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/mm/allocation-profiling.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="memory-allocation-profiling">
+<h1>MEMORY ALLOCATION PROFILING<a class="headerlink" href="#memory-allocation-profiling" title="連結到這個標頭">¶</a></h1>
+<p>Low overhead (suitable for production) accounting of all memory allocations,
+tracked by file and line number.</p>
+<p>Usage:
+kconfig options:
+- CONFIG_MEM_ALLOC_PROFILING</p>
+<ul class="simple">
+<li><p>CONFIG_MEM_ALLOC_PROFILING_ENABLED_BY_DEFAULT</p></li>
+<li><p>CONFIG_MEM_ALLOC_PROFILING_DEBUG
+adds warnings for allocations that weren't accounted because of a
+missing annotation</p></li>
+</ul>
+<dl>
+<dt>Boot parameter:</dt><dd><p>sysctl.vm.mem_profiling={0|1|never}[,compressed]</p>
+<p>When set to &quot;never&quot;, memory allocation profiling overhead is minimized and it
+cannot be enabled at runtime (sysctl becomes read-only).
+When CONFIG_MEM_ALLOC_PROFILING_ENABLED_BY_DEFAULT=y, default value is &quot;1&quot;.
+When CONFIG_MEM_ALLOC_PROFILING_ENABLED_BY_DEFAULT=n, default value is &quot;never&quot;.
+&quot;compressed&quot; optional parameter will try to store page tag references in a
+compact format, avoiding page extensions. This results in improved performance
+and memory consumption, however it might fail depending on system configuration.
+If compression fails, a warning is issued and memory allocation profiling gets
+disabled.</p>
+</dd>
+<dt>sysctl:</dt><dd><p>/proc/sys/vm/mem_profiling</p>
+<p>1: Enable memory profiling.</p>
+<p>0: Disable memory profiling.</p>
+<p>The default value depends on CONFIG_MEM_ALLOC_PROFILING_ENABLED_BY_DEFAULT.</p>
+<p>When CONFIG_MEM_ALLOC_PROFILING_DEBUG=y, this control is read-only to avoid
+warnings produced by allocations made while profiling is disabled and freed
+when it's enabled.</p>
+</dd>
+<dt>Runtime info:</dt><dd><p>/proc/allocinfo</p>
+</dd>
+</dl>
+<p>Example output:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>root@moria-kvm:~# sort -g /proc/allocinfo|tail|numfmt --to=iec
+      2.8M    22648 fs/kernfs/dir.c:615 func:__kernfs_new_node
+      3.8M      953 mm/memory.c:4214 func:alloc_anon_folio
+      4.0M     1010 drivers/staging/ctagmod/ctagmod.c:20 [ctagmod] func:ctagmod_start
+      4.1M        4 net/netfilter/nf_conntrack_core.c:2567 func:nf_ct_alloc_hashtable
+      6.0M     1532 mm/filemap.c:1919 func:__filemap_get_folio
+      8.8M     2785 kernel/fork.c:307 func:alloc_thread_stack_node
+       13M      234 block/blk-mq.c:3421 func:blk_mq_alloc_rqs
+       14M     3520 mm/mm_init.c:2530 func:alloc_large_system_hash
+       15M     3656 mm/readahead.c:247 func:page_cache_ra_unbounded
+       55M     4887 mm/slub.c:2259 func:alloc_slab_page
+      122M    31168 mm/page_ext.c:270 func:alloc_page_ext
+</pre></div>
+</div>
+<section id="theory-of-operation">
+<h2>Theory of operation<a class="headerlink" href="#theory-of-operation" title="連結到這個標頭">¶</a></h2>
+<p>Memory allocation profiling builds off of code tagging, which is a library for
+declaring static structs (that typically describe a file and line number in
+some way, hence code tagging) and then finding and operating on them at runtime,
+- i.e. iterating over them to print them in debugfs/procfs.</p>
+<p>To add accounting for an allocation call, we replace it with a macro
+invocation, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">alloc_hooks()</span></code>, that
+- declares a code tag
+- stashes a pointer to it in task_struct
+- calls the real allocation function
+- and finally, restores the task_struct alloc tag pointer to its previous value.</p>
+<p>This allows for <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">alloc_hooks()</span></code> calls to be nested, with the most recent one
+taking effect. This is important for allocations internal to the mm/ code that
+do not properly belong to the outer allocation context and should be counted
+separately: for example, slab object extension vectors, or when the slab
+allocates pages from the page allocator.</p>
+<p>Thus, proper usage requires determining which function in an allocation call
+stack should be tagged. There are many helper functions that essentially wrap
+e.g. <a class="reference internal" href="../core-api/mm-api.html#c.kmalloc" title="kmalloc"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmalloc()</span></code></a> and do a little more work, then are called in multiple places;
+we'll generally want the accounting to happen in the callers of these helpers,
+not in the helpers themselves.</p>
+<p>To fix up a given helper, for example <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">foo()</span></code>, do the following:
+- switch its allocation call to the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">_noprof()</span></code> version, e.g. <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">kmalloc_noprof()</span></code></p>
+<ul>
+<li><p>rename it to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">foo_noprof()</span></code></p></li>
+<li><p>define a macro version of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">foo()</span></code> like so:</p>
+<p>#define foo(...) alloc_hooks(foo_noprof(__VA_ARGS__))</p>
+</li>
+</ul>
+<p>It's also possible to stash a pointer to an alloc tag in your own data structures.</p>
+<p>Do this when you're implementing a generic data structure that does allocations
+&quot;on behalf of&quot; some other code - for example, the rhashtable code. This way,
+instead of seeing a large line in /proc/allocinfo for rhashtable.c, we can
+break it out by rhashtable type.</p>
+<p>To do so:
+- Hook your data structure's init function, like any other allocation function.</p>
+<ul class="simple">
+<li><p>Within your init function, use the convenience macro <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">alloc_tag_record()</span></code> to
+record alloc tag in your data structure.</p></li>
+<li><p>Then, use the following form for your allocations:
+alloc_hooks_tag(ht-&gt;your_saved_tag, kmalloc_noprof(...))</p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/mm/allocation-profiling.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

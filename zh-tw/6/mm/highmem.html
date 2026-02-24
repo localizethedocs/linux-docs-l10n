@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>High Memory Handling &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/mm/highmem.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Page Reclaim" href="page_reclaim.html" />
+    <link rel="prev" title="Slab Allocation" href="slab.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/mm/highmem.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="high-memory-handling">
+<h1>High Memory Handling<a class="headerlink" href="#high-memory-handling" title="連結到這個標頭">¶</a></h1>
+<p>By: Peter Zijlstra &lt;<a class="reference external" href="mailto:a&#46;p&#46;zijlstra&#37;&#52;&#48;chello&#46;nl">a<span>&#46;</span>p<span>&#46;</span>zijlstra<span>&#64;</span>chello<span>&#46;</span>nl</a>&gt;</p>
+<nav class="contents local" id="id1">
+<ul class="simple">
+<li><p><a class="reference internal" href="#what-is-high-memory" id="id2">What Is High Memory?</a></p></li>
+<li><p><a class="reference internal" href="#temporary-virtual-mappings" id="id3">Temporary Virtual Mappings</a></p></li>
+<li><p><a class="reference internal" href="#cost-of-temporary-mappings" id="id4">Cost of Temporary Mappings</a></p></li>
+<li><p><a class="reference internal" href="#i386-pae" id="id5">i386 PAE</a></p></li>
+<li><p><a class="reference internal" href="#functions" id="id6">Functions</a></p></li>
+</ul>
+</nav>
+<section id="what-is-high-memory">
+<h2><a class="toc-backref" href="#id2" role="doc-backlink">What Is High Memory?</a><a class="headerlink" href="#what-is-high-memory" title="連結到這個標頭">¶</a></h2>
+<p>High memory (highmem) is used when the size of physical memory approaches or
+exceeds the maximum size of virtual memory.  At that point it becomes
+impossible for the kernel to keep all of the available physical memory mapped
+at all times.  This means the kernel needs to start using temporary mappings of
+the pieces of physical memory that it wants to access.</p>
+<p>The part of (physical) memory not covered by a permanent mapping is what we
+refer to as 'highmem'.  There are various architecture dependent constraints on
+where exactly that border lies.</p>
+<p>In the i386 arch, for example, we choose to map the kernel into every process's
+VM space so that we don't have to pay the full TLB invalidation costs for
+kernel entry/exit.  This means the available virtual memory space (4GiB on
+i386) has to be divided between user and kernel space.</p>
+<p>The traditional split for architectures using this approach is 3:1, 3GiB for
+userspace and the top 1GiB for kernel space:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>+--------+ 0xffffffff
+| Kernel |
++--------+ 0xc0000000
+|        |
+| User   |
+|        |
++--------+ 0x00000000
+</pre></div>
+</div>
+<p>This means that the kernel can at most map 1GiB of physical memory at any one
+time, but because we need virtual address space for other things - including
+temporary maps to access the rest of the physical memory - the actual direct
+map will typically be less (usually around ~896MiB).</p>
+<p>Other architectures that have mm context tagged TLBs can have separate kernel
+and user maps.  Some hardware (like some ARMs), however, have limited virtual
+space when they use mm context tags.</p>
+</section>
+<section id="temporary-virtual-mappings">
+<h2><a class="toc-backref" href="#id3" role="doc-backlink">Temporary Virtual Mappings</a><a class="headerlink" href="#temporary-virtual-mappings" title="連結到這個標頭">¶</a></h2>
+<p>The kernel contains several ways of creating temporary mappings. The following
+list shows them in order of preference of use.</p>
+<ul>
+<li><p><a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a>, <a class="reference internal" href="#c.kmap_local_folio" title="kmap_local_folio"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_folio()</span></code></a> - These functions are used to create
+short term mappings. They can be invoked from any context (including
+interrupts) but the mappings can only be used in the context which acquired
+them. The only differences between them consist in the first taking a pointer
+to a <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> and the second taking a pointer to <a class="reference internal" href="../core-api/mm-api.html#c.folio" title="folio"><code class="xref c c-struct docutils literal notranslate"><span class="pre">struct</span> <span class="pre">folio</span></code></a> and the byte
+offset within the folio which identifies the page.</p>
+<p>These functions should always be used, whereas <a class="reference internal" href="#c.kmap_atomic" title="kmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_atomic()</span></code></a> and <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a> have
+been deprecated.</p>
+<p>These mappings are thread-local and CPU-local, meaning that the mapping
+can only be accessed from within this thread and the thread is bound to the
+CPU while the mapping is active. Although preemption is never disabled by
+this function, the CPU can not be unplugged from the system via
+CPU-hotplug until the mapping is disposed.</p>
+<p>It's valid to take pagefaults in a local kmap region, unless the context
+in which the local mapping is acquired does not allow it for other reasons.</p>
+<p>As said, pagefaults and preemption are never disabled. There is no need to
+disable preemption because, when context switches to a different task, the
+maps of the outgoing task are saved and those of the incoming one are
+restored.</p>
+<p><a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a>, as well as <a class="reference internal" href="#c.kmap_local_folio" title="kmap_local_folio"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_folio()</span></code></a> always returns valid virtual
+kernel addresses and it is assumed that <a class="reference internal" href="#c.kunmap_local" title="kunmap_local"><code class="xref c c-func docutils literal notranslate"><span class="pre">kunmap_local()</span></code></a> will never fail.</p>
+<p>On CONFIG_HIGHMEM=n kernels and for low memory pages they return the
+virtual address of the direct mapping. Only real highmem pages are
+temporarily mapped. Therefore, users may call a plain <a class="reference internal" href="#c.page_address" title="page_address"><code class="xref c c-func docutils literal notranslate"><span class="pre">page_address()</span></code></a>
+for pages which are known to not come from ZONE_HIGHMEM. However, it is
+always safe to use kmap_local_{page,folio}() / <a class="reference internal" href="#c.kunmap_local" title="kunmap_local"><code class="xref c c-func docutils literal notranslate"><span class="pre">kunmap_local()</span></code></a>.</p>
+<p>While they are significantly faster than <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a>, for the highmem case they
+come with restrictions about the pointers validity. Contrary to <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a>
+mappings, the local mappings are only valid in the context of the caller
+and cannot be handed to other contexts. This implies that users must
+be absolutely sure to keep the use of the return address local to the
+thread which mapped it.</p>
+<p>Most code can be designed to use thread local mappings. User should
+therefore try to design their code to avoid the use of <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a> by mapping
+pages in the same thread the address will be used and prefer
+<a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a> or <a class="reference internal" href="#c.kmap_local_folio" title="kmap_local_folio"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_folio()</span></code></a>.</p>
+<p>Nesting <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a> and <a class="reference internal" href="#c.kmap_atomic" title="kmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_atomic()</span></code></a> mappings is allowed to a certain
+extent (up to KMAP_TYPE_NR) but their invocations have to be strictly ordered
+because the map implementation is stack based. See <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a> kdocs
+(included in the &quot;Functions&quot; section) for details on how to manage nested
+mappings.</p>
+</li>
+<li><p><a class="reference internal" href="#c.kmap_atomic" title="kmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_atomic()</span></code></a>. This function has been deprecated; use <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a>.</p>
+<p>NOTE: Conversions to <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a> must take care to follow the mapping
+restrictions imposed on <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a>. Furthermore, the code between
+calls to <a class="reference internal" href="#c.kmap_atomic" title="kmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_atomic()</span></code></a> and <a class="reference internal" href="#c.kunmap_atomic" title="kunmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kunmap_atomic()</span></code></a> may implicitly depend on the side
+effects of atomic mappings, i.e. disabling page faults or preemption, or both.
+In that case, explicit calls to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pagefault_disable()</span></code> or <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">preempt_disable()</span></code> or
+both must be made in conjunction with the use of <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a>.</p>
+<p>[Legacy documentation]</p>
+<p>This permits a very short duration mapping of a single page.  Since the
+mapping is restricted to the CPU that issued it, it performs well, but
+the issuing task is therefore required to stay on that CPU until it has
+finished, lest some other task displace its mappings.</p>
+<p><a class="reference internal" href="#c.kmap_atomic" title="kmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_atomic()</span></code></a> may also be used by interrupt contexts, since it does not
+sleep and the callers too may not sleep until after <a class="reference internal" href="#c.kunmap_atomic" title="kunmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kunmap_atomic()</span></code></a> is
+called.</p>
+<p>Each call of <a class="reference internal" href="#c.kmap_atomic" title="kmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_atomic()</span></code></a> in the kernel creates a non-preemptible section
+and disable pagefaults. This could be a source of unwanted latency. Therefore
+users should prefer <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a> instead of <a class="reference internal" href="#c.kmap_atomic" title="kmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_atomic()</span></code></a>.</p>
+<p>It is assumed that k[un]<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">map_atomic()</span></code> won't fail.</p>
+</li>
+<li><p><a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a>. This function has been deprecated; use <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a>.</p>
+<p>NOTE: Conversions to <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a> must take care to follow the mapping
+restrictions imposed on <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a>. In particular, it is necessary to
+make sure that the kernel virtual memory pointer is only valid in the thread
+that obtained it.</p>
+<p>[Legacy documentation]</p>
+<p>This should be used to make short duration mapping of a single page with no
+restrictions on preemption or migration. It comes with an overhead as mapping
+space is restricted and protected by a global lock for synchronization. When
+mapping is no longer needed, the address that the page was mapped to must be
+released with <a class="reference internal" href="#c.kunmap" title="kunmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kunmap()</span></code></a>.</p>
+<p>Mapping changes must be propagated across all the CPUs. <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a> also
+requires global TLB invalidation when the kmap's pool wraps and it might
+block when the mapping space is fully utilized until a slot becomes
+available. Therefore, <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a> is only callable from preemptible context.</p>
+<p>All the above work is necessary if a mapping must last for a relatively
+long time but the bulk of high-memory mappings in the kernel are
+short-lived and only used in one place. This means that the cost of
+<a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a> is mostly wasted in such cases. <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a> was not intended for long
+term mappings but it has morphed in that direction and its use is
+strongly discouraged in newer code and the set of the preceding functions
+should be preferred.</p>
+<p>On 64-bit systems, calls to <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a>, <a class="reference internal" href="#c.kmap_atomic" title="kmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_atomic()</span></code></a> and <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a> have
+no real work to do because a 64-bit address space is more than sufficient to
+address all the physical memory whose pages are permanently mapped.</p>
+</li>
+<li><p><a class="reference internal" href="../core-api/mm-api.html#c.vmap" title="vmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">vmap()</span></code></a>.  This can be used to make a long duration mapping of multiple
+physical pages into a contiguous virtual space.  It needs global
+synchronization to unmap.</p></li>
+</ul>
+</section>
+<section id="cost-of-temporary-mappings">
+<h2><a class="toc-backref" href="#id4" role="doc-backlink">Cost of Temporary Mappings</a><a class="headerlink" href="#cost-of-temporary-mappings" title="連結到這個標頭">¶</a></h2>
+<p>The cost of creating temporary mappings can be quite high.  The arch has to
+manipulate the kernel's page tables, the data TLB and/or the MMU's registers.</p>
+<p>If CONFIG_HIGHMEM is not set, then the kernel will try and create a mapping
+simply with a bit of arithmetic that will convert the page <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">address</span></code> into
+a pointer to the page contents rather than juggling mappings about.  In such a
+case, the unmap operation may be a null operation.</p>
+<p>If CONFIG_MMU is not set, then there can be no temporary mappings and no
+highmem.  In such a case, the arithmetic approach will also be used.</p>
+</section>
+<section id="i386-pae">
+<h2><a class="toc-backref" href="#id5" role="doc-backlink">i386 PAE</a><a class="headerlink" href="#i386-pae" title="連結到這個標頭">¶</a></h2>
+<p>The i386 arch, under some circumstances, will permit you to stick up to 64GiB
+of RAM into your 32-bit machine.  This has a number of consequences:</p>
+<ul class="simple">
+<li><p>Linux needs a page-frame structure for each page in the system and the
+pageframes need to live in the permanent mapping, which means:</p></li>
+<li><p>you can have 896M/sizeof(<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code>) page-frames at most; with <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span>
+<span class="pre">page</span></code> being 32-bytes that would end up being something in the order of 112G
+worth of pages; the kernel, however, needs to store more than just
+page-frames in that memory...</p></li>
+<li><p>PAE makes your page tables larger - which slows the system down as more
+data has to be accessed to traverse in TLB fills and the like.  One
+advantage is that PAE has more PTE bits and can provide advanced features
+like NX and PAT.</p></li>
+</ul>
+<p>The general recommendation is that you don't use more than 8GiB on a 32-bit
+machine - although more might work for you and your workload, you're pretty
+much on your own - don't expect kernel developers to really care much if things
+come apart.</p>
+</section>
+<section id="functions">
+<h2><a class="toc-backref" href="#id6" role="doc-backlink">Functions</a><a class="headerlink" href="#functions" title="連結到這個標頭">¶</a></h2>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kmap">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">kmap</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kmap" title="page"><span class="n"><span class="pre">page</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">page</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kmap" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Map a page for long term usage</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span> <span class="pre">*page</span></code></dt><dd><p>Pointer to the page to be mapped</p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>The virtual address of the mapping</p>
+<p><strong>Description</strong></p>
+<p>Can only be invoked from preemptible task context because on 32bit
+systems with CONFIG_HIGHMEM enabled this function might sleep.</p>
+<p>For systems with CONFIG_HIGHMEM=n and for pages in the low memory area
+this returns the virtual address of the direct kernel mapping.</p>
+<p>The returned virtual address is globally visible and valid up to the
+point where it is unmapped via <a class="reference internal" href="#c.kunmap" title="kunmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kunmap()</span></code></a>. The pointer can be handed to
+other contexts.</p>
+<p>For highmem pages on 32bit systems this can be slow as the mapping space
+is limited and protected by a global lock. In case that there is no
+mapping slot available the function blocks until a slot is released via
+<a class="reference internal" href="#c.kunmap" title="kunmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kunmap()</span></code></a>.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kunmap">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">kunmap</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kunmap" title="page"><span class="n"><span class="pre">page</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">page</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kunmap" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Unmap the virtual address mapped by <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a></p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">page</span> <span class="pre">*page</span></code></dt><dd><p>Pointer to the page which was mapped by <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a></p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Counterpart to <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a>. A NOOP for CONFIG_HIGHMEM=n and for mappings of
+pages in the low memory area.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kmap_to_page">
+<span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">page</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">kmap_to_page</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">addr</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kmap_to_page" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Get the page for a kmap'ed address</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*addr</span></code></dt><dd><p>The address to look up</p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>The page which is mapped to <strong>addr</strong>.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kmap_flush_unused">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">kmap_flush_unused</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kmap_flush_unused" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Flush all unused kmap mappings in order to remove stray mappings</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">void</span></code></dt><dd><p>no arguments</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kmap_local_page">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">kmap_local_page</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kmap_local_page" title="page"><span class="n"><span class="pre">page</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">page</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kmap_local_page" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Map a page for temporary usage</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">page</span> <span class="pre">*page</span></code></dt><dd><p>Pointer to the page to be mapped</p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>The virtual address of the mapping</p>
+<p><strong>Description</strong></p>
+<p>Can be invoked from any context, including interrupts.</p>
+<p>Requires careful handling when nesting multiple mappings because the map
+management is stack based. The unmap has to be in the reverse order of
+the map operation:</p>
+<p>addr1 = kmap_local_page(page1);
+addr2 = kmap_local_page(page2);
+...
+kunmap_local(addr2);
+kunmap_local(addr1);</p>
+<p>Unmapping addr1 before addr2 is invalid and causes malfunction.</p>
+<p>Contrary to <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a> mappings the mapping is only valid in the context of
+the caller and cannot be handed to other contexts.</p>
+<p>On CONFIG_HIGHMEM=n kernels and for low memory pages this returns the
+virtual address of the direct mapping. Only real highmem pages are
+temporarily mapped.</p>
+<p>While <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a> is significantly faster than <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a> for the highmem
+case it comes with restrictions about the pointer validity.</p>
+<p>On HIGHMEM enabled systems mapping a highmem page has the side effect of
+disabling migration in order to keep the virtual address stable across
+preemption. No caller of <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a> can rely on this side effect.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kmap_local_folio">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">kmap_local_folio</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kmap_local_folio" title="folio"><span class="n"><span class="pre">folio</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">folio</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">offset</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kmap_local_folio" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Map a page in this folio for temporary usage</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">folio</span> <span class="pre">*folio</span></code></dt><dd><p>The folio containing the page.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">offset</span></code></dt><dd><p>The byte offset within the folio which identifies the page.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Requires careful handling when nesting multiple mappings because the map
+management is stack based. The unmap has to be in the reverse order of
+the map operation:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>addr1 = kmap_local_folio(folio1, offset1);
+addr2 = kmap_local_folio(folio2, offset2);
+...
+kunmap_local(addr2);
+kunmap_local(addr1);
+</pre></div>
+</div>
+<p>Unmapping addr1 before addr2 is invalid and causes malfunction.</p>
+<p>Contrary to <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a> mappings the mapping is only valid in the context of
+the caller and cannot be handed to other contexts.</p>
+<p>On CONFIG_HIGHMEM=n kernels and for low memory pages this returns the
+virtual address of the direct mapping. Only real highmem pages are
+temporarily mapped.</p>
+<p>While it is significantly faster than <a class="reference internal" href="#c.kmap" title="kmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap()</span></code></a> for the highmem case it
+comes with restrictions about the pointer validity.</p>
+<p>On HIGHMEM enabled systems mapping a highmem page has the side effect of
+disabling migration in order to keep the virtual address stable across
+preemption. No caller of <a class="reference internal" href="#c.kmap_local_folio" title="kmap_local_folio"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_folio()</span></code></a> can rely on this side effect.</p>
+<p><strong>Context</strong></p>
+<p>Can be invoked from any context.</p>
+<p><strong>Return</strong></p>
+<p>The virtual address of <strong>offset</strong>.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kmap_atomic">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">kmap_atomic</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kmap_atomic" title="page"><span class="n"><span class="pre">page</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">page</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kmap_atomic" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Atomically map a page for temporary usage - Deprecated!</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">page</span> <span class="pre">*page</span></code></dt><dd><p>Pointer to the page to be mapped</p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p>The virtual address of the mapping</p>
+<p><strong>Description</strong></p>
+<p>In fact a wrapper around <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a> which also disables pagefaults
+and, depending on PREEMPT_RT configuration, also CPU migration and
+preemption. Therefore users should not count on the latter two side effects.</p>
+<p>Mappings should always be released by <a class="reference internal" href="#c.kunmap_atomic" title="kunmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kunmap_atomic()</span></code></a>.</p>
+<p>Do not use in new code. Use <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a> instead.</p>
+<p>It is used in atomic context when code wants to access the contents of a
+page that might be allocated from high memory (see __GFP_HIGHMEM), for
+example a page in the pagecache.  The API has two functions, and they
+can be used in a manner similar to the following:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>// Find the page of interest.
+struct page *page = find_get_page(mapping, offset);
+
+// Gain access to the contents of that page.
+void *vaddr = kmap_atomic(page);
+
+// Do something to the contents of that page.
+memset(vaddr, 0, PAGE_SIZE);
+
+// Unmap that page.
+kunmap_atomic(vaddr);
+</pre></div>
+</div>
+<p>Note that the <a class="reference internal" href="#c.kunmap_atomic" title="kunmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kunmap_atomic()</span></code></a> call takes the result of the <a class="reference internal" href="#c.kmap_atomic" title="kmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_atomic()</span></code></a>
+call, not the argument.</p>
+<p>If you need to map two pages because you want to copy from one page to
+another you need to keep the kmap_atomic calls strictly nested, like:</p>
+<p>vaddr1 = kmap_atomic(page1);
+vaddr2 = kmap_atomic(page2);</p>
+<p>memcpy(vaddr1, vaddr2, PAGE_SIZE);</p>
+<p>kunmap_atomic(vaddr2);
+kunmap_atomic(vaddr1);</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.vma_alloc_zeroed_movable_folio">
+<span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="../core-api/mm-api.html#c.folio" title="folio"><span class="n"><span class="pre">folio</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">vma_alloc_zeroed_movable_folio</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">vm_area_struct</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">vma</span></span>, <span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">long</span></span><span class="w"> </span><span class="n"><span class="pre">vaddr</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.vma_alloc_zeroed_movable_folio" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Allocate a zeroed page for a VMA.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">vm_area_struct</span> <span class="pre">*vma</span></code></dt><dd><p>The VMA the page is to be allocated for.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">long</span> <span class="pre">vaddr</span></code></dt><dd><p>The virtual address the page will be inserted into.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>This function will allocate a page suitable for inserting into this
+VMA at this virtual address.  It may be allocated from highmem or
+the movable zone.  An architecture may provide its own implementation.</p>
+<p><strong>Return</strong></p>
+<p>A folio containing one allocated and zeroed page or NULL if
+we are out of memory.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.memcpy_from_folio">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">memcpy_from_folio</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">to</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.memcpy_from_folio" title="folio"><span class="n"><span class="pre">folio</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">folio</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">offset</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">len</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.memcpy_from_folio" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Copy a range of bytes from a folio.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">char</span> <span class="pre">*to</span></code></dt><dd><p>The memory to copy to.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">folio</span> <span class="pre">*folio</span></code></dt><dd><p>The folio to read from.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">offset</span></code></dt><dd><p>The first byte in the folio to read.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">len</span></code></dt><dd><p>The number of bytes to copy.</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.memcpy_to_folio">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">memcpy_to_folio</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.memcpy_to_folio" title="folio"><span class="n"><span class="pre">folio</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">folio</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">offset</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">from</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">len</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.memcpy_to_folio" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Copy a range of bytes to a folio.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">folio</span> <span class="pre">*folio</span></code></dt><dd><p>The folio to write to.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">offset</span></code></dt><dd><p>The first byte in the folio to store to.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">char</span> <span class="pre">*from</span></code></dt><dd><p>The memory to copy from.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">len</span></code></dt><dd><p>The number of bytes to copy.</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.folio_zero_tail">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">folio_zero_tail</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.folio_zero_tail" title="folio"><span class="n"><span class="pre">folio</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">folio</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">offset</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">kaddr</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.folio_zero_tail" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Zero the tail of a folio.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">folio</span> <span class="pre">*folio</span></code></dt><dd><p>The folio to zero.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">offset</span></code></dt><dd><p>The byte offset in the folio to start zeroing at.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*kaddr</span></code></dt><dd><p>The address the folio is currently mapped to.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>If you have already used <a class="reference internal" href="#c.kmap_local_folio" title="kmap_local_folio"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_folio()</span></code></a> to map a folio, written
+some data to it and now need to zero the end of the folio (and flush
+the dcache), you can use this function.  If you do not have the
+folio kmapped (eg the folio has been partially populated by DMA),
+use <a class="reference internal" href="#c.folio_zero_range" title="folio_zero_range"><code class="xref c c-func docutils literal notranslate"><span class="pre">folio_zero_range()</span></code></a> or <a class="reference internal" href="#c.folio_zero_segment" title="folio_zero_segment"><code class="xref c c-func docutils literal notranslate"><span class="pre">folio_zero_segment()</span></code></a> instead.</p>
+<p><strong>Return</strong></p>
+<p>An address which can be passed to <a class="reference internal" href="#c.kunmap_local" title="kunmap_local"><code class="xref c c-func docutils literal notranslate"><span class="pre">kunmap_local()</span></code></a>.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.folio_fill_tail">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">folio_fill_tail</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.folio_fill_tail" title="folio"><span class="n"><span class="pre">folio</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">folio</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">offset</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">from</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">len</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.folio_fill_tail" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Copy some data to a folio and pad with zeroes.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">folio</span> <span class="pre">*folio</span></code></dt><dd><p>The destination folio.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">offset</span></code></dt><dd><p>The offset into <strong>folio</strong> at which to start copying.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">char</span> <span class="pre">*from</span></code></dt><dd><p>The data to copy.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">len</span></code></dt><dd><p>How many bytes of data to copy.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>This function is most useful for filesystems which support inline data.
+When they want to copy data from the inode into the page cache, this
+function does everything for them.  It supports large folios even on
+HIGHMEM configurations.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.memcpy_from_file_folio">
+<span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">memcpy_from_file_folio</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">to</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.memcpy_from_file_folio" title="folio"><span class="n"><span class="pre">folio</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">folio</span></span>, <span class="n"><span class="pre">loff_t</span></span><span class="w"> </span><span class="n"><span class="pre">pos</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">len</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.memcpy_from_file_folio" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Copy some bytes from a file folio.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">char</span> <span class="pre">*to</span></code></dt><dd><p>The destination buffer.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">folio</span> <span class="pre">*folio</span></code></dt><dd><p>The folio to copy from.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">loff_t</span> <span class="pre">pos</span></code></dt><dd><p>The position in the file.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">len</span></code></dt><dd><p>The maximum number of bytes to copy.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Copy up to <strong>len</strong> bytes from this folio.  This may be limited by PAGE_SIZE
+if the folio comes from HIGHMEM, and by the size of the folio.</p>
+<p><strong>Return</strong></p>
+<p>The number of bytes copied from the folio.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.folio_zero_segments">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">folio_zero_segments</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.folio_zero_segments" title="folio"><span class="n"><span class="pre">folio</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">folio</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">start1</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">xend1</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">start2</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">xend2</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.folio_zero_segments" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Zero two byte ranges in a folio.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">folio</span> <span class="pre">*folio</span></code></dt><dd><p>The folio to write to.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">start1</span></code></dt><dd><p>The first byte to zero.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">xend1</span></code></dt><dd><p>One more than the last byte in the first range.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">start2</span></code></dt><dd><p>The first byte to zero in the second range.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">xend2</span></code></dt><dd><p>One more than the last byte in the second range.</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.folio_zero_segment">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">folio_zero_segment</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.folio_zero_segment" title="folio"><span class="n"><span class="pre">folio</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">folio</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">start</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">xend</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.folio_zero_segment" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Zero a byte range in a folio.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">folio</span> <span class="pre">*folio</span></code></dt><dd><p>The folio to write to.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">start</span></code></dt><dd><p>The first byte to zero.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">xend</span></code></dt><dd><p>One more than the last byte to zero.</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.folio_zero_range">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">folio_zero_range</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.folio_zero_range" title="folio"><span class="n"><span class="pre">folio</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">folio</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">start</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n"><span class="pre">length</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.folio_zero_range" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Zero a byte range in a folio.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">folio</span> <span class="pre">*folio</span></code></dt><dd><p>The folio to write to.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">start</span></code></dt><dd><p>The first byte to zero.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">size_t</span> <span class="pre">length</span></code></dt><dd><p>The number of bytes to zero.</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.folio_release_kmap">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">folio_release_kmap</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.folio_release_kmap" title="folio"><span class="n"><span class="pre">folio</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">folio</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">addr</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.folio_release_kmap" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Unmap a folio and drop a refcount.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">folio</span> <span class="pre">*folio</span></code></dt><dd><p>The folio to release.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*addr</span></code></dt><dd><p>The address previously returned by a call to <a class="reference internal" href="#c.kmap_local_folio" title="kmap_local_folio"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_folio()</span></code></a>.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>It is common, eg in directory handling to kmap a folio.  This function
+unmaps the folio and drops the refcount that was being held to keep the
+folio alive while we accessed it.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kmap_high">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">kmap_high</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kmap_high" title="page"><span class="n"><span class="pre">page</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">page</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kmap_high" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>map a highmem page into memory</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span> <span class="pre">*page</span></code></dt><dd><p><code class="xref c c-type docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> to map</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Returns the page's virtual memory address.</p>
+<p>We cannot call this from interrupts, as it may block.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kmap_high_get">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">kmap_high_get</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kmap_high_get" title="page"><span class="n"><span class="pre">page</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">page</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kmap_high_get" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>pin a highmem page into memory</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">page</span> <span class="pre">*page</span></code></dt><dd><p><code class="xref c c-type docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> to pin</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Returns the page's current virtual memory address, or NULL if no mapping
+exists.  If and only if a non null address is returned then a
+matching call to <a class="reference internal" href="#c.kunmap_high" title="kunmap_high"><code class="xref c c-func docutils literal notranslate"><span class="pre">kunmap_high()</span></code></a> is necessary.</p>
+<p>This can be called from any context.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kunmap_high">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">kunmap_high</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kunmap_high" title="page"><span class="n"><span class="pre">page</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">page</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kunmap_high" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>unmap a highmem page into memory</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">page</span> <span class="pre">*page</span></code></dt><dd><p><code class="xref c c-type docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> to unmap</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>If ARCH_NEEDS_KMAP_HIGH_GET is not defined then this may be called
+only from user context.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.page_address">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">page_address</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.page_address" title="page"><span class="n"><span class="pre">page</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">page</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.page_address" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>get the mapped virtual address of a page</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">page</span> <span class="pre">*page</span></code></dt><dd><p><code class="xref c c-type docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> to get the virtual address of</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Returns the page's virtual address.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.set_page_address">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">set_page_address</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.set_page_address" title="page"><span class="n"><span class="pre">page</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">page</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">virtual</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.set_page_address" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>set a page's virtual address</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span> <span class="pre">*page</span></code></dt><dd><p><code class="xref c c-type docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> to set</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*virtual</span></code></dt><dd><p>virtual address to use</p>
+</dd>
+</dl>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.kunmap_atomic">
+<span class="sig-name descname"><span class="n"><span class="pre">kunmap_atomic</span></span></span><a class="headerlink" href="#c.kunmap_atomic" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">kunmap_atomic</span> <span class="pre">(__addr)</span></code></p>
+<blockquote>
+<div><p>Unmap the virtual address mapped by <a class="reference internal" href="#c.kmap_atomic" title="kmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_atomic()</span></code></a> - deprecated!</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">__addr</span></code></dt><dd><p>Virtual address to be unmapped</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Unmaps an address previously mapped by <a class="reference internal" href="#c.kmap_atomic" title="kmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_atomic()</span></code></a> and re-enables
+pagefaults. Depending on PREEMP_RT configuration, re-enables also
+migration and preemption. Users should not count on these side effects.</p>
+<p>Mappings should be unmapped in the reverse order that they were mapped.
+See <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a> for details on nesting.</p>
+<p><strong>__addr</strong> can be any address within the mapped page, so there is no need
+to subtract any offset that has been added. In contrast to <a class="reference internal" href="#c.kunmap" title="kunmap"><code class="xref c c-func docutils literal notranslate"><span class="pre">kunmap()</span></code></a>,
+this function takes the address returned from <a class="reference internal" href="#c.kmap_atomic" title="kmap_atomic"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_atomic()</span></code></a>, not the
+page passed to it. The compiler will warn you if you pass the page.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.kunmap_local">
+<span class="sig-name descname"><span class="n"><span class="pre">kunmap_local</span></span></span><a class="headerlink" href="#c.kunmap_local" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">kunmap_local</span> <span class="pre">(__addr)</span></code></p>
+<blockquote>
+<div><p>Unmap a page mapped via <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a>.</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">__addr</span></code></dt><dd><p>An address within the page mapped</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p><strong>__addr</strong> can be any address within the mapped page.  Commonly it is the
+address return from <a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a>, but it can also include offsets.</p>
+<p>Unmapping should be done in the reverse order of the mapping.  See
+<a class="reference internal" href="#c.kmap_local_page" title="kmap_local_page"><code class="xref c c-func docutils literal notranslate"><span class="pre">kmap_local_page()</span></code></a> for details.</p>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/mm/highmem.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

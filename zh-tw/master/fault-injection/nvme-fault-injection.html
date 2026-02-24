@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>NVMe Fault Injection &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/fault-injection/nvme-fault-injection.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Provoking crashes with Linux Kernel Dump Test Module (LKDTM)" href="provoke-crashes.html" />
+    <link rel="prev" title="Notifier error injection" href="notifier-error-inject.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Fault injection</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="fault-injection.html">Fault injection capabilities infrastructure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notifier-error-inject.html">Notifier error injection</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">NVMe Fault Injection</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#example-1-inject-default-status-code-with-no-retry">Example 1: Inject default status code with no retry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-2-inject-default-status-code-with-retry">Example 2: Inject default status code with retry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-3-inject-an-error-into-the-10th-admin-command">Example 3: Inject an error into the 10th admin command</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="provoke-crashes.html">Provoking crashes with Linux Kernel Dump Test Module (LKDTM)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/fault-injection/nvme-fault-injection.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="nvme-fault-injection">
+<h1>NVMe Fault Injection<a class="headerlink" href="#nvme-fault-injection" title="連結到這個標頭">¶</a></h1>
+<p>Linux's fault injection framework provides a systematic way to support
+error injection via debugfs in the /sys/kernel/debug directory. When
+enabled, the default NVME_SC_INVALID_OPCODE with no retry will be
+injected into the nvme_try_complete_req. Users can change the default status
+code and no retry flag via the debugfs. The list of Generic Command
+Status can be found in include/linux/nvme.h</p>
+<p>Following examples show how to inject an error into the nvme.</p>
+<p>First, enable CONFIG_FAULT_INJECTION_DEBUG_FS kernel config,
+recompile the kernel. After booting up the kernel, do the
+following.</p>
+<section id="example-1-inject-default-status-code-with-no-retry">
+<h2>Example 1: Inject default status code with no retry<a class="headerlink" href="#example-1-inject-default-status-code-with-no-retry" title="連結到這個標頭">¶</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>mount /dev/nvme0n1 /mnt
+echo 1 &gt; /sys/kernel/debug/nvme0n1/fault_inject/times
+echo 100 &gt; /sys/kernel/debug/nvme0n1/fault_inject/probability
+cp a.file /mnt
+</pre></div>
+</div>
+<p>Expected Result:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cp: cannot stat ‘/mnt/a.file’: Input/output error
+</pre></div>
+</div>
+<p>Message from dmesg:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>FAULT_INJECTION: forcing a failure.
+name fault_inject, interval 1, probability 100, space 0, times 1
+CPU: 0 PID: 0 Comm: swapper/0 Not tainted 4.15.0-rc8+ #2
+Hardware name: innotek GmbH VirtualBox/VirtualBox,
+BIOS VirtualBox 12/01/2006
+Call Trace:
+  &lt;IRQ&gt;
+  dump_stack+0x5c/0x7d
+  should_fail+0x148/0x170
+  nvme_should_fail+0x2f/0x50 [nvme_core]
+  nvme_process_cq+0xe7/0x1d0 [nvme]
+  nvme_irq+0x1e/0x40 [nvme]
+  __handle_irq_event_percpu+0x3a/0x190
+  handle_irq_event_percpu+0x30/0x70
+  handle_irq_event+0x36/0x60
+  handle_fasteoi_irq+0x78/0x120
+  handle_irq+0xa7/0x130
+  ? tick_irq_enter+0xa8/0xc0
+  do_IRQ+0x43/0xc0
+  common_interrupt+0xa2/0xa2
+  &lt;/IRQ&gt;
+RIP: 0010:native_safe_halt+0x2/0x10
+RSP: 0018:ffffffff82003e90 EFLAGS: 00000246 ORIG_RAX: ffffffffffffffdd
+RAX: ffffffff817a10c0 RBX: ffffffff82012480 RCX: 0000000000000000
+RDX: 0000000000000000 RSI: 0000000000000000 RDI: 0000000000000000
+RBP: 0000000000000000 R08: 000000008e38ce64 R09: 0000000000000000
+R10: 0000000000000000 R11: 0000000000000000 R12: ffffffff82012480
+R13: ffffffff82012480 R14: 0000000000000000 R15: 0000000000000000
+  ? __sched_text_end+0x4/0x4
+  default_idle+0x18/0xf0
+  do_idle+0x150/0x1d0
+  cpu_startup_entry+0x6f/0x80
+  start_kernel+0x4c4/0x4e4
+  ? set_init_arg+0x55/0x55
+  secondary_startup_64+0xa5/0xb0
+  print_req_error: I/O error, dev nvme0n1, sector 9240
+EXT4-fs error (device nvme0n1): ext4_find_entry:1436:
+inode #2: comm cp: reading directory lblock 0
+</pre></div>
+</div>
+</section>
+<section id="example-2-inject-default-status-code-with-retry">
+<h2>Example 2: Inject default status code with retry<a class="headerlink" href="#example-2-inject-default-status-code-with-retry" title="連結到這個標頭">¶</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>mount /dev/nvme0n1 /mnt
+echo 1 &gt; /sys/kernel/debug/nvme0n1/fault_inject/times
+echo 100 &gt; /sys/kernel/debug/nvme0n1/fault_inject/probability
+echo 1 &gt; /sys/kernel/debug/nvme0n1/fault_inject/status
+echo 0 &gt; /sys/kernel/debug/nvme0n1/fault_inject/dont_retry
+
+cp a.file /mnt
+</pre></div>
+</div>
+<p>Expected Result:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>command success without error
+</pre></div>
+</div>
+<p>Message from dmesg:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>FAULT_INJECTION: forcing a failure.
+name fault_inject, interval 1, probability 100, space 0, times 1
+CPU: 1 PID: 0 Comm: swapper/1 Not tainted 4.15.0-rc8+ #4
+Hardware name: innotek GmbH VirtualBox/VirtualBox, BIOS VirtualBox 12/01/2006
+Call Trace:
+  &lt;IRQ&gt;
+  dump_stack+0x5c/0x7d
+  should_fail+0x148/0x170
+  nvme_should_fail+0x30/0x60 [nvme_core]
+  nvme_loop_queue_response+0x84/0x110 [nvme_loop]
+  nvmet_req_complete+0x11/0x40 [nvmet]
+  nvmet_bio_done+0x28/0x40 [nvmet]
+  blk_update_request+0xb0/0x310
+  blk_mq_end_request+0x18/0x60
+  flush_smp_call_function_queue+0x3d/0xf0
+  smp_call_function_single_interrupt+0x2c/0xc0
+  call_function_single_interrupt+0xa2/0xb0
+  &lt;/IRQ&gt;
+RIP: 0010:native_safe_halt+0x2/0x10
+RSP: 0018:ffffc9000068bec0 EFLAGS: 00000246 ORIG_RAX: ffffffffffffff04
+RAX: ffffffff817a10c0 RBX: ffff88011a3c9680 RCX: 0000000000000000
+RDX: 0000000000000000 RSI: 0000000000000000 RDI: 0000000000000000
+RBP: 0000000000000001 R08: 000000008e38c131 R09: 0000000000000000
+R10: 0000000000000000 R11: 0000000000000000 R12: ffff88011a3c9680
+R13: ffff88011a3c9680 R14: 0000000000000000 R15: 0000000000000000
+  ? __sched_text_end+0x4/0x4
+  default_idle+0x18/0xf0
+  do_idle+0x150/0x1d0
+  cpu_startup_entry+0x6f/0x80
+  start_secondary+0x187/0x1e0
+  secondary_startup_64+0xa5/0xb0
+</pre></div>
+</div>
+</section>
+<section id="example-3-inject-an-error-into-the-10th-admin-command">
+<h2>Example 3: Inject an error into the 10th admin command<a class="headerlink" href="#example-3-inject-an-error-into-the-10th-admin-command" title="連結到這個標頭">¶</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>echo 100 &gt; /sys/kernel/debug/nvme0/fault_inject/probability
+echo 10 &gt; /sys/kernel/debug/nvme0/fault_inject/space
+echo 1 &gt; /sys/kernel/debug/nvme0/fault_inject/times
+nvme reset /dev/nvme0
+</pre></div>
+</div>
+<p>Expected Result:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>After NVMe controller reset, the reinitialization may or may not succeed.
+It depends on which admin command is actually forced to fail.
+</pre></div>
+</div>
+<p>Message from dmesg:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>nvme nvme0: resetting controller
+FAULT_INJECTION: forcing a failure.
+name fault_inject, interval 1, probability 100, space 1, times 1
+CPU: 0 PID: 0 Comm: swapper/0 Not tainted 5.2.0-rc2+ #2
+Hardware name: MSI MS-7A45/B150M MORTAR ARCTIC (MS-7A45), BIOS 1.50 04/25/2017
+Call Trace:
+ &lt;IRQ&gt;
+ dump_stack+0x63/0x85
+ should_fail+0x14a/0x170
+ nvme_should_fail+0x38/0x80 [nvme_core]
+ nvme_irq+0x129/0x280 [nvme]
+ ? blk_mq_end_request+0xb3/0x120
+ __handle_irq_event_percpu+0x84/0x1a0
+ handle_irq_event_percpu+0x32/0x80
+ handle_irq_event+0x3b/0x60
+ handle_edge_irq+0x7f/0x1a0
+ handle_irq+0x20/0x30
+ do_IRQ+0x4e/0xe0
+ common_interrupt+0xf/0xf
+ &lt;/IRQ&gt;
+RIP: 0010:cpuidle_enter_state+0xc5/0x460
+Code: ff e8 8f 5f 86 ff 80 7d c7 00 74 17 9c 58 0f 1f 44 00 00 f6 c4 02 0f 85 69 03 00 00 31 ff e8 62 aa 8c ff fb 66 0f 1f 44 00 00 &lt;45&gt; 85 ed 0f 88 37 03 00 00 4c 8b 45 d0 4c 2b 45 b8 48 ba cf f7 53
+RSP: 0018:ffffffff88c03dd0 EFLAGS: 00000246 ORIG_RAX: ffffffffffffffdc
+RAX: ffff9dac25a2ac80 RBX: ffffffff88d53760 RCX: 000000000000001f
+RDX: 0000000000000000 RSI: 000000002d958403 RDI: 0000000000000000
+RBP: ffffffff88c03e18 R08: fffffff75e35ffb7 R09: 00000a49a56c0b48
+R10: ffffffff88c03da0 R11: 0000000000001b0c R12: ffff9dac25a34d00
+R13: 0000000000000006 R14: 0000000000000006 R15: ffffffff88d53760
+ cpuidle_enter+0x2e/0x40
+ call_cpuidle+0x23/0x40
+ do_idle+0x201/0x280
+ cpu_startup_entry+0x1d/0x20
+ rest_init+0xaa/0xb0
+ arch_call_rest_init+0xe/0x1b
+ start_kernel+0x51c/0x53b
+ x86_64_start_reservations+0x24/0x26
+ x86_64_start_kernel+0x74/0x77
+ secondary_startup_64+0xa4/0xb0
+nvme nvme0: Could not set queue count (16385)
+nvme nvme0: IO queues not created
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/fault-injection/nvme-fault-injection.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

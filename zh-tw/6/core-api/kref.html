@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Adding reference counters (krefs) to kernel objects &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/core-api/kref.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Scope-based Cleanup Helpers" href="cleanup.html" />
+    <link rel="prev" title="Everything you never wanted to know about kobjects, ksets, and ktypes" href="kobject.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">核心 API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="kobject.html">Everything you never wanted to know about kobjects, ksets, and ktypes</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Adding reference counters (krefs) to kernel objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cleanup.html">Scope-based Cleanup Helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="assoc_array.html">Generic Associative Array Implementation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="folio_queue.html">Folio Queue</a></li>
+<li class="toctree-l3"><a class="reference internal" href="xarray.html">XArray</a></li>
+<li class="toctree-l3"><a class="reference internal" href="maple_tree.html">Maple Tree</a></li>
+<li class="toctree-l3"><a class="reference internal" href="idr.html">ID Allocation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="circular-buffers.html">Circular Buffers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rbtree.html">Red-black Trees (rbtree) in Linux</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generic-radix-tree.html">Generic radix trees/sparse arrays</a></li>
+<li class="toctree-l3"><a class="reference internal" href="packing.html">Generic bitfield packing and unpacking functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="this_cpu_ops.html">this_cpu operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="timekeeping.html">ktime accessors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="errseq.html">The errseq_t datatype</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wrappers/atomic_t.html">Atomic types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wrappers/atomic_bitops.html">Atomic bitops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="floating-point.html">Floating-point API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="union_find.html">Union-Find in Linux</a></li>
+<li class="toctree-l3"><a class="reference internal" href="min_heap.html">Min Heap API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="parser.html">Generic parser</a></li>
+<li class="toctree-l3"><a class="reference internal" href="list.html">Linked Lists in Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#low-level-entry-and-exit">低階進入與退出</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#concurrency-primitives">Concurrency primitives</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#memory-management">記憶體管理</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">核心 API 文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">記憶體管理文件</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">電源管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">計時器</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/core-api/kref.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="adding-reference-counters-krefs-to-kernel-objects">
+<h1>Adding reference counters (krefs) to kernel objects<a class="headerlink" href="#adding-reference-counters-krefs-to-kernel-objects" title="連結到這個標頭">¶</a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">作者<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Corey Minyard &lt;<a class="reference external" href="mailto:minyard&#37;&#52;&#48;acm&#46;org">minyard<span>&#64;</span>acm<span>&#46;</span>org</a>&gt;</p>
+</dd>
+<dt class="field-even">作者<span class="colon">:</span></dt>
+<dd class="field-even"><p>Thomas Hellström &lt;<a class="reference external" href="mailto:thomas&#46;hellstrom&#37;&#52;&#48;linux&#46;intel&#46;com">thomas<span>&#46;</span>hellstrom<span>&#64;</span>linux<span>&#46;</span>intel<span>&#46;</span>com</a>&gt;</p>
+</dd>
+</dl>
+<p>A lot of this was lifted from Greg Kroah-Hartman's 2004 OLS paper and
+presentation on krefs, which can be found at:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference external" href="http://www.kroah.com/linux/talks/ols_2004_kref_paper/Reprint-Kroah-Hartman-OLS2004.pdf">http://www.kroah.com/linux/talks/ols_2004_kref_paper/Reprint-Kroah-Hartman-OLS2004.pdf</a></p></li>
+<li><p><a class="reference external" href="http://www.kroah.com/linux/talks/ols_2004_kref_talk/">http://www.kroah.com/linux/talks/ols_2004_kref_talk/</a></p></li>
+</ul>
+</div></blockquote>
+<section id="introduction">
+<h2>介紹<a class="headerlink" href="#introduction" title="連結到這個標頭">¶</a></h2>
+<p>krefs allow you to add reference counters to your objects.  If you
+have objects that are used in multiple places and passed around, and
+you don't have refcounts, your code is almost certainly broken.  If
+you want refcounts, krefs are the way to go.</p>
+<p>To use a kref, add one to your data structures like:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct my_data
+{
+    .
+    .
+    struct kref refcount;
+    .
+    .
+};
+</pre></div>
+</div>
+<p>The kref can occur anywhere within the data structure.</p>
+</section>
+<section id="initialization">
+<h2>Initialization<a class="headerlink" href="#initialization" title="連結到這個標頭">¶</a></h2>
+<p>You must initialize the kref after you allocate it.  To do this, call
+kref_init as so:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct my_data *data;
+
+data = kmalloc(sizeof(*data), GFP_KERNEL);
+if (!data)
+       return -ENOMEM;
+kref_init(&amp;data-&gt;refcount);
+</pre></div>
+</div>
+<p>This sets the refcount in the kref to 1.</p>
+</section>
+<section id="kref-rules">
+<h2>Kref rules<a class="headerlink" href="#kref-rules" title="連結到這個標頭">¶</a></h2>
+<p>Once you have an initialized kref, you must follow the following
+rules:</p>
+<ol class="arabic">
+<li><p>If you make a non-temporary copy of a pointer, especially if
+it can be passed to another thread of execution, you must
+increment the refcount with <a class="reference internal" href="#c.kref_get" title="kref_get"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_get()</span></code></a> before passing it off:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kref_get(&amp;data-&gt;refcount);
+</pre></div>
+</div>
+<p>If you already have a valid pointer to a kref-ed structure (the
+refcount cannot go to zero) you may do this without a lock.</p>
+</li>
+<li><p>When you are done with a pointer, you must call <a class="reference internal" href="#c.kref_put" title="kref_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_put()</span></code></a>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kref_put(&amp;data-&gt;refcount, data_release);
+</pre></div>
+</div>
+<p>If this is the last reference to the pointer, the release
+routine will be called.  If the code never tries to get
+a valid pointer to a kref-ed structure without already
+holding a valid pointer, it is safe to do this without
+a lock.</p>
+</li>
+<li><p>If the code attempts to gain a reference to a kref-ed structure
+without already holding a valid pointer, it must serialize access
+where a <a class="reference internal" href="#c.kref_put" title="kref_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_put()</span></code></a> cannot occur during the <a class="reference internal" href="#c.kref_get" title="kref_get"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_get()</span></code></a>, and the
+structure must remain valid during the <a class="reference internal" href="#c.kref_get" title="kref_get"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_get()</span></code></a>.</p></li>
+</ol>
+<p>For example, if you allocate some data and then pass it to another
+thread to process:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void data_release(struct kref *ref)
+{
+    struct my_data *data = container_of(ref, struct my_data, refcount);
+    kfree(data);
+}
+
+void more_data_handling(void *cb_data)
+{
+    struct my_data *data = cb_data;
+    .
+    . do stuff with data here
+    .
+    kref_put(&amp;data-&gt;refcount, data_release);
+}
+
+int my_data_handler(void)
+{
+    int rv = 0;
+    struct my_data *data;
+    struct task_struct *task;
+    data = kmalloc(sizeof(*data), GFP_KERNEL);
+    if (!data)
+            return -ENOMEM;
+    kref_init(&amp;data-&gt;refcount);
+
+    kref_get(&amp;data-&gt;refcount);
+    task = kthread_run(more_data_handling, data, &quot;more_data_handling&quot;);
+    if (task == ERR_PTR(-ENOMEM)) {
+            rv = -ENOMEM;
+            kref_put(&amp;data-&gt;refcount, data_release);
+            goto out;
+    }
+
+    .
+    . do stuff with data here
+    .
+out:
+    kref_put(&amp;data-&gt;refcount, data_release);
+    return rv;
+}
+</pre></div>
+</div>
+<p>This way, it doesn't matter what order the two threads handle the
+data, the <a class="reference internal" href="#c.kref_put" title="kref_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_put()</span></code></a> handles knowing when the data is not referenced
+any more and releasing it.  The <a class="reference internal" href="#c.kref_get" title="kref_get"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_get()</span></code></a> does not require a lock,
+since we already have a valid pointer that we own a refcount for.  The
+put needs no lock because nothing tries to get the data without
+already holding a pointer.</p>
+<p>In the above example, <a class="reference internal" href="#c.kref_put" title="kref_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_put()</span></code></a> will be called 2 times in both success
+and error paths. This is necessary because the reference count got
+incremented 2 times by <a class="reference internal" href="#c.kref_init" title="kref_init"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_init()</span></code></a> and <a class="reference internal" href="#c.kref_get" title="kref_get"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_get()</span></code></a>.</p>
+<p>Note that the &quot;before&quot; in rule 1 is very important.  You should never
+do something like:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>task = kthread_run(more_data_handling, data, &quot;more_data_handling&quot;);
+if (task == ERR_PTR(-ENOMEM)) {
+        rv = -ENOMEM;
+        goto out;
+} else
+        /* BAD BAD BAD - get is after the handoff */
+        kref_get(&amp;data-&gt;refcount);
+</pre></div>
+</div>
+<p>Don't assume you know what you are doing and use the above construct.
+First of all, you may not know what you are doing.  Second, you may
+know what you are doing (there are some situations where locking is
+involved where the above may be legal) but someone else who doesn't
+know what they are doing may change the code or copy the code.  It's
+bad style.  Don't do it.</p>
+<p>There are some situations where you can optimize the gets and puts.
+For instance, if you are done with an object and enqueuing it for
+something else or passing it off to something else, there is no reason
+to do a get then a put:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/* Silly extra get and put */
+kref_get(&amp;obj-&gt;ref);
+enqueue(obj);
+kref_put(&amp;obj-&gt;ref, obj_cleanup);
+</pre></div>
+</div>
+<p>Just do the enqueue.  A comment about this is always welcome:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>enqueue(obj);
+/* We are done with obj, so we pass our refcount off
+   to the queue.  DON&#39;T TOUCH obj AFTER HERE! */
+</pre></div>
+</div>
+<p>The last rule (rule 3) is the nastiest one to handle.  Say, for
+instance, you have a list of items that are each kref-ed, and you wish
+to get the first one.  You can't just pull the first item off the list
+and <a class="reference internal" href="#c.kref_get" title="kref_get"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_get()</span></code></a> it.  That violates rule 3 because you are not already
+holding a valid pointer.  You must add a mutex (or some other lock).
+For instance:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static DEFINE_MUTEX(mutex);
+static LIST_HEAD(q);
+struct my_data
+{
+        struct kref      refcount;
+        struct list_head link;
+};
+
+static struct my_data *get_entry()
+{
+        struct my_data *entry = NULL;
+        mutex_lock(&amp;mutex);
+        if (!list_empty(&amp;q)) {
+                entry = container_of(q.next, struct my_data, link);
+                kref_get(&amp;entry-&gt;refcount);
+        }
+        mutex_unlock(&amp;mutex);
+        return entry;
+}
+
+static void release_entry(struct kref *ref)
+{
+        struct my_data *entry = container_of(ref, struct my_data, refcount);
+
+        list_del(&amp;entry-&gt;link);
+        kfree(entry);
+}
+
+static void put_entry(struct my_data *entry)
+{
+        mutex_lock(&amp;mutex);
+        kref_put(&amp;entry-&gt;refcount, release_entry);
+        mutex_unlock(&amp;mutex);
+}
+</pre></div>
+</div>
+<p>The <a class="reference internal" href="#c.kref_put" title="kref_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_put()</span></code></a> return value is useful if you do not want to hold the
+lock during the whole release operation.  Say you didn't want to call
+<a class="reference internal" href="mm-api.html#c.kfree" title="kfree"><code class="xref c c-func docutils literal notranslate"><span class="pre">kfree()</span></code></a> with the lock held in the example above (since it is kind of
+pointless to do so).  You could use <a class="reference internal" href="#c.kref_put" title="kref_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_put()</span></code></a> as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static void release_entry(struct kref *ref)
+{
+        /* All work is done after the return from kref_put(). */
+}
+
+static void put_entry(struct my_data *entry)
+{
+        mutex_lock(&amp;mutex);
+        if (kref_put(&amp;entry-&gt;refcount, release_entry)) {
+                list_del(&amp;entry-&gt;link);
+                mutex_unlock(&amp;mutex);
+                kfree(entry);
+        } else
+                mutex_unlock(&amp;mutex);
+}
+</pre></div>
+</div>
+<p>This is really more useful if you have to call other routines as part
+of the free operations that could take a long time or might claim the
+same lock.  Note that doing everything in the release routine is still
+preferred as it is a little neater.</p>
+<p>The above example could also be optimized using <a class="reference internal" href="#c.kref_get_unless_zero" title="kref_get_unless_zero"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_get_unless_zero()</span></code></a> in
+the following way:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static struct my_data *get_entry()
+{
+        struct my_data *entry = NULL;
+        mutex_lock(&amp;mutex);
+        if (!list_empty(&amp;q)) {
+                entry = container_of(q.next, struct my_data, link);
+                if (!kref_get_unless_zero(&amp;entry-&gt;refcount))
+                        entry = NULL;
+        }
+        mutex_unlock(&amp;mutex);
+        return entry;
+}
+
+static void release_entry(struct kref *ref)
+{
+        struct my_data *entry = container_of(ref, struct my_data, refcount);
+
+        mutex_lock(&amp;mutex);
+        list_del(&amp;entry-&gt;link);
+        mutex_unlock(&amp;mutex);
+        kfree(entry);
+}
+
+static void put_entry(struct my_data *entry)
+{
+        kref_put(&amp;entry-&gt;refcount, release_entry);
+}
+</pre></div>
+</div>
+<p>Which is useful to remove the mutex lock around <a class="reference internal" href="#c.kref_put" title="kref_put"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_put()</span></code></a> in <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">put_entry()</span></code>, but
+it's important that kref_get_unless_zero is enclosed in the same critical
+section that finds the entry in the lookup table,
+otherwise kref_get_unless_zero may reference already freed memory.
+Note that it is illegal to use kref_get_unless_zero without checking its
+return value. If you are sure (by already having a valid pointer) that
+<a class="reference internal" href="#c.kref_get_unless_zero" title="kref_get_unless_zero"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_get_unless_zero()</span></code></a> will return true, then use <a class="reference internal" href="#c.kref_get" title="kref_get"><code class="xref c c-func docutils literal notranslate"><span class="pre">kref_get()</span></code></a> instead.</p>
+</section>
+<section id="krefs-and-rcu">
+<h2>Krefs and RCU<a class="headerlink" href="#krefs-and-rcu" title="連結到這個標頭">¶</a></h2>
+<p>The function kref_get_unless_zero also makes it possible to use rcu
+locking for lookups in the above example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct my_data
+{
+        struct rcu_head rhead;
+        .
+        struct kref refcount;
+        .
+        .
+};
+
+static struct my_data *get_entry_rcu()
+{
+        struct my_data *entry = NULL;
+        rcu_read_lock();
+        if (!list_empty(&amp;q)) {
+                entry = container_of(q.next, struct my_data, link);
+                if (!kref_get_unless_zero(&amp;entry-&gt;refcount))
+                        entry = NULL;
+        }
+        rcu_read_unlock();
+        return entry;
+}
+
+static void release_entry_rcu(struct kref *ref)
+{
+        struct my_data *entry = container_of(ref, struct my_data, refcount);
+
+        mutex_lock(&amp;mutex);
+        list_del_rcu(&amp;entry-&gt;link);
+        mutex_unlock(&amp;mutex);
+        kfree_rcu(entry, rhead);
+}
+
+static void put_entry(struct my_data *entry)
+{
+        kref_put(&amp;entry-&gt;refcount, release_entry_rcu);
+}
+</pre></div>
+</div>
+<p>But note that the <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kref</span></code> member needs to remain in valid memory for a
+rcu grace period after release_entry_rcu was called. That can be accomplished
+by using kfree_rcu(entry, rhead) as done above, or by calling <a class="reference internal" href="kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a>
+before using kfree, but note that <a class="reference internal" href="kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a> may sleep for a
+substantial amount of time.</p>
+</section>
+<section id="functions-and-structures">
+<h2>Functions and structures<a class="headerlink" href="#functions-and-structures" title="連結到這個標頭">¶</a></h2>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kref_init">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">kref_init</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kref_init" title="kref"><span class="n"><span class="pre">kref</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">kref</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kref_init" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>initialize object.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kref</span> <span class="pre">*kref</span></code></dt><dd><p>object in question.</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kref_get">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">kref_get</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kref_get" title="kref"><span class="n"><span class="pre">kref</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">kref</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kref_get" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>increment refcount for object.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kref</span> <span class="pre">*kref</span></code></dt><dd><p>object.</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kref_put">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">kref_put</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kref_put" title="kref"><span class="n"><span class="pre">kref</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">kref</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">(</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">release</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">(</span></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kref_put" title="kref"><span class="n"><span class="pre">kref</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">kref</span></span><span class="p"><span class="pre">)</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kref_put" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Decrement refcount for object</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kref</span> <span class="pre">*kref</span></code></dt><dd><p>Object</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">(*release)(struct</span> <span class="pre">kref</span> <span class="pre">*kref)</span></code></dt><dd><p>Pointer to the function that will clean up the object when the
+last reference to the object is released.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Decrement the refcount, and if 0, call <strong>release</strong>.  The caller may not
+pass NULL or <a class="reference internal" href="mm-api.html#c.kfree" title="kfree"><code class="xref c c-func docutils literal notranslate"><span class="pre">kfree()</span></code></a> as the release function.</p>
+<p><strong>Return</strong></p>
+<p>1 if this call removed the object, otherwise return 0.  Beware,
+if this function returns 0, another caller may have removed the object
+by the time this function returns.  The return value is only certain
+if you want to see if the object is definitely released.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kref_put_mutex">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">kref_put_mutex</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kref_put_mutex" title="kref"><span class="n"><span class="pre">kref</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">kref</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">(</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">release</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">(</span></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kref_put_mutex" title="kref"><span class="n"><span class="pre">kref</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">kref</span></span><span class="p"><span class="pre">)</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kref_put_mutex" title="mutex"><span class="n"><span class="pre">mutex</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">mutex</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kref_put_mutex" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Decrement refcount for object</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kref</span> <span class="pre">*kref</span></code></dt><dd><p>Object</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">(*release)(struct</span> <span class="pre">kref</span> <span class="pre">*kref)</span></code></dt><dd><p>Pointer to the function that will clean up the object when the
+last reference to the object is released.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">mutex</span> <span class="pre">*mutex</span></code></dt><dd><p>Mutex which protects the release function.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>This variant of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">kref_lock()</span></code> calls the <strong>release</strong> function with the <strong>mutex</strong>
+held.  The <strong>release</strong> function will release the mutex.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kref_put_lock">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">kref_put_lock</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kref_put_lock" title="kref"><span class="n"><span class="pre">kref</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">kref</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">(</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">release</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">(</span></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kref_put_lock" title="kref"><span class="n"><span class="pre">kref</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">kref</span></span><span class="p"><span class="pre">)</span></span>, <span class="n"><span class="pre">spinlock_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lock</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kref_put_lock" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Decrement refcount for object</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kref</span> <span class="pre">*kref</span></code></dt><dd><p>Object</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">(*release)(struct</span> <span class="pre">kref</span> <span class="pre">*kref)</span></code></dt><dd><p>Pointer to the function that will clean up the object when the
+last reference to the object is released.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">spinlock_t</span> <span class="pre">*lock</span></code></dt><dd><p>Spinlock which protects the release function.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>This variant of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">kref_lock()</span></code> calls the <strong>release</strong> function with the <strong>lock</strong>
+held.  The <strong>release</strong> function will release the lock.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kref_get_unless_zero">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">kref_get_unless_zero</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.kref_get_unless_zero" title="kref"><span class="n"><span class="pre">kref</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">kref</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kref_get_unless_zero" title="連結到這個定義">¶</a><br /></dt>
+<dd><p>Increment refcount for object unless it is zero.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kref</span> <span class="pre">*kref</span></code></dt><dd><p>object.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>This function is intended to simplify locking around refcounting for
+objects that can be looked up from a lookup structure, and which are
+removed from that lookup structure in the object destructor.
+Operations on such objects require at least a read lock around
+lookup + kref_get, and a write lock around kref_put + remove from lookup
+structure. Furthermore, RCU implementations become extremely tricky.
+With a lookup followed by a kref_get_unless_zero <em>with return value check</em>
+locking in the kref_put path can be deferred to the actual removal from
+the lookup structure and RCU lookups become trivial.</p>
+<p><strong>Return</strong></p>
+<p>non-zero if the increment succeeded. Otherwise return 0.</p>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/core-api/kref.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

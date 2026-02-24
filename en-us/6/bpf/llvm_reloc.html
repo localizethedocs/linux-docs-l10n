@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>BPF LLVM Relocations &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/bpf/llvm_reloc.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="BPF Graph Data Structures" href="graph_ds_impl.html" />
+    <link rel="prev" title="BPF ring buffer" href="ringbuf.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../accounting/index.html">Accounting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cpu-freq/index.html">CPUFreq - CPU frequency and voltage scaling code in the Linux(TM) kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../edac/index.html">EDAC Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../fpga/index.html">FPGA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../i2c/index.html">I2C/SMBus Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../iio/index.html">Industrial I/O</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pcmcia/index.html">PCMCIA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../spi/index.html">Serial Peripheral Interface (SPI)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../w1/index.html">1-Wire Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../watchdog/index.html">Watchdog Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../virt/index.html">Virtualization Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../hwmon/index.html">Hardware Monitoring</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../accel/index.html">Compute Accelerators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../security/index.html">Security Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../crypto/index.html">Crypto API</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">BPF Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usb/index.html">USB support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../PCI/index.html">PCI Bus Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../misc-devices/index.html">Assorted Miscellaneous Devices Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../peci/index.html">PECI Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../wmi/index.html">WMI Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tee/index.html">TEE Subsystem</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/bpf/llvm_reloc.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="bpf-llvm-relocations">
+<h1>BPF LLVM Relocations<a class="headerlink" href="#bpf-llvm-relocations" title="Link to this heading">¶</a></h1>
+<p>This document describes LLVM BPF backend relocation types.</p>
+<section id="relocation-record">
+<h2>Relocation Record<a class="headerlink" href="#relocation-record" title="Link to this heading">¶</a></h2>
+<p>LLVM BPF backend records each relocation with the following 16-byte
+ELF structure:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>typedef struct
+{
+  Elf64_Addr    r_offset;  // Offset from the beginning of section.
+  Elf64_Xword   r_info;    // Relocation type and symbol index.
+} Elf64_Rel;
+</pre></div>
+</div>
+<p>For example, for the following code:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int g1 __attribute__((section(&quot;sec&quot;)));
+int g2 __attribute__((section(&quot;sec&quot;)));
+static volatile int l1 __attribute__((section(&quot;sec&quot;)));
+static volatile int l2 __attribute__((section(&quot;sec&quot;)));
+int test() {
+  return g1 + g2 + l1 + l2;
+}
+</pre></div>
+</div>
+<p>Compiled with <code class="docutils literal notranslate"><span class="pre">clang</span> <span class="pre">--target=bpf</span> <span class="pre">-O2</span> <span class="pre">-c</span> <span class="pre">test.c</span></code>, the following is
+the code with <code class="docutils literal notranslate"><span class="pre">llvm-objdump</span> <span class="pre">-dr</span> <span class="pre">test.o</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span> 0:       18 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 r1 = 0 ll
+          0000000000000000:  R_BPF_64_64  g1
+ 2:       61 11 00 00 00 00 00 00 r1 = *(u32 *)(r1 + 0)
+ 3:       18 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 r2 = 0 ll
+          0000000000000018:  R_BPF_64_64  g2
+ 5:       61 20 00 00 00 00 00 00 r0 = *(u32 *)(r2 + 0)
+ 6:       0f 10 00 00 00 00 00 00 r0 += r1
+ 7:       18 01 00 00 08 00 00 00 00 00 00 00 00 00 00 00 r1 = 8 ll
+          0000000000000038:  R_BPF_64_64  sec
+ 9:       61 11 00 00 00 00 00 00 r1 = *(u32 *)(r1 + 0)
+10:       0f 10 00 00 00 00 00 00 r0 += r1
+11:       18 01 00 00 0c 00 00 00 00 00 00 00 00 00 00 00 r1 = 12 ll
+          0000000000000058:  R_BPF_64_64  sec
+13:       61 11 00 00 00 00 00 00 r1 = *(u32 *)(r1 + 0)
+14:       0f 10 00 00 00 00 00 00 r0 += r1
+15:       95 00 00 00 00 00 00 00 exit
+</pre></div>
+</div>
+<p>There are four relocations in the above for four <code class="docutils literal notranslate"><span class="pre">LD_imm64</span></code> instructions.
+The following <code class="docutils literal notranslate"><span class="pre">llvm-readelf</span> <span class="pre">-r</span> <span class="pre">test.o</span></code> shows the binary values of the four
+relocations:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Relocation section &#39;.rel.text&#39; at offset 0x190 contains 4 entries:
+    Offset             Info             Type               Symbol&#39;s Value  Symbol&#39;s Name
+0000000000000000  0000000600000001 R_BPF_64_64            0000000000000000 g1
+0000000000000018  0000000700000001 R_BPF_64_64            0000000000000004 g2
+0000000000000038  0000000400000001 R_BPF_64_64            0000000000000000 sec
+0000000000000058  0000000400000001 R_BPF_64_64            0000000000000000 sec
+</pre></div>
+</div>
+<p>Each relocation is represented by <code class="docutils literal notranslate"><span class="pre">Offset</span></code> (8 bytes) and <code class="docutils literal notranslate"><span class="pre">Info</span></code> (8 bytes).
+For example, the first relocation corresponds to the first instruction
+(Offset 0x0) and the corresponding <code class="docutils literal notranslate"><span class="pre">Info</span></code> indicates the relocation type
+of <code class="docutils literal notranslate"><span class="pre">R_BPF_64_64</span></code> (type 1) and the entry in the symbol table (entry 6).
+The following is the symbol table with <code class="docutils literal notranslate"><span class="pre">llvm-readelf</span> <span class="pre">-s</span> <span class="pre">test.o</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Symbol table &#39;.symtab&#39; contains 8 entries:
+   Num:    Value          Size Type    Bind   Vis       Ndx Name
+     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
+     1: 0000000000000000     0 FILE    LOCAL  DEFAULT   ABS test.c
+     2: 0000000000000008     4 OBJECT  LOCAL  DEFAULT     4 l1
+     3: 000000000000000c     4 OBJECT  LOCAL  DEFAULT     4 l2
+     4: 0000000000000000     0 SECTION LOCAL  DEFAULT     4 sec
+     5: 0000000000000000   128 FUNC    GLOBAL DEFAULT     2 test
+     6: 0000000000000000     4 OBJECT  GLOBAL DEFAULT     4 g1
+     7: 0000000000000004     4 OBJECT  GLOBAL DEFAULT     4 g2
+</pre></div>
+</div>
+<p>The 6th entry is global variable <code class="docutils literal notranslate"><span class="pre">g1</span></code> with value 0.</p>
+<p>Similarly, the second relocation is at <code class="docutils literal notranslate"><span class="pre">.text</span></code> offset <code class="docutils literal notranslate"><span class="pre">0x18</span></code>, instruction 3,
+has a type of <code class="docutils literal notranslate"><span class="pre">R_BPF_64_64</span></code> and refers to entry 7 in the symbol table.
+The second relocation resolves to global variable <code class="docutils literal notranslate"><span class="pre">g2</span></code> which has a symbol
+value 4. The symbol value represents the offset from the start of <code class="docutils literal notranslate"><span class="pre">.data</span></code>
+section where the initial value of the global variable <code class="docutils literal notranslate"><span class="pre">g2</span></code> is stored.</p>
+<p>The third and fourth relocations refer to static variables <code class="docutils literal notranslate"><span class="pre">l1</span></code>
+and <code class="docutils literal notranslate"><span class="pre">l2</span></code>. From the <code class="docutils literal notranslate"><span class="pre">.rel.text</span></code> section above, it is not clear
+to which symbols they really refer as they both refer to
+symbol table entry 4, symbol <code class="docutils literal notranslate"><span class="pre">sec</span></code>, which has <code class="docutils literal notranslate"><span class="pre">STT_SECTION</span></code> type
+and represents a section. So for a static variable or function,
+the section offset is written to the original insn
+buffer, which is called <code class="docutils literal notranslate"><span class="pre">A</span></code> (addend). Looking at
+above insn <code class="docutils literal notranslate"><span class="pre">7</span></code> and <code class="docutils literal notranslate"><span class="pre">11</span></code>, they have section offset <code class="docutils literal notranslate"><span class="pre">8</span></code> and <code class="docutils literal notranslate"><span class="pre">12</span></code>.
+From symbol table, we can find that they correspond to entries <code class="docutils literal notranslate"><span class="pre">2</span></code>
+and <code class="docutils literal notranslate"><span class="pre">3</span></code> for <code class="docutils literal notranslate"><span class="pre">l1</span></code> and <code class="docutils literal notranslate"><span class="pre">l2</span></code>.</p>
+<p>In general, the <code class="docutils literal notranslate"><span class="pre">A</span></code> is 0 for global variables and functions,
+and is the section offset or some computation result based on
+section offset for static variables/functions. The non-section-offset
+case refers to function calls. See below for more details.</p>
+</section>
+<section id="different-relocation-types">
+<h2>Different Relocation Types<a class="headerlink" href="#different-relocation-types" title="Link to this heading">¶</a></h2>
+<p>Six relocation types are supported. The following is an overview and
+<code class="docutils literal notranslate"><span class="pre">S</span></code> represents the value of the symbol in the symbol table:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Enum  ELF Reloc Type     Description      BitSize  Offset        Calculation
+0     R_BPF_NONE         None
+1     R_BPF_64_64        ld_imm64 insn    32       r_offset + 4  S + A
+2     R_BPF_64_ABS64     normal data      64       r_offset      S + A
+3     R_BPF_64_ABS32     normal data      32       r_offset      S + A
+4     R_BPF_64_NODYLD32  .BTF[.ext] data  32       r_offset      S + A
+10    R_BPF_64_32        call insn        32       r_offset + 4  (S + A) / 8 - 1
+</pre></div>
+</div>
+<p>For example, <code class="docutils literal notranslate"><span class="pre">R_BPF_64_64</span></code> relocation type is used for <code class="docutils literal notranslate"><span class="pre">ld_imm64</span></code> instruction.
+The actual to-be-relocated data (0 or section offset)
+is stored at <code class="docutils literal notranslate"><span class="pre">r_offset</span> <span class="pre">+</span> <span class="pre">4</span></code> and the read/write
+data bitsize is 32 (4 bytes). The relocation can be resolved with
+the symbol value plus implicit addend. Note that the <code class="docutils literal notranslate"><span class="pre">BitSize</span></code> is 32 which
+means the section offset must be less than or equal to <code class="docutils literal notranslate"><span class="pre">UINT32_MAX</span></code> and this
+is enforced by LLVM BPF backend.</p>
+<p>In another case, <code class="docutils literal notranslate"><span class="pre">R_BPF_64_ABS64</span></code> relocation type is used for normal 64-bit data.
+The actual to-be-relocated data is stored at <code class="docutils literal notranslate"><span class="pre">r_offset</span></code> and the read/write data
+bitsize is 64 (8 bytes). The relocation can be resolved with
+the symbol value plus implicit addend.</p>
+<p>Both <code class="docutils literal notranslate"><span class="pre">R_BPF_64_ABS32</span></code> and <code class="docutils literal notranslate"><span class="pre">R_BPF_64_NODYLD32</span></code> types are for 32-bit data.
+But <code class="docutils literal notranslate"><span class="pre">R_BPF_64_NODYLD32</span></code> specifically refers to relocations in <code class="docutils literal notranslate"><span class="pre">.BTF</span></code> and
+<code class="docutils literal notranslate"><span class="pre">.BTF.ext</span></code> sections. For cases like bcc where llvm <code class="docutils literal notranslate"><span class="pre">ExecutionEngine</span> <span class="pre">RuntimeDyld</span></code>
+is involved, <code class="docutils literal notranslate"><span class="pre">R_BPF_64_NODYLD32</span></code> types of relocations should not be resolved
+to actual function/variable address. Otherwise, <code class="docutils literal notranslate"><span class="pre">.BTF</span></code> and <code class="docutils literal notranslate"><span class="pre">.BTF.ext</span></code>
+become unusable by bcc and kernel.</p>
+<p>Type <code class="docutils literal notranslate"><span class="pre">R_BPF_64_32</span></code> is used for call instruction. The call target section
+offset is stored at <code class="docutils literal notranslate"><span class="pre">r_offset</span> <span class="pre">+</span> <span class="pre">4</span></code> (32bit) and calculated as
+<code class="docutils literal notranslate"><span class="pre">(S</span> <span class="pre">+</span> <span class="pre">A)</span> <span class="pre">/</span> <span class="pre">8</span> <span class="pre">-</span> <span class="pre">1</span></code>.</p>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
+<p>Types <code class="docutils literal notranslate"><span class="pre">R_BPF_64_64</span></code> and <code class="docutils literal notranslate"><span class="pre">R_BPF_64_32</span></code> are used to resolve <code class="docutils literal notranslate"><span class="pre">ld_imm64</span></code>
+and <code class="docutils literal notranslate"><span class="pre">call</span></code> instructions. For example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>__attribute__((noinline)) __attribute__((section(&quot;sec1&quot;)))
+int gfunc(int a, int b) {
+  return a * b;
+}
+static __attribute__((noinline)) __attribute__((section(&quot;sec1&quot;)))
+int lfunc(int a, int b) {
+  return a + b;
+}
+int global __attribute__((section(&quot;sec2&quot;)));
+int test(int a, int b) {
+  return gfunc(a, b) +  lfunc(a, b) + global;
+}
+</pre></div>
+</div>
+<p>Compiled with <code class="docutils literal notranslate"><span class="pre">clang</span> <span class="pre">--target=bpf</span> <span class="pre">-O2</span> <span class="pre">-c</span> <span class="pre">test.c</span></code>, we will have
+following code with <cite>llvm-objdump -dr test.o`</cite>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Disassembly of section .text:
+
+0000000000000000 &lt;test&gt;:
+       0:       bf 26 00 00 00 00 00 00 r6 = r2
+       1:       bf 17 00 00 00 00 00 00 r7 = r1
+       2:       85 10 00 00 ff ff ff ff call -1
+                0000000000000010:  R_BPF_64_32  gfunc
+       3:       bf 08 00 00 00 00 00 00 r8 = r0
+       4:       bf 71 00 00 00 00 00 00 r1 = r7
+       5:       bf 62 00 00 00 00 00 00 r2 = r6
+       6:       85 10 00 00 02 00 00 00 call 2
+                0000000000000030:  R_BPF_64_32  sec1
+       7:       0f 80 00 00 00 00 00 00 r0 += r8
+       8:       18 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 r1 = 0 ll
+                0000000000000040:  R_BPF_64_64  global
+      10:       61 11 00 00 00 00 00 00 r1 = *(u32 *)(r1 + 0)
+      11:       0f 10 00 00 00 00 00 00 r0 += r1
+      12:       95 00 00 00 00 00 00 00 exit
+
+Disassembly of section sec1:
+
+0000000000000000 &lt;gfunc&gt;:
+       0:       bf 20 00 00 00 00 00 00 r0 = r2
+       1:       2f 10 00 00 00 00 00 00 r0 *= r1
+       2:       95 00 00 00 00 00 00 00 exit
+
+0000000000000018 &lt;lfunc&gt;:
+       3:       bf 20 00 00 00 00 00 00 r0 = r2
+       4:       0f 10 00 00 00 00 00 00 r0 += r1
+       5:       95 00 00 00 00 00 00 00 exit
+</pre></div>
+</div>
+<p>The first relocation corresponds to <code class="docutils literal notranslate"><span class="pre">gfunc(a,</span> <span class="pre">b)</span></code> where <code class="docutils literal notranslate"><span class="pre">gfunc</span></code> has a value of 0,
+so the <code class="docutils literal notranslate"><span class="pre">call</span></code> instruction offset is <code class="docutils literal notranslate"><span class="pre">(0</span> <span class="pre">+</span> <span class="pre">0)/8</span> <span class="pre">-</span> <span class="pre">1</span> <span class="pre">=</span> <span class="pre">-1</span></code>.
+The second relocation corresponds to <code class="docutils literal notranslate"><span class="pre">lfunc(a,</span> <span class="pre">b)</span></code> where <code class="docutils literal notranslate"><span class="pre">lfunc</span></code> has a section
+offset <code class="docutils literal notranslate"><span class="pre">0x18</span></code>, so the <code class="docutils literal notranslate"><span class="pre">call</span></code> instruction offset is <code class="docutils literal notranslate"><span class="pre">(0</span> <span class="pre">+</span> <span class="pre">0x18)/8</span> <span class="pre">-</span> <span class="pre">1</span> <span class="pre">=</span> <span class="pre">2</span></code>.
+The third relocation corresponds to ld_imm64 of <code class="docutils literal notranslate"><span class="pre">global</span></code>, which has a section
+offset <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p>
+<p>The following is an example to show how R_BPF_64_ABS64 could be generated:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int global() { return 0; }
+struct t { void *g; } gbl = { global };
+</pre></div>
+</div>
+<p>Compiled with <code class="docutils literal notranslate"><span class="pre">clang</span> <span class="pre">--target=bpf</span> <span class="pre">-O2</span> <span class="pre">-g</span> <span class="pre">-c</span> <span class="pre">test.c</span></code>, we will see a
+relocation below in <code class="docutils literal notranslate"><span class="pre">.data</span></code> section with command
+<code class="docutils literal notranslate"><span class="pre">llvm-readelf</span> <span class="pre">-r</span> <span class="pre">test.o</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Relocation section &#39;.rel.data&#39; at offset 0x458 contains 1 entries:
+    Offset             Info             Type               Symbol&#39;s Value  Symbol&#39;s Name
+0000000000000000  0000000700000002 R_BPF_64_ABS64         0000000000000000 global
+</pre></div>
+</div>
+<p>The relocation says the first 8-byte of <code class="docutils literal notranslate"><span class="pre">.data</span></code> section should be
+filled with address of <code class="docutils literal notranslate"><span class="pre">global</span></code> variable.</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">llvm-readelf</span></code> output, we can see that dwarf sections have a bunch of
+<code class="docutils literal notranslate"><span class="pre">R_BPF_64_ABS32</span></code> and <code class="docutils literal notranslate"><span class="pre">R_BPF_64_ABS64</span></code> relocations:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Relocation section &#39;.rel.debug_info&#39; at offset 0x468 contains 13 entries:
+    Offset             Info             Type               Symbol&#39;s Value  Symbol&#39;s Name
+0000000000000006  0000000300000003 R_BPF_64_ABS32         0000000000000000 .debug_abbrev
+000000000000000c  0000000400000003 R_BPF_64_ABS32         0000000000000000 .debug_str
+0000000000000012  0000000400000003 R_BPF_64_ABS32         0000000000000000 .debug_str
+0000000000000016  0000000600000003 R_BPF_64_ABS32         0000000000000000 .debug_line
+000000000000001a  0000000400000003 R_BPF_64_ABS32         0000000000000000 .debug_str
+000000000000001e  0000000200000002 R_BPF_64_ABS64         0000000000000000 .text
+000000000000002b  0000000400000003 R_BPF_64_ABS32         0000000000000000 .debug_str
+0000000000000037  0000000800000002 R_BPF_64_ABS64         0000000000000000 gbl
+0000000000000040  0000000400000003 R_BPF_64_ABS32         0000000000000000 .debug_str
+......
+</pre></div>
+</div>
+<p>The .BTF/.BTF.ext sections has R_BPF_64_NODYLD32 relocations:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Relocation section &#39;.rel.BTF&#39; at offset 0x538 contains 1 entries:
+    Offset             Info             Type               Symbol&#39;s Value  Symbol&#39;s Name
+0000000000000084  0000000800000004 R_BPF_64_NODYLD32      0000000000000000 gbl
+
+Relocation section &#39;.rel.BTF.ext&#39; at offset 0x548 contains 2 entries:
+    Offset             Info             Type               Symbol&#39;s Value  Symbol&#39;s Name
+000000000000002c  0000000200000004 R_BPF_64_NODYLD32      0000000000000000 .text
+0000000000000040  0000000200000004 R_BPF_64_NODYLD32      0000000000000000 .text
+</pre></div>
+</div>
+</section>
+</section>
+<section id="co-re-relocations">
+<span id="btf-co-re-relocations"></span><h1>CO-RE Relocations<a class="headerlink" href="#co-re-relocations" title="Link to this heading">¶</a></h1>
+<p>From object file point of view CO-RE mechanism is implemented as a set
+of CO-RE specific relocation records. These relocation records are not
+related to ELF relocations and are encoded in .BTF.ext section.
+See <a class="reference internal" href="btf.html#btf-ext-section"><span class="std std-ref">Documentation/bpf/btf.rst</span></a> for more
+information on .BTF.ext structure.</p>
+<p>CO-RE relocations are applied to BPF instructions to update immediate
+or offset fields of the instruction at load time with information
+relevant for target kernel.</p>
+<p>Field to patch is selected basing on the instruction class:</p>
+<ul class="simple">
+<li><p>For BPF_ALU, BPF_ALU64, BPF_LD <cite>immediate</cite> field is patched;</p></li>
+<li><p>For BPF_LDX, BPF_STX, BPF_ST <cite>offset</cite> field is patched;</p></li>
+<li><p>BPF_JMP, BPF_JMP32 instructions <strong>should not</strong> be patched.</p></li>
+</ul>
+<section id="relocation-kinds">
+<h2>Relocation kinds<a class="headerlink" href="#relocation-kinds" title="Link to this heading">¶</a></h2>
+<p>There are several kinds of CO-RE relocations that could be split in
+three groups:</p>
+<ul class="simple">
+<li><p>Field-based - patch instruction with field related information, e.g.
+change offset field of the BPF_LDX instruction to reflect offset
+of a specific structure field in the target kernel.</p></li>
+<li><p>Type-based - patch instruction with type related information, e.g.
+change immediate field of the BPF_ALU move instruction to 0 or 1 to
+reflect if specific type is present in the target kernel.</p></li>
+<li><p>Enum-based - patch instruction with <code class="xref c c-enum broken_xref docutils literal notranslate"><span class="pre">enum</span> <span class="pre">related</span></code> information, e.g.
+change immediate field of the BPF_LD_IMM64 instruction to reflect
+value of a specific <code class="xref c c-enum broken_xref docutils literal notranslate"><span class="pre">enum</span> <span class="pre">literal</span></code> in the target kernel.</p></li>
+</ul>
+<p>The complete list of relocation kinds is represented by the following enum:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">enum</span><span class="w"> </span><span class="n">bpf_core_relo_kind</span><span class="w"> </span><span class="p">{</span>
+<span class="w">       </span><span class="n">BPF_CORE_FIELD_BYTE_OFFSET</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">  </span><span class="cm">/* field byte offset */</span>
+<span class="w">       </span><span class="n">BPF_CORE_FIELD_BYTE_SIZE</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">  </span><span class="cm">/* field size in bytes */</span>
+<span class="w">       </span><span class="n">BPF_CORE_FIELD_EXISTS</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">  </span><span class="cm">/* field existence in target kernel */</span>
+<span class="w">       </span><span class="n">BPF_CORE_FIELD_SIGNED</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">  </span><span class="cm">/* field signedness (0 - unsigned, 1 - signed) */</span>
+<span class="w">       </span><span class="n">BPF_CORE_FIELD_LSHIFT_U64</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w">  </span><span class="cm">/* bitfield-specific left bitshift */</span>
+<span class="w">       </span><span class="n">BPF_CORE_FIELD_RSHIFT_U64</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">  </span><span class="cm">/* bitfield-specific right bitshift */</span>
+<span class="w">       </span><span class="n">BPF_CORE_TYPE_ID_LOCAL</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w">  </span><span class="cm">/* type ID in local BPF object */</span>
+<span class="w">       </span><span class="n">BPF_CORE_TYPE_ID_TARGET</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w">  </span><span class="cm">/* type ID in target kernel */</span>
+<span class="w">       </span><span class="n">BPF_CORE_TYPE_EXISTS</span><span class="w">       </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w">  </span><span class="cm">/* type existence in target kernel */</span>
+<span class="w">       </span><span class="n">BPF_CORE_TYPE_SIZE</span><span class="w">         </span><span class="o">=</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w">  </span><span class="cm">/* type size in bytes */</span>
+<span class="w">       </span><span class="n">BPF_CORE_ENUMVAL_EXISTS</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="cm">/* enum value existence in target kernel */</span>
+<span class="w">       </span><span class="n">BPF_CORE_ENUMVAL_VALUE</span><span class="w">     </span><span class="o">=</span><span class="w"> </span><span class="mi">11</span><span class="p">,</span><span class="w"> </span><span class="cm">/* enum value integer value */</span>
+<span class="w">       </span><span class="n">BPF_CORE_TYPE_MATCHES</span><span class="w">      </span><span class="o">=</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="cm">/* type match in target kernel */</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>Notes:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">BPF_CORE_FIELD_LSHIFT_U64</span></code> and <code class="docutils literal notranslate"><span class="pre">BPF_CORE_FIELD_RSHIFT_U64</span></code> are
+supposed to be used to read bitfield values using the following
+algorithm:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// To read bitfield ``f`` from ``struct s``</span>
+<span class="n">is_signed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">relo</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">f</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_CORE_FIELD_SIGNED</span><span class="p">)</span>
+<span class="n">off</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">relo</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">f</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_CORE_FIELD_BYTE_OFFSET</span><span class="p">)</span>
+<span class="n">sz</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">relo</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">f</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_CORE_FIELD_BYTE_SIZE</span><span class="p">)</span>
+<span class="n">l</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">relo</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">f</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_CORE_FIELD_LSHIFT_U64</span><span class="p">)</span>
+<span class="n">r</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">relo</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">f</span><span class="p">,</span><span class="w"> </span><span class="n">BPF_CORE_FIELD_RSHIFT_U64</span><span class="p">)</span>
+<span class="c1">// define ``v`` as signed or unsigned integer of size ``sz``</span>
+<span class="n">v</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">({</span><span class="n">s</span><span class="o">|</span><span class="n">u</span><span class="p">}</span><span class="o">&lt;</span><span class="n">sz</span><span class="o">&gt;</span><span class="w"> </span><span class="o">*</span><span class="p">)((</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">s</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">off</span><span class="p">)</span>
+<span class="n">v</span><span class="w"> </span><span class="o">&lt;&lt;=</span><span class="w"> </span><span class="n">l</span>
+<span class="n">v</span><span class="w"> </span><span class="o">&gt;&gt;=</span><span class="w"> </span><span class="n">r</span>
+</pre></div>
+</div>
+</li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">BPF_CORE_TYPE_MATCHES</span></code> queries matching relation, defined as
+follows:</p>
+<ul class="simple">
+<li><p>for integers: types match if size and signedness match;</p></li>
+<li><p>for arrays &amp; pointers: target types are recursively matched;</p></li>
+<li><p>for structs &amp; unions:</p>
+<ul>
+<li><p>local members need to exist in target with the same name;</p></li>
+<li><p>for each member we recursively check match unless it is already behind a
+pointer, in which case we only check matching names and compatible kind;</p></li>
+</ul>
+</li>
+<li><p>for enums:</p>
+<ul>
+<li><p>local variants have to have a match in target by symbolic name (but not
+numeric value);</p></li>
+<li><p>size has to match (but <code class="xref c c-enum broken_xref docutils literal notranslate"><span class="pre">enum</span> <span class="pre">may</span></code> match enum64 and vice versa);</p></li>
+</ul>
+</li>
+<li><p>for function pointers:</p>
+<ul>
+<li><p>number and position of arguments in local type has to match target;</p></li>
+<li><p>for each argument and the return value we recursively check match.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="co-re-relocation-record">
+<h2>CO-RE Relocation Record<a class="headerlink" href="#co-re-relocation-record" title="Link to this heading">¶</a></h2>
+<p>Relocation record is encoded as the following structure:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">bpf_core_relo</span><span class="w"> </span><span class="p">{</span>
+<span class="w">       </span><span class="n">__u32</span><span class="w"> </span><span class="n">insn_off</span><span class="p">;</span>
+<span class="w">       </span><span class="n">__u32</span><span class="w"> </span><span class="n">type_id</span><span class="p">;</span>
+<span class="w">       </span><span class="n">__u32</span><span class="w"> </span><span class="n">access_str_off</span><span class="p">;</span>
+<span class="w">       </span><span class="k">enum</span><span class="w"> </span><span class="n">bpf_core_relo_kind</span><span class="w"> </span><span class="n">kind</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">insn_off</span></code> - instruction offset (in bytes) within a code section
+associated with this relocation;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">type_id</span></code> - BTF type ID of the “root” (containing) entity of a
+relocatable type or field;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">access_str_off</span></code> - offset into corresponding .BTF string section.
+String interpretation depends on specific relocation kind:</p>
+<ul>
+<li><p>for field-based relocations, string encodes an accessed field using
+a sequence of field and array indices, separated by colon (:). It’s
+conceptually very close to LLVM’s <a class="reference external" href="https://llvm.org/docs/LangRef.html#getelementptr-instruction">getelementptr</a> instruction’s
+arguments for identifying offset to a field. For example, consider the
+following C code:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">sample</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
+<span class="w">    </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">c</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span><span class="w"> </span><span class="p">};</span>
+<span class="p">}</span><span class="w"> </span><span class="n">__attribute__</span><span class="p">((</span><span class="n">preserve_access_index</span><span class="p">));</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">sample</span><span class="w"> </span><span class="o">*</span><span class="n">s</span><span class="p">;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Access to <code class="docutils literal notranslate"><span class="pre">s[0].a</span></code> would be encoded as <code class="docutils literal notranslate"><span class="pre">0:0</span></code>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">0</span></code>: first element of <code class="docutils literal notranslate"><span class="pre">s</span></code> (as if <code class="docutils literal notranslate"><span class="pre">s</span></code> is an array);</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">0</span></code>: index of field <code class="docutils literal notranslate"><span class="pre">a</span></code> in <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sample</span></code>.</p></li>
+</ul>
+</li>
+<li><p>Access to <code class="docutils literal notranslate"><span class="pre">s-&gt;a</span></code> would be encoded as <code class="docutils literal notranslate"><span class="pre">0:0</span></code> as well.</p></li>
+<li><p>Access to <code class="docutils literal notranslate"><span class="pre">s-&gt;b</span></code> would be encoded as <code class="docutils literal notranslate"><span class="pre">0:1</span></code>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">0</span></code>: first element of <code class="docutils literal notranslate"><span class="pre">s</span></code>;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">1</span></code>: index of field <code class="docutils literal notranslate"><span class="pre">b</span></code> in <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sample</span></code>.</p></li>
+</ul>
+</li>
+<li><p>Access to <code class="docutils literal notranslate"><span class="pre">s[1].c[5]</span></code> would be encoded as <code class="docutils literal notranslate"><span class="pre">1:2:0:5</span></code>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">1</span></code>: second element of <code class="docutils literal notranslate"><span class="pre">s</span></code>;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">2</span></code>: index of anonymous structure field in <code class="docutils literal notranslate"><span class="pre">struct</span> <span class="pre">sample</span></code>;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">0</span></code>: index of field <code class="docutils literal notranslate"><span class="pre">c</span></code> in anonymous structure;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">5</span></code>: access to array element #5.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>for type-based relocations, string is expected to be just “0”;</p></li>
+<li><dl class="simple">
+<dt>for enum value-based relocations, string contains an index of enum</dt><dd><p>value within its <code class="xref c c-enum broken_xref docutils literal notranslate"><span class="pre">enum</span> <span class="pre">type</span></code>;</p>
+</dd>
+</dl>
+</li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">kind</span></code> - one of <code class="docutils literal notranslate"><span class="pre">enum</span> <span class="pre">bpf_core_relo_kind</span></code>.</p></li>
+</ul>
+</section>
+<section id="co-re-relocation-examples">
+<span id="btf-co-re-relocation-examples"></span><h2>CO-RE Relocation Examples<a class="headerlink" href="#co-re-relocation-examples" title="Link to this heading">¶</a></h2>
+<p>For the following C code:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">unsigned</span><span class="w"> </span><span class="n">c</span><span class="o">:</span><span class="mi">15</span><span class="p">;</span>
+<span class="p">}</span><span class="w"> </span><span class="n">__attribute__</span><span class="p">((</span><span class="n">preserve_access_index</span><span class="p">));</span>
+
+<span class="k">enum</span><span class="w"> </span><span class="n">bar</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">U</span><span class="p">,</span><span class="w"> </span><span class="n">V</span><span class="w"> </span><span class="p">};</span>
+</pre></div>
+</div>
+<p>With the following BTF definitions:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>...
+[2] STRUCT &#39;foo&#39; size=8 vlen=2
+       &#39;a&#39; type_id=3 bits_offset=0
+       &#39;b&#39; type_id=3 bits_offset=32
+       &#39;c&#39; type_id=4 bits_offset=64 bitfield_size=15
+[3] INT &#39;int&#39; size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
+[4] INT &#39;unsigned int&#39; size=4 bits_offset=0 nr_bits=32 encoding=(none)
+...
+[16] ENUM &#39;bar&#39; encoding=UNSIGNED size=4 vlen=2
+       &#39;U&#39; val=0
+       &#39;V&#39; val=1
+</pre></div>
+</div>
+<p>Field offset relocations are generated automatically when
+<code class="docutils literal notranslate"><span class="pre">__attribute__((preserve_access_index))</span></code> is used, for example:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">alpha</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span><span class="w"> </span><span class="o">*</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="k">volatile</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="o">*</span><span class="n">g</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s</span><span class="o">-&gt;</span><span class="n">a</span><span class="p">;</span>
+<span class="w">  </span><span class="n">s</span><span class="o">-&gt;</span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="mo">00</span><span class="w"> </span><span class="o">&lt;</span><span class="n">alpha</span><span class="o">&gt;:</span>
+<span class="w">  </span><span class="mi">0</span><span class="o">:</span><span class="w">  </span><span class="n">r3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="n">s32</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span>
+<span class="w">         </span><span class="mo">00</span><span class="o">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">byte_off</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span><span class="o">::</span><span class="n">a</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="o">:</span><span class="mi">0</span><span class="p">)</span>
+<span class="w">  </span><span class="mi">1</span><span class="o">:</span><span class="w">  </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r3</span>
+<span class="w">  </span><span class="mi">2</span><span class="o">:</span><span class="w">  </span><span class="o">*</span><span class="p">(</span><span class="n">u32</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x1</span>
+<span class="w">         </span><span class="mi">10</span><span class="o">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">byte_off</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span><span class="o">::</span><span class="n">a</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="o">:</span><span class="mi">0</span><span class="p">)</span>
+<span class="w">  </span><span class="mi">3</span><span class="o">:</span><span class="w">  </span><span class="n">exit</span>
+</pre></div>
+</div>
+<p>All relocation kinds could be requested via built-in functions.
+E.g. field-based relocations:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">bravo</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span><span class="w"> </span><span class="o">*</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="k">volatile</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="o">*</span><span class="n">g</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__builtin_preserve_field_info</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="cm">/* field byte offset */</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__builtin_preserve_field_info</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="cm">/* field byte size */</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__builtin_preserve_field_info</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="cm">/* field existence */</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__builtin_preserve_field_info</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="cm">/* field signedness */</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__builtin_preserve_field_info</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">c</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="cm">/* bitfield left shift */</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__builtin_preserve_field_info</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">c</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="cm">/* bitfield right shift */</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="mi">20</span><span class="w"> </span><span class="o">&lt;</span><span class="n">bravo</span><span class="o">&gt;:</span>
+<span class="w">   </span><span class="mi">4</span><span class="o">:</span><span class="w">     </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x4</span>
+<span class="w">          </span><span class="mi">20</span><span class="o">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">byte_off</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span><span class="o">::</span><span class="n">b</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="o">:</span><span class="mi">1</span><span class="p">)</span>
+<span class="w">   </span><span class="mi">5</span><span class="o">:</span><span class="w">     </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r1</span>
+<span class="w">   </span><span class="mi">6</span><span class="o">:</span><span class="w">     </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x4</span>
+<span class="w">          </span><span class="mi">30</span><span class="o">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">byte_sz</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span><span class="o">::</span><span class="n">b</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="o">:</span><span class="mi">1</span><span class="p">)</span>
+<span class="w">   </span><span class="mi">7</span><span class="o">:</span><span class="w">     </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r1</span>
+<span class="w">   </span><span class="mi">8</span><span class="o">:</span><span class="w">     </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x1</span>
+<span class="w">          </span><span class="mi">40</span><span class="o">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">field_exists</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span><span class="o">::</span><span class="n">b</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="o">:</span><span class="mi">1</span><span class="p">)</span>
+<span class="w">   </span><span class="mi">9</span><span class="o">:</span><span class="w">     </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r1</span>
+<span class="w">  </span><span class="mi">10</span><span class="o">:</span><span class="w">     </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x1</span>
+<span class="w">          </span><span class="mi">50</span><span class="o">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="kt">signed</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span><span class="o">::</span><span class="n">b</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="o">:</span><span class="mi">1</span><span class="p">)</span>
+<span class="w">  </span><span class="mi">11</span><span class="o">:</span><span class="w">     </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r1</span>
+<span class="w">  </span><span class="mi">12</span><span class="o">:</span><span class="w">     </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x31</span>
+<span class="w">          </span><span class="mi">60</span><span class="o">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">lshift_u64</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span><span class="o">::</span><span class="n">c</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="o">:</span><span class="mi">2</span><span class="p">)</span>
+<span class="w">  </span><span class="mi">13</span><span class="o">:</span><span class="w">     </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r1</span>
+<span class="w">  </span><span class="mi">14</span><span class="o">:</span><span class="w">     </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x31</span>
+<span class="w">          </span><span class="mi">70</span><span class="o">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">rshift_u64</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span><span class="o">::</span><span class="n">c</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="o">:</span><span class="mi">2</span><span class="p">)</span>
+<span class="w">  </span><span class="mi">15</span><span class="o">:</span><span class="w">     </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r1</span>
+<span class="w">  </span><span class="mi">16</span><span class="o">:</span><span class="w">     </span><span class="n">exit</span>
+</pre></div>
+</div>
+<p>Type-based relocations:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">charlie</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span><span class="w"> </span><span class="o">*</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="k">volatile</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="o">*</span><span class="n">g</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__builtin_preserve_type_info</span><span class="p">(</span><span class="o">*</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="cm">/* type existence */</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__builtin_preserve_type_info</span><span class="p">(</span><span class="o">*</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="cm">/* type size */</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__builtin_preserve_type_info</span><span class="p">(</span><span class="o">*</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="cm">/* type matches */</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__builtin_btf_type_id</span><span class="p">(</span><span class="o">*</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="cm">/* type id in this object file */</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__builtin_btf_type_id</span><span class="p">(</span><span class="o">*</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="cm">/* type id in target kernel */</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="mi">88</span><span class="w"> </span><span class="o">&lt;</span><span class="n">charlie</span><span class="o">&gt;:</span>
+<span class="w">  </span><span class="mi">17</span><span class="o">:</span><span class="w">     </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x1</span>
+<span class="w">          </span><span class="mi">88</span><span class="o">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">type_exists</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span>
+<span class="w">  </span><span class="mi">18</span><span class="o">:</span><span class="w">     </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r1</span>
+<span class="w">  </span><span class="mi">19</span><span class="o">:</span><span class="w">     </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0xc</span>
+<span class="w">          </span><span class="mi">98</span><span class="o">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">type_size</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span>
+<span class="w">  </span><span class="mi">20</span><span class="o">:</span><span class="w">     </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r1</span>
+<span class="w">  </span><span class="mi">21</span><span class="o">:</span><span class="w">     </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x1</span>
+<span class="w">          </span><span class="nl">a8</span><span class="p">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">type_matches</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span>
+<span class="w">  </span><span class="mi">22</span><span class="o">:</span><span class="w">     </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r1</span>
+<span class="w">  </span><span class="mi">23</span><span class="o">:</span><span class="w">     </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x2</span><span class="w"> </span><span class="n">ll</span>
+<span class="w">          </span><span class="nl">b8</span><span class="p">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">local_type_id</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span>
+<span class="w">  </span><span class="mi">25</span><span class="o">:</span><span class="w">     </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r1</span>
+<span class="w">  </span><span class="mi">26</span><span class="o">:</span><span class="w">     </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x2</span><span class="w"> </span><span class="n">ll</span>
+<span class="w">          </span><span class="nl">d0</span><span class="p">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">target_type_id</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span>
+<span class="w">  </span><span class="mi">28</span><span class="o">:</span><span class="w">     </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r1</span>
+<span class="w">  </span><span class="mi">29</span><span class="o">:</span><span class="w">     </span><span class="n">exit</span>
+</pre></div>
+</div>
+<p>Enum-based relocations:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">delta</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">foo</span><span class="w"> </span><span class="o">*</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="k">volatile</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="o">*</span><span class="n">g</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__builtin_preserve_enum_value</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="k">enum</span><span class="w"> </span><span class="n">bar</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">U</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="cm">/* enum literal existence */</span><span class="p">);</span>
+<span class="w">  </span><span class="o">*</span><span class="n">g</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">__builtin_preserve_enum_value</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="k">enum</span><span class="w"> </span><span class="n">bar</span><span class="w"> </span><span class="o">*</span><span class="p">)</span><span class="n">V</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="cm">/* enum literal value */</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="n">f0</span><span class="w"> </span><span class="o">&lt;</span><span class="n">delta</span><span class="o">&gt;:</span>
+<span class="w">  </span><span class="mi">30</span><span class="o">:</span><span class="w">     </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x1</span><span class="w"> </span><span class="n">ll</span>
+<span class="w">          </span><span class="nl">f0</span><span class="p">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">enumval_exists</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="n">bar</span><span class="o">::</span><span class="n">U</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">  </span><span class="mi">32</span><span class="o">:</span><span class="w">     </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r1</span>
+<span class="w">  </span><span class="mi">33</span><span class="o">:</span><span class="w">     </span><span class="n">r1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x1</span><span class="w"> </span><span class="n">ll</span>
+<span class="w">          </span><span class="mi">108</span><span class="o">:</span><span class="w">  </span><span class="n">CO</span><span class="o">-</span><span class="n">RE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">enumval_value</span><span class="o">&gt;</span><span class="w"> </span><span class="p">[</span><span class="mi">16</span><span class="p">]</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="n">bar</span><span class="o">::</span><span class="n">V</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">  </span><span class="mi">35</span><span class="o">:</span><span class="w">     </span><span class="o">*</span><span class="p">(</span><span class="n">u64</span><span class="w"> </span><span class="o">*</span><span class="p">)(</span><span class="n">r2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0x0</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">r1</span>
+<span class="w">  </span><span class="mi">36</span><span class="o">:</span><span class="w">     </span><span class="n">exit</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/bpf/llvm_reloc.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

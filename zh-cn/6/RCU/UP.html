@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>RCU on Uniprocessor Systems &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/RCU/UP.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="A Tour Through TREE_RCU&#39;s Grace-Period Memory Ordering" href="Design/Memory-Ordering/Tree-RCU-Memory-Ordering.html" />
+    <link rel="prev" title="Using RCU to Protect Dynamic NMI Handlers" href="NMI-RCU.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core-api/index.html">Core API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-entry-and-exit">Low level entry and exit</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../core-api/index.html#concurrency-primitives">Concurrency primitives</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/refcount-vs-atomic.html">refcount_t API compared to atomic_t</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/irq/index.html">IRQs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/local_ops.html">Semantics and Behavior of Local Atomic Operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/padata.html">The padata parallel execution mechanism</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">RCU Handbook</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/wrappers/memory-barriers.html">Linux kernel memory barriers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#memory-management">Memory management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/RCU/UP.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="rcu-on-uniprocessor-systems">
+<span id="up-doc"></span><h1>RCU on Uniprocessor Systems<a class="headerlink" href="#rcu-on-uniprocessor-systems" title="Link to this heading">¶</a></h1>
+<p>A common misconception is that, on UP systems, the <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> primitive
+may immediately invoke its function.  The basis of this misconception
+is that since there is only one CPU, it should not be necessary to
+wait for anything else to get done, since there are no other CPUs for
+anything else to be happening on.  Although this approach will <em>sort of</em>
+work a surprising amount of the time, it is a very bad idea in general.
+This document presents three examples that demonstrate exactly how bad
+an idea this is.</p>
+<section id="example-1-softirq-suicide">
+<h2>Example 1: softirq Suicide<a class="headerlink" href="#example-1-softirq-suicide" title="Link to this heading">¶</a></h2>
+<p>Suppose that an RCU-based algorithm scans a linked list containing
+elements A, B, and C in process context, and can delete elements from
+this same list in softirq context.  Suppose that the process-context scan
+is referencing element B when it is interrupted by softirq processing,
+which deletes element B, and then invokes <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> to free element B
+after a grace period.</p>
+<p>Now, if <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> were to directly invoke its arguments, then upon return
+from softirq, the list scan would find itself referencing a newly freed
+element B.  This situation can greatly decrease the life expectancy of
+your kernel.</p>
+<p>This same problem can occur if <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> is invoked from a hardware
+interrupt handler.</p>
+</section>
+<section id="example-2-function-call-fatality">
+<h2>Example 2: Function-Call Fatality<a class="headerlink" href="#example-2-function-call-fatality" title="Link to this heading">¶</a></h2>
+<p>Of course, one could avert the suicide described in the preceding example
+by having <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> directly invoke its arguments only if it was called
+from process context.  However, this can fail in a similar manner.</p>
+<p>Suppose that an RCU-based algorithm again scans a linked list containing
+elements A, B, and C in process context, but that it invokes a function
+on each element as it is scanned.  Suppose further that this function
+deletes element B from the list, then passes it to <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> for deferred
+freeing.  This may be a bit unconventional, but it is perfectly legal
+RCU usage, since <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> must wait for a grace period to elapse.
+Therefore, in this case, allowing <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> to immediately invoke
+its arguments would cause it to fail to make the fundamental guarantee
+underlying RCU, namely that <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> defers invoking its arguments until
+all RCU read-side critical sections currently executing have completed.</p>
+<dl class="simple">
+<dt>Quick Quiz #1:</dt><dd><p>Why is it <em>not</em> legal to invoke <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a> in this case?</p>
+</dd>
+</dl>
+<p><a class="reference internal" href="#answer-quick-quiz-up"><span class="std std-ref">Answers to Quick Quiz</span></a></p>
+</section>
+<section id="example-3-death-by-deadlock">
+<h2>Example 3: Death by Deadlock<a class="headerlink" href="#example-3-death-by-deadlock" title="Link to this heading">¶</a></h2>
+<p>Suppose that <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> is invoked while holding a lock, and that the
+callback function must acquire this same lock.  In this case, if
+<a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> were to directly invoke the callback, the result would
+be self-deadlock <em>even if</em> this invocation occurred from a later
+<a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> invocation a full grace period later.</p>
+<p>In some cases, it would possible to restructure to code so that
+the <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> is delayed until after the lock is released.  However,
+there are cases where this can be quite ugly:</p>
+<ol class="arabic simple">
+<li><p>If a number of items need to be passed to <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> within
+the same critical section, then the code would need to create
+a list of them, then traverse the list once the lock was
+released.</p></li>
+<li><p>In some cases, the lock will be held across some kernel API,
+so that delaying the <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> until the lock is released
+requires that the data item be passed up via a common API.
+It is far better to guarantee that callbacks are invoked
+with no locks held than to have to modify such APIs to allow
+arbitrary data items to be passed back up through them.</p></li>
+</ol>
+<p>If <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> directly invokes the callback, painful locking restrictions
+or API changes would be required.</p>
+<dl class="simple">
+<dt>Quick Quiz #2:</dt><dd><p>What locking restriction must RCU callbacks respect?</p>
+</dd>
+</dl>
+<p><a class="reference internal" href="#answer-quick-quiz-up"><span class="std std-ref">Answers to Quick Quiz</span></a></p>
+<p>It is important to note that userspace RCU implementations <em>do</em>
+permit <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> to directly invoke callbacks, but only if a full
+grace period has elapsed since those callbacks were queued.  This is
+the case because some userspace environments are extremely constrained.
+Nevertheless, people writing userspace RCU implementations are strongly
+encouraged to avoid invoking callbacks from <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a>, thus obtaining
+the deadlock-avoidance benefits called out above.</p>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading">¶</a></h2>
+<p>Permitting <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> to immediately invoke its arguments breaks RCU,
+even on a UP system.  So do not do it!  Even on a UP system, the RCU
+infrastructure <em>must</em> respect grace periods, and <em>must</em> invoke callbacks
+from a known environment in which no locks are held.</p>
+<p>Note that it <em>is</em> safe for <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a> to return immediately on
+UP systems, including PREEMPT SMP builds running on UP systems.</p>
+<dl class="simple">
+<dt>Quick Quiz #3:</dt><dd><p>Why can't <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a> return immediately on UP systems running
+preemptible RCU?</p>
+</dd>
+</dl>
+<dl id="answer-quick-quiz-up">
+<dt>Answer to Quick Quiz #1:</dt><dd><p>Why is it <em>not</em> legal to invoke <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a> in this case?</p>
+<p>Because the calling function is scanning an RCU-protected linked
+list, and is therefore within an RCU read-side critical section.
+Therefore, the called function has been invoked within an RCU
+read-side critical section, and is not permitted to block.</p>
+</dd>
+<dt>Answer to Quick Quiz #2:</dt><dd><p>What locking restriction must RCU callbacks respect?</p>
+<p>Any lock that is acquired within an RCU callback must be acquired
+elsewhere using an _bh variant of the spinlock primitive.
+For example, if &quot;mylock&quot; is acquired by an RCU callback, then
+a process-context acquisition of this lock must use something
+like <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">spin_lock_bh()</span></code> to acquire the lock.  Please note that
+it is also OK to use _irq variants of spinlocks, for example,
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">spin_lock_irqsave()</span></code>.</p>
+<p>If the process-context code were to simply use <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">spin_lock()</span></code>,
+then, since RCU callbacks can be invoked from softirq context,
+the callback might be called from a softirq that interrupted
+the process-context critical section.  This would result in
+self-deadlock.</p>
+<p>This restriction might seem gratuitous, since very few RCU
+callbacks acquire locks directly.  However, a great many RCU
+callbacks do acquire locks <em>indirectly</em>, for example, via
+the <a class="reference internal" href="../core-api/mm-api.html#c.kfree" title="kfree"><code class="xref c c-func docutils literal notranslate"><span class="pre">kfree()</span></code></a> primitive.</p>
+</dd>
+<dt>Answer to Quick Quiz #3:</dt><dd><p>Why can't <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a> return immediately on UP systems
+running preemptible RCU?</p>
+<p>Because some other task might have been preempted in the middle
+of an RCU read-side critical section.  If <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a>
+simply immediately returned, it would prematurely signal the
+end of the grace period, which would come as a nasty shock to
+that other thread when it started running again.</p>
+</dd>
+</dl>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/RCU/UP.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

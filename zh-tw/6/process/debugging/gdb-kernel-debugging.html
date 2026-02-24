@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Debugging kernel and modules via gdb &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/process/debugging/gdb-kernel-debugging.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜尋" href="../../search.html" />
+    <link rel="next" title="Using kgdb, kdb and the kernel debugger internals" href="kgdb.html" />
+    <link rel="prev" title="Debugging advice for driver development" href="driver_development_debugging_guide.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">All development-process docs</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#an-introduction-to-how-kernel-development-works">An introduction to how kernel development works</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#tools-and-technical-guides-for-kernel-developers">Tools and technical guides for kernel developers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#policy-guides-and-developer-statements">方針指南與開發者聲明</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#dealing-with-bugs">處理臭蟲</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Debugging advice for Linux Kernel developers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../handling-regressions.html">Handling regressions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../security-bugs.html">Security bugs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cve.html">CVEs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../embargoed-hardware-issues.html">Embargoed hardware issues</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#maintainer-information">維護者資訊</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#other-material">Other material</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/process/debugging/gdb-kernel-debugging.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="debugging-kernel-and-modules-via-gdb">
+<h1>Debugging kernel and modules via gdb<a class="headerlink" href="#debugging-kernel-and-modules-via-gdb" title="連結到這個標頭">¶</a></h1>
+<p>The kernel debugger kgdb, hypervisors like QEMU or JTAG-based hardware
+interfaces allow to debug the Linux kernel and its modules during runtime
+using gdb. Gdb comes with a powerful scripting interface for python. The
+kernel provides a collection of helper scripts that can simplify typical
+kernel debugging steps. This is a short tutorial about how to enable and use
+them. It focuses on QEMU/KVM virtual machines as target, but the examples can
+be transferred to the other gdb stubs as well.</p>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="連結到這個標頭">¶</a></h2>
+<ul class="simple">
+<li><p>gdb 7.2+ (recommended: 7.4+) with python support enabled (typically true
+for distributions)</p></li>
+</ul>
+</section>
+<section id="setup">
+<h2>Setup<a class="headerlink" href="#setup" title="連結到這個標頭">¶</a></h2>
+<ul>
+<li><p>Create a virtual Linux machine for QEMU/KVM (see www.linux-kvm.org and
+www.qemu.org for more details). For cross-development,
+<a class="reference external" href="https://landley.net/aboriginal/bin">https://landley.net/aboriginal/bin</a> keeps a pool of machine images and
+toolchains that can be helpful to start from.</p></li>
+<li><p>Build the kernel with CONFIG_GDB_SCRIPTS enabled, but leave
+CONFIG_DEBUG_INFO_REDUCED off. If your architecture supports
+CONFIG_FRAME_POINTER, keep it enabled.</p></li>
+<li><p>Install that kernel on the guest, turn off KASLR if necessary by adding
+&quot;nokaslr&quot; to the kernel command line.
+Alternatively, QEMU allows to boot the kernel directly using -kernel,
+-append, -initrd command line switches. This is generally only useful if
+you do not depend on modules. See QEMU documentation for more details on
+this mode. In this case, you should build the kernel with
+CONFIG_RANDOMIZE_BASE disabled if the architecture supports KASLR.</p></li>
+<li><p>Build the gdb scripts (required on kernels v5.1 and above):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>make scripts_gdb
+</pre></div>
+</div>
+</li>
+<li><p>Enable the gdb stub of QEMU/KVM, either</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>at VM startup time by appending &quot;-s&quot; to the QEMU command line</p></li>
+</ul>
+</div></blockquote>
+<p>or</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>during runtime by issuing &quot;gdbserver&quot; from the QEMU monitor
+console</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>cd /path/to/linux-build</p></li>
+<li><p>Start gdb: gdb vmlinux</p>
+<p>Note: Some distros may restrict auto-loading of gdb scripts to known safe
+directories. In case gdb reports to refuse loading vmlinux-gdb.py, add:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>add-auto-load-safe-path /path/to/linux-build
+</pre></div>
+</div>
+<p>to ~/.gdbinit. See gdb help for more details.</p>
+</li>
+<li><p>Attach to the booted guest:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(gdb) target remote :1234
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
+<section id="examples-of-using-the-linux-provided-gdb-helpers">
+<h2>Examples of using the Linux-provided gdb helpers<a class="headerlink" href="#examples-of-using-the-linux-provided-gdb-helpers" title="連結到這個標頭">¶</a></h2>
+<ul>
+<li><p>Load module (and main kernel) symbols:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(gdb) lx-symbols
+loading vmlinux
+scanning for modules in /home/user/linux/build
+loading @0xffffffffa0020000: /home/user/linux/build/net/netfilter/xt_tcpudp.ko
+loading @0xffffffffa0016000: /home/user/linux/build/net/netfilter/xt_pkttype.ko
+loading @0xffffffffa0002000: /home/user/linux/build/net/netfilter/xt_limit.ko
+loading @0xffffffffa00ca000: /home/user/linux/build/net/packet/af_packet.ko
+loading @0xffffffffa003c000: /home/user/linux/build/fs/fuse/fuse.ko
+...
+loading @0xffffffffa0000000: /home/user/linux/build/drivers/ata/ata_generic.ko
+</pre></div>
+</div>
+</li>
+<li><p>Set a breakpoint on some not yet loaded module function, e.g.:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(gdb) b btrfs_init_sysfs
+Function &quot;btrfs_init_sysfs&quot; not defined.
+Make breakpoint pending on future shared library load? (y or [n]) y
+Breakpoint 1 (btrfs_init_sysfs) pending.
+</pre></div>
+</div>
+</li>
+<li><p>Continue the target:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(gdb) c
+</pre></div>
+</div>
+</li>
+<li><p>Load the module on the target and watch the symbols being loaded as well as
+the breakpoint hit:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>loading @0xffffffffa0034000: /home/user/linux/build/lib/libcrc32c.ko
+loading @0xffffffffa0050000: /home/user/linux/build/lib/lzo/lzo_compress.ko
+loading @0xffffffffa006e000: /home/user/linux/build/lib/zlib_deflate/zlib_deflate.ko
+loading @0xffffffffa01b1000: /home/user/linux/build/fs/btrfs/btrfs.ko
+
+Breakpoint 1, btrfs_init_sysfs () at /home/user/linux/fs/btrfs/sysfs.c:36
+36              btrfs_kset = kset_create_and_add(&quot;btrfs&quot;, NULL, fs_kobj);
+</pre></div>
+</div>
+</li>
+<li><p>Dump the log buffer of the target kernel:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(gdb) lx-dmesg
+[     0.000000] Initializing cgroup subsys cpuset
+[     0.000000] Initializing cgroup subsys cpu
+[     0.000000] Linux version 3.8.0-rc4-dbg+ (...
+[     0.000000] Command line: root=/dev/sda2 resume=/dev/sda1 vga=0x314
+[     0.000000] e820: BIOS-provided physical RAM map:
+[     0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable
+[     0.000000] BIOS-e820: [mem 0x000000000009fc00-0x000000000009ffff] reserved
+....
+</pre></div>
+</div>
+</li>
+<li><p>Examine fields of the current task struct(supported by x86 and arm64 only):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(gdb) p $lx_current().pid
+$1 = 4998
+(gdb) p $lx_current().comm
+$2 = &quot;modprobe\000\000\000\000\000\000\000&quot;
+</pre></div>
+</div>
+</li>
+<li><p>Make use of the per-cpu function for the current or a specified CPU:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(gdb) p $lx_per_cpu(runqueues).nr_running
+$3 = 1
+(gdb) p $lx_per_cpu(runqueues, 2).nr_running
+$4 = 0
+</pre></div>
+</div>
+</li>
+<li><p>Dig into hrtimers using the container_of helper:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(gdb) set $leftmost = $lx_per_cpu(hrtimer_bases).clock_base[0].active.rb_root.rb_leftmost
+(gdb) p *$container_of($leftmost, &quot;struct hrtimer&quot;, &quot;node&quot;)
+$5 = {
+  node = {
+    node = {
+      __rb_parent_color = 18446612686384860673,
+      rb_right = 0xffff888231da8b00,
+      rb_left = 0x0
+    },
+    expires = 1228461000000
+  },
+  _softexpires = 1228461000000,
+  function = 0xffffffff8137ab20 &lt;tick_nohz_handler&gt;,
+  base = 0xffff888231d9b4c0,
+  state = 1 &#39;\001&#39;,
+  is_rel = 0 &#39;\000&#39;,
+  is_soft = 0 &#39;\000&#39;,
+  is_hard = 1 &#39;\001&#39;
+}
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
+<section id="list-of-commands-and-functions">
+<h2>List of commands and functions<a class="headerlink" href="#list-of-commands-and-functions" title="連結到這個標頭">¶</a></h2>
+<p>The number of commands and convenience functions may evolve over the time,
+this is just a snapshot of the initial version:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>(gdb) apropos lx
+function lx_current -- Return current task
+function lx_module -- Find module by name and return the module variable
+function lx_per_cpu -- Return per-cpu variable
+function lx_task_by_pid -- Find Linux task by PID and return the task_struct variable
+function lx_thread_info -- Calculate Linux thread_info from task variable
+lx-dmesg -- Print Linux kernel log buffer
+lx-lsmod -- List currently loaded modules
+lx-symbols -- (Re-)load symbols of Linux kernel and currently loaded modules
+</pre></div>
+</div>
+<p>Detailed help can be obtained via &quot;help &lt;command-name&gt;&quot; for commands and &quot;help
+function &lt;function-name&gt;&quot; for convenience functions.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/process/debugging/gdb-kernel-debugging.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

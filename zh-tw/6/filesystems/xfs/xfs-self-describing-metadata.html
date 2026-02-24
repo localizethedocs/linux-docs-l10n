@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>3. XFS Self Describing Metadata &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/filesystems/xfs/xfs-self-describing-metadata.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜尋" href="../../search.html" />
+    <link rel="next" title="4. XFS Online Fsck Design" href="xfs-online-fsck-design.html" />
+    <link rel="prev" title="1. XFS Logging Design" href="xfs-delayed-logging-design.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../subsystem-apis.html">子系統</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../subsystem-apis.html#core-subsystems">Core subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../../subsystem-apis.html#storage-interfaces">Storage interfaces</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">Linux 內核中的檔案系統</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../block/index.html">Block</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../cdrom/index.html">CD-ROM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../scsi/index.html">SCSI Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../target/index.html">TCM 虛擬裝置</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../nvme/index.html">NVMe Subsystem</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../subsystem-apis.html#other-subsystems">其他子系統</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/filesystems/xfs/xfs-self-describing-metadata.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="xfs-self-describing-metadata">
+<span id="id1"></span><h1><span class="section-number">3. </span>XFS Self Describing Metadata<a class="headerlink" href="#xfs-self-describing-metadata" title="連結到這個標頭">¶</a></h1>
+<section id="introduction">
+<h2><span class="section-number">3.1. </span>介紹<a class="headerlink" href="#introduction" title="連結到這個標頭">¶</a></h2>
+<p>The largest scalability problem facing XFS is not one of algorithmic
+scalability, but of verification of the filesystem structure. Scalabilty of the
+structures and indexes on disk and the algorithms for iterating them are
+adequate for supporting PB scale filesystems with billions of inodes, however it
+is this very scalability that causes the verification problem.</p>
+<p>Almost all metadata on XFS is dynamically allocated. The only fixed location
+metadata is the allocation group headers (SB, AGF, AGFL and AGI), while all
+other metadata structures need to be discovered by walking the filesystem
+structure in different ways. While this is already done by userspace tools for
+validating and repairing the structure, there are limits to what they can
+verify, and this in turn limits the supportable size of an XFS filesystem.</p>
+<p>For example, it is entirely possible to manually use xfs_db and a bit of
+scripting to analyse the structure of a 100TB filesystem when trying to
+determine the root cause of a corruption problem, but it is still mainly a
+manual task of verifying that things like single bit errors or misplaced writes
+weren't the ultimate cause of a corruption event. It may take a few hours to a
+few days to perform such forensic analysis, so for at this scale root cause
+analysis is entirely possible.</p>
+<p>However, if we scale the filesystem up to 1PB, we now have 10x as much metadata
+to analyse and so that analysis blows out towards weeks/months of forensic work.
+Most of the analysis work is slow and tedious, so as the amount of analysis goes
+up, the more likely that the cause will be lost in the noise.  Hence the primary
+concern for supporting PB scale filesystems is minimising the time and effort
+required for basic forensic analysis of the filesystem structure.</p>
+</section>
+<section id="self-describing-metadata">
+<h2><span class="section-number">3.2. </span>Self Describing Metadata<a class="headerlink" href="#self-describing-metadata" title="連結到這個標頭">¶</a></h2>
+<p>One of the problems with the current metadata format is that apart from the
+magic number in the metadata block, we have no other way of identifying what it
+is supposed to be. We can't even identify if it is the right place. Put simply,
+you can't look at a single metadata block in isolation and say &quot;yes, it is
+supposed to be there and the contents are valid&quot;.</p>
+<p>Hence most of the time spent on forensic analysis is spent doing basic
+verification of metadata values, looking for values that are in range (and hence
+not detected by automated verification checks) but are not correct. Finding and
+understanding how things like cross linked block lists (e.g. sibling
+pointers in a btree end up with loops in them) are the key to understanding what
+went wrong, but it is impossible to tell what order the blocks were linked into
+each other or written to disk after the fact.</p>
+<p>Hence we need to record more information into the metadata to allow us to
+quickly determine if the metadata is intact and can be ignored for the purpose
+of analysis. We can't protect against every possible type of error, but we can
+ensure that common types of errors are easily detectable.  Hence the concept of
+self describing metadata.</p>
+<p>The first, fundamental requirement of self describing metadata is that the
+metadata object contains some form of unique identifier in a well known
+location. This allows us to identify the expected contents of the block and
+hence parse and verify the metadata object. IF we can't independently identify
+the type of metadata in the object, then the metadata doesn't describe itself
+very well at all!</p>
+<p>Luckily, almost all XFS metadata has magic numbers embedded already - only the
+AGFL, remote symlinks and remote attribute blocks do not contain identifying
+magic numbers. Hence we can change the on-disk format of all these objects to
+add more identifying information and detect this simply by changing the magic
+numbers in the metadata objects. That is, if it has the current magic number,
+the metadata isn't self identifying. If it contains a new magic number, it is
+self identifying and we can do much more expansive automated verification of the
+metadata object at runtime, during forensic analysis or repair.</p>
+<p>As a primary concern, self describing metadata needs some form of overall
+integrity checking. We cannot trust the metadata if we cannot verify that it has
+not been changed as a result of external influences. Hence we need some form of
+integrity check, and this is done by adding CRC32c validation to the metadata
+block. If we can verify the block contains the metadata it was intended to
+contain, a large amount of the manual verification work can be skipped.</p>
+<p>CRC32c was selected as metadata cannot be more than 64k in length in XFS and
+hence a 32 bit CRC is more than sufficient to detect multi-bit errors in
+metadata blocks. CRC32c is also now hardware accelerated on common CPUs so it is
+fast. So while CRC32c is not the strongest of possible integrity checks that
+could be used, it is more than sufficient for our needs and has relatively
+little overhead. Adding support for larger integrity fields and/or algorithms
+does really provide any extra value over CRC32c, but it does add a lot of
+complexity and so there is no provision for changing the integrity checking
+mechanism.</p>
+<p>Self describing metadata needs to contain enough information so that the
+metadata block can be verified as being in the correct place without needing to
+look at any other metadata. This means it needs to contain location information.
+Just adding a block number to the metadata is not sufficient to protect against
+mis-directed writes - a write might be misdirected to the wrong LUN and so be
+written to the &quot;correct block&quot; of the wrong filesystem. Hence location
+information must contain a filesystem identifier as well as a block number.</p>
+<p>Another key information point in forensic analysis is knowing who the metadata
+block belongs to. We already know the type, the location, that it is valid
+and/or corrupted, and how long ago that it was last modified. Knowing the owner
+of the block is important as it allows us to find other related metadata to
+determine the scope of the corruption. For example, if we have a extent btree
+object, we don't know what inode it belongs to and hence have to walk the entire
+filesystem to find the owner of the block. Worse, the corruption could mean that
+no owner can be found (i.e. it's an orphan block), and so without an owner field
+in the metadata we have no idea of the scope of the corruption. If we have an
+owner field in the metadata object, we can immediately do top down validation to
+determine the scope of the problem.</p>
+<p>Different types of metadata have different owner identifiers. For example,
+directory, attribute and extent tree blocks are all owned by an inode, while
+freespace btree blocks are owned by an allocation group. Hence the size and
+contents of the owner field are determined by the type of metadata object we are
+looking at.  The owner information can also identify misplaced writes (e.g.
+freespace btree block written to the wrong AG).</p>
+<p>Self describing metadata also needs to contain some indication of when it was
+written to the filesystem. One of the key information points when doing forensic
+analysis is how recently the block was modified. Correlation of set of corrupted
+metadata blocks based on modification times is important as it can indicate
+whether the corruptions are related, whether there's been multiple corruption
+events that lead to the eventual failure, and even whether there are corruptions
+present that the run-time verification is not detecting.</p>
+<p>For example, we can determine whether a metadata object is supposed to be free
+space or still allocated if it is still referenced by its owner by looking at
+when the free space btree block that contains the block was last written
+compared to when the metadata object itself was last written.  If the free space
+block is more recent than the object and the object's owner, then there is a
+very good chance that the block should have been removed from the owner.</p>
+<p>To provide this &quot;written timestamp&quot;, each metadata block gets the Log Sequence
+Number (LSN) of the most recent transaction it was modified on written into it.
+This number will always increase over the life of the filesystem, and the only
+thing that resets it is running xfs_repair on the filesystem. Further, by use of
+the LSN we can tell if the corrupted metadata all belonged to the same log
+checkpoint and hence have some idea of how much modification occurred between
+the first and last instance of corrupt metadata on disk and, further, how much
+modification occurred between the corruption being written and when it was
+detected.</p>
+</section>
+<section id="runtime-validation">
+<h2><span class="section-number">3.3. </span>Runtime Validation<a class="headerlink" href="#runtime-validation" title="連結到這個標頭">¶</a></h2>
+<p>Validation of self-describing metadata takes place at runtime in two places:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>immediately after a successful read from disk</p></li>
+<li><p>immediately prior to write IO submission</p></li>
+</ul>
+</div></blockquote>
+<p>The verification is completely stateless - it is done independently of the
+modification process, and seeks only to check that the metadata is what it says
+it is and that the metadata fields are within bounds and internally consistent.
+As such, we cannot catch all types of corruption that can occur within a block
+as there may be certain limitations that operational state enforces of the
+metadata, or there may be corruption of interblock relationships (e.g. corrupted
+sibling pointer lists). Hence we still need stateful checking in the main code
+body, but in general most of the per-field validation is handled by the
+verifiers.</p>
+<p>For read verification, the caller needs to specify the expected type of metadata
+that it should see, and the IO completion process verifies that the metadata
+object matches what was expected. If the verification process fails, then it
+marks the object being read as EFSCORRUPTED. The caller needs to catch this
+error (same as for IO errors), and if it needs to take special action due to a
+verification error it can do so by catching the EFSCORRUPTED error value. If we
+need more discrimination of error type at higher levels, we can define new
+error numbers for different errors as necessary.</p>
+<p>The first step in read verification is checking the magic number and determining
+whether CRC validating is necessary. If it is, the CRC32c is calculated and
+compared against the value stored in the object itself. Once this is validated,
+further checks are made against the location information, followed by extensive
+object specific metadata validation. If any of these checks fail, then the
+buffer is considered corrupt and the EFSCORRUPTED error is set appropriately.</p>
+<p>Write verification is the opposite of the read verification - first the object
+is extensively verified and if it is OK we then update the LSN from the last
+modification made to the object, After this, we calculate the CRC and insert it
+into the object. Once this is done the write IO is allowed to continue. If any
+error occurs during this process, the buffer is again marked with a EFSCORRUPTED
+error for the higher layers to catch.</p>
+</section>
+<section id="structures">
+<h2><span class="section-number">3.4. </span>Structures<a class="headerlink" href="#structures" title="連結到這個標頭">¶</a></h2>
+<p>A typical on-disk structure needs to contain the following information:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct xfs_ondisk_hdr {
+        __be32  magic;              /* magic number */
+        __be32  crc;                /* CRC, not logged */
+        uuid_t  uuid;               /* filesystem identifier */
+        __be64  owner;              /* parent object */
+        __be64  blkno;              /* location on disk */
+        __be64  lsn;                /* last modification in log, not logged */
+};
+</pre></div>
+</div>
+<p>Depending on the metadata, this information may be part of a header structure
+separate to the metadata contents, or may be distributed through an existing
+structure. The latter occurs with metadata that already contains some of this
+information, such as the superblock and AG headers.</p>
+<p>Other metadata may have different formats for the information, but the same
+level of information is generally provided. For example:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>short btree blocks have a 32 bit owner (ag number) and a 32 bit block
+number for location. The two of these combined provide the same
+information as &#64;owner and &#64;blkno in eh above structure, but using 8
+bytes less space on disk.</p></li>
+<li><p>directory/attribute node blocks have a 16 bit magic number, and the
+header that contains the magic number has other information in it as
+well. hence the additional metadata headers change the overall format
+of the metadata.</p></li>
+</ul>
+</div></blockquote>
+<p>A typical buffer read verifier is structured as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#define XFS_FOO_CRC_OFF             offsetof(struct xfs_ondisk_hdr, crc)
+
+static void
+xfs_foo_read_verify(
+        struct xfs_buf      *bp)
+{
+    struct xfs_mount *mp = bp-&gt;b_mount;
+
+        if ((xfs_sb_version_hascrc(&amp;mp-&gt;m_sb) &amp;&amp;
+            !xfs_verify_cksum(bp-&gt;b_addr, BBTOB(bp-&gt;b_length),
+                                        XFS_FOO_CRC_OFF)) ||
+            !xfs_foo_verify(bp)) {
+                XFS_CORRUPTION_ERROR(__func__, XFS_ERRLEVEL_LOW, mp, bp-&gt;b_addr);
+                xfs_buf_ioerror(bp, EFSCORRUPTED);
+        }
+}
+</pre></div>
+</div>
+<p>The code ensures that the CRC is only checked if the filesystem has CRCs enabled
+by checking the superblock of the feature bit, and then if the CRC verifies OK
+(or is not needed) it verifies the actual contents of the block.</p>
+<p>The verifier function will take a couple of different forms, depending on
+whether the magic number can be used to determine the format of the block. In
+the case it can't, the code is structured as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static bool
+xfs_foo_verify(
+        struct xfs_buf              *bp)
+{
+        struct xfs_mount    *mp = bp-&gt;b_mount;
+        struct xfs_ondisk_hdr       *hdr = bp-&gt;b_addr;
+
+        if (hdr-&gt;magic != cpu_to_be32(XFS_FOO_MAGIC))
+                return false;
+
+        if (!xfs_sb_version_hascrc(&amp;mp-&gt;m_sb)) {
+                if (!uuid_equal(&amp;hdr-&gt;uuid, &amp;mp-&gt;m_sb.sb_uuid))
+                        return false;
+                if (bp-&gt;b_bn != be64_to_cpu(hdr-&gt;blkno))
+                        return false;
+                if (hdr-&gt;owner == 0)
+                        return false;
+        }
+
+        /* object specific verification checks here */
+
+        return true;
+}
+</pre></div>
+</div>
+<p>If there are different magic numbers for the different formats, the verifier
+will look like:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static bool
+xfs_foo_verify(
+        struct xfs_buf              *bp)
+{
+        struct xfs_mount    *mp = bp-&gt;b_mount;
+        struct xfs_ondisk_hdr       *hdr = bp-&gt;b_addr;
+
+        if (hdr-&gt;magic == cpu_to_be32(XFS_FOO_CRC_MAGIC)) {
+                if (!uuid_equal(&amp;hdr-&gt;uuid, &amp;mp-&gt;m_sb.sb_uuid))
+                        return false;
+                if (bp-&gt;b_bn != be64_to_cpu(hdr-&gt;blkno))
+                        return false;
+                if (hdr-&gt;owner == 0)
+                        return false;
+        } else if (hdr-&gt;magic != cpu_to_be32(XFS_FOO_MAGIC))
+                return false;
+
+        /* object specific verification checks here */
+
+        return true;
+}
+</pre></div>
+</div>
+<p>Write verifiers are very similar to the read verifiers, they just do things in
+the opposite order to the read verifiers. A typical write verifier:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static void
+xfs_foo_write_verify(
+        struct xfs_buf      *bp)
+{
+        struct xfs_mount    *mp = bp-&gt;b_mount;
+        struct xfs_buf_log_item     *bip = bp-&gt;b_fspriv;
+
+        if (!xfs_foo_verify(bp)) {
+                XFS_CORRUPTION_ERROR(__func__, XFS_ERRLEVEL_LOW, mp, bp-&gt;b_addr);
+                xfs_buf_ioerror(bp, EFSCORRUPTED);
+                return;
+        }
+
+        if (!xfs_sb_version_hascrc(&amp;mp-&gt;m_sb))
+                return;
+
+
+        if (bip) {
+                struct xfs_ondisk_hdr       *hdr = bp-&gt;b_addr;
+                hdr-&gt;lsn = cpu_to_be64(bip-&gt;bli_item.li_lsn);
+        }
+        xfs_update_cksum(bp-&gt;b_addr, BBTOB(bp-&gt;b_length), XFS_FOO_CRC_OFF);
+}
+</pre></div>
+</div>
+<p>This will verify the internal structure of the metadata before we go any
+further, detecting corruptions that have occurred as the metadata has been
+modified in memory. If the metadata verifies OK, and CRCs are enabled, we then
+update the LSN field (when it was last modified) and calculate the CRC on the
+metadata. Once this is done, we can issue the IO.</p>
+</section>
+<section id="inodes-and-dquots">
+<h2><span class="section-number">3.5. </span>Inodes and Dquots<a class="headerlink" href="#inodes-and-dquots" title="連結到這個標頭">¶</a></h2>
+<p>Inodes and dquots are special snowflakes. They have per-object CRC and
+self-identifiers, but they are packed so that there are multiple objects per
+buffer. Hence we do not use per-buffer verifiers to do the work of per-object
+verification and CRC calculations. The per-buffer verifiers simply perform basic
+identification of the buffer - that they contain inodes or dquots, and that
+there are magic numbers in all the expected spots. All further CRC and
+verification checks are done when each inode is read from or written back to the
+buffer.</p>
+<p>The structure of the verifiers and the identifiers checks is very similar to the
+buffer code described above. The only difference is where they are called. For
+example, inode read verification is done in <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">xfs_inode_from_disk()</span></code> when the inode
+is first read out of the buffer and the <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">xfs_inode</span></code> is instantiated. The
+inode is already extensively verified during writeback in xfs_iflush_int, so the
+only addition here is to add the LSN and CRC to the inode as it is copied back
+into the buffer.</p>
+<p>XXX: inode unlinked list modification doesn't recalculate the inode CRC! None of
+the unlinked list modifications check or update CRCs, neither during unlink nor
+log recovery. So, it's gone unnoticed until now. This won't matter immediately -
+repair will probably complain about it - but it needs to be fixed.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/filesystems/xfs/xfs-self-describing-metadata.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

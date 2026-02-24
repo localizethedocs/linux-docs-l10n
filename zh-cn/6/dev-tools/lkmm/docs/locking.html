@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Locking &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/dev-tools/lkmm/docs/locking.html" />
+    <link rel="index" title="索引" href="../../../genindex.html" />
+    <link rel="search" title="搜索" href="../../../search.html" />
+    <link rel="next" title="Recipes" href="recipes.html" />
+    <link rel="prev" title="Litmus Tests" href="litmus-tests.html" />
+
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../locking/index.html">Locking</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">Development tools</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../testing-overview.html">Kernel Testing Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../checkpatch.html">Checkpatch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../clang-format.html">clang-format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../coccinelle.html">Coccinelle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../sparse.html">Sparse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../kcov.html">KCOV: code coverage for fuzzing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../gcov.html">Using gcov with the Linux kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../kasan.html">Kernel Address Sanitizer (KASAN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../kmsan.html">Kernel Memory Sanitizer (KMSAN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ubsan.html">Undefined Behavior Sanitizer - UBSAN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../kmemleak.html">Kernel Memory Leak Detector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../kcsan.html">Kernel Concurrency Sanitizer (KCSAN)</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html">Linux Kernel Memory Consistency Model (LKMM)</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../readme.html">README (for LKMM)</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../kfence.html">Kernel Electric-Fence (KFENCE)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../kselftest.html">Linux Kernel Selftests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../kunit/index.html">KUnit - Linux Kernel Unit Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../ktap.html">The Kernel Test Anything Protocol (KTAP), version 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../checkuapi.html">UAPI Checker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../gpio-sloppy-logic-analyzer.html">Linux Kernel GPIO based sloppy logic analyzer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../autofdo.html">Using AutoFDO with the Linux kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../propeller.html">Using Propeller with the Linux kernel</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../_sources/dev-tools/lkmm/docs/locking.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="locking">
+<h1>Locking<a class="headerlink" href="#locking" title="Link to this heading">¶</a></h1>
+<p>Literal include of <code class="docutils literal notranslate"><span class="pre">tools/memory-model/Documentation/locking.txt</span></code>.</p>
+<hr class="docutils" />
+<pre class="literal-block">[!] Note:
+        This file expands on the &quot;Locking&quot; section of recipes.txt,
+        focusing on locklessly accessing shared variables that are
+        otherwise protected by a lock.
+
+Locking
+=======
+
+Locking is well-known and the common use cases are straightforward: Any
+CPU holding a given lock sees any changes previously seen or made by any
+CPU before it previously released that same lock.  This last sentence
+is the only part of this document that most developers will need to read.
+
+However, developers who would like to also access lock-protected shared
+variables outside of their corresponding locks should continue reading.
+
+
+Locking and Prior Accesses
+--------------------------
+
+The basic rule of locking is worth repeating:
+
+        Any CPU holding a given lock sees any changes previously seen
+        or made by any CPU before it previously released that same lock.
+
+Note that this statement is a bit stronger than &quot;Any CPU holding a
+given lock sees all changes made by any CPU during the time that CPU was
+previously holding this same lock&quot;.  For example, consider the following
+pair of code fragments:
+
+        /* See MP+polocks.litmus. */
+        void CPU0(void)
+        {
+                WRITE_ONCE(x, 1);
+                spin_lock(&amp;mylock);
+                WRITE_ONCE(y, 1);
+                spin_unlock(&amp;mylock);
+        }
+
+        void CPU1(void)
+        {
+                spin_lock(&amp;mylock);
+                r0 = READ_ONCE(y);
+                spin_unlock(&amp;mylock);
+                r1 = READ_ONCE(x);
+        }
+
+The basic rule guarantees that if CPU0() acquires mylock before CPU1(),
+then both r0 and r1 must be set to the value 1.  This also has the
+consequence that if the final value of r0 is equal to 1, then the final
+value of r1 must also be equal to 1.  In contrast, the weaker rule would
+say nothing about the final value of r1.
+
+
+Locking and Subsequent Accesses
+-------------------------------
+
+The converse to the basic rule also holds:  Any CPU holding a given
+lock will not see any changes that will be made by any CPU after it
+subsequently acquires this same lock.  This converse statement is
+illustrated by the following litmus test:
+
+        /* See MP+porevlocks.litmus. */
+        void CPU0(void)
+        {
+                r0 = READ_ONCE(y);
+                spin_lock(&amp;mylock);
+                r1 = READ_ONCE(x);
+                spin_unlock(&amp;mylock);
+        }
+
+        void CPU1(void)
+        {
+                spin_lock(&amp;mylock);
+                WRITE_ONCE(x, 1);
+                spin_unlock(&amp;mylock);
+                WRITE_ONCE(y, 1);
+        }
+
+This converse to the basic rule guarantees that if CPU0() acquires
+mylock before CPU1(), then both r0 and r1 must be set to the value 0.
+This also has the consequence that if the final value of r1 is equal
+to 0, then the final value of r0 must also be equal to 0.  In contrast,
+the weaker rule would say nothing about the final value of r0.
+
+These examples show only a single pair of CPUs, but the effects of the
+locking basic rule extend across multiple acquisitions of a given lock
+across multiple CPUs.
+
+
+Double-Checked Locking
+----------------------
+
+It is well known that more than just a lock is required to make
+double-checked locking work correctly,  This litmus test illustrates
+one incorrect approach:
+
+        /* See Documentation/litmus-tests/locking/DCL-broken.litmus. */
+        void CPU0(void)
+        {
+                r0 = READ_ONCE(flag);
+                if (r0 == 0) {
+                        spin_lock(&amp;lck);
+                        r1 = READ_ONCE(flag);
+                        if (r1 == 0) {
+                                WRITE_ONCE(data, 1);
+                                WRITE_ONCE(flag, 1);
+                        }
+                        spin_unlock(&amp;lck);
+                }
+                r2 = READ_ONCE(data);
+        }
+        /* CPU1() is the exactly the same as CPU0(). */
+
+There are two problems.  First, there is no ordering between the first
+READ_ONCE() of &quot;flag&quot; and the READ_ONCE() of &quot;data&quot;.  Second, there is
+no ordering between the two WRITE_ONCE() calls.  It should therefore be
+no surprise that &quot;r2&quot; can be zero, and a quick herd7 run confirms this.
+
+One way to fix this is to use smp_load_acquire() and smp_store_release()
+as shown in this corrected version:
+
+        /* See Documentation/litmus-tests/locking/DCL-fixed.litmus. */
+        void CPU0(void)
+        {
+                r0 = smp_load_acquire(&amp;flag);
+                if (r0 == 0) {
+                        spin_lock(&amp;lck);
+                        r1 = READ_ONCE(flag);
+                        if (r1 == 0) {
+                                WRITE_ONCE(data, 1);
+                                smp_store_release(&amp;flag, 1);
+                        }
+                        spin_unlock(&amp;lck);
+                }
+                r2 = READ_ONCE(data);
+        }
+        /* CPU1() is the exactly the same as CPU0(). */
+
+The smp_load_acquire() guarantees that its load from &quot;flags&quot; will
+be ordered before the READ_ONCE() from data, thus solving the first
+problem.  The smp_store_release() guarantees that its store will be
+ordered after the WRITE_ONCE() to &quot;data&quot;, solving the second problem.
+The smp_store_release() pairs with the smp_load_acquire(), thus ensuring
+that the ordering provided by each actually takes effect.  Again, a
+quick herd7 run confirms this.
+
+In short, if you access a lock-protected variable without holding the
+corresponding lock, you will need to provide additional ordering, in
+this case, via the smp_load_acquire() and the smp_store_release().
+
+
+Ordering Provided by a Lock to CPUs Not Holding That Lock
+---------------------------------------------------------
+
+It is not necessarily the case that accesses ordered by locking will be
+seen as ordered by CPUs not holding that lock.  Consider this example:
+
+        /* See Z6.0+pooncelock+pooncelock+pombonce.litmus. */
+        void CPU0(void)
+        {
+                spin_lock(&amp;mylock);
+                WRITE_ONCE(x, 1);
+                WRITE_ONCE(y, 1);
+                spin_unlock(&amp;mylock);
+        }
+
+        void CPU1(void)
+        {
+                spin_lock(&amp;mylock);
+                r0 = READ_ONCE(y);
+                WRITE_ONCE(z, 1);
+                spin_unlock(&amp;mylock);
+        }
+
+        void CPU2(void)
+        {
+                WRITE_ONCE(z, 2);
+                smp_mb();
+                r1 = READ_ONCE(x);
+        }
+
+Counter-intuitive though it might be, it is quite possible to have
+the final value of r0 be 1, the final value of z be 2, and the final
+value of r1 be 0.  The reason for this surprising outcome is that CPU2()
+never acquired the lock, and thus did not fully benefit from the lock's
+ordering properties.
+
+Ordering can be extended to CPUs not holding the lock by careful use
+of smp_mb__after_spinlock():
+
+        /* See Z6.0+pooncelock+poonceLock+pombonce.litmus. */
+        void CPU0(void)
+        {
+                spin_lock(&amp;mylock);
+                WRITE_ONCE(x, 1);
+                WRITE_ONCE(y, 1);
+                spin_unlock(&amp;mylock);
+        }
+
+        void CPU1(void)
+        {
+                spin_lock(&amp;mylock);
+                smp_mb__after_spinlock();
+                r0 = READ_ONCE(y);
+                WRITE_ONCE(z, 1);
+                spin_unlock(&amp;mylock);
+        }
+
+        void CPU2(void)
+        {
+                WRITE_ONCE(z, 2);
+                smp_mb();
+                r1 = READ_ONCE(x);
+        }
+
+This addition of smp_mb__after_spinlock() strengthens the lock
+acquisition sufficiently to rule out the counter-intuitive outcome.
+In other words, the addition of the smp_mb__after_spinlock() prohibits
+the counter-intuitive result where the final value of r0 is 1, the final
+value of z is 2, and the final value of r1 is 0.
+
+
+No Roach-Motel Locking!
+-----------------------
+
+This example requires familiarity with the herd7 &quot;filter&quot; clause, so
+please read up on that topic in litmus-tests.txt.
+
+It is tempting to allow memory-reference instructions to be pulled
+into a critical section, but this cannot be allowed in the general case.
+For example, consider a spin loop preceding a lock-based critical section.
+Now, herd7 does not model spin loops, but we can emulate one with two
+loads, with a &quot;filter&quot; clause to constrain the first to return the
+initial value and the second to return the updated value, as shown below:
+
+        /* See Documentation/litmus-tests/locking/RM-fixed.litmus. */
+        void CPU0(void)
+        {
+                spin_lock(&amp;lck);
+                r2 = atomic_inc_return(&amp;y);
+                WRITE_ONCE(x, 1);
+                spin_unlock(&amp;lck);
+        }
+
+        void CPU1(void)
+        {
+                r0 = READ_ONCE(x);
+                r1 = READ_ONCE(x);
+                spin_lock(&amp;lck);
+                r2 = atomic_inc_return(&amp;y);
+                spin_unlock(&amp;lck);
+        }
+
+        filter (1:r0=0 /\ 1:r1=1)
+        exists (1:r2=1)
+
+The variable &quot;x&quot; is the control variable for the emulated spin loop.
+CPU0() sets it to &quot;1&quot; while holding the lock, and CPU1() emulates the
+spin loop by reading it twice, first into &quot;1:r0&quot; (which should get the
+initial value &quot;0&quot;) and then into &quot;1:r1&quot; (which should get the updated
+value &quot;1&quot;).
+
+The &quot;filter&quot; clause takes this into account, constraining &quot;1:r0&quot; to
+equal &quot;0&quot; and &quot;1:r1&quot; to equal 1.
+
+Then the &quot;exists&quot; clause checks to see if CPU1() acquired its lock first,
+which should not happen given the filter clause because CPU0() updates
+&quot;x&quot; while holding the lock.  And herd7 confirms this.
+
+But suppose that the compiler was permitted to reorder the spin loop
+into CPU1()'s critical section, like this:
+
+        /* See Documentation/litmus-tests/locking/RM-broken.litmus. */
+        void CPU0(void)
+        {
+                int r2;
+
+                spin_lock(&amp;lck);
+                r2 = atomic_inc_return(&amp;y);
+                WRITE_ONCE(x, 1);
+                spin_unlock(&amp;lck);
+        }
+
+        void CPU1(void)
+        {
+                spin_lock(&amp;lck);
+                r0 = READ_ONCE(x);
+                r1 = READ_ONCE(x);
+                r2 = atomic_inc_return(&amp;y);
+                spin_unlock(&amp;lck);
+        }
+
+        filter (1:r0=0 /\ 1:r1=1)
+        exists (1:r2=1)
+
+If &quot;1:r0&quot; is equal to &quot;0&quot;, &quot;1:r1&quot; can never equal &quot;1&quot; because CPU0()
+cannot update &quot;x&quot; while CPU1() holds the lock.  And herd7 confirms this,
+showing zero executions matching the &quot;filter&quot; criteria.
+
+And this is why Linux-kernel lock and unlock primitives must prevent
+code from entering critical sections.  It is not sufficient to only
+prevent code from leaving them.
+</pre>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../../_sources/dev-tools/lkmm/docs/locking.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

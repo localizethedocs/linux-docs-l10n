@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>(Un)patching Callbacks &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/livepatch/callbacks.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Atomic Replace &amp; Cumulative Patches" href="cumulative-patches.html" />
+    <link rel="prev" title="Livepatch" href="livepatch.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Livepatching</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="livepatch.html">Livepatch</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">(Un)patching Callbacks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#motivation">1. Motivation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#callback-types">2. Callback types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#how-it-works">3. How it works</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#use-cases">4. Use cases</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cumulative-patches.html">Atomic Replace &amp; Cumulative Patches</a></li>
+<li class="toctree-l2"><a class="reference internal" href="module-elf-format.html">Livepatch module ELF format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shadow-vars.html">Shadow Variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="system-state.html">System State Changes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="reliable-stacktrace.html">Reliable Stacktrace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html">Livepatching APIs</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/livepatch/callbacks.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="un-patching-callbacks">
+<h1>(Un)patching Callbacks<a class="headerlink" href="#un-patching-callbacks" title="Link to this heading">¶</a></h1>
+<p>Livepatch (un)patch-callbacks provide a mechanism for livepatch modules
+to execute callback functions when a kernel object is (un)patched.  They
+can be considered a <strong>power feature</strong> that <strong>extends livepatching abilities</strong>
+to include:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Safe updates to global data</p></li>
+<li><p>“Patches” to init and probe functions</p></li>
+<li><p>Patching otherwise unpatchable code (i.e. assembly)</p></li>
+</ul>
+</div></blockquote>
+<p>In most cases, (un)patch callbacks will need to be used in conjunction
+with memory barriers and kernel synchronization primitives, like
+mutexes/spinlocks, or even <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">stop_machine()</span></code>, to avoid concurrency issues.</p>
+<section id="motivation">
+<h2>1. Motivation<a class="headerlink" href="#motivation" title="Link to this heading">¶</a></h2>
+<p>Callbacks differ from existing kernel facilities:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Module init/exit code doesn’t run when disabling and re-enabling a
+patch.</p></li>
+<li><p>A module notifier can’t stop a to-be-patched module from loading.</p></li>
+</ul>
+</div></blockquote>
+<p>Callbacks are part of the klp_object structure and their implementation
+is specific to that klp_object.  Other livepatch objects may or may not
+be patched, irrespective of the target klp_object’s current state.</p>
+</section>
+<section id="callback-types">
+<h2>2. Callback types<a class="headerlink" href="#callback-types" title="Link to this heading">¶</a></h2>
+<p>Callbacks can be registered for the following livepatch actions:</p>
+<blockquote>
+<div><ul class="simple">
+<li><dl class="simple">
+<dt>Pre-patch</dt><dd><ul>
+<li><p>before a klp_object is patched</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Post-patch</dt><dd><ul>
+<li><p>after a klp_object has been patched and is active
+across all tasks</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Pre-unpatch</dt><dd><ul>
+<li><p>before a klp_object is unpatched (ie, patched code is
+active), used to clean up post-patch callback
+resources</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Post-unpatch</dt><dd><ul>
+<li><p>after a klp_object has been patched, all code has
+been restored and no tasks are running patched code,
+used to cleanup pre-patch callback resources</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+</section>
+<section id="how-it-works">
+<h2>3. How it works<a class="headerlink" href="#how-it-works" title="Link to this heading">¶</a></h2>
+<p>Each callback is optional, omitting one does not preclude specifying any
+other.  However, the livepatching core executes the handlers in
+symmetry: pre-patch callbacks have a post-unpatch counterpart and
+post-patch callbacks have a pre-unpatch counterpart.  An unpatch
+callback will only be executed if its corresponding patch callback was
+executed.  Typical use cases pair a patch handler that acquires and
+configures resources with an unpatch handler tears down and releases
+those same resources.</p>
+<p>A callback is only executed if its host klp_object is loaded.  For
+in-kernel vmlinux targets, this means that callbacks will always execute
+when a livepatch is enabled/disabled.  For patch target kernel modules,
+callbacks will only execute if the target module is loaded.  When a
+module target is (un)loaded, its callbacks will execute only if the
+livepatch module is enabled.</p>
+<p>The pre-patch callback, if specified, is expected to return a status
+code (0 for success, -ERRNO on error).  An error status code indicates
+to the livepatching core that patching of the current klp_object is not
+safe and to stop the current patching request.  (When no pre-patch
+callback is provided, the transition is assumed to be safe.)  If a
+pre-patch callback returns failure, the kernel’s module loader will:</p>
+<blockquote>
+<div><ul>
+<li><p>Refuse to load a livepatch, if the livepatch is loaded after
+targeted code.</p>
+<p>or:</p>
+</li>
+<li><p>Refuse to load a module, if the livepatch was already successfully
+loaded.</p></li>
+</ul>
+</div></blockquote>
+<p>No post-patch, pre-unpatch, or post-unpatch callbacks will be executed
+for a given klp_object if the object failed to patch, due to a failed
+pre_patch callback or for any other reason.</p>
+<p>If a patch transition is reversed, no pre-unpatch handlers will be run
+(this follows the previously mentioned symmetry -- pre-unpatch callbacks
+will only occur if their corresponding post-patch callback executed).</p>
+<p>If the object did successfully patch, but the patch transition never
+started for some reason (e.g., if another object failed to patch),
+only the post-unpatch callback will be called.</p>
+</section>
+<section id="use-cases">
+<h2>4. Use cases<a class="headerlink" href="#use-cases" title="Link to this heading">¶</a></h2>
+<p>Sample livepatch modules demonstrating the callback API can be found in
+samples/livepatch/ directory.  These samples were modified for use in
+kselftests and can be found in the lib/livepatch directory.</p>
+<section id="global-data-update">
+<h3>Global data update<a class="headerlink" href="#global-data-update" title="Link to this heading">¶</a></h3>
+<p>A pre-patch callback can be useful to update a global variable.  For
+example, <a class="reference external" href="https://git.kernel.org/torvalds/c/75ff39ccc1bd">commit 75ff39ccc1bd</a> (“tcp: make challenge acks less predictable”)
+changes a global sysctl, as well as patches the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">tcp_send_challenge_ack()</span></code>
+function.</p>
+<p>In this case, if we’re being super paranoid, it might make sense to
+patch the data <em>after</em> patching is complete with a post-patch callback,
+so that <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">tcp_send_challenge_ack()</span></code> could first be changed to read
+sysctl_tcp_challenge_ack_limit with READ_ONCE.</p>
+</section>
+<section id="init-and-probe-function-patches-support">
+<h3>__init and probe function patches support<a class="headerlink" href="#init-and-probe-function-patches-support" title="Link to this heading">¶</a></h3>
+<p>Although __init and probe functions are not directly livepatch-able, it
+may be possible to implement similar updates via pre/post-patch
+callbacks.</p>
+<p>The <a class="reference external" href="https://git.kernel.org/torvalds/c/48900cb6af42">commit 48900cb6af42</a> (“virtio-net: drop NETIF_F_FRAGLIST”) change the way that
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">virtnet_probe()</span></code> initialized its driver’s net_device features.  A
+pre/post-patch callback could iterate over all such devices, making a
+similar change to their hw_features value.  (Client functions of the
+value may need to be updated accordingly.)</p>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/livepatch/callbacks.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
