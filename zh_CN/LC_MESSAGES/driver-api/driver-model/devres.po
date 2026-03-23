@@ -1,0 +1,529 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-06 06:05+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../driver-api/driver-model/devres.rst:3
+msgid "Devres - Managed Device Resource"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:5
+msgid "Tejun Heo       <teheo@suse.de>"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:7
+msgid "First draft     10 January 2007"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:20
+msgid "1. Intro"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:22
+msgid ""
+"devres came up while trying to convert libata to use iomap.  Each iomapped "
+"address should be kept and unmapped on driver detach.  For example, a plain "
+"SFF ATA controller (that is, good old PCI IDE) in native mode makes use of 5 "
+"PCI BARs and all of them should be maintained."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:28
+msgid ""
+"As with many other device drivers, libata low level drivers have sufficient "
+"bugs in ->remove and ->probe failure path.  Well, yes, that's probably "
+"because libata low level driver developers are lazy bunch, but aren't all "
+"low level driver developers?  After spending a day fiddling with "
+"braindamaged hardware with no document or braindamaged document, if it's "
+"finally working, well, it's working."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:35
+msgid ""
+"For one reason or another, low level drivers don't receive as much attention "
+"or testing as core code, and bugs on driver detach or initialization failure "
+"don't happen often enough to be noticeable. Init failure path is worse "
+"because it's much less travelled while needs to handle multiple entry points."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:41
+msgid ""
+"So, many low level drivers end up leaking resources on driver detach and "
+"having half broken failure path implementation in ->probe() which would leak "
+"resources or even cause oops when failure occurs.  iomap adds more to this "
+"mix.  So do msi and msix."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:48
+msgid "2. Devres"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:50
+msgid ""
+"devres is basically linked list of arbitrarily sized memory areas associated "
+"with a struct device.  Each devres entry is associated with a release "
+"function.  A devres can be released in several ways.  No matter what, all "
+"devres entries are released on driver detach.  On release, the associated "
+"release function is invoked and then the devres entry is freed."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:57
+msgid ""
+"Managed interface is created for resources commonly used by device drivers "
+"using devres.  For example, coherent DMA memory is acquired using "
+"dma_alloc_coherent().  The managed version is called dmam_alloc_coherent().  "
+"It is identical to dma_alloc_coherent() except for the DMA memory allocated "
+"using it is managed and will be automatically released on driver detach.  "
+"Implementation looks like the following::"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:99
+msgid ""
+"If a driver uses dmam_alloc_coherent(), the area is guaranteed to be freed "
+"whether initialization fails half-way or the device gets detached.  If most "
+"resources are acquired using managed interface, a driver can have much "
+"simpler init and exit code.  Init path basically looks like the following::"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:124
+msgid "And exit path::"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:132
+msgid ""
+"As shown above, low level drivers can be simplified a lot by using devres.  "
+"Complexity is shifted from less maintained low level drivers to better "
+"maintained higher layer.  Also, as init failure path is shared with exit "
+"path, both can get more testing."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:137
+msgid ""
+"Note though that when converting current calls or assignments to managed "
+"devm_* versions it is up to you to check if internal operations like "
+"allocating memory, have failed. Managed resources pertains to the freeing of "
+"these resources *only* - all other checks needed are still on you. In some "
+"cases this may mean introducing checks that were not necessary before moving "
+"to the managed devm_* calls."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:146
+msgid "3. Devres group"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:148
+msgid ""
+"Devres entries can be grouped using devres group.  When a group is released, "
+"all contained normal devres entries and properly nested groups are "
+"released.  One usage is to rollback series of acquired resources on "
+"failure.  For example::"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:172
+msgid ""
+"As resource acquisition failure usually means probe failure, constructs like "
+"above are usually useful in midlayer driver (e.g. libata core layer) where "
+"interface function shouldn't have side effect on failure. For LLDs, just "
+"returning error code suffices in most cases."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:177
+msgid ""
+"Each group is identified by `void *id`.  It can either be explicitly "
+"specified by @id argument to devres_open_group() or automatically created by "
+"passing NULL as @id as in the above example.  In both cases, "
+"devres_open_group() returns the group's id.  The returned id can be passed "
+"to other devres functions to select the target group. If NULL is given to "
+"those functions, the latest open group is selected."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:185
+msgid "For example, you can do something like the following::"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:205
+msgid "4. Details"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:207
+msgid ""
+"Lifetime of a devres entry begins on devres allocation and finishes when it "
+"is released or destroyed (removed and freed) - no reference counting."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:211
+msgid ""
+"devres core guarantees atomicity to all basic devres operations and has "
+"support for single-instance devres types (atomic lookup-and-add-if-not-"
+"found).  Other than that, synchronizing concurrent accesses to allocated "
+"devres data is caller's responsibility.  This is usually non-issue because "
+"bus ops and resource allocations already do the job."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:218
+msgid ""
+"For an example of single-instance devres type, read pcim_iomap_table() in "
+"lib/devres.c."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:221
+msgid ""
+"All devres interface functions can be called without context if the right "
+"gfp mask is given."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:226
+msgid "5. Overhead"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:228
+msgid ""
+"Each devres bookkeeping info is allocated together with requested data "
+"area.  With debug option turned off, bookkeeping info occupies 16 bytes on "
+"32bit machines and 24 bytes on 64bit (three pointers rounded up to ull "
+"alignment).  If singly linked list is used, it can be reduced to two "
+"pointers (8 bytes on 32bit, 16 bytes on 64bit)."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:234
+msgid ""
+"Each devres group occupies 8 pointers.  It can be reduced to 6 if singly "
+"linked list is used."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:237
+msgid ""
+"Memory space overhead on ahci controller with two ports is between 300 and "
+"400 bytes on 32bit machine after naive conversion (we can certainly invest a "
+"bit more effort into libata core layer)."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:243
+msgid "6. List of managed interfaces"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:245
+msgid "CLOCK"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:246
+msgid ""
+"devm_clk_get() devm_clk_get_optional() devm_clk_put() devm_clk_bulk_get() "
+"devm_clk_bulk_get_all() devm_clk_bulk_get_optional() "
+"devm_get_clk_from_child() devm_clk_hw_register() "
+"devm_of_clk_add_hw_provider() devm_clk_hw_register_clkdev()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:257
+msgid "DMA"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:258
+msgid ""
+"dmaenginem_async_device_register() dmam_alloc_coherent() dmam_alloc_attrs() "
+"dmam_free_coherent() dmam_pool_create() dmam_pool_destroy()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:265
+msgid "DRM"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:266
+msgid "devm_drm_dev_alloc()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:268
+msgid "GPIO"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:269
+msgid ""
+"devm_gpiod_get() devm_gpiod_get_array() devm_gpiod_get_array_optional() "
+"devm_gpiod_get_index() devm_gpiod_get_index_optional() "
+"devm_gpiod_get_optional() devm_gpiod_put() devm_gpiod_unhinge() "
+"devm_gpiochip_add_data() devm_gpio_request_one()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:280
+msgid "I2C"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:281
+msgid "devm_i2c_add_adapter() devm_i2c_new_dummy_device()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:284
+msgid "IIO"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:285
+msgid ""
+"devm_iio_device_alloc() devm_iio_device_register() "
+"devm_iio_dmaengine_buffer_setup() devm_iio_kfifo_buffer_setup() "
+"devm_iio_kfifo_buffer_setup_ext() devm_iio_map_array_register() "
+"devm_iio_triggered_buffer_setup() devm_iio_triggered_buffer_setup_ext() "
+"devm_iio_trigger_alloc() devm_iio_trigger_register() devm_iio_channel_get() "
+"devm_iio_channel_get_all() devm_iio_hw_consumer_alloc() "
+"devm_fwnode_iio_channel_get_by_name()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:300
+msgid "INPUT"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:301
+msgid "devm_input_allocate_device()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:303
+msgid "IO region"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:304
+msgid ""
+"devm_release_mem_region() devm_release_region() devm_release_resource() "
+"devm_request_mem_region() devm_request_free_mem_region() "
+"devm_request_region() devm_request_resource()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:312
+msgid "IOMAP"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:313
+msgid ""
+"devm_ioport_map() devm_ioport_unmap() devm_ioremap() devm_ioremap_uc() "
+"devm_ioremap_wc() devm_ioremap_resource() : checks resource, requests memory "
+"region, ioremaps devm_ioremap_resource_wc() "
+"devm_platform_ioremap_resource() : calls devm_ioremap_resource() for "
+"platform device devm_platform_ioremap_resource_byname() "
+"devm_platform_get_and_ioremap_resource() devm_iounmap()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:325
+msgid ""
+"Note: For the PCI devices the specific pcim_*() functions may be used, see "
+"below."
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:327
+msgid "IRQ"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:328
+msgid ""
+"devm_free_irq() devm_request_any_context_irq() devm_request_irq() "
+"devm_request_threaded_irq() devm_irq_alloc_descs() devm_irq_alloc_desc() "
+"devm_irq_alloc_desc_at() devm_irq_alloc_desc_from() "
+"devm_irq_alloc_descs_from() devm_irq_alloc_generic_chip() "
+"devm_irq_setup_generic_chip() devm_irq_domain_create_sim()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:341
+msgid "LED"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:342
+msgid ""
+"devm_led_classdev_register() devm_led_classdev_register_ext() "
+"devm_led_classdev_unregister() devm_led_trigger_register() devm_of_led_get()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:348
+msgid "MDIO"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:349
+msgid ""
+"devm_mdiobus_alloc() devm_mdiobus_alloc_size() devm_mdiobus_register() "
+"devm_of_mdiobus_register()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:354
+msgid "MEM"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:355
+msgid ""
+"devm_free_pages() devm_get_free_pages() devm_kasprintf() devm_kcalloc() "
+"devm_kfree() devm_kmalloc() devm_kmalloc_array() devm_kmemdup() "
+"devm_krealloc() devm_krealloc_array() devm_kstrdup() devm_kstrdup_const() "
+"devm_kvasprintf() devm_kzalloc()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:370
+msgid "MFD"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:371
+msgid "devm_mfd_add_devices()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:373
+msgid "MUX"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:374
+msgid ""
+"devm_mux_chip_alloc() devm_mux_chip_register() devm_mux_control_get() "
+"devm_mux_state_get()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:379
+msgid "NET"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:380
+msgid "devm_alloc_etherdev() devm_alloc_etherdev_mqs() devm_register_netdev()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:384
+msgid "PER-CPU MEM"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:385
+msgid "devm_alloc_percpu()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:387
+msgid "PCI"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:388
+msgid ""
+"devm_pci_alloc_host_bridge()  : managed PCI host bridge allocation "
+"devm_pci_remap_cfgspace()     : ioremap PCI configuration space "
+"devm_pci_remap_cfg_resource() : ioremap PCI configuration space resource"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:392
+msgid ""
+"pcim_enable_device()          : after success, the PCI device gets disabled "
+"automatically on driver detach pcim_iomap()                  : do iomap() on "
+"a single BAR pcim_iomap_regions()          : do request_region() and iomap() "
+"on multiple BARs pcim_iomap_table()            : array of mapped addresses "
+"indexed by BAR pcim_iounmap()                : do iounmap() on a single BAR "
+"pcim_pin_device()             : keep PCI device enabled after release "
+"pcim_set_mwi()                : enable Memory-Write-Invalidate PCI "
+"transaction"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:400
+msgid "PHY"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:401
+msgid ""
+"devm_usb_get_phy() devm_usb_get_phy_by_node() devm_usb_get_phy_by_phandle()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:405
+msgid "PINCTRL"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:406
+msgid ""
+"devm_pinctrl_get() devm_pinctrl_put() devm_pinctrl_get_select() "
+"devm_pinctrl_register() devm_pinctrl_register_and_init() "
+"devm_pinctrl_unregister()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:413
+msgid "POWER"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:414
+msgid "devm_reboot_mode_register() devm_reboot_mode_unregister()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:417
+msgid "PWM"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:418
+msgid ""
+"devm_pwmchip_alloc() devm_pwmchip_add() devm_pwm_get() devm_fwnode_pwm_get()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:423
+msgid "REGULATOR"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:424
+msgid ""
+"devm_regulator_bulk_register_supply_alias() devm_regulator_bulk_get() "
+"devm_regulator_bulk_get_const() devm_regulator_bulk_get_enable() "
+"devm_regulator_bulk_put() devm_regulator_get() devm_regulator_get_enable() "
+"devm_regulator_get_enable_read_voltage() "
+"devm_regulator_get_enable_optional() devm_regulator_get_exclusive() "
+"devm_regulator_get_optional() devm_regulator_irq_helper() "
+"devm_regulator_put() devm_regulator_register() "
+"devm_regulator_register_notifier() devm_regulator_register_supply_alias() "
+"devm_regulator_unregister_notifier()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:442
+msgid "RESET"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:443
+msgid "devm_reset_control_get() devm_reset_controller_register()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:446
+msgid "RTC"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:447
+msgid ""
+"devm_rtc_device_register() devm_rtc_allocate_device() "
+"devm_rtc_register_device() devm_rtc_nvmem_register()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:452
+msgid "SERDEV"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:453
+msgid "devm_serdev_device_open()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:455
+msgid "SLAVE DMA ENGINE"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:456
+msgid "devm_acpi_dma_controller_register()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:458
+msgid "SPI"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:459
+msgid ""
+"devm_spi_alloc_host() devm_spi_alloc_target() devm_spi_optimize_message() "
+"devm_spi_register_controller() devm_spi_register_host() "
+"devm_spi_register_target()"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:466
+msgid "WATCHDOG"
+msgstr ""
+
+#: ../../../driver-api/driver-model/devres.rst:467
+msgid "devm_watchdog_register_device()"
+msgstr ""
