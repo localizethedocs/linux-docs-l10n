@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"POT-Creation-Date: 2026-03-30 09:10+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1247,11 +1247,11 @@ msgstr ""
 #: ../../../filesystems/overlayfs.rst:755
 msgid ""
 "Note: the mount option uuid=off can be used to replace UUID of the "
-"underlying filesystem in file handles with null, and effectively disable "
-"UUID checks. This can be useful in case the underlying disk is copied and "
-"the UUID of this copy is changed. This is only applicable if all lower/upper/"
-"work directories are on the same filesystem, otherwise it will fallback to "
-"normal behaviour."
+"underlying filesystem in file handles with null, in order to relax the UUID "
+"checks. This can be useful in case the underlying disk is copied and the "
+"UUID of this copy is changed. This is only applicable if all lower "
+"directories are on the same filesystem, otherwise it will fallback to normal "
+"behaviour."
 msgstr ""
 
 #: ../../../filesystems/overlayfs.rst:763
@@ -1275,7 +1275,7 @@ msgstr ""
 #: ../../../filesystems/overlayfs.rst:771
 msgid ""
 "UUID of overlayfs is null. fsid is taken from upper most filesystem. UUID of "
-"underlying layers is ignored."
+"underlying layers is ignored and null used instead."
 msgstr ""
 
 #: ../../../filesystems/overlayfs.rst:774
@@ -1287,6 +1287,7 @@ msgid ""
 msgstr ""
 
 #: ../../../filesystems/overlayfs.rst:778
+#: ../../../filesystems/overlayfs.rst:824
 msgid "\"auto\": (default)"
 msgstr ""
 
@@ -1299,10 +1300,93 @@ msgid ""
 msgstr ""
 
 #: ../../../filesystems/overlayfs.rst:787
-msgid "Volatile mount"
+msgid "Durability and copy up"
 msgstr ""
 
 #: ../../../filesystems/overlayfs.rst:789
+msgid ""
+"The fsync(2) system call ensures that the data and metadata of a file are "
+"safely written to the backing storage, which is expected to guarantee the "
+"existence of the information post system crash."
+msgstr ""
+
+#: ../../../filesystems/overlayfs.rst:793
+msgid ""
+"Without an fsync(2) call, there is no guarantee that the observed data after "
+"a system crash will be either the old or the new data, but in practice, the "
+"observed data after crash is often the old or new data or a mix of both."
+msgstr ""
+
+#: ../../../filesystems/overlayfs.rst:798
+msgid ""
+"When an overlayfs file is modified for the first time, copy up will create a "
+"copy of the lower file and its parent directories in the upper layer.  Since "
+"the Linux filesystem API does not enforce any particular ordering on storing "
+"changes without explicit fsync(2) calls, in case of a system crash, the "
+"upper file could end up with no data at all (i.e. zeros), which would be an "
+"unusual outcome.  To avoid this experience, overlayfs calls fsync(2) on the "
+"upper file before completing data copy up with rename(2) or link(2) to make "
+"the copy up \"atomic\"."
+msgstr ""
+
+#: ../../../filesystems/overlayfs.rst:807
+msgid ""
+"By default, overlayfs does not explicitly call fsync(2) on copied up "
+"directories or on metadata-only copy up, so it provides no guarantee to "
+"persist the user's modification unless the user calls fsync(2). The fsync "
+"during copy up only guarantees that if a copy up is observed after a crash, "
+"the observed data is not zeroes or intermediate values from the copy up "
+"staging area."
+msgstr ""
+
+#: ../../../filesystems/overlayfs.rst:814
+msgid ""
+"On traditional local filesystems with a single journal (e.g. ext4, xfs), "
+"fsync on a file also persists the parent directory changes, because they are "
+"usually modified in the same transaction, so metadata durability during data "
+"copy up effectively comes for free.  Overlayfs further limits risk by "
+"disallowing network filesystems as upper layer."
+msgstr ""
+
+#: ../../../filesystems/overlayfs.rst:820
+msgid ""
+"Overlayfs can be tuned to prefer performance or durability when storing to "
+"the underlying upper layer.  This is controlled by the \"fsync\" mount "
+"option, which supports these values:"
+msgstr ""
+
+#: ../../../filesystems/overlayfs.rst:825
+msgid ""
+"Call fsync(2) on upper file before completion of data copy up. No explicit "
+"fsync(2) on directory or metadata-only copy up."
+msgstr ""
+
+#: ../../../filesystems/overlayfs.rst:827
+msgid "\"strict\":"
+msgstr ""
+
+#: ../../../filesystems/overlayfs.rst:828
+msgid ""
+"Call fsync(2) on upper file and directories before completion of any copy up."
+msgstr ""
+
+#: ../../../filesystems/overlayfs.rst:830
+msgid "\"volatile\": [*]"
+msgstr ""
+
+#: ../../../filesystems/overlayfs.rst:831
+msgid "Prefer performance over durability (see `Volatile mount`_)"
+msgstr ""
+
+#: ../../../filesystems/overlayfs.rst:833
+msgid "[*] The mount option \"volatile\" is an alias to \"fsync=volatile\"."
+msgstr ""
+
+#: ../../../filesystems/overlayfs.rst:837
+msgid "Volatile mount"
+msgstr ""
+
+#: ../../../filesystems/overlayfs.rst:839
 msgid ""
 "This is enabled with the \"volatile\" mount option.  Volatile mounts are not "
 "guaranteed to survive a crash.  It is strongly recommended that volatile "
@@ -1310,13 +1394,13 @@ msgid ""
 "significant effort."
 msgstr ""
 
-#: ../../../filesystems/overlayfs.rst:794
+#: ../../../filesystems/overlayfs.rst:844
 msgid ""
 "The advantage of mounting with the \"volatile\" option is that all forms of "
 "sync calls to the upper filesystem are omitted."
 msgstr ""
 
-#: ../../../filesystems/overlayfs.rst:797
+#: ../../../filesystems/overlayfs.rst:847
 msgid ""
 "In order to avoid giving a false sense of safety, the syncfs (and fsync) "
 "semantics of volatile mounts are slightly different than that of the rest of "
@@ -1327,7 +1411,7 @@ msgid ""
 "experienced a new error since the last sync call."
 msgstr ""
 
-#: ../../../filesystems/overlayfs.rst:805
+#: ../../../filesystems/overlayfs.rst:855
 msgid ""
 "When overlay is mounted with \"volatile\" option, the directory \"$workdir/"
 "work/incompat/volatile\" is created.  During next mount, overlay checks for "
@@ -1338,31 +1422,31 @@ msgid ""
 "be removed."
 msgstr ""
 
-#: ../../../filesystems/overlayfs.rst:815
+#: ../../../filesystems/overlayfs.rst:865
 msgid "User xattr"
 msgstr ""
 
-#: ../../../filesystems/overlayfs.rst:817
+#: ../../../filesystems/overlayfs.rst:867
 msgid ""
 "The \"-o userxattr\" mount option forces overlayfs to use the \"user.overlay."
 "\" xattr namespace instead of \"trusted.overlay.\".  This is useful for "
 "unprivileged mounting of overlayfs."
 msgstr ""
 
-#: ../../../filesystems/overlayfs.rst:823
+#: ../../../filesystems/overlayfs.rst:873
 msgid "Testsuite"
 msgstr ""
 
-#: ../../../filesystems/overlayfs.rst:825
+#: ../../../filesystems/overlayfs.rst:875
 msgid ""
 "There's a testsuite originally developed by David Howells and currently "
 "maintained by Amir Goldstein at:"
 msgstr ""
 
-#: ../../../filesystems/overlayfs.rst:828
+#: ../../../filesystems/overlayfs.rst:878
 msgid "https://github.com/amir73il/unionmount-testsuite.git"
 msgstr ""
 
-#: ../../../filesystems/overlayfs.rst:830
+#: ../../../filesystems/overlayfs.rst:880
 msgid "Run as root::"
 msgstr ""
