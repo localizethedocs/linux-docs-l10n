@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Futex Requeue PI &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/locking/futex-requeue-pi.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="Hardware Spinlock Framework" href="hwspinlock.html" />
+    <link rel="prev" title="Lightweight PI-futexes" href="pi-futex.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Locking</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="locktypes.html">Lock types and their rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockdep-design.html">Runtime locking correctness validator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockstat.html">Lock Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="locktorture.html">Kernel Lock Torture Test Operation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mutex-design.html">Generic Mutex Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex-design.html">RT-mutex implementation design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex.html">RT-mutex subsystem with PI support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seqlock.html">Sequence counters and sequential locks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spinlocks.html">Locking lessons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ww-mutex-design.html">Wound/Wait Deadlock-Proof Mutex Design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="preempt-locking.html">Proper Locking Under a Preemptible Kernel: Keeping Kernel Code Preempt-Safe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pi-futex.html">Lightweight PI-futexes</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Futex Requeue PI</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#motivation">Motivation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#implementation">Implementation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="hwspinlock.html">Hardware Spinlock Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="percpu-rw-semaphore.html">Percpu rw semaphores</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futexes.html">A description of what robust futexes are</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futex-ABI.html">The robust futex ABI</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/locking/futex-requeue-pi.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="futex-requeue-pi">
+<h1>Futex Requeue PI<a class="headerlink" href="#futex-requeue-pi" title="Link to this heading">¶</a></h1>
+<p>Requeueing of tasks from a non-PI futex to a PI futex requires
+special handling in order to ensure the underlying rt_mutex is never
+left without an owner if it has waiters; doing so would break the PI
+boosting logic [see <a class="reference internal" href="rt-mutex-design.html"><span class="doc">RT-mutex implementation design</span></a>] For the purposes of
+brevity, this action will be referred to as &quot;requeue_pi&quot; throughout
+this document.  Priority inheritance is abbreviated throughout as
+&quot;PI&quot;.</p>
+<section id="motivation">
+<h2>Motivation<a class="headerlink" href="#motivation" title="Link to this heading">¶</a></h2>
+<p>Without requeue_pi, the glibc implementation of
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_cond_broadcast()</span></code> must resort to waking all the tasks waiting
+on a pthread_condvar and letting them try to sort out which task
+gets to run first in classic thundering-herd formation.  An ideal
+implementation would wake the highest-priority waiter, and leave the
+rest to the natural wakeup inherent in unlocking the mutex
+associated with the condvar.</p>
+<p>Consider the simplified glibc calls:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/* caller must lock mutex */
+pthread_cond_wait(cond, mutex)
+{
+        lock(cond-&gt;__data.__lock);
+        unlock(mutex);
+        do {
+        unlock(cond-&gt;__data.__lock);
+        futex_wait(cond-&gt;__data.__futex);
+        lock(cond-&gt;__data.__lock);
+        } while(...)
+        unlock(cond-&gt;__data.__lock);
+        lock(mutex);
+}
+
+pthread_cond_broadcast(cond)
+{
+        lock(cond-&gt;__data.__lock);
+        unlock(cond-&gt;__data.__lock);
+        futex_requeue(cond-&gt;data.__futex, cond-&gt;mutex);
+}
+</pre></div>
+</div>
+<p>Once <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_cond_broadcast()</span></code> requeues the tasks, the cond-&gt;mutex
+has waiters. Note that <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_cond_wait()</span></code> attempts to lock the
+mutex only after it has returned to user space.  This will leave the
+underlying rt_mutex with waiters, and no owner, breaking the
+previously mentioned PI-boosting algorithms.</p>
+<p>In order to support PI-aware pthread_condvar's, the kernel needs to
+be able to requeue tasks to PI futexes.  This support implies that
+upon a successful futex_wait system call, the caller would return to
+user space already holding the PI futex.  The glibc implementation
+would be modified as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/* caller must lock mutex */
+pthread_cond_wait_pi(cond, mutex)
+{
+        lock(cond-&gt;__data.__lock);
+        unlock(mutex);
+        do {
+        unlock(cond-&gt;__data.__lock);
+        futex_wait_requeue_pi(cond-&gt;__data.__futex);
+        lock(cond-&gt;__data.__lock);
+        } while(...)
+        unlock(cond-&gt;__data.__lock);
+        /* the kernel acquired the mutex for us */
+}
+
+pthread_cond_broadcast_pi(cond)
+{
+        lock(cond-&gt;__data.__lock);
+        unlock(cond-&gt;__data.__lock);
+        futex_requeue_pi(cond-&gt;data.__futex, cond-&gt;mutex);
+}
+</pre></div>
+</div>
+<p>The actual glibc implementation will likely test for PI and make the
+necessary changes inside the existing calls rather than creating new
+calls for the PI cases.  Similar changes are needed for
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_cond_timedwait()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_cond_signal()</span></code>.</p>
+</section>
+<section id="implementation">
+<h2>Implementation<a class="headerlink" href="#implementation" title="Link to this heading">¶</a></h2>
+<p>In order to ensure the rt_mutex has an owner if it has waiters, it
+is necessary for both the requeue code, as well as the waiting code,
+to be able to acquire the rt_mutex before returning to user space.
+The requeue code cannot simply wake the waiter and leave it to
+acquire the rt_mutex as it would open a race window between the
+requeue call returning to user space and the waiter waking and
+starting to run.  This is especially true in the uncontended case.</p>
+<p>The solution involves two new rt_mutex helper routines,
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rt_mutex_start_proxy_lock()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rt_mutex_finish_proxy_lock()</span></code>, which
+allow the requeue code to acquire an uncontended rt_mutex on behalf
+of the waiter and to enqueue the waiter on a contended rt_mutex.
+Two new system calls provide the kernel&lt;-&gt;user interface to
+requeue_pi: FUTEX_WAIT_REQUEUE_PI and FUTEX_CMP_REQUEUE_PI.</p>
+<p>FUTEX_WAIT_REQUEUE_PI is called by the waiter (<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_cond_wait()</span></code>
+and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_cond_timedwait()</span></code>) to block on the initial futex and wait
+to be requeued to a PI-aware futex.  The implementation is the
+result of a high-speed collision between <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">futex_wait()</span></code> and
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">futex_lock_pi()</span></code>, with some extra logic to check for the additional
+wake-up scenarios.</p>
+<p>FUTEX_CMP_REQUEUE_PI is called by the waker
+(<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_cond_broadcast()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_cond_signal()</span></code>) to requeue and
+possibly wake the waiting tasks. Internally, this system call is
+still handled by futex_requeue (by passing requeue_pi=1).  Before
+requeueing, <a class="reference internal" href="../kernel-hacking/locking.html#c.futex_requeue" title="futex_requeue"><code class="xref c c-func docutils literal notranslate"><span class="pre">futex_requeue()</span></code></a> attempts to acquire the requeue target
+PI futex on behalf of the top waiter.  If it can, this waiter is
+woken.  <a class="reference internal" href="../kernel-hacking/locking.html#c.futex_requeue" title="futex_requeue"><code class="xref c c-func docutils literal notranslate"><span class="pre">futex_requeue()</span></code></a> then proceeds to requeue the remaining
+nr_wake+nr_requeue tasks to the PI futex, calling
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rt_mutex_start_proxy_lock()</span></code> prior to each requeue to prepare the
+task as a waiter on the underlying rt_mutex.  It is possible that
+the lock can be acquired at this stage as well, if so, the next
+waiter is woken to finish the acquisition of the lock.</p>
+<p>FUTEX_CMP_REQUEUE_PI accepts nr_wake and nr_requeue as arguments, but
+their sum is all that really matters.  <a class="reference internal" href="../kernel-hacking/locking.html#c.futex_requeue" title="futex_requeue"><code class="xref c c-func docutils literal notranslate"><span class="pre">futex_requeue()</span></code></a> will wake or
+requeue up to nr_wake + nr_requeue tasks.  It will wake only as many
+tasks as it can acquire the lock for, which in the majority of cases
+should be 0 as good programming practice dictates that the caller of
+either <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_cond_broadcast()</span></code> or <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_cond_signal()</span></code> acquire the
+mutex prior to making the call. FUTEX_CMP_REQUEUE_PI requires that
+nr_wake=1.  nr_requeue should be INT_MAX for broadcast and 0 for
+signal.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/locking/futex-requeue-pi.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

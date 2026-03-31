@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Short users guide for the slab allocator &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/mm/slab.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜索" href="../../search.html" />
+    <link rel="next" title="Soft-Dirty PTEs" href="soft-dirty.html" />
+    <link rel="prev" title="Shrinker Debugfs Interface" href="shrinker_debugfs.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#core-kernel-subsystems">Core-kernel subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v2.html">Control Group v2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v1/index.html">Control Groups version 1</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cpu-load.html">CPU load</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Memory Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../module-signing.html">Kernel module signing facility</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../namespaces/index.html">Namespaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../numastat.html">Numa policy hit/miss statistics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pm/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../syscall-user-dispatch.html">Syscall User Dispatch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../binfmt-misc.html">Kernel Support for miscellaneous Binary Formats (binfmt_misc)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../java.html">Java(tm) Binary Kernel Support for Linux v1.03</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mono.html">Mono(tm) Binary Kernel Support for Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/admin-guide/mm/slab.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="short-users-guide-for-the-slab-allocator">
+<h1>Short users guide for the slab allocator<a class="headerlink" href="#short-users-guide-for-the-slab-allocator" title="Link to this heading">¶</a></h1>
+<p>The slab allocator includes full debugging support (when built with
+CONFIG_SLUB_DEBUG=y) but it is off by default (unless built with
+CONFIG_SLUB_DEBUG_ON=y).  You can enable debugging only for selected
+slabs in order to avoid an impact on overall system performance which
+may make a bug more difficult to find.</p>
+<p>In order to switch debugging on one can add an option <code class="docutils literal notranslate"><span class="pre">slab_debug</span></code>
+to the kernel command line. That will enable full debugging for
+all slabs.</p>
+<p>Typically one would then use the <code class="docutils literal notranslate"><span class="pre">slabinfo</span></code> command to get statistical
+data and perform operation on the slabs. By default <code class="docutils literal notranslate"><span class="pre">slabinfo</span></code> only lists
+slabs that have data in them. See &quot;slabinfo -h&quot; for more options when
+running the command. <code class="docutils literal notranslate"><span class="pre">slabinfo</span></code> can be compiled with</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>gcc -o slabinfo tools/mm/slabinfo.c
+</pre></div>
+</div>
+<p>Some of the modes of operation of <code class="docutils literal notranslate"><span class="pre">slabinfo</span></code> require that slub debugging
+be enabled on the command line. F.e. no tracking information will be
+available without debugging on and validation can only partially
+be performed if debugging was not switched on.</p>
+<section id="some-more-sophisticated-uses-of-slab-debug">
+<h2>Some more sophisticated uses of slab_debug:<a class="headerlink" href="#some-more-sophisticated-uses-of-slab-debug" title="Link to this heading">¶</a></h2>
+<p>Parameters may be given to <code class="docutils literal notranslate"><span class="pre">slab_debug</span></code>. If none is specified then full
+debugging is enabled. Format:</p>
+<dl class="simple">
+<dt>slab_debug=&lt;Debug-Options&gt;</dt><dd><p>Enable options for all slabs</p>
+</dd>
+<dt>slab_debug=&lt;Debug-Options&gt;,&lt;slab name1&gt;,&lt;slab name2&gt;,...</dt><dd><p>Enable options only for select slabs (no spaces
+after a comma)</p>
+</dd>
+</dl>
+<p>Multiple blocks of options for all slabs or selected slabs can be given, with
+blocks of options delimited by ';'. The last of &quot;all slabs&quot; blocks is applied
+to all slabs except those that match one of the &quot;select slabs&quot; block. Options
+of the first &quot;select slabs&quot; blocks that matches the slab's name are applied.</p>
+<p>Possible debug options are:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>F               Sanity checks on (enables SLAB_DEBUG_CONSISTENCY_CHECKS
+                Sorry SLAB legacy issues)
+Z               Red zoning
+P               Poisoning (object and padding)
+U               User tracking (free and alloc)
+T               Trace (please only use on single slabs)
+A               Enable failslab filter mark for the cache
+O               Switch debugging off for caches that would have
+                caused higher minimum slab orders
+-               Switch all debugging off (useful if the kernel is
+                configured with CONFIG_SLUB_DEBUG_ON)
+</pre></div>
+</div>
+<p>F.e. in order to boot just with sanity checks and red zoning one would specify:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slab_debug=FZ
+</pre></div>
+</div>
+<p>Trying to find an issue in the dentry cache? Try:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slab_debug=,dentry
+</pre></div>
+</div>
+<p>to only enable debugging on the dentry cache.  You may use an asterisk at the
+end of the slab name, in order to cover all slabs with the same prefix.  For
+example, here's how you can poison the dentry cache as well as all kmalloc
+slabs:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slab_debug=P,kmalloc-*,dentry
+</pre></div>
+</div>
+<p>Red zoning and tracking may realign the slab.  We can just apply sanity checks
+to the dentry cache with:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slab_debug=F,dentry
+</pre></div>
+</div>
+<p>Debugging options may require the minimum possible slab order to increase as
+a result of storing the metadata (for example, caches with PAGE_SIZE object
+sizes).  This has a higher likelihood of resulting in slab allocation errors
+in low memory situations or if there's high fragmentation of memory.  To
+switch off debugging for such caches by default, use:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slab_debug=O
+</pre></div>
+</div>
+<p>You can apply different options to different list of slab names, using blocks
+of options. This will enable red zoning for dentry and user tracking for
+kmalloc. All other slabs will not get any debugging enabled:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slab_debug=Z,dentry;U,kmalloc-*
+</pre></div>
+</div>
+<p>You can also enable options (e.g. sanity checks and poisoning) for all caches
+except some that are deemed too performance critical and don't need to be
+debugged by specifying global debug options followed by a list of slab names
+with &quot;-&quot; as options:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slab_debug=FZ;-,zs_handle,zspage
+</pre></div>
+</div>
+<p>The state of each debug option for a slab can be found in the respective files
+under:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/sys/kernel/slab/&lt;slab name&gt;/
+</pre></div>
+</div>
+<p>If the file contains 1, the option is enabled, 0 means disabled. The debug
+options from the <code class="docutils literal notranslate"><span class="pre">slab_debug</span></code> parameter translate to the following files:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>F       sanity_checks
+Z       red_zone
+P       poison
+U       store_user
+T       trace
+A       failslab
+</pre></div>
+</div>
+<p>failslab file is writable, so writing 1 or 0 will enable or disable
+the option at runtime. Write returns -EINVAL if cache is an alias.
+Careful with tracing: It may spew out lots of information and never stop if
+used on the wrong slab.</p>
+<section id="slab-merging">
+<h3>Slab merging<a class="headerlink" href="#slab-merging" title="Link to this heading">¶</a></h3>
+<p>If no debug options are specified then SLUB may merge similar slabs together
+in order to reduce overhead and increase cache hotness of objects.
+<code class="docutils literal notranslate"><span class="pre">slabinfo</span> <span class="pre">-a</span></code> displays which slabs were merged together.</p>
+</section>
+<section id="slab-validation">
+<h3>Slab validation<a class="headerlink" href="#slab-validation" title="Link to this heading">¶</a></h3>
+<p>SLUB can validate all object if the kernel was booted with slab_debug. In
+order to do so you must have the <code class="docutils literal notranslate"><span class="pre">slabinfo</span></code> tool. Then you can do</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slabinfo -v
+</pre></div>
+</div>
+<p>which will test all objects. Output will be generated to the syslog.</p>
+<p>This also works in a more limited way if boot was without slab debug.
+In that case <code class="docutils literal notranslate"><span class="pre">slabinfo</span> <span class="pre">-v</span></code> simply tests all reachable objects. Usually
+these are in the cpu slabs and the partial slabs. Full slabs are not
+tracked by SLUB in a non debug situation.</p>
+</section>
+<section id="getting-more-performance">
+<h3>Getting more performance<a class="headerlink" href="#getting-more-performance" title="Link to this heading">¶</a></h3>
+<p>To some degree SLUB's performance is limited by the need to take the
+list_lock once in a while to deal with partial slabs. That overhead is
+governed by the order of the allocation for each slab. The allocations
+can be influenced by kernel parameters:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">slab_min_objects</span></code></dt><dd><p>allows to specify how many objects must at least fit into one
+slab in order for the allocation order to be acceptable.  In
+general slub will be able to perform this number of
+allocations on a slab without consulting centralized resources
+(list_lock) where contention may occur.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">slab_min_order</span></code></dt><dd><p>specifies a minimum order of slabs. A similar effect like
+<code class="docutils literal notranslate"><span class="pre">slab_min_objects</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">slab_max_order</span></code></dt><dd><p>specified the order at which <code class="docutils literal notranslate"><span class="pre">slab_min_objects</span></code> should no
+longer be checked. This is useful to avoid SLUB trying to
+generate super large order pages to fit <code class="docutils literal notranslate"><span class="pre">slab_min_objects</span></code>
+of a slab cache with large object sizes into one high order
+page. Setting command line parameter
+<code class="docutils literal notranslate"><span class="pre">debug_guardpage_minorder=N</span></code> (N &gt; 0), forces setting
+<code class="docutils literal notranslate"><span class="pre">slab_max_order</span></code> to 0, what cause minimum possible order of
+slabs allocation.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">slab_strict_numa</span></code></dt><dd><p>Enables the application of memory policies on each
+allocation. This results in more accurate placement of
+objects which may result in the reduction of accesses
+to remote nodes. The default is to only apply memory
+policies at the folio level when a new folio is acquired
+or a folio is retrieved from the lists. Enabling this
+option reduces the fastpath performance of the slab allocator.</p>
+</dd>
+</dl>
+</section>
+<section id="slub-debug-output">
+<h3>SLUB Debug output<a class="headerlink" href="#slub-debug-output" title="Link to this heading">¶</a></h3>
+<p>Here is a sample of slub debug output:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>====================================================================
+BUG kmalloc-8: Right Redzone overwritten
+--------------------------------------------------------------------
+
+INFO: 0xc90f6d28-0xc90f6d2b. First byte 0x00 instead of 0xcc
+INFO: Slab 0xc528c530 flags=0x400000c3 inuse=61 fp=0xc90f6d58
+INFO: Object 0xc90f6d20 @offset=3360 fp=0xc90f6d58
+INFO: Allocated in get_modalias+0x61/0xf5 age=53 cpu=1 pid=554
+
+Bytes b4 (0xc90f6d10): 00 00 00 00 00 00 00 00 5a 5a 5a 5a 5a 5a 5a 5a ........ZZZZZZZZ
+Object   (0xc90f6d20): 31 30 31 39 2e 30 30 35                         1019.005
+Redzone  (0xc90f6d28): 00 cc cc cc                                     .
+Padding  (0xc90f6d50): 5a 5a 5a 5a 5a 5a 5a 5a                         ZZZZZZZZ
+
+  [&lt;c010523d&gt;] dump_trace+0x63/0x1eb
+  [&lt;c01053df&gt;] show_trace_log_lvl+0x1a/0x2f
+  [&lt;c010601d&gt;] show_trace+0x12/0x14
+  [&lt;c0106035&gt;] dump_stack+0x16/0x18
+  [&lt;c017e0fa&gt;] object_err+0x143/0x14b
+  [&lt;c017e2cc&gt;] check_object+0x66/0x234
+  [&lt;c017eb43&gt;] __slab_free+0x239/0x384
+  [&lt;c017f446&gt;] kfree+0xa6/0xc6
+  [&lt;c02e2335&gt;] get_modalias+0xb9/0xf5
+  [&lt;c02e23b7&gt;] dmi_dev_uevent+0x27/0x3c
+  [&lt;c027866a&gt;] dev_uevent+0x1ad/0x1da
+  [&lt;c0205024&gt;] kobject_uevent_env+0x20a/0x45b
+  [&lt;c020527f&gt;] kobject_uevent+0xa/0xf
+  [&lt;c02779f1&gt;] store_uevent+0x4f/0x58
+  [&lt;c027758e&gt;] dev_attr_store+0x29/0x2f
+  [&lt;c01bec4f&gt;] sysfs_write_file+0x16e/0x19c
+  [&lt;c0183ba7&gt;] vfs_write+0xd1/0x15a
+  [&lt;c01841d7&gt;] sys_write+0x3d/0x72
+  [&lt;c0104112&gt;] sysenter_past_esp+0x5f/0x99
+  [&lt;b7f7b410&gt;] 0xb7f7b410
+  =======================
+
+FIX kmalloc-8: Restoring Redzone 0xc90f6d28-0xc90f6d2b=0xcc
+</pre></div>
+</div>
+<p>If SLUB encounters a corrupted object (full detection requires the kernel
+to be booted with slab_debug) then the following output will be dumped
+into the syslog:</p>
+<ol class="arabic">
+<li><p>Description of the problem encountered</p>
+<p>This will be a message in the system log starting with:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>===============================================
+BUG &lt;slab cache affected&gt;: &lt;What went wrong&gt;
+-----------------------------------------------
+
+INFO: &lt;corruption start&gt;-&lt;corruption_end&gt; &lt;more info&gt;
+INFO: Slab &lt;address&gt; &lt;slab information&gt;
+INFO: Object &lt;address&gt; &lt;object information&gt;
+INFO: Allocated in &lt;kernel function&gt; age=&lt;jiffies since alloc&gt; cpu=&lt;allocated by
+   cpu&gt; pid=&lt;pid of the process&gt;
+INFO: Freed in &lt;kernel function&gt; age=&lt;jiffies since free&gt; cpu=&lt;freed by cpu&gt;
+   pid=&lt;pid of the process&gt;
+</pre></div>
+</div>
+<p>(Object allocation / free information is only available if SLAB_STORE_USER is
+set for the slab. slab_debug sets that option)</p>
+</li>
+<li><p>The object contents if an object was involved.</p>
+<p>Various types of lines can follow the BUG SLUB line:</p>
+<dl>
+<dt>Bytes b4 &lt;address&gt;<span class="classifier">&lt;bytes&gt;</span></dt><dd><p>Shows a few bytes before the object where the problem was detected.
+Can be useful if the corruption does not stop with the start of the
+object.</p>
+</dd>
+<dt>Object &lt;address&gt;<span class="classifier">&lt;bytes&gt;</span></dt><dd><p>The bytes of the object. If the object is inactive then the bytes
+typically contain poison values. Any non-poison value shows a
+corruption by a write after free.</p>
+</dd>
+<dt>Redzone &lt;address&gt;<span class="classifier">&lt;bytes&gt;</span></dt><dd><p>The Redzone following the object. The Redzone is used to detect
+writes after the object. All bytes should always have the same
+value. If there is any deviation then it is due to a write after
+the object boundary.</p>
+<p>(Redzone information is only available if SLAB_RED_ZONE is set.
+slab_debug sets that option)</p>
+</dd>
+<dt>Padding &lt;address&gt;<span class="classifier">&lt;bytes&gt;</span></dt><dd><p>Unused data to fill up the space in order to get the next object
+properly aligned. In the debug case we make sure that there are
+at least 4 bytes of padding. This allows the detection of writes
+before the object.</p>
+</dd>
+</dl>
+</li>
+<li><p>A stackdump</p>
+<p>The stackdump describes the location where the error was detected. The cause
+of the corruption is may be more likely found by looking at the function that
+allocated or freed the object.</p>
+</li>
+<li><p>Report on how the problem was dealt with in order to ensure the continued
+operation of the system.</p>
+<p>These are messages in the system log beginning with:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>FIX &lt;slab cache affected&gt;: &lt;corrective action taken&gt;
+</pre></div>
+</div>
+<p>In the above sample SLUB found that the Redzone of an active object has
+been overwritten. Here a string of 8 characters was written into a slab that
+has the length of 8 characters. However, a 8 character string needs a
+terminating 0. That zero has overwritten the first byte of the Redzone field.
+After reporting the details of the issue encountered the FIX SLUB message
+tells us that SLUB has restored the Redzone to its proper value and then
+system operations continue.</p>
+</li>
+</ol>
+</section>
+<section id="emergency-operations">
+<h3>Emergency operations<a class="headerlink" href="#emergency-operations" title="Link to this heading">¶</a></h3>
+<p>Minimal debugging (sanity checks alone) can be enabled by booting with:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slab_debug=F
+</pre></div>
+</div>
+<p>This will be generally be enough to enable the resiliency features of slub
+which will keep the system running even if a bad kernel component will
+keep corrupting objects. This may be important for production systems.
+Performance will be impacted by the sanity checks and there will be a
+continual stream of error messages to the syslog but no additional memory
+will be used (unlike full debugging).</p>
+<p>No guarantees. The kernel component still needs to be fixed. Performance
+may be optimized further by locating the slab that experiences corruption
+and enabling debugging only for that cache</p>
+<p>I.e.:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slab_debug=F,dentry
+</pre></div>
+</div>
+<p>If the corruption occurs by writing after the end of the object then it
+may be advisable to enable a Redzone to avoid corrupting the beginning
+of other objects:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slab_debug=FZ,dentry
+</pre></div>
+</div>
+</section>
+<section id="extended-slabinfo-mode-and-plotting">
+<h3>Extended slabinfo mode and plotting<a class="headerlink" href="#extended-slabinfo-mode-and-plotting" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>The <code class="docutils literal notranslate"><span class="pre">slabinfo</span></code> tool has a special 'extended' ('-X') mode that includes:</dt><dd><ul class="simple">
+<li><p>Slabcache Totals</p></li>
+<li><p>Slabs sorted by size (up to -N &lt;num&gt; slabs, default 1)</p></li>
+<li><p>Slabs sorted by loss (up to -N &lt;num&gt; slabs, default 1)</p></li>
+</ul>
+</dd>
+</dl>
+<p>Additionally, in this mode <code class="docutils literal notranslate"><span class="pre">slabinfo</span></code> does not dynamically scale
+sizes (G/M/K) and reports everything in bytes (this functionality is
+also available to other slabinfo modes via '-B' option) which makes
+reporting more precise and accurate. Moreover, in some sense the <cite>-X'
+mode also simplifies the analysis of slabs' behaviour, because its
+output can be plotted using the ``slabinfo-gnuplot.sh`</cite> script. So it
+pushes the analysis from looking through the numbers (tons of numbers)
+to something easier -- visual analysis.</p>
+<p>To generate plots:</p>
+<ol class="loweralpha">
+<li><p>collect slabinfo extended records, for example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>while [ 1 ]; do slabinfo -X &gt;&gt; FOO_STATS; sleep 1; done
+</pre></div>
+</div>
+</li>
+<li><p>pass stats file(-s) to <code class="docutils literal notranslate"><span class="pre">slabinfo-gnuplot.sh</span></code> script:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slabinfo-gnuplot.sh FOO_STATS [FOO_STATS2 .. FOO_STATSN]
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">slabinfo-gnuplot.sh</span></code> script will pre-processes the collected records
+and generates 3 png files (and 3 pre-processing cache files) per STATS
+file:
+- Slabcache Totals: FOO_STATS-totals.png
+- Slabs sorted by size: FOO_STATS-slabs-by-size.png
+- Slabs sorted by loss: FOO_STATS-slabs-by-loss.png</p>
+</li>
+</ol>
+<p>Another use case, when <code class="docutils literal notranslate"><span class="pre">slabinfo-gnuplot.sh</span></code> can be useful, is when you
+need to compare slabs' behaviour &quot;prior to&quot; and &quot;after&quot; some code
+modification.  To help you out there, <code class="docutils literal notranslate"><span class="pre">slabinfo-gnuplot.sh</span></code> script
+can 'merge' the <cite>Slabcache Totals</cite> sections from different
+measurements. To visually compare N plots:</p>
+<ol class="loweralpha">
+<li><p>Collect as many STATS1, STATS2, .. STATSN files as you need:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>while [ 1 ]; do slabinfo -X &gt;&gt; STATS&lt;X&gt;; sleep 1; done
+</pre></div>
+</div>
+</li>
+<li><p>Pre-process those STATS files:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slabinfo-gnuplot.sh STATS1 STATS2 .. STATSN
+</pre></div>
+</div>
+</li>
+<li><p>Execute <code class="docutils literal notranslate"><span class="pre">slabinfo-gnuplot.sh</span></code> in '-t' mode, passing all of the
+generated pre-processed *-totals:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>slabinfo-gnuplot.sh -t STATS1-totals STATS2-totals .. STATSN-totals
+</pre></div>
+</div>
+<p>This will produce a single plot (png file).</p>
+<p>Plots, expectedly, can be large so some fluctuations or small spikes
+can go unnoticed. To deal with that, <code class="docutils literal notranslate"><span class="pre">slabinfo-gnuplot.sh</span></code> has two
+options to 'zoom-in'/'zoom-out':</p>
+<ol class="loweralpha simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-s</span> <span class="pre">%d,%d</span></code> -- overwrites the default image width and height</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-r</span> <span class="pre">%d,%d</span></code> -- specifies a range of samples to use (for example,
+in <code class="docutils literal notranslate"><span class="pre">slabinfo</span> <span class="pre">-X</span> <span class="pre">&gt;&gt;</span> <span class="pre">FOO_STATS;</span> <span class="pre">sleep</span> <span class="pre">1;</span></code> case, using a <code class="docutils literal notranslate"><span class="pre">-r</span>
+<span class="pre">40,60</span></code> range will plot only samples collected between 40th and
+60th seconds).</p></li>
+</ol>
+</li>
+</ol>
+</section>
+<section id="debugfs-files-for-slub">
+<h3>DebugFS files for SLUB<a class="headerlink" href="#debugfs-files-for-slub" title="Link to this heading">¶</a></h3>
+<p>For more information about current state of SLUB caches with the user tracking
+debug option enabled, debugfs files are available, typically under
+/sys/kernel/debug/slab/&lt;cache&gt;/ (created only for caches with enabled user
+tracking). There are 2 types of these files with the following debug
+information:</p>
+<ol class="arabic">
+<li><p>alloc_traces:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Prints information about unique allocation traces of the currently
+allocated objects. The output is sorted by frequency of each trace.
+
+Information in the output:
+Number of objects, allocating function, possible memory wastage of
+kmalloc objects(total/per-object), minimal/average/maximal jiffies
+since alloc, pid range of the allocating processes, cpu mask of
+allocating cpus, numa node mask of origins of memory, and stack trace.
+
+Example:::
+
+338 pci_alloc_dev+0x2c/0xa0 waste=521872/1544 age=290837/291891/293509 pid=1 cpus=106 nodes=0-1
+    __kmem_cache_alloc_node+0x11f/0x4e0
+    kmalloc_trace+0x26/0xa0
+    pci_alloc_dev+0x2c/0xa0
+    pci_scan_single_device+0xd2/0x150
+    pci_scan_slot+0xf7/0x2d0
+    pci_scan_child_bus_extend+0x4e/0x360
+    acpi_pci_root_create+0x32e/0x3b0
+    pci_acpi_scan_root+0x2b9/0x2d0
+    acpi_pci_root_add.cold.11+0x110/0xb0a
+    acpi_bus_attach+0x262/0x3f0
+    device_for_each_child+0xb7/0x110
+    acpi_dev_for_each_child+0x77/0xa0
+    acpi_bus_attach+0x108/0x3f0
+    device_for_each_child+0xb7/0x110
+    acpi_dev_for_each_child+0x77/0xa0
+    acpi_bus_attach+0x108/0x3f0
+</pre></div>
+</div>
+</li>
+<li><p>free_traces:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Prints information about unique freeing traces of the currently allocated
+objects. The freeing traces thus come from the previous life-cycle of the
+objects and are reported as not available for objects allocated for the first
+time. The output is sorted by frequency of each trace.
+
+Information in the output:
+Number of objects, freeing function, minimal/average/maximal jiffies since free,
+pid range of the freeing processes, cpu mask of freeing cpus, and stack trace.
+
+Example:::
+
+1980 &lt;not-available&gt; age=4294912290 pid=0 cpus=0
+51 acpi_ut_update_ref_count+0x6a6/0x782 age=236886/237027/237772 pid=1 cpus=1
+    kfree+0x2db/0x420
+    acpi_ut_update_ref_count+0x6a6/0x782
+    acpi_ut_update_object_reference+0x1ad/0x234
+    acpi_ut_remove_reference+0x7d/0x84
+    acpi_rs_get_prt_method_data+0x97/0xd6
+    acpi_get_irq_routing_table+0x82/0xc4
+    acpi_pci_irq_find_prt_entry+0x8e/0x2e0
+    acpi_pci_irq_lookup+0x3a/0x1e0
+    acpi_pci_irq_enable+0x77/0x240
+    pcibios_enable_device+0x39/0x40
+    do_pci_enable_device.part.0+0x5d/0xe0
+    pci_enable_device_flags+0xfc/0x120
+    pci_enable_device+0x13/0x20
+    virtio_pci_probe+0x9e/0x170
+    local_pci_probe+0x48/0x80
+    pci_device_probe+0x105/0x1c0
+</pre></div>
+</div>
+</li>
+</ol>
+<p>Christoph Lameter, May 30, 2007
+Sergey Senozhatsky, October 23, 2015</p>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/admin-guide/mm/slab.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

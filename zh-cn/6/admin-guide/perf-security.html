@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Perf events and tool security &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/perf-security.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="Boot Configuration" href="bootconfig.html" />
+    <link rel="prev" title="Landlock: system-wide management" href="LSM/landlock.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Administration</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#general-guides-to-kernel-administration">General guides to kernel administration</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="README.html">Linux kernel release 6.x &lt;http://kernel.org/&gt;</a></li>
+<li class="toctree-l3"><a class="reference internal" href="devices.html">Linux allocated devices (4.x+ version)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="features.html">Feature status on all architectures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sysfs-rules.html">Rules on how to access information in sysfs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sysctl/index.html">Documentation for /proc/sys</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cputopology.html">How CPU topology info is exported via sysfs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="abi.html">Linux ABI description</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hw-vuln/index.html">Hardware vulnerabilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="LSM/index.html">Linux Security Module Usage</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Perf events and tool security</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-kernel-subsystems">Core-kernel subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/admin-guide/perf-security.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="perf-events-and-tool-security">
+<span id="perf-security"></span><h1>Perf events and tool security<a class="headerlink" href="#perf-events-and-tool-security" title="Link to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>Usage of Performance Counters for Linux (perf_events) <a class="footnote-reference brackets" href="#id32" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> , <a class="footnote-reference brackets" href="#id33" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a> , <a class="footnote-reference brackets" href="#id34" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>
+can impose a considerable risk of leaking sensitive data accessed by
+monitored processes. The data leakage is possible both in scenarios of
+direct usage of perf_events system call API <a class="footnote-reference brackets" href="#id33" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a> and over data files
+generated by Perf tool user mode utility (Perf) <a class="footnote-reference brackets" href="#id34" id="id5" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a> , <a class="footnote-reference brackets" href="#id35" id="id6" role="doc-noteref"><span class="fn-bracket">[</span>4<span class="fn-bracket">]</span></a> . The risk
+depends on the nature of data that perf_events performance monitoring
+units (PMU) <a class="footnote-reference brackets" href="#id33" id="id7" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a> and Perf collect and expose for performance analysis.
+Collected system and performance data may be split into several
+categories:</p>
+<ol class="arabic simple">
+<li><p>System hardware and software configuration data, for example: a CPU
+model and its cache configuration, an amount of available memory and
+its topology, used kernel and Perf versions, performance monitoring
+setup including experiment time, events configuration, Perf command
+line parameters, etc.</p></li>
+<li><p>User and kernel module paths and their load addresses with sizes,
+process and thread names with their PIDs and TIDs, timestamps for
+captured hardware and software events.</p></li>
+<li><p>Content of kernel software counters (e.g., for context switches, page
+faults, CPU migrations), architectural hardware performance counters
+(PMC) <a class="footnote-reference brackets" href="#id39" id="id8" role="doc-noteref"><span class="fn-bracket">[</span>8<span class="fn-bracket">]</span></a> and machine specific registers (MSR) <a class="footnote-reference brackets" href="#id40" id="id9" role="doc-noteref"><span class="fn-bracket">[</span>9<span class="fn-bracket">]</span></a> that provide
+execution metrics for various monitored parts of the system (e.g.,
+memory controller (IMC), interconnect (QPI/UPI) or peripheral (PCIe)
+uncore counters) without direct attribution to any execution context
+state.</p></li>
+<li><p>Content of architectural execution context registers (e.g., RIP, RSP,
+RBP on x86_64), process user and kernel space memory addresses and
+data, content of various architectural MSRs that capture data from
+this category.</p></li>
+</ol>
+<p>Data that belong to the fourth category can potentially contain
+sensitive process data. If PMUs in some monitoring modes capture values
+of execution context registers or data from process memory then access
+to such monitoring modes requires to be ordered and secured properly.
+So, perf_events performance monitoring and observability operations are
+the subject for security access control management <a class="footnote-reference brackets" href="#id36" id="id10" role="doc-noteref"><span class="fn-bracket">[</span>5<span class="fn-bracket">]</span></a> .</p>
+</section>
+<section id="perf-events-access-control">
+<h2>perf_events access control<a class="headerlink" href="#perf-events-access-control" title="Link to this heading">¶</a></h2>
+<p>To perform security checks, the Linux implementation splits processes
+into two categories <a class="footnote-reference brackets" href="#id37" id="id11" role="doc-noteref"><span class="fn-bracket">[</span>6<span class="fn-bracket">]</span></a> : a) privileged processes (whose effective user
+ID is 0, referred to as superuser or root), and b) unprivileged
+processes (whose effective UID is nonzero). Privileged processes bypass
+all kernel security permission checks so perf_events performance
+monitoring is fully available to privileged processes without access,
+scope and resource restrictions.</p>
+<p>Unprivileged processes are subject to a full security permission check
+based on the process's credentials <a class="footnote-reference brackets" href="#id36" id="id12" role="doc-noteref"><span class="fn-bracket">[</span>5<span class="fn-bracket">]</span></a> (usually: effective UID,
+effective GID, and supplementary group list).</p>
+<p>Linux divides the privileges traditionally associated with superuser
+into distinct units, known as capabilities <a class="footnote-reference brackets" href="#id37" id="id13" role="doc-noteref"><span class="fn-bracket">[</span>6<span class="fn-bracket">]</span></a> , which can be
+independently enabled and disabled on per-thread basis for processes and
+files of unprivileged users.</p>
+<p>Unprivileged processes with enabled CAP_PERFMON capability are treated
+as privileged processes with respect to perf_events performance
+monitoring and observability operations, thus, bypass <em>scope</em> permissions
+checks in the kernel. CAP_PERFMON implements the principle of least
+privilege <a class="footnote-reference brackets" href="#id44" id="id14" role="doc-noteref"><span class="fn-bracket">[</span>13<span class="fn-bracket">]</span></a> (POSIX 1003.1e: 2.2.2.39) for performance monitoring and
+observability operations in the kernel and provides a secure approach to
+performance monitoring and observability in the system.</p>
+<p>For backward compatibility reasons the access to perf_events monitoring and
+observability operations is also open for CAP_SYS_ADMIN privileged
+processes but CAP_SYS_ADMIN usage for secure monitoring and observability
+use cases is discouraged with respect to the CAP_PERFMON capability.
+If system audit records <a class="footnote-reference brackets" href="#id45" id="id15" role="doc-noteref"><span class="fn-bracket">[</span>14<span class="fn-bracket">]</span></a> for a process using perf_events system call
+API contain denial records of acquiring both CAP_PERFMON and CAP_SYS_ADMIN
+capabilities then providing the process with CAP_PERFMON capability singly
+is recommended as the preferred secure approach to resolve double access
+denial logging related to usage of performance monitoring and observability.</p>
+<p>Prior Linux v5.9 unprivileged processes using perf_events system call
+are also subject for PTRACE_MODE_READ_REALCREDS ptrace access mode check
+<a class="footnote-reference brackets" href="#id38" id="id16" role="doc-noteref"><span class="fn-bracket">[</span>7<span class="fn-bracket">]</span></a> , whose outcome determines whether monitoring is permitted.
+So unprivileged processes provided with CAP_SYS_PTRACE capability are
+effectively permitted to pass the check. Starting from Linux v5.9
+CAP_SYS_PTRACE capability is not required and CAP_PERFMON is enough to
+be provided for processes to make performance monitoring and observability
+operations.</p>
+<p>Other capabilities being granted to unprivileged processes can
+effectively enable capturing of additional data required for later
+performance analysis of monitored processes or a system. For example,
+CAP_SYSLOG capability permits reading kernel space memory addresses from
+/proc/kallsyms file.</p>
+</section>
+<section id="privileged-perf-users-groups">
+<h2>Privileged Perf users groups<a class="headerlink" href="#privileged-perf-users-groups" title="Link to this heading">¶</a></h2>
+<p>Mechanisms of capabilities, privileged capability-dumb files <a class="footnote-reference brackets" href="#id37" id="id17" role="doc-noteref"><span class="fn-bracket">[</span>6<span class="fn-bracket">]</span></a>,
+file system ACLs <a class="footnote-reference brackets" href="#id41" id="id18" role="doc-noteref"><span class="fn-bracket">[</span>10<span class="fn-bracket">]</span></a> and sudo <a class="footnote-reference brackets" href="#id46" id="id19" role="doc-noteref"><span class="fn-bracket">[</span>15<span class="fn-bracket">]</span></a> utility can be used to create
+dedicated groups of privileged Perf users who are permitted to execute
+performance monitoring and observability without limits. The following
+steps can be taken to create such groups of privileged Perf users.</p>
+<ol class="arabic simple">
+<li><p>Create perf_users group of privileged Perf users, assign perf_users
+group to Perf tool executable and limit access to the executable for
+other users in the system who are not in the perf_users group:</p></li>
+</ol>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># groupadd perf_users
+# ls -alhF
+-rwxr-xr-x  2 root root  11M Oct 19 15:12 perf
+# chgrp perf_users perf
+# ls -alhF
+-rwxr-xr-x  2 root perf_users  11M Oct 19 15:12 perf
+# chmod o-rwx perf
+# ls -alhF
+-rwxr-x---  2 root perf_users  11M Oct 19 15:12 perf
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Assign the required capabilities to the Perf tool executable file and
+enable members of perf_users group with monitoring and observability
+privileges <a class="footnote-reference brackets" href="#id37" id="id20" role="doc-noteref"><span class="fn-bracket">[</span>6<span class="fn-bracket">]</span></a> :</p></li>
+</ol>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># setcap &quot;cap_perfmon,cap_sys_ptrace,cap_syslog=ep&quot; perf
+# setcap -v &quot;cap_perfmon,cap_sys_ptrace,cap_syslog=ep&quot; perf
+perf: OK
+# getcap perf
+perf = cap_sys_ptrace,cap_syslog,cap_perfmon+ep
+</pre></div>
+</div>
+<p>If the libcap <a class="footnote-reference brackets" href="#id47" id="id21" role="doc-noteref"><span class="fn-bracket">[</span>16<span class="fn-bracket">]</span></a> installed doesn't yet support &quot;cap_perfmon&quot;, use &quot;38&quot; instead,
+i.e.:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># setcap &quot;38,cap_ipc_lock,cap_sys_ptrace,cap_syslog=ep&quot; perf
+</pre></div>
+</div>
+<p>Note that you may need to have 'cap_ipc_lock' in the mix for tools such as
+'perf top', alternatively use 'perf top -m N', to reduce the memory that
+it uses for the perf ring buffer, see the memory allocation section below.</p>
+<p>Using a libcap without support for CAP_PERFMON will make cap_get_flag(caps, 38,
+CAP_EFFECTIVE, &amp;val) fail, which will lead the default event to be 'cycles:u',
+so as a workaround explicitly ask for the 'cycles' event, i.e.:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># perf top -e cycles
+</pre></div>
+</div>
+<p>To get kernel and user samples with a perf binary with just CAP_PERFMON.</p>
+<p>As a result, members of perf_users group are capable of conducting
+performance monitoring and observability by using functionality of the
+configured Perf tool executable that, when executes, passes perf_events
+subsystem scope checks.</p>
+<p>In case Perf tool executable can't be assigned required capabilities (e.g.
+file system is mounted with nosuid option or extended attributes are
+not supported by the file system) then creation of the capabilities
+privileged environment, naturally shell, is possible. The shell provides
+inherent processes with CAP_PERFMON and other required capabilities so that
+performance monitoring and observability operations are available in the
+environment without limits. Access to the environment can be open via sudo
+utility for members of perf_users group only. In order to create such
+environment:</p>
+<ol class="arabic simple">
+<li><p>Create shell script that uses capsh utility <a class="footnote-reference brackets" href="#id47" id="id22" role="doc-noteref"><span class="fn-bracket">[</span>16<span class="fn-bracket">]</span></a> to assign CAP_PERFMON
+and other required capabilities into ambient capability set of the shell
+process, lock the process security bits after enabling SECBIT_NO_SETUID_FIXUP,
+SECBIT_NOROOT and SECBIT_NO_CAP_AMBIENT_RAISE bits and then change
+the process identity to sudo caller of the script who should essentially
+be a member of perf_users group:</p></li>
+</ol>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># ls -alh /usr/local/bin/perf.shell
+-rwxr-xr-x. 1 root root 83 Oct 13 23:57 /usr/local/bin/perf.shell
+# cat /usr/local/bin/perf.shell
+exec /usr/sbin/capsh --iab=^cap_perfmon --secbits=239 --user=$SUDO_USER -- -l
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Extend sudo policy at /etc/sudoers file with a rule for perf_users group:</p></li>
+</ol>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># grep perf_users /etc/sudoers
+%perf_users    ALL=/usr/local/bin/perf.shell
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Check that members of perf_users group have access to the privileged
+shell and have CAP_PERFMON and other required capabilities enabled
+in permitted, effective and ambient capability sets of an inherent process:</p></li>
+</ol>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ id
+uid=1003(capsh_test) gid=1004(capsh_test) groups=1004(capsh_test),1000(perf_users) context=unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023
+$ sudo perf.shell
+[sudo] password for capsh_test:
+$ grep Cap /proc/self/status
+CapInh:        0000004000000000
+CapPrm:        0000004000000000
+CapEff:        0000004000000000
+CapBnd:        000000ffffffffff
+CapAmb:        0000004000000000
+$ capsh --decode=0000004000000000
+0x0000004000000000=cap_perfmon
+</pre></div>
+</div>
+<p>As a result, members of perf_users group have access to the privileged
+environment where they can use tools employing performance monitoring APIs
+governed by CAP_PERFMON Linux capability.</p>
+<p>This specific access control management is only available to superuser
+or root running processes with CAP_SETPCAP, CAP_SETFCAP <a class="footnote-reference brackets" href="#id37" id="id23" role="doc-noteref"><span class="fn-bracket">[</span>6<span class="fn-bracket">]</span></a>
+capabilities.</p>
+</section>
+<section id="unprivileged-users">
+<h2>Unprivileged users<a class="headerlink" href="#unprivileged-users" title="Link to this heading">¶</a></h2>
+<p>perf_events <em>scope</em> and <em>access</em> control for unprivileged processes
+is governed by perf_event_paranoid <a class="footnote-reference brackets" href="#id33" id="id24" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a> setting:</p>
+<dl class="simple">
+<dt>-1:</dt><dd><p>Impose no <em>scope</em> and <em>access</em> restrictions on using perf_events
+performance monitoring. Per-user per-cpu perf_event_mlock_kb <a class="footnote-reference brackets" href="#id33" id="id25" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>
+locking limit is ignored when allocating memory buffers for storing
+performance data. This is the least secure mode since allowed
+monitored <em>scope</em> is maximized and no perf_events specific limits
+are imposed on <em>resources</em> allocated for performance monitoring.</p>
+</dd>
+<dt>&gt;=0:</dt><dd><p><em>scope</em> includes per-process and system wide performance monitoring
+but excludes raw tracepoints and ftrace function tracepoints
+monitoring. CPU and system events happened when executing either in
+user or in kernel space can be monitored and captured for later
+analysis. Per-user per-cpu perf_event_mlock_kb locking limit is
+imposed but ignored for unprivileged processes with CAP_IPC_LOCK
+<a class="footnote-reference brackets" href="#id37" id="id26" role="doc-noteref"><span class="fn-bracket">[</span>6<span class="fn-bracket">]</span></a> capability.</p>
+</dd>
+<dt>&gt;=1:</dt><dd><p><em>scope</em> includes per-process performance monitoring only and
+excludes system wide performance monitoring. CPU and system events
+happened when executing either in user or in kernel space can be
+monitored and captured for later analysis. Per-user per-cpu
+perf_event_mlock_kb locking limit is imposed but ignored for
+unprivileged processes with CAP_IPC_LOCK capability.</p>
+</dd>
+<dt>&gt;=2:</dt><dd><p><em>scope</em> includes per-process performance monitoring only. CPU and
+system events happened when executing in user space only can be
+monitored and captured for later analysis. Per-user per-cpu
+perf_event_mlock_kb locking limit is imposed but ignored for
+unprivileged processes with CAP_IPC_LOCK capability.</p>
+</dd>
+</dl>
+</section>
+<section id="resource-control">
+<h2>Resource control<a class="headerlink" href="#resource-control" title="Link to this heading">¶</a></h2>
+<section id="open-file-descriptors">
+<h3>Open file descriptors<a class="headerlink" href="#open-file-descriptors" title="Link to this heading">¶</a></h3>
+<p>The perf_events system call API <a class="footnote-reference brackets" href="#id33" id="id27" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a> allocates file descriptors for
+every configured PMU event. Open file descriptors are a per-process
+accountable resource governed by the RLIMIT_NOFILE <a class="footnote-reference brackets" href="#id42" id="id28" role="doc-noteref"><span class="fn-bracket">[</span>11<span class="fn-bracket">]</span></a> limit
+(ulimit -n), which is usually derived from the login shell process. When
+configuring Perf collection for a long list of events on a large server
+system, this limit can be easily hit preventing required monitoring
+configuration. RLIMIT_NOFILE limit can be increased on per-user basis
+modifying content of the limits.conf file <a class="footnote-reference brackets" href="#id43" id="id29" role="doc-noteref"><span class="fn-bracket">[</span>12<span class="fn-bracket">]</span></a> . Ordinarily, a Perf
+sampling session (perf record) requires an amount of open perf_event
+file descriptors that is not less than the number of monitored events
+multiplied by the number of monitored CPUs.</p>
+</section>
+<section id="memory-allocation">
+<h3>Memory allocation<a class="headerlink" href="#memory-allocation" title="Link to this heading">¶</a></h3>
+<p>The amount of memory available to user processes for capturing
+performance monitoring data is governed by the perf_event_mlock_kb <a class="footnote-reference brackets" href="#id33" id="id30" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>
+setting. This perf_event specific resource setting defines overall
+per-cpu limits of memory allowed for mapping by the user processes to
+execute performance monitoring. The setting essentially extends the
+RLIMIT_MEMLOCK <a class="footnote-reference brackets" href="#id42" id="id31" role="doc-noteref"><span class="fn-bracket">[</span>11<span class="fn-bracket">]</span></a> limit, but only for memory regions mapped
+specifically for capturing monitored performance events and related data.</p>
+<p>For example, if a machine has eight cores and perf_event_mlock_kb limit
+is set to 516 KiB, then a user process is provided with 516 KiB * 8 =
+4128 KiB of memory above the RLIMIT_MEMLOCK limit (ulimit -l) for
+perf_event mmap buffers. In particular, this means that, if the user
+wants to start two or more performance monitoring processes, the user is
+required to manually distribute the available 4128 KiB between the
+monitoring processes, for example, using the --mmap-pages Perf record
+mode option. Otherwise, the first started performance monitoring process
+allocates all available 4128 KiB and the other processes will fail to
+proceed due to the lack of memory.</p>
+<p>RLIMIT_MEMLOCK and perf_event_mlock_kb resource constraints are ignored
+for processes with the CAP_IPC_LOCK capability. Thus, perf_events/Perf
+privileged users can be provided with memory above the constraints for
+perf_events/Perf performance monitoring purpose by providing the Perf
+executable with CAP_IPC_LOCK capability.</p>
+</section>
+</section>
+<section id="bibliography">
+<h2>Bibliography<a class="headerlink" href="#bibliography" title="Link to this heading">¶</a></h2>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id32" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://lwn.net/Articles/337493/">https://lwn.net/Articles/337493/</a></p>
+</aside>
+<aside class="footnote brackets" id="id33" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id2">1</a>,<a role="doc-backlink" href="#id4">2</a>,<a role="doc-backlink" href="#id7">3</a>,<a role="doc-backlink" href="#id24">4</a>,<a role="doc-backlink" href="#id25">5</a>,<a role="doc-backlink" href="#id27">6</a>,<a role="doc-backlink" href="#id30">7</a>)</span>
+<p><a class="reference external" href="http://man7.org/linux/man-pages/man2/perf_event_open.2.html">http://man7.org/linux/man-pages/man2/perf_event_open.2.html</a></p>
+</aside>
+<aside class="footnote brackets" id="id34" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id3">1</a>,<a role="doc-backlink" href="#id5">2</a>)</span>
+<p><a class="reference external" href="http://web.eece.maine.edu/~vweaver/projects/perf_events/">http://web.eece.maine.edu/~vweaver/projects/perf_events/</a></p>
+</aside>
+<aside class="footnote brackets" id="id35" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id6">4</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://perf.wiki.kernel.org/index.php/Main_Page">https://perf.wiki.kernel.org/index.php/Main_Page</a></p>
+</aside>
+<aside class="footnote brackets" id="id36" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>5<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id10">1</a>,<a role="doc-backlink" href="#id12">2</a>)</span>
+<p><a class="reference external" href="https://www.kernel.org/doc/html/latest/security/credentials.html">https://www.kernel.org/doc/html/latest/security/credentials.html</a></p>
+</aside>
+<aside class="footnote brackets" id="id37" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>6<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id11">1</a>,<a role="doc-backlink" href="#id13">2</a>,<a role="doc-backlink" href="#id17">3</a>,<a role="doc-backlink" href="#id20">4</a>,<a role="doc-backlink" href="#id23">5</a>,<a role="doc-backlink" href="#id26">6</a>)</span>
+<p><a class="reference external" href="http://man7.org/linux/man-pages/man7/capabilities.7.html">http://man7.org/linux/man-pages/man7/capabilities.7.html</a></p>
+</aside>
+<aside class="footnote brackets" id="id38" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id16">7</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://man7.org/linux/man-pages/man2/ptrace.2.html">http://man7.org/linux/man-pages/man2/ptrace.2.html</a></p>
+</aside>
+<aside class="footnote brackets" id="id39" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id8">8</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Hardware_performance_counter">https://en.wikipedia.org/wiki/Hardware_performance_counter</a></p>
+</aside>
+<aside class="footnote brackets" id="id40" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id9">9</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Model-specific_register">https://en.wikipedia.org/wiki/Model-specific_register</a></p>
+</aside>
+<aside class="footnote brackets" id="id41" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id18">10</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://man7.org/linux/man-pages/man5/acl.5.html">http://man7.org/linux/man-pages/man5/acl.5.html</a></p>
+</aside>
+<aside class="footnote brackets" id="id42" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>11<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id28">1</a>,<a role="doc-backlink" href="#id31">2</a>)</span>
+<p><a class="reference external" href="http://man7.org/linux/man-pages/man2/getrlimit.2.html">http://man7.org/linux/man-pages/man2/getrlimit.2.html</a></p>
+</aside>
+<aside class="footnote brackets" id="id43" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id29">12</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://man7.org/linux/man-pages/man5/limits.conf.5.html">http://man7.org/linux/man-pages/man5/limits.conf.5.html</a></p>
+</aside>
+<aside class="footnote brackets" id="id44" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id14">13</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://sites.google.com/site/fullycapable">https://sites.google.com/site/fullycapable</a></p>
+</aside>
+<aside class="footnote brackets" id="id45" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id15">14</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="http://man7.org/linux/man-pages/man8/auditd.8.html">http://man7.org/linux/man-pages/man8/auditd.8.html</a></p>
+</aside>
+<aside class="footnote brackets" id="id46" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id19">15</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://man7.org/linux/man-pages/man8/sudo.8.html">https://man7.org/linux/man-pages/man8/sudo.8.html</a></p>
+</aside>
+<aside class="footnote brackets" id="id47" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>16<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id21">1</a>,<a role="doc-backlink" href="#id22">2</a>)</span>
+<p><a class="reference external" href="https://git.kernel.org/pub/scm/libs/libcap/libcap.git/">https://git.kernel.org/pub/scm/libs/libcap/libcap.git/</a></p>
+</aside>
+</aside>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/admin-guide/perf-security.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

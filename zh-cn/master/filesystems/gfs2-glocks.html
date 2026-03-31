@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Glock internal locking rules &#8212; The Linux Kernel  文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=7d86a446"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/filesystems/gfs2-glocks.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="Macintosh HFS Filesystem for Linux" href="hfs.html" />
+    <link rel="prev" title="uevents and GFS2" href="gfs2-uevents.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.18.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Filesystems in the Linux kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../block/index.html">Block</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cdrom/index.html">CD-ROM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scsi/index.html">SCSI Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../target/index.html">TCM Virtual Device</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../nvme/index.html">NVMe Subsystem</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/filesystems/gfs2-glocks.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="glock-internal-locking-rules">
+<h1>Glock internal locking rules<a class="headerlink" href="#glock-internal-locking-rules" title="Link to this heading">¶</a></h1>
+<p>This documents the basic principles of the glock state machine
+internals. Each glock (<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">gfs2_glock</span></code> in fs/gfs2/incore.h)
+has two main (internal) locks:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>A spinlock (gl_lockref.lock) which protects the internal state such
+as gl_state, gl_target and the list of holders (gl_holders)</p></li>
+<li><p>A non-blocking bit lock, GLF_LOCK, which is used to prevent other
+threads from making calls to the DLM, etc. at the same time. If a
+thread takes this lock, it must then call run_queue (usually via the
+workqueue) when it releases it in order to ensure any pending tasks
+are completed.</p></li>
+</ol>
+</div></blockquote>
+<p>The gl_holders list contains all the queued lock requests (not
+just the holders) associated with the glock. If there are any
+held locks, then they will be contiguous entries at the head
+of the list. Locks are granted in strictly the order that they
+are queued.</p>
+<p>There are three lock states that users of the glock layer can request,
+namely shared (SH), deferred (DF) and exclusive (EX). Those translate
+to the following DLM lock modes:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Glock mode</p></th>
+<th class="head"><p>DLM</p></th>
+<th class="head"><p>lock mode</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>UN</p></td>
+<td><p>IV/NL</p></td>
+<td><p>Unlocked (no DLM lock associated with glock) or NL</p></td>
+</tr>
+<tr class="row-odd"><td><p>SH</p></td>
+<td><p>PR</p></td>
+<td><p>(Protected read)</p></td>
+</tr>
+<tr class="row-even"><td><p>DF</p></td>
+<td><p>CW</p></td>
+<td><p>(Concurrent write)</p></td>
+</tr>
+<tr class="row-odd"><td><p>EX</p></td>
+<td><p>EX</p></td>
+<td><p>(Exclusive)</p></td>
+</tr>
+</tbody>
+</table>
+<p>Thus DF is basically a shared mode which is incompatible with the &quot;normal&quot;
+shared lock mode, SH. In GFS2 the DF mode is used exclusively for direct I/O
+operations. The glocks are basically a lock plus some routines which deal
+with cache management. The following rules apply for the cache:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Glock mode</p></th>
+<th class="head"><p>Cache Metadata</p></th>
+<th class="head"><p>Cache data</p></th>
+<th class="head"><p>Dirty Data</p></th>
+<th class="head"><p>Dirty Metadata</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>UN</p></td>
+<td><p>No</p></td>
+<td><p>No</p></td>
+<td><p>No</p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-odd"><td><p>DF</p></td>
+<td><p>Yes</p></td>
+<td><p>No</p></td>
+<td><p>No</p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-even"><td><p>SH</p></td>
+<td><p>Yes</p></td>
+<td><p>Yes</p></td>
+<td><p>No</p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-odd"><td><p>EX</p></td>
+<td><p>Yes</p></td>
+<td><p>Yes</p></td>
+<td><p>Yes</p></td>
+<td><p>Yes</p></td>
+</tr>
+</tbody>
+</table>
+<p>These rules are implemented using the various glock operations which
+are defined for each type of glock. Not all types of glocks use
+all the modes. Only inode glocks use the DF mode for example.</p>
+<p>Table of glock operations and per type constants:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Purpose</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>go_sync</p></td>
+<td><p>Called before remote state change (e.g. to sync dirty data)</p></td>
+</tr>
+<tr class="row-odd"><td><p>go_xmote_bh</p></td>
+<td><p>Called after remote state change (e.g. to refill cache)</p></td>
+</tr>
+<tr class="row-even"><td><p>go_inval</p></td>
+<td><p>Called if remote state change requires invalidating the cache</p></td>
+</tr>
+<tr class="row-odd"><td><p>go_instantiate</p></td>
+<td><p>Called when a glock has been acquired</p></td>
+</tr>
+<tr class="row-even"><td><p>go_held</p></td>
+<td><p>Called every time a glock holder is acquired</p></td>
+</tr>
+<tr class="row-odd"><td><p>go_dump</p></td>
+<td><p>Called to print content of object for debugfs file, or on
+error to dump glock to the log.</p></td>
+</tr>
+<tr class="row-even"><td><p>go_callback</p></td>
+<td><p>Called if the DLM sends a callback to drop this lock</p></td>
+</tr>
+<tr class="row-odd"><td><p>go_unlocked</p></td>
+<td><p>Called when a glock is unlocked (<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dlm_unlock()</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p>go_type</p></td>
+<td><p>The type of the glock, <code class="docutils literal notranslate"><span class="pre">LM_TYPE_*</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>go_flags</p></td>
+<td><p>GLOF_ASPACE is set, if the glock has an address space
+associated with it</p></td>
+</tr>
+</tbody>
+</table>
+<p>The minimum hold time for each lock is the time after a remote lock
+grant for which we ignore remote demote requests. This is in order to
+prevent a situation where locks are being bounced around the cluster
+from node to node with none of the nodes making any progress. This
+tends to show up most with shared mmapped files which are being written
+to by multiple nodes. By delaying the demotion in response to a
+remote callback, that gives the userspace program time to make
+some progress before the pages are unmapped.</p>
+<p>Eventually, we hope to make the glock &quot;EX&quot; mode locally shared such that any
+local locking will be done with the i_mutex as required rather than via the
+glock.</p>
+<p>Locking rules for glock operations:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Operation</p></th>
+<th class="head"><p>GLF_LOCK bit lock held</p></th>
+<th class="head"><p>gl_lockref.lock spinlock held</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>go_sync</p></td>
+<td><p>Yes</p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-odd"><td><p>go_xmote_bh</p></td>
+<td><p>Yes</p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-even"><td><p>go_inval</p></td>
+<td><p>Yes</p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-odd"><td><p>go_instantiate</p></td>
+<td><p>No</p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-even"><td><p>go_held</p></td>
+<td><p>No</p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-odd"><td><p>go_dump</p></td>
+<td><p>Sometimes</p></td>
+<td><p>Yes</p></td>
+</tr>
+<tr class="row-even"><td><p>go_callback</p></td>
+<td><p>Sometimes (N/A)</p></td>
+<td><p>Yes</p></td>
+</tr>
+<tr class="row-odd"><td><p>go_unlocked</p></td>
+<td><p>Yes</p></td>
+<td><p>No</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">备注</p>
+<p>Operations must not drop either the bit lock or the spinlock
+if its held on entry. go_dump and do_demote_ok must never block.
+Note that go_dump will only be called if the glock's state
+indicates that it is caching up-to-date data.</p>
+</div>
+<p>Glock locking order within GFS2:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>i_rwsem (if required)</p></li>
+<li><p>Rename glock (for rename only)</p></li>
+<li><p>Inode glock(s)
+(Parents before children, inodes at &quot;same level&quot; with same parent in
+lock number order)</p></li>
+<li><p>Rgrp glock(s) (for (de)allocation operations)</p></li>
+<li><p>Transaction glock (via gfs2_trans_begin) for non-read operations</p></li>
+<li><p>i_rw_mutex (if required)</p></li>
+<li><p>Page lock  (always last, very important!)</p></li>
+</ol>
+</div></blockquote>
+<p>There are two glocks per inode. One deals with access to the inode
+itself (locking order as above), and the other, known as the iopen
+glock is used in conjunction with the i_nlink field in the inode to
+determine the lifetime of the inode in question. Locking of inodes
+is on a per-inode basis. Locking of rgrps is on a per rgrp basis.
+In general we prefer to lock local locks prior to cluster locks.</p>
+<section id="glock-statistics">
+<h2>Glock Statistics<a class="headerlink" href="#glock-statistics" title="Link to this heading">¶</a></h2>
+<p>The stats are divided into two sets: those relating to the
+super block and those relating to an individual glock. The
+super block stats are done on a per cpu basis in order to
+try and reduce the overhead of gathering them. They are also
+further divided by glock type. All timings are in nanoseconds.</p>
+<p>In the case of both the super block and glock statistics,
+the same information is gathered in each case. The super
+block timing statistics are used to provide default values for
+the glock timing statistics, so that newly created glocks
+should have, as far as possible, a sensible starting point.
+The per-glock counters are initialised to zero when the
+glock is created. The per-glock statistics are lost when
+the glock is ejected from memory.</p>
+<p>The statistics are divided into three pairs of mean and
+variance, plus two counters. The mean/variance pairs are
+smoothed exponential estimates and the algorithm used is
+one which will be very familiar to those used to calculation
+of round trip times in network code. See &quot;TCP/IP Illustrated,
+Volume 1&quot;, W. Richard Stevens, sect 21.3, &quot;Round-Trip Time Measurement&quot;,
+p. 299 and onwards. Also, Volume 2, Sect. 25.10, p. 838 and onwards.
+Unlike the TCP/IP Illustrated case, the mean and variance are
+not scaled, but are in units of integer nanoseconds.</p>
+<p>The three pairs of mean/variance measure the following
+things:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>DLM lock time (non-blocking requests)</p></li>
+<li><p>DLM lock time (blocking requests)</p></li>
+<li><p>Inter-request time (again to the DLM)</p></li>
+</ol>
+</div></blockquote>
+<p>A non-blocking request is one which will complete right
+away, whatever the state of the DLM lock in question. That
+currently means any requests when (a) the current state of
+the lock is exclusive, i.e. a lock demotion (b) the requested
+state is either null or unlocked (again, a demotion) or (c) the
+&quot;try lock&quot; flag is set. A blocking request covers all the other
+lock requests.</p>
+<p>There are two counters. The first is there primarily to show
+how many lock requests have been made, and thus how much data
+has gone into the mean/variance calculations. The other counter
+is counting queuing of holders at the top layer of the glock
+code. Hopefully that number will be a lot larger than the number
+of dlm lock requests issued.</p>
+<p>So why gather these statistics? There are several reasons
+we'd like to get a better idea of these timings:</p>
+<ol class="arabic simple">
+<li><p>To be able to better set the glock &quot;min hold time&quot;</p></li>
+<li><p>To spot performance issues more easily</p></li>
+<li><p>To improve the algorithm for selecting resource groups for
+allocation (to base it on lock wait time, rather than blindly
+using a &quot;try lock&quot;)</p></li>
+</ol>
+<p>Due to the smoothing action of the updates, a step change in
+some input quantity being sampled will only fully be taken
+into account after 8 samples (or 4 for the variance) and this
+needs to be carefully considered when interpreting the
+results.</p>
+<p>Knowing both the time it takes a lock request to complete and
+the average time between lock requests for a glock means we
+can compute the total percentage of the time for which the
+node is able to use a glock vs. time that the rest of the
+cluster has its share. That will be very useful when setting
+the lock min hold time.</p>
+<p>Great care has been taken to ensure that we
+measure exactly the quantities that we want, as accurately
+as possible. There are always inaccuracies in any
+measuring system, but I hope this is as accurate as we
+can reasonably make it.</p>
+<p>Per sb stats can be found here:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/sys/kernel/debug/gfs2/&lt;fsname&gt;/sbstats
+</pre></div>
+</div>
+<p>Per glock stats can be found here:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/sys/kernel/debug/gfs2/&lt;fsname&gt;/glstats
+</pre></div>
+</div>
+<p>Assuming that debugfs is mounted on /sys/kernel/debug and also
+that &lt;fsname&gt; is replaced with the name of the gfs2 filesystem
+in question.</p>
+<p>The abbreviations used in the output as are follows:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>srtt</p></td>
+<td><p>Smoothed round trip time for non blocking dlm requests</p></td>
+</tr>
+<tr class="row-even"><td><p>srttvar</p></td>
+<td><p>Variance estimate for srtt</p></td>
+</tr>
+<tr class="row-odd"><td><p>srttb</p></td>
+<td><p>Smoothed round trip time for (potentially) blocking dlm requests</p></td>
+</tr>
+<tr class="row-even"><td><p>srttvarb</p></td>
+<td><p>Variance estimate for srttb</p></td>
+</tr>
+<tr class="row-odd"><td><p>sirt</p></td>
+<td><p>Smoothed inter request time (for dlm requests)</p></td>
+</tr>
+<tr class="row-even"><td><p>sirtvar</p></td>
+<td><p>Variance estimate for sirt</p></td>
+</tr>
+<tr class="row-odd"><td><p>dlm</p></td>
+<td><p>Number of dlm requests made (dcnt in glstats file)</p></td>
+</tr>
+<tr class="row-even"><td><p>queue</p></td>
+<td><p>Number of glock requests queued (qcnt in glstats file)</p></td>
+</tr>
+</tbody>
+</table>
+<p>The sbstats file contains a set of these stats for each glock type (so 8 lines
+for each type) and for each cpu (one column per cpu). The glstats file contains
+a set of these stats for each glock in a similar format to the glocks file, but
+using the format mean/variance for each of the timing stats.</p>
+<p>The gfs2_glock_lock_time tracepoint prints out the current values of the stats
+for the glock in question, along with some addition information on each dlm
+reply that is received:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>status</p></td>
+<td><p>The status of the dlm request</p></td>
+</tr>
+<tr class="row-even"><td><p>flags</p></td>
+<td><p>The dlm request flags</p></td>
+</tr>
+<tr class="row-odd"><td><p>tdiff</p></td>
+<td><p>The time taken by this specific request</p></td>
+</tr>
+</tbody>
+</table>
+<p>(remaining fields as per above list)</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/filesystems/gfs2-glocks.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

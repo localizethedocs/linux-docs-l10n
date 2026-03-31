@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Backporting and conflict resolution &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/process/backporting.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="Adding a New System Call" href="adding-syscalls.html" />
+    <link rel="prev" title="Applying Patches To The Linux Kernel" href="applying-patches.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">All development-process docs</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#an-introduction-to-how-kernel-development-works">An introduction to how kernel development works</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#tools-and-technical-guides-for-kernel-developers">Tools and technical guides for kernel developers</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="changes.html">Minimal requirements to compile the Kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="programming-language.html">Programming Language</a></li>
+<li class="toctree-l3"><a class="reference internal" href="coding-style.html">Linux kernel coding style</a></li>
+<li class="toctree-l3"><a class="reference internal" href="maintainer-pgp-guide.html">Kernel Maintainer PGP guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="email-clients.html">Email clients info for Linux</a></li>
+<li class="toctree-l3"><a class="reference internal" href="applying-patches.html">Applying Patches To The Linux Kernel</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Backporting and conflict resolution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="adding-syscalls.html">Adding a New System Call</a></li>
+<li class="toctree-l3"><a class="reference internal" href="volatile-considered-harmful.html">Why the &quot;volatile&quot; type class should not be used</a></li>
+<li class="toctree-l3"><a class="reference internal" href="botching-up-ioctls.html">(How to avoid) Botching up ioctls</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#policy-guides-and-developer-statements">Policy guides and developer statements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#dealing-with-bugs">Dealing with bugs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#maintainer-information">Maintainer information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#other-material">Other material</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/process/backporting.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="backporting-and-conflict-resolution">
+<h1>Backporting and conflict resolution<a class="headerlink" href="#backporting-and-conflict-resolution" title="Link to this heading">¶</a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">Author<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Vegard Nossum &lt;<a class="reference external" href="mailto:vegard&#46;nossum&#37;&#52;&#48;oracle&#46;com">vegard<span>&#46;</span>nossum<span>&#64;</span>oracle<span>&#46;</span>com</a>&gt;</p>
+</dd>
+</dl>
+<nav class="contents local" id="id1">
+<ul class="simple">
+<li><p><a class="reference internal" href="#introduction" id="id3">Introduction</a></p></li>
+<li><p><a class="reference internal" href="#applying-the-patch-to-a-tree" id="id4">Applying the patch to a tree</a></p></li>
+<li><p><a class="reference internal" href="#resolving-conflicts" id="id5">Resolving conflicts</a></p>
+<ul>
+<li><p><a class="reference internal" href="#prerequisite-patches" id="id6">Prerequisite patches</a></p>
+<ul>
+<li><p><a class="reference internal" href="#git-log" id="id7">git log</a></p></li>
+<li><p><a class="reference internal" href="#git-blame" id="id8">git blame</a></p></li>
+<li><p><a class="reference internal" href="#prerequisite-vs-incidental-patches" id="id9">Prerequisite vs. incidental patches</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#understanding-conflict-markers" id="id10">Understanding conflict markers</a></p>
+<ul>
+<li><p><a class="reference internal" href="#combined-diffs" id="id11">Combined diffs</a></p></li>
+<li><p><a class="reference internal" href="#better-diffs" id="id12">Better diffs</a></p></li>
+<li><p><a class="reference internal" href="#merge-styles-and-diff3" id="id13">Merge styles and diff3</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#iterating-on-conflict-resolutions" id="id14">Iterating on conflict resolutions</a></p>
+<ul>
+<li><p><a class="reference internal" href="#resolution-process" id="id15">Resolution process</a></p></li>
+<li><p><a class="reference internal" href="#dealing-with-file-renames" id="id16">Dealing with file renames</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#gotchas" id="id17">Gotchas</a></p>
+<ul>
+<li><p><a class="reference internal" href="#function-arguments" id="id18">Function arguments</a></p></li>
+<li><p><a class="reference internal" href="#error-handling" id="id19">Error handling</a></p></li>
+<li><p><a class="reference internal" href="#refactored-code" id="id20">Refactored code</a></p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#verifying-the-result" id="id21">Verifying the result</a></p>
+<ul>
+<li><p><a class="reference internal" href="#colordiff" id="id22">colordiff</a></p></li>
+<li><p><a class="reference internal" href="#build-testing" id="id23">Build testing</a></p></li>
+<li><p><a class="reference internal" href="#runtime-testing" id="id24">Runtime testing</a></p></li>
+</ul>
+</li>
+<li><p><a class="reference internal" href="#submitting-backports-to-stable" id="id25">Submitting backports to stable</a></p></li>
+<li><p><a class="reference internal" href="#a-few-final-words-of-advice" id="id26">A few final words of advice</a></p></li>
+<li><p><a class="reference internal" href="#examples" id="id27">Examples</a></p></li>
+</ul>
+</nav>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading">¶</a></h2>
+<p>Some developers may never really have to deal with backporting patches,
+merging branches, or resolving conflicts in their day-to-day work, so
+when a merge conflict does pop up, it can be daunting. Luckily,
+resolving conflicts is a skill like any other, and there are many useful
+techniques you can use to make the process smoother and increase your
+confidence in the result.</p>
+<p>This document aims to be a comprehensive, step-by-step guide to
+backporting and conflict resolution.</p>
+</section>
+<section id="applying-the-patch-to-a-tree">
+<h2>Applying the patch to a tree<a class="headerlink" href="#applying-the-patch-to-a-tree" title="Link to this heading">¶</a></h2>
+<p>Sometimes the patch you are backporting already exists as a git commit,
+in which case you just cherry-pick it directly using
+<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">cherry-pick</span></code>. However, if the patch comes from an email, as it
+often does for the Linux kernel, you will need to apply it to a tree
+using <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">am</span></code>.</p>
+<p>If you've ever used <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">am</span></code>, you probably already know that it is
+quite picky about the patch applying perfectly to your source tree. In
+fact, you've probably had nightmares about <code class="docutils literal notranslate"><span class="pre">.rej</span></code> files and trying to
+edit the patch to make it apply.</p>
+<p>It is strongly recommended to instead find an appropriate base version
+where the patch applies cleanly and <em>then</em> cherry-pick it over to your
+destination tree, as this will make git output conflict markers and let
+you resolve conflicts with the help of git and any other conflict
+resolution tools you might prefer to use. For example, if you want to
+apply a patch that just arrived on LKML to an older stable kernel, you
+can apply it to the most recent mainline kernel and then cherry-pick it
+to your older stable branch.</p>
+<p>It's generally better to use the exact same base as the one the patch
+was generated from, but it doesn't really matter that much as long as it
+applies cleanly and isn't too far from the original base. The only
+problem with applying the patch to the &quot;wrong&quot; base is that it may pull
+in more unrelated changes in the context of the diff when cherry-picking
+it to the older branch.</p>
+<p>A good reason to prefer <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">cherry-pick</span></code> over <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">am</span></code> is that git
+knows the precise history of an existing commit, so it will know when
+code has moved around and changed the line numbers; this in turn makes
+it less likely to apply the patch to the wrong place (which can result
+in silent mistakes or messy conflicts).</p>
+<p>If you are using <a class="reference external" href="https://people.kernel.org/monsieuricon/introducing-b4-and-patch-attestation">b4</a>. and you are applying the patch directly from an
+email, you can use <code class="docutils literal notranslate"><span class="pre">b4</span> <span class="pre">am</span></code> with the options <code class="docutils literal notranslate"><span class="pre">-g</span></code>/<code class="docutils literal notranslate"><span class="pre">--guess-base</span></code>
+and <code class="docutils literal notranslate"><span class="pre">-3</span></code>/<code class="docutils literal notranslate"><span class="pre">--prep-3way</span></code> to do some of this automatically (see the
+<a class="reference external" href="https://youtu.be/mF10hgVIx9o?t=2996">b4 presentation</a> for more information). However, the rest of this
+article will assume that you are doing a plain <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">cherry-pick</span></code>.</p>
+<p>Once you have the patch in git, you can go ahead and cherry-pick it into
+your source tree. Don't forget to cherry-pick with <code class="docutils literal notranslate"><span class="pre">-x</span></code> if you want a
+written record of where the patch came from!</p>
+<p>Note that if you are submitting a patch for stable, the format is
+slightly different; the first line after the subject line needs to be
+either:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>commit &lt;upstream commit&gt; upstream
+</pre></div>
+</div>
+<p>或者：</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>[ Upstream commit &lt;upstream commit&gt; ]
+</pre></div>
+</div>
+</section>
+<section id="resolving-conflicts">
+<h2>Resolving conflicts<a class="headerlink" href="#resolving-conflicts" title="Link to this heading">¶</a></h2>
+<p>Uh-oh; the cherry-pick failed with a vaguely threatening message:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>CONFLICT (content): Merge conflict
+</pre></div>
+</div>
+<p>What to do now?</p>
+<p>In general, conflicts appear when the context of the patch (i.e., the
+lines being changed and/or the lines surrounding the changes) doesn't
+match what's in the tree you are trying to apply the patch <em>to</em>.</p>
+<p>For backports, what likely happened was that the branch you are
+backporting from contains patches not in the branch you are backporting
+to. However, the reverse is also possible. In any case, the result is a
+conflict that needs to be resolved.</p>
+<p>If your attempted cherry-pick fails with a conflict, git automatically
+edits the files to include so-called conflict markers showing you where
+the conflict is and how the two branches have diverged. Resolving the
+conflict typically means editing the end result in such a way that it
+takes into account these other commits.</p>
+<p>Resolving the conflict can be done either by hand in a regular text
+editor or using a dedicated conflict resolution tool.</p>
+<p>Many people prefer to use their regular text editor and edit the
+conflict directly, as it may be easier to understand what you're doing
+and to control the final result. There are definitely pros and cons to
+each method, and sometimes there's value in using both.</p>
+<p>We will not cover using dedicated merge tools here beyond providing some
+pointers to various tools that you could use:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.emacswiki.org/emacs/EdiffMode">Emacs Ediff mode</a></p></li>
+<li><p><a class="reference external" href="https://linux.die.net/man/1/vimdiff">vimdiff/gvimdiff</a></p></li>
+<li><p><a class="reference external" href="http://kdiff3.sourceforge.net/">KDiff3</a></p></li>
+<li><p><a class="reference external" href="https://tortoisesvn.net/TortoiseMerge.html">TortoiseMerge</a></p></li>
+<li><p><a class="reference external" href="https://meldmerge.org/help/">Meld</a></p></li>
+<li><p><a class="reference external" href="https://www.perforce.com/products/helix-core-apps/merge-diff-tool-p4merge">P4Merge</a></p></li>
+<li><p><a class="reference external" href="https://www.scootersoftware.com/">Beyond Compare</a></p></li>
+<li><p><a class="reference external" href="https://www.jetbrains.com/help/idea/resolve-conflicts.html">IntelliJ</a></p></li>
+<li><p><a class="reference external" href="https://code.visualstudio.com/docs/editor/versioncontrol">VSCode</a></p></li>
+</ul>
+<p>To configure git to work with these, see <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">mergetool</span> <span class="pre">--help</span></code> or
+the official <a class="reference external" href="https://git-scm.com/docs/git-mergetool">git-mergetool documentation</a>.</p>
+<section id="prerequisite-patches">
+<h3>Prerequisite patches<a class="headerlink" href="#prerequisite-patches" title="Link to this heading">¶</a></h3>
+<p>Most conflicts happen because the branch you are backporting to is
+missing some patches compared to the branch you are backporting <em>from</em>.
+In the more general case (such as merging two independent branches),
+development could have happened on either branch, or the branches have
+simply diverged -- perhaps your older branch had some other backports
+applied to it that themselves needed conflict resolutions, causing a
+divergence.</p>
+<p>It's important to always identify the commit or commits that caused the
+conflict, as otherwise you cannot be confident in the correctness of
+your resolution. As an added bonus, especially if the patch is in an
+area you're not that familiar with, the changelogs of these commits will
+often give you the context to understand the code and potential problems
+or pitfalls with your conflict resolution.</p>
+<section id="git-log">
+<h4>git log<a class="headerlink" href="#git-log" title="Link to this heading">¶</a></h4>
+<p>A good first step is to look at <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">log</span></code> for the file that has the
+conflict -- this is usually sufficient when there aren't a lot of
+patches to the file, but may get confusing if the file is big and
+frequently patched. You should run <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">log</span></code> on the range of commits
+between your currently checked-out branch (<code class="docutils literal notranslate"><span class="pre">HEAD</span></code>) and the parent of
+the patch you are picking (<code class="docutils literal notranslate"><span class="pre">&lt;commit&gt;</span></code>), i.e.:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git log HEAD..&lt;commit&gt;^ -- &lt;path&gt;
+</pre></div>
+</div>
+<p>Even better, if you want to restrict this output to a single function
+(because that's where the conflict appears), you can use the following
+syntax:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git log -L:&#39;\&lt;function\&gt;&#39;:&lt;path&gt; HEAD..&lt;commit&gt;^
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">备注</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">\&lt;</span></code> and <code class="docutils literal notranslate"><span class="pre">\&gt;</span></code> around the function name ensure that the
+matches are anchored on a word boundary. This is important, as this
+part is actually a regex and git only follows the first match, so
+if you use <code class="docutils literal notranslate"><span class="pre">-L:thread_stack:kernel/fork.c</span></code> it may only give you
+results for the function <code class="docutils literal notranslate"><span class="pre">try_release_thread_stack_to_cache</span></code> even
+though there are many other functions in that file containing the
+string <code class="docutils literal notranslate"><span class="pre">thread_stack</span></code> in their names.</p>
+</div>
+<p>Another useful option for <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">log</span></code> is <code class="docutils literal notranslate"><span class="pre">-G</span></code>, which allows you to
+filter on certain strings appearing in the diffs of the commits you are
+listing:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git log -G&#39;regex&#39; HEAD..&lt;commit&gt;^ -- &lt;path&gt;
+</pre></div>
+</div>
+<p>This can also be a handy way to quickly find when something (e.g. a
+function call or a variable) was changed, added, or removed. The search
+string is a regular expression, which means you can potentially search
+for more specific things like assignments to a specific <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">member</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git log -G&#39;\-&gt;index\&gt;.*=&#39;
+</pre></div>
+</div>
+</section>
+<section id="git-blame">
+<h4>git blame<a class="headerlink" href="#git-blame" title="Link to this heading">¶</a></h4>
+<p>Another way to find prerequisite commits (albeit only the most recent
+one for a given conflict) is to run <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">blame</span></code>. In this case, you
+need to run it against the parent commit of the patch you are
+cherry-picking and the file where the conflict appeared, i.e.:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git blame &lt;commit&gt;^ -- &lt;path&gt;
+</pre></div>
+</div>
+<p>This command also accepts the <code class="docutils literal notranslate"><span class="pre">-L</span></code> argument (for restricting the
+output to a single function), but in this case you specify the filename
+at the end of the command as usual:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git blame -L:&#39;\&lt;function\&gt;&#39; &lt;commit&gt;^ -- &lt;path&gt;
+</pre></div>
+</div>
+<p>Navigate to the place where the conflict occurred. The first column of
+the blame output is the commit ID of the patch that added a given line
+of code.</p>
+<p>It might be a good idea to <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">show</span></code> these commits and see if they
+look like they might be the source of the conflict. Sometimes there will
+be more than one of these commits, either because multiple commits
+changed different lines of the same conflict area <em>or</em> because multiple
+subsequent patches changed the same line (or lines) multiple times. In
+the latter case, you may have to run <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">blame</span></code> again and specify the
+older version of the file to look at in order to dig further back in
+the history of the file.</p>
+</section>
+<section id="prerequisite-vs-incidental-patches">
+<h4>Prerequisite vs. incidental patches<a class="headerlink" href="#prerequisite-vs-incidental-patches" title="Link to this heading">¶</a></h4>
+<p>Having found the patch that caused the conflict, you need to determine
+whether it is a prerequisite for the patch you are backporting or
+whether it is just incidental and can be skipped. An incidental patch
+would be one that touches the same code as the patch you are
+backporting, but does not change the semantics of the code in any
+material way. For example, a whitespace cleanup patch is completely
+incidental -- likewise, a patch that simply renames a function or a
+variable would be incidental as well. On the other hand, if the function
+being changed does not even exist in your current branch then this would
+not be incidental at all and you need to carefully consider whether the
+patch adding the function should be cherry-picked first.</p>
+<p>If you find that there is a necessary prerequisite patch, then you need
+to stop and cherry-pick that instead. If you've already resolved some
+conflicts in a different file and don't want to do it again, you can
+create a temporary copy of that file.</p>
+<p>To abort the current cherry-pick, go ahead and run
+<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">cherry-pick</span> <span class="pre">--abort</span></code>, then restart the cherry-picking process
+with the commit ID of the prerequisite patch instead.</p>
+</section>
+</section>
+<section id="understanding-conflict-markers">
+<h3>Understanding conflict markers<a class="headerlink" href="#understanding-conflict-markers" title="Link to this heading">¶</a></h3>
+<section id="combined-diffs">
+<h4>Combined diffs<a class="headerlink" href="#combined-diffs" title="Link to this heading">¶</a></h4>
+<p>Let's say you've decided against picking (or reverting) additional
+patches and you just want to resolve the conflict. Git will have
+inserted conflict markers into your file. Out of the box, this will look
+something like:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+this is what&#39;s in your current tree before cherry-picking
+=======
+this is what the patch wants it to be after cherry-picking
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; &lt;commit&gt;... title
+</pre></div>
+</div>
+<p>This is what you would see if you opened the file in your editor.
+However, if you were to run <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span></code> without any arguments, the
+output would look something like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ git diff
+[...]
+++&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+ +this is what&#39;s in your current tree before cherry-picking
+++========
++ this is what the patch wants it to be after cherry-picking
+++&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt; &lt;commit&gt;... title
+</pre></div>
+</div>
+<p>When you are resolving a conflict, the behavior of <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span></code> differs
+from its normal behavior. Notice the two columns of diff markers
+instead of the usual one; this is a so-called &quot;<a class="reference external" href="https://git-scm.com/docs/diff-format#_combined_diff_format">combined diff</a>&quot;, here
+showing the 3-way diff (or diff-of-diffs) between</p>
+<ol class="arabic simple">
+<li><p>the current branch (before cherry-picking) and the current working
+directory, and</p></li>
+<li><p>the current branch (before cherry-picking) and the file as it looks
+after the original patch has been applied.</p></li>
+</ol>
+</section>
+<section id="better-diffs">
+<h4>Better diffs<a class="headerlink" href="#better-diffs" title="Link to this heading">¶</a></h4>
+<p>3-way combined diffs include all the other changes that happened to the
+file between your current branch and the branch you are cherry-picking
+from. While this is useful for spotting other changes that you need to
+take into account, this also makes the output of <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span></code> somewhat
+intimidating and difficult to read. You may instead prefer to run
+<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span> <span class="pre">HEAD</span></code> (or <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span> <span class="pre">--ours</span></code>) which shows only the diff
+between the current branch before cherry-picking and the current working
+directory. It looks like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ git diff HEAD
+[...]
++&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+ this is what&#39;s in your current tree before cherry-picking
++========
++this is what the patch wants it to be after cherry-picking
++&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt; &lt;commit&gt;... title
+</pre></div>
+</div>
+<p>As you can see, this reads just like any other diff and makes it clear
+which lines are in the current branch and which lines are being added
+because they are part of the merge conflict or the patch being
+cherry-picked.</p>
+</section>
+<section id="merge-styles-and-diff3">
+<h4>Merge styles and diff3<a class="headerlink" href="#merge-styles-and-diff3" title="Link to this heading">¶</a></h4>
+<p>The default conflict marker style shown above is known as the <code class="docutils literal notranslate"><span class="pre">merge</span></code>
+style. There is also another style available, known as the <code class="docutils literal notranslate"><span class="pre">diff3</span></code>
+style, which looks like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+this is what is in your current tree before cherry-picking
+||||||| parent of &lt;commit&gt; (title)
+this is what the patch expected to find there
+=======
+this is what the patch wants it to be after being applied
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; &lt;commit&gt; (title)
+</pre></div>
+</div>
+<p>As you can see, this has 3 parts instead of 2, and includes what git
+expected to find there but didn't. It is <em>highly recommended</em> to use
+this conflict style as it makes it much clearer what the patch actually
+changed; i.e., it allows you to compare the before-and-after versions
+of the file for the commit you are cherry-picking. This allows you to
+make better decisions about how to resolve the conflict.</p>
+<p>To change conflict marker styles, you can use the following command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git config merge.conflictStyle diff3
+</pre></div>
+</div>
+<p>There is a third option, <code class="docutils literal notranslate"><span class="pre">zdiff3</span></code>, introduced in <a class="reference external" href="https://github.blog/2022-01-24-highlights-from-git-2-35/">Git 2.35</a>,
+which has the same 3 sections as <code class="docutils literal notranslate"><span class="pre">diff3</span></code>, but where common lines have
+been trimmed off, making the conflict area smaller in some cases.</p>
+</section>
+</section>
+<section id="iterating-on-conflict-resolutions">
+<h3>Iterating on conflict resolutions<a class="headerlink" href="#iterating-on-conflict-resolutions" title="Link to this heading">¶</a></h3>
+<p>The first step in any conflict resolution process is to understand the
+patch you are backporting. For the Linux kernel this is especially
+important, since an incorrect change can lead to the whole system
+crashing -- or worse, an undetected security vulnerability.</p>
+<p>Understanding the patch can be easy or difficult depending on the patch
+itself, the changelog, and your familiarity with the code being changed.
+However, a good question for every change (or every hunk of the patch)
+might be: &quot;Why is this hunk in the patch?&quot; The answers to these
+questions will inform your conflict resolution.</p>
+<section id="resolution-process">
+<h4>Resolution process<a class="headerlink" href="#resolution-process" title="Link to this heading">¶</a></h4>
+<p>Sometimes the easiest thing to do is to just remove all but the first
+part of the conflict, leaving the file essentially unchanged, and apply
+the changes by hand. Perhaps the patch is changing a function call
+argument from <code class="docutils literal notranslate"><span class="pre">0</span></code> to <code class="docutils literal notranslate"><span class="pre">1</span></code> while a conflicting change added an
+entirely new (and insignificant) parameter to the end of the parameter
+list; in that case, it's easy enough to change the argument from <code class="docutils literal notranslate"><span class="pre">0</span></code>
+to <code class="docutils literal notranslate"><span class="pre">1</span></code> by hand and leave the rest of the arguments alone. This
+technique of manually applying changes is mostly useful if the conflict
+pulled in a lot of unrelated context that you don't really need to care
+about.</p>
+<p>For particularly nasty conflicts with many conflict markers, you can use
+<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">add</span></code> or <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">add</span> <span class="pre">-i</span></code> to selectively stage your resolutions to
+get them out of the way; this also lets you use <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span> <span class="pre">HEAD</span></code> to
+always see what remains to be resolved or <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span> <span class="pre">--cached</span></code> to see
+what your patch looks like so far.</p>
+</section>
+<section id="dealing-with-file-renames">
+<h4>Dealing with file renames<a class="headerlink" href="#dealing-with-file-renames" title="Link to this heading">¶</a></h4>
+<p>One of the most annoying things that can happen while backporting a
+patch is discovering that one of the files being patched has been
+renamed, as that typically means git won't even put in conflict markers,
+but will just throw up its hands and say (paraphrased): &quot;Unmerged path!
+You do the work...&quot;</p>
+<p>There are generally a few ways to deal with this. If the patch to the
+renamed file is small, like a one-line change, the easiest thing is to
+just go ahead and apply the change by hand and be done with it. On the
+other hand, if the change is big or complicated, you definitely don't
+want to do it by hand.</p>
+<p>As a first pass, you can try something like this, which will lower the
+rename detection threshold to 30% (by default, git uses 50%, meaning
+that two files need to have at least 50% in common for it to consider
+an add-delete pair to be a potential rename):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git cherry-pick -strategy=recursive -Xrename-threshold=30
+</pre></div>
+</div>
+<p>Sometimes the right thing to do will be to also backport the patch that
+did the rename, but that's definitely not the most common case. Instead,
+what you can do is to temporarily rename the file in the branch you're
+backporting to (using <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">mv</span></code> and committing the result), restart the
+attempt to cherry-pick the patch, rename the file back (<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">mv</span></code> and
+committing again), and finally squash the result using <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">rebase</span> <span class="pre">-i</span></code>
+(see the <a class="reference external" href="https://medium.com/&#64;slamflipstrom/a-beginners-guide-to-squashing-commits-with-git-rebase-8185cf6e62ec">rebase tutorial</a>) so it appears as a single commit when you
+are done.</p>
+</section>
+</section>
+<section id="gotchas">
+<h3>Gotchas<a class="headerlink" href="#gotchas" title="Link to this heading">¶</a></h3>
+<section id="function-arguments">
+<h4>Function arguments<a class="headerlink" href="#function-arguments" title="Link to this heading">¶</a></h4>
+<p>Pay attention to changing function arguments! It's easy to gloss over
+details and think that two lines are the same but actually they differ
+in some small detail like which variable was passed as an argument
+(especially if the two variables are both a single character that look
+the same, like i and j).</p>
+</section>
+<section id="error-handling">
+<h4>Error handling<a class="headerlink" href="#error-handling" title="Link to this heading">¶</a></h4>
+<p>If you cherry-pick a patch that includes a <code class="docutils literal notranslate"><span class="pre">goto</span></code> statement (typically
+for error handling), it is absolutely imperative to double check that
+the target label is still correct in the branch you are backporting to.
+The same goes for added <code class="docutils literal notranslate"><span class="pre">return</span></code>, <code class="docutils literal notranslate"><span class="pre">break</span></code>, and <code class="docutils literal notranslate"><span class="pre">continue</span></code>
+statements.</p>
+<p>Error handling is typically located at the bottom of the function, so it
+may not be part of the conflict even though could have been changed by
+other patches.</p>
+<p>A good way to ensure that you review the error paths is to always use
+<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span> <span class="pre">-W</span></code> and <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">show</span> <span class="pre">-W</span></code> (AKA <code class="docutils literal notranslate"><span class="pre">--function-context</span></code>) when
+inspecting your changes.  For C code, this will show you the whole
+function that's being changed in a patch. One of the things that often
+go wrong during backports is that something else in the function changed
+on either of the branches that you're backporting from or to. By
+including the whole function in the diff you get more context and can
+more easily spot problems that might otherwise go unnoticed.</p>
+</section>
+<section id="refactored-code">
+<h4>Refactored code<a class="headerlink" href="#refactored-code" title="Link to this heading">¶</a></h4>
+<p>Something that happens quite often is that code gets refactored by
+&quot;factoring out&quot; a common code sequence or pattern into a helper
+function. When backporting patches to an area where such a refactoring
+has taken place, you effectively need to do the reverse when
+backporting: a patch to a single location may need to be applied to
+multiple locations in the backported version. (One giveaway for this
+scenario is that a function was renamed -- but that's not always the
+case.)</p>
+<p>To avoid incomplete backports, it's worth trying to figure out if the
+patch fixes a bug that appears in more than one place. One way to do
+this would be to use <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">grep</span></code>. (This is actually a good idea to do
+in general, not just for backports.) If you do find that the same kind
+of fix would apply to other places, it's also worth seeing if those
+places exist upstream -- if they don't, it's likely the patch may need
+to be adjusted. <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">log</span></code> is your friend to figure out what happened
+to these areas as <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">blame</span></code> won't show you code that has been
+removed.</p>
+<p>If you do find other instances of the same pattern in the upstream tree
+and you're not sure whether it's also a bug, it may be worth asking the
+patch author. It's not uncommon to find new bugs during backporting!</p>
+</section>
+</section>
+</section>
+<section id="verifying-the-result">
+<h2>Verifying the result<a class="headerlink" href="#verifying-the-result" title="Link to this heading">¶</a></h2>
+<section id="colordiff">
+<h3>colordiff<a class="headerlink" href="#colordiff" title="Link to this heading">¶</a></h3>
+<p>Having committed a conflict-free new patch, you can now compare your
+patch to the original patch. It is highly recommended that you use a
+tool such as <a class="reference external" href="https://www.colordiff.org/">colordiff</a> that can show two files side by side and color
+them according to the changes between them:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>colordiff -yw -W 200 &lt;(git diff -W &lt;upstream commit&gt;^-) &lt;(git diff -W HEAD^-) | less -SR
+</pre></div>
+</div>
+<p>Here, <code class="docutils literal notranslate"><span class="pre">-y</span></code> means to do a side-by-side comparison; <code class="docutils literal notranslate"><span class="pre">-w</span></code> ignores
+whitespace, and <code class="docutils literal notranslate"><span class="pre">-W</span> <span class="pre">200</span></code> sets the width of the output (as otherwise it
+will use 130 by default, which is often a bit too little).</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">rev^-</span></code> syntax is a handy shorthand for <code class="docutils literal notranslate"><span class="pre">rev^..rev</span></code>, essentially
+giving you just the diff for that single commit; also see
+the official <a class="reference external" href="https://git-scm.com/docs/git-rev-parse#_other_rev_parent_shorthand_notations">git rev-parse documentation</a>.</p>
+<p>Again, note the inclusion of <code class="docutils literal notranslate"><span class="pre">-W</span></code> for <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">diff</span></code>; this ensures that
+you will see the full function for any function that has changed.</p>
+<p>One incredibly important thing that colordiff does is to highlight lines
+that are different. For example, if an error-handling <code class="docutils literal notranslate"><span class="pre">goto</span></code> has
+changed labels between the original and backported patch, colordiff will
+show these side-by-side but highlighted in a different color.  Thus, it
+is easy to see that the two <code class="docutils literal notranslate"><span class="pre">goto</span></code> statements are jumping to different
+labels. Likewise, lines that were not modified by either patch but
+differ in the context will also be highlighted and thus stand out during
+a manual inspection.</p>
+<p>Of course, this is just a visual inspection; the real test is building
+and running the patched kernel (or program).</p>
+</section>
+<section id="build-testing">
+<h3>Build testing<a class="headerlink" href="#build-testing" title="Link to this heading">¶</a></h3>
+<p>We won't cover runtime testing here, but it can be a good idea to build
+just the files touched by the patch as a quick sanity check. For the
+Linux kernel you can build single files like this, assuming you have the
+<code class="docutils literal notranslate"><span class="pre">.config</span></code> and build environment set up correctly:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>make path/to/file.o
+</pre></div>
+</div>
+<p>Note that this won't discover linker errors, so you should still do a
+full build after verifying that the single file compiles. By compiling
+the single file first you can avoid having to wait for a full build <em>in
+case</em> there are compiler errors in any of the files you've changed.</p>
+</section>
+<section id="runtime-testing">
+<h3>Runtime testing<a class="headerlink" href="#runtime-testing" title="Link to this heading">¶</a></h3>
+<p>Even a successful build or boot test is not necessarily enough to rule
+out a missing dependency somewhere. Even though the chances are small,
+there could be code changes where two independent changes to the same
+file result in no conflicts, no compile-time errors, and runtime errors
+only in exceptional cases.</p>
+<p>One concrete example of this was a pair of patches to the system call
+entry code where the first patch saved/restored a register and a later
+patch made use of the same register somewhere in the middle of this
+sequence. Since there was no overlap between the changes, one could
+cherry-pick the second patch, have no conflicts, and believe that
+everything was fine, when in fact the code was now scribbling over an
+unsaved register.</p>
+<p>Although the vast majority of errors will be caught during compilation
+or by superficially exercising the code, the only way to <em>really</em> verify
+a backport is to review the final patch with the same level of scrutiny
+as you would (or should) give to any other patch. Having unit tests and
+regression tests or other types of automatic testing can help increase
+the confidence in the correctness of a backport.</p>
+</section>
+</section>
+<section id="submitting-backports-to-stable">
+<h2>Submitting backports to stable<a class="headerlink" href="#submitting-backports-to-stable" title="Link to this heading">¶</a></h2>
+<p>As the stable maintainers try to cherry-pick mainline fixes onto their
+stable kernels, they may send out emails asking for backports when
+encountering conflicts, see e.g.
+&lt;<a class="reference external" href="https://lore.kernel.org/stable/2023101528-jawed-shelving-071a&#64;gregkh/">https://lore.kernel.org/stable/2023101528-jawed-shelving-071a&#64;gregkh/</a>&gt;.
+These emails typically include the exact steps you need to cherry-pick
+the patch to the correct tree and submit the patch.</p>
+<p>One thing to make sure is that your changelog conforms to the expected
+format:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;original patch title&gt;
+
+[ Upstream commit &lt;mainline rev&gt; ]
+
+&lt;rest of the original changelog&gt;
+[ &lt;summary of the conflicts and their resolutions&gt; ]
+Signed-off-by: &lt;your name and email&gt;
+</pre></div>
+</div>
+<p>The &quot;Upstream commit&quot; line is sometimes slightly different depending on
+the stable version. Older version used this format:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>commit &lt;mainline rev&gt; upstream.
+</pre></div>
+</div>
+<p>It is most common to indicate the kernel version the patch applies to
+in the email subject line (using e.g.
+<code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">send-email</span> <span class="pre">--subject-prefix='PATCH</span> <span class="pre">6.1.y'</span></code>), but you can also put
+it in the Signed-off-by:-area or below the <code class="docutils literal notranslate"><span class="pre">---</span></code> line.</p>
+<p>The stable maintainers expect separate submissions for each active
+stable version, and each submission should also be tested separately.</p>
+</section>
+<section id="a-few-final-words-of-advice">
+<h2>A few final words of advice<a class="headerlink" href="#a-few-final-words-of-advice" title="Link to this heading">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Approach the backporting process with humility.</p></li>
+<li><p>Understand the patch you are backporting; this means reading both
+the changelog and the code.</p></li>
+<li><p>Be honest about your confidence in the result when submitting the
+patch.</p></li>
+<li><p>Ask relevant maintainers for explicit acks.</p></li>
+</ol>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
+<p>The above shows roughly the idealized process of backporting a patch.
+For a more concrete example, see this video tutorial where two patches
+are backported from mainline to stable:
+<a class="reference external" href="https://youtu.be/sBR7R1V2FeA">Backporting Linux Kernel Patches</a>.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/process/backporting.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

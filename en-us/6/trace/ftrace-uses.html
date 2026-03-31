@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Using ftrace to hook to functions &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/trace/ftrace-uses.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Kernel Probes (Kprobes)" href="kprobes.html" />
+    <link rel="prev" title="Function Tracer Design" href="ftrace-design.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tracing</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#introduction-to-tracing">Introduction to Tracing</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#core-tracing-frameworks">Core Tracing Frameworks</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="ftrace.html">ftrace - Function Tracer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ftrace-design.html">Function Tracer Design</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Using ftrace to hook to functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kprobes.html">Kernel Probes (Kprobes)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kprobetrace.html">Kprobe-based Event Tracing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fprobetrace.html">Fprobe-based Event Tracing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="eprobetrace.html">Eprobe - Event-based Probe Tracing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fprobe.html">Fprobe - Function entry/exit probe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ring-buffer-design.html">Lockless Ring Buffer Design</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#event-tracing-and-analysis">Event Tracing and Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#hardware-and-performance-tracing">Hardware and Performance Tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#user-space-tracing">User-Space Tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#additional-resources">Additional Resources</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/trace/ftrace-uses.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="using-ftrace-to-hook-to-functions">
+<h1>Using ftrace to hook to functions<a class="headerlink" href="#using-ftrace-to-hook-to-functions" title="Link to this heading">¶</a></h1>
+<p>Written for: 4.14</p>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading">¶</a></h2>
+<p>The ftrace infrastructure was originally created to attach callbacks to the
+beginning of functions in order to record and trace the flow of the kernel.
+But callbacks to the start of a function can have other use cases. Either
+for live kernel patching, or for security monitoring. This document describes
+how to use ftrace to implement your own function callbacks.</p>
+</section>
+<section id="the-ftrace-context">
+<h2>The ftrace context<a class="headerlink" href="#the-ftrace-context" title="Link to this heading">¶</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The ability to add a callback to almost any function within the
+kernel comes with risks. A callback can be called from any context
+(normal, softirq, irq, and NMI). Callbacks can also be called just before
+going to idle, during CPU bring up and takedown, or going to user space.
+This requires extra care to what can be done inside a callback. A callback
+can be called outside the protective scope of RCU.</p>
+</div>
+<p>There are helper functions to help against recursion, and making sure
+RCU is watching. These are explained below.</p>
+</section>
+<section id="the-ftrace-ops-structure">
+<h2>The ftrace_ops structure<a class="headerlink" href="#the-ftrace-ops-structure" title="Link to this heading">¶</a></h2>
+<p>To register a function callback, a ftrace_ops is required. This structure
+is used to tell ftrace what function should be called as the callback
+as well as what protections the callback will perform and not require
+ftrace to handle.</p>
+<p>There is only one field that is needed to be set when registering
+an ftrace_ops with ftrace:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">ftrace_ops</span><span class="w"> </span><span class="n">ops</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="p">.</span><span class="n">func</span><span class="w">                    </span><span class="o">=</span><span class="w"> </span><span class="n">my_callback_func</span><span class="p">,</span>
+<span class="w">      </span><span class="p">.</span><span class="n">flags</span><span class="w">                   </span><span class="o">=</span><span class="w"> </span><span class="n">MY_FTRACE_FLAGS</span>
+<span class="w">      </span><span class="p">.</span><span class="n">private</span><span class="w">                 </span><span class="o">=</span><span class="w"> </span><span class="n">any_private_data_structure</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>Both .flags and .private are optional. Only .func is required.</p>
+<p>To enable tracing call:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>register_ftrace_function(&amp;ops);
+</pre></div>
+</div>
+<p>To disable tracing call:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>unregister_ftrace_function(&amp;ops);
+</pre></div>
+</div>
+<p>The above is defined by including the header:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/ftrace.h&gt;
+</pre></div>
+</div>
+<p>The registered callback will start being called some time after the
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">register_ftrace_function()</span></code> is called and before it returns. The exact time
+that callbacks start being called is dependent upon architecture and scheduling
+of services. The callback itself will have to handle any synchronization if it
+must begin at an exact moment.</p>
+<p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">unregister_ftrace_function()</span></code> will guarantee that the callback is
+no longer being called by functions after the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">unregister_ftrace_function()</span></code>
+returns. Note that to perform this guarantee, the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">unregister_ftrace_function()</span></code>
+may take some time to finish.</p>
+</section>
+<section id="the-callback-function">
+<h2>The callback function<a class="headerlink" href="#the-callback-function" title="Link to this heading">¶</a></h2>
+<p>The prototype of the callback function is as follows (as of v4.14):</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="nf">callback_func</span><span class="p">(</span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">ip</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">parent_ip</span><span class="p">,</span>
+<span class="w">                   </span><span class="k">struct</span><span class="w"> </span><span class="nc">ftrace_ops</span><span class="w"> </span><span class="o">*</span><span class="n">op</span><span class="p">,</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">pt_regs</span><span class="w"> </span><span class="o">*</span><span class="n">regs</span><span class="p">);</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt>&#64;ip</dt><dd><p>This is the instruction pointer of the function that is being traced.
+(where the fentry or mcount is within the function)</p>
+</dd>
+<dt>&#64;parent_ip</dt><dd><p>This is the instruction pointer of the function that called the
+the function being traced (where the call of the function occurred).</p>
+</dd>
+<dt>&#64;op</dt><dd><p>This is a pointer to ftrace_ops that was used to register the callback.
+This can be used to pass data to the callback via the private pointer.</p>
+</dd>
+<dt>&#64;regs</dt><dd><p>If the FTRACE_OPS_FL_SAVE_REGS or FTRACE_OPS_FL_SAVE_REGS_IF_SUPPORTED
+flags are set in the ftrace_ops structure, then this will be pointing
+to the pt_regs structure like it would be if an breakpoint was placed
+at the start of the function where ftrace was tracing. Otherwise it
+either contains garbage, or NULL.</p>
+</dd>
+</dl>
+</section>
+<section id="protect-your-callback">
+<h2>Protect your callback<a class="headerlink" href="#protect-your-callback" title="Link to this heading">¶</a></h2>
+<p>As functions can be called from anywhere, and it is possible that a function
+called by a callback may also be traced, and call that same callback,
+recursion protection must be used. There are two helper functions that
+can help in this regard. If you start your code with:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="n">bit</span><span class="p">;</span>
+
+<span class="n">bit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ftrace_test_recursion_trylock</span><span class="p">(</span><span class="n">ip</span><span class="p">,</span><span class="w"> </span><span class="n">parent_ip</span><span class="p">);</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">bit</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<span class="w">        </span><span class="k">return</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>and end it with:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">ftrace_test_recursion_unlock</span><span class="p">(</span><span class="n">bit</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>The code in between will be safe to use, even if it ends up calling a
+function that the callback is tracing. Note, on success,
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">ftrace_test_recursion_trylock()</span></code> will disable preemption, and the
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">ftrace_test_recursion_unlock()</span></code> will enable it again (if it was previously
+enabled). The instruction pointer (ip) and its parent (parent_ip) is passed to
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">ftrace_test_recursion_trylock()</span></code> to record where the recursion happened
+(if CONFIG_FTRACE_RECORD_RECURSION is set).</p>
+<p>Alternatively, if the FTRACE_OPS_FL_RECURSION flag is set on the ftrace_ops
+(as explained below), then a helper trampoline will be used to test
+for recursion for the callback and no recursion test needs to be done.
+But this is at the expense of a slightly more overhead from an extra
+function call.</p>
+<p>If your callback accesses any data or critical section that requires RCU
+protection, it is best to make sure that RCU is “watching”, otherwise
+that data or critical section will not be protected as expected. In this
+case add:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">rcu_is_watching</span><span class="p">())</span>
+<span class="w">        </span><span class="k">return</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>Alternatively, if the FTRACE_OPS_FL_RCU flag is set on the ftrace_ops
+(as explained below), then a helper trampoline will be used to test
+for rcu_is_watching for the callback and no other test needs to be done.
+But this is at the expense of a slightly more overhead from an extra
+function call.</p>
+</section>
+<section id="the-ftrace-flags">
+<h2>The ftrace FLAGS<a class="headerlink" href="#the-ftrace-flags" title="Link to this heading">¶</a></h2>
+<p>The ftrace_ops flags are all defined and documented in include/linux/ftrace.h.
+Some of the flags are used for internal infrastructure of ftrace, but the
+ones that users should be aware of are the following:</p>
+<dl>
+<dt>FTRACE_OPS_FL_SAVE_REGS</dt><dd><p>If the callback requires reading or modifying the pt_regs
+passed to the callback, then it must set this flag. Registering
+a ftrace_ops with this flag set on an architecture that does not
+support passing of pt_regs to the callback will fail.</p>
+</dd>
+<dt>FTRACE_OPS_FL_SAVE_REGS_IF_SUPPORTED</dt><dd><p>Similar to SAVE_REGS but the registering of a
+ftrace_ops on an architecture that does not support passing of regs
+will not fail with this flag set. But the callback must check if
+regs is NULL or not to determine if the architecture supports it.</p>
+</dd>
+<dt>FTRACE_OPS_FL_RECURSION</dt><dd><p>By default, it is expected that the callback can handle recursion.
+But if the callback is not that worried about overhead, then
+setting this bit will add the recursion protection around the
+callback by calling a helper function that will do the recursion
+protection and only call the callback if it did not recurse.</p>
+<p>Note, if this flag is not set, and recursion does occur, it could
+cause the system to crash, and possibly reboot via a triple fault.</p>
+<p>Note, if this flag is set, then the callback will always be called
+with preemption disabled. If it is not set, then it is possible
+(but not guaranteed) that the callback will be called in
+preemptible context.</p>
+</dd>
+<dt>FTRACE_OPS_FL_IPMODIFY</dt><dd><p>Requires FTRACE_OPS_FL_SAVE_REGS set. If the callback is to “hijack”
+the traced function (have another function called instead of the
+traced function), it requires setting this flag. This is what live
+kernel patches uses. Without this flag the pt_regs-&gt;ip can not be
+modified.</p>
+<p>Note, only one ftrace_ops with FTRACE_OPS_FL_IPMODIFY set may be
+registered to any given function at a time.</p>
+</dd>
+<dt>FTRACE_OPS_FL_RCU</dt><dd><p>If this is set, then the callback will only be called by functions
+where RCU is “watching”. This is required if the callback function
+performs any <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_read_lock" title="rcu_read_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_read_lock()</span></code></a> operation.</p>
+<p>RCU stops watching when the system goes idle, the time when a CPU
+is taken down and comes back online, and when entering from kernel
+to user space and back to kernel space. During these transitions,
+a callback may be executed and RCU synchronization will not protect
+it.</p>
+</dd>
+<dt>FTRACE_OPS_FL_PERMANENT</dt><dd><p>If this is set on any ftrace ops, then the tracing cannot disabled by
+writing 0 to the proc sysctl ftrace_enabled. Equally, a callback with
+the flag set cannot be registered if ftrace_enabled is 0.</p>
+<p>Livepatch uses it not to lose the function redirection, so the system
+stays protected.</p>
+</dd>
+</dl>
+</section>
+<section id="filtering-which-functions-to-trace">
+<h2>Filtering which functions to trace<a class="headerlink" href="#filtering-which-functions-to-trace" title="Link to this heading">¶</a></h2>
+<p>If a callback is only to be called from specific functions, a filter must be
+set up. The filters are added by name, or ip if it is known.</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">ftrace_set_filter</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">ftrace_ops</span><span class="w"> </span><span class="o">*</span><span class="n">ops</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">,</span>
+<span class="w">                      </span><span class="kt">int</span><span class="w"> </span><span class="n">len</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">reset</span><span class="p">);</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt>&#64;ops</dt><dd><p>The ops to set the filter with</p>
+</dd>
+<dt>&#64;buf</dt><dd><p>The string that holds the function filter text.</p>
+</dd>
+<dt>&#64;len</dt><dd><p>The length of the string.</p>
+</dd>
+<dt>&#64;reset</dt><dd><p>Non-zero to reset all filters before applying this filter.</p>
+</dd>
+</dl>
+<p>Filters denote which functions should be enabled when tracing is enabled.
+If &#64;buf is NULL and reset is set, all functions will be enabled for tracing.</p>
+<p>The &#64;buf can also be a glob expression to enable all functions that
+match a specific pattern.</p>
+<p>See Filter Commands in <code class="file docutils literal notranslate"><span class="pre">Documentation/trace/ftrace.rst</span></code>.</p>
+<p>To just trace the schedule function:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">ret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ftrace_set_filter</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ops</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;schedule&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="s">&quot;schedule&quot;</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>To add more functions, call the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">ftrace_set_filter()</span></code> more than once with the
+&#64;reset parameter set to zero. To remove the current filter set and replace it
+with new functions defined by &#64;buf, have &#64;reset be non-zero.</p>
+<p>To remove all the filtered functions and trace all functions:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">ret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ftrace_set_filter</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ops</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Sometimes more than one function has the same name. To trace just a specific
+function in this case, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">ftrace_set_filter_ip()</span></code> can be used.</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">ret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ftrace_set_filter_ip</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ops</span><span class="p">,</span><span class="w"> </span><span class="n">ip</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Although the ip must be the address where the call to fentry or mcount is
+located in the function. This function is used by perf and kprobes that
+gets the ip address from the user (usually using debug info from the kernel).</p>
+<p>If a glob is used to set the filter, functions can be added to a “notrace”
+list that will prevent those functions from calling the callback.
+The “notrace” list takes precedence over the “filter” list. If the
+two lists are non-empty and contain the same functions, the callback will not
+be called by any function.</p>
+<p>An empty “notrace” list means to allow all functions defined by the filter
+to be traced.</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">ftrace_set_notrace</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">ftrace_ops</span><span class="w"> </span><span class="o">*</span><span class="n">ops</span><span class="p">,</span><span class="w"> </span><span class="kt">unsigned</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">buf</span><span class="p">,</span>
+<span class="w">                       </span><span class="kt">int</span><span class="w"> </span><span class="n">len</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">reset</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>This takes the same parameters as <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">ftrace_set_filter()</span></code> but will add the
+functions it finds to not be traced. This is a separate list from the
+filter list, and this function does not modify the filter list.</p>
+<p>A non-zero &#64;reset will clear the “notrace” list before adding functions
+that match &#64;buf to it.</p>
+<p>Clearing the “notrace” list is the same as clearing the filter list</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">ret</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ftrace_set_notrace</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ops</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>The filter and notrace lists may be changed at any time. If only a set of
+functions should call the callback, it is best to set the filters before
+registering the callback. But the changes may also happen after the callback
+has been registered.</p>
+<p>If a filter is in place, and the &#64;reset is non-zero, and &#64;buf contains a
+matching glob to functions, the switch will happen during the time of
+the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">ftrace_set_filter()</span></code> call. At no time will all functions call the callback.</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">ftrace_set_filter</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ops</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;schedule&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="s">&quot;schedule&quot;</span><span class="p">),</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+
+<span class="n">register_ftrace_function</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ops</span><span class="p">);</span>
+
+<span class="n">msleep</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span>
+
+<span class="n">ftrace_set_filter</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ops</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;try_to_wake_up&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="s">&quot;try_to_wake_up&quot;</span><span class="p">),</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>is not the same as:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">ftrace_set_filter</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ops</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;schedule&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="s">&quot;schedule&quot;</span><span class="p">),</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+
+<span class="n">register_ftrace_function</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ops</span><span class="p">);</span>
+
+<span class="n">msleep</span><span class="p">(</span><span class="mi">10</span><span class="p">);</span>
+
+<span class="n">ftrace_set_filter</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ops</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+
+<span class="n">ftrace_set_filter</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ops</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;try_to_wake_up&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">strlen</span><span class="p">(</span><span class="s">&quot;try_to_wake_up&quot;</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>As the latter will have a short time where all functions will call
+the callback, between the time of the reset, and the time of the
+new setting of the filter.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/trace/ftrace-uses.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

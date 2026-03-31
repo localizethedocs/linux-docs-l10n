@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Kernel Probes (Kprobes) &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/trace/kprobes.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Kprobe-based Event Tracing" href="kprobetrace.html" />
+    <link rel="prev" title="Using ftrace to hook to functions" href="ftrace-uses.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tracing</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#introduction-to-tracing">Introduction to Tracing</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#core-tracing-frameworks">Core Tracing Frameworks</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="ftrace.html">ftrace - Function Tracer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ftrace-design.html">Function Tracer Design</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ftrace-uses.html">Using ftrace to hook to functions</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Kernel Probes (Kprobes)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kprobetrace.html">Kprobe-based Event Tracing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fprobetrace.html">Fprobe-based Event Tracing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="eprobetrace.html">Eprobe - Event-based Probe Tracing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fprobe.html">Fprobe - Function entry/exit probe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ring-buffer-design.html">Lockless Ring Buffer Design</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#event-tracing-and-analysis">Event Tracing and Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#hardware-and-performance-tracing">Hardware and Performance Tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#user-space-tracing">User-Space Tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#additional-resources">Additional Resources</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/trace/kprobes.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="kernel-probes-kprobes">
+<h1>Kernel Probes (Kprobes)<a class="headerlink" href="#kernel-probes-kprobes" title="Link to this heading">¶</a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">Author<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Jim Keniston &lt;<a class="reference external" href="mailto:jkenisto&#37;&#52;&#48;us&#46;ibm&#46;com">jkenisto<span>&#64;</span>us<span>&#46;</span>ibm<span>&#46;</span>com</a>&gt;</p>
+</dd>
+<dt class="field-even">Author<span class="colon">:</span></dt>
+<dd class="field-even"><p>Prasanna S Panchamukhi &lt;<a class="reference external" href="mailto:prasanna&#46;panchamukhi&#37;&#52;&#48;gmail&#46;com">prasanna<span>&#46;</span>panchamukhi<span>&#64;</span>gmail<span>&#46;</span>com</a>&gt;</p>
+</dd>
+<dt class="field-odd">Author<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Masami Hiramatsu &lt;<a class="reference external" href="mailto:mhiramat&#37;&#52;&#48;kernel&#46;org">mhiramat<span>&#64;</span>kernel<span>&#46;</span>org</a>&gt;</p>
+</dd>
+</dl>
+<section id="concepts-kprobes-and-return-probes">
+<h2>Concepts: Kprobes and Return Probes<a class="headerlink" href="#concepts-kprobes-and-return-probes" title="Link to this heading">¶</a></h2>
+<p>Kprobes enables you to dynamically break into any kernel routine and
+collect debugging and performance information non-disruptively. You
+can trap at almost any kernel code address <a class="footnote-reference brackets" href="#id2" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>, specifying a handler
+routine to be invoked when the breakpoint is hit.</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id2" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>some parts of the kernel code can not be trapped, see
+<a class="reference internal" href="#kprobes-blacklist"><span class="std std-ref">Blacklist</span></a>)</p>
+</aside>
+</aside>
+<p>There are currently two types of probes: kprobes, and kretprobes
+(also called return probes).  A kprobe can be inserted on virtually
+any instruction in the kernel.  A return probe fires when a specified
+function returns.</p>
+<p>In the typical case, Kprobes-based instrumentation is packaged as
+a kernel module.  The module’s init function installs (“registers”)
+one or more probes, and the exit function unregisters them.  A
+registration function such as <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">register_kprobe()</span></code> specifies where
+the probe is to be inserted and what handler is to be called when
+the probe is hit.</p>
+<p>There are also <code class="docutils literal notranslate"><span class="pre">register_/unregister_*probes()</span></code> functions for batch
+registration/unregistration of a group of <code class="docutils literal notranslate"><span class="pre">*probes</span></code>. These functions
+can speed up unregistration process when you have to unregister
+a lot of probes at once.</p>
+<p>The next four subsections explain how the different types of
+probes work and how jump optimization works.  They explain certain
+things that you’ll need to know in order to make the best use of
+Kprobes -- e.g., the difference between a pre_handler and
+a post_handler, and how to use the maxactive and nmissed fields of
+a kretprobe.  But if you’re in a hurry to start using Kprobes, you
+can skip ahead to <a class="reference internal" href="#kprobes-archs-supported"><span class="std std-ref">Architectures Supported</span></a>.</p>
+<section id="how-does-a-kprobe-work">
+<h3>How Does a Kprobe Work?<a class="headerlink" href="#how-does-a-kprobe-work" title="Link to this heading">¶</a></h3>
+<p>When a kprobe is registered, Kprobes makes a copy of the probed
+instruction and replaces the first byte(s) of the probed instruction
+with a breakpoint instruction (e.g., int3 on i386 and x86_64).</p>
+<p>When a CPU hits the breakpoint instruction, a trap occurs, the CPU’s
+registers are saved, and control passes to Kprobes via the
+notifier_call_chain mechanism.  Kprobes executes the “pre_handler”
+associated with the kprobe, passing the handler the addresses of the
+kprobe <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">and</span></code> the saved registers.</p>
+<p>Next, Kprobes single-steps its copy of the probed instruction.
+(It would be simpler to single-step the actual instruction in place,
+but then Kprobes would have to temporarily remove the breakpoint
+instruction.  This would open a small time window when another CPU
+could sail right past the probepoint.)</p>
+<p>After the instruction is single-stepped, Kprobes executes the
+“post_handler,” if any, that is associated with the kprobe.
+Execution then continues with the instruction following the probepoint.</p>
+</section>
+<section id="changing-execution-path">
+<h3>Changing Execution Path<a class="headerlink" href="#changing-execution-path" title="Link to this heading">¶</a></h3>
+<p>Since kprobes can probe into a running kernel code, it can change the
+register set, including instruction pointer. This operation requires
+maximum care, such as keeping the stack frame, recovering the execution
+path etc. Since it operates on a running kernel and needs deep knowledge
+of computer architecture and concurrent computing, you can easily shoot
+your foot.</p>
+<p>If you change the instruction pointer (and set up other related
+registers) in pre_handler, you must return !0 so that kprobes stops
+single stepping and just returns to the given address.
+This also means post_handler should not be called anymore.</p>
+<p>Note that this operation may be harder on some architectures which use
+TOC (Table of Contents) for function call, since you have to setup a new
+TOC for your function in your module, and recover the old one after
+returning from it.</p>
+</section>
+<section id="return-probes">
+<h3>Return Probes<a class="headerlink" href="#return-probes" title="Link to this heading">¶</a></h3>
+<section id="how-does-a-return-probe-work">
+<h4>How Does a Return Probe Work?<a class="headerlink" href="#how-does-a-return-probe-work" title="Link to this heading">¶</a></h4>
+<p>When you call <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">register_kretprobe()</span></code>, Kprobes establishes a kprobe at
+the entry to the function.  When the probed function is called and this
+probe is hit, Kprobes saves a copy of the return address, and replaces
+the return address with the address of a “trampoline.”  The trampoline
+is an arbitrary piece of code -- typically just a nop instruction.
+At boot time, Kprobes registers a kprobe at the trampoline.</p>
+<p>When the probed function executes its return instruction, control
+passes to the trampoline and that probe is hit.  Kprobes’ trampoline
+handler calls the user-specified return handler associated with the
+kretprobe, then sets the saved instruction pointer to the saved return
+address, and that’s where execution resumes upon return from the trap.</p>
+<p>While the probed function is executing, its return address is
+stored in an object of type kretprobe_instance.  Before calling
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">register_kretprobe()</span></code>, the user sets the maxactive field of the
+kretprobe <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">to</span></code> specify how many instances of the specified
+function can be probed simultaneously.  <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">register_kretprobe()</span></code>
+pre-allocates the indicated number of kretprobe_instance objects.</p>
+<p>For example, if the function is non-recursive and is called with a
+spinlock held, maxactive = 1 should be enough.  If the function is
+non-recursive and can never relinquish the CPU (e.g., via a semaphore
+or preemption), NR_CPUS should be enough.  If maxactive &lt;= 0, it is
+set to a default value: max(10, 2*NR_CPUS).</p>
+<p>It’s not a disaster if you set maxactive too low; you’ll just miss
+some probes.  In the kretprobe struct, the nmissed field is set to
+zero when the return probe is registered, and is incremented every
+time the probed function is entered but there is no kretprobe_instance
+object available for establishing the return probe.</p>
+</section>
+<section id="kretprobe-entry-handler">
+<h4>Kretprobe entry-handler<a class="headerlink" href="#kretprobe-entry-handler" title="Link to this heading">¶</a></h4>
+<p>Kretprobes also provides an optional user-specified handler which runs
+on function entry. This handler is specified by setting the entry_handler
+field of the kretprobe struct. Whenever the kprobe placed by kretprobe at the
+function entry is hit, the user-defined entry_handler, if any, is invoked.
+If the entry_handler returns 0 (success) then a corresponding return handler
+is guaranteed to be called upon function return. If the entry_handler
+returns a non-zero error then Kprobes leaves the return address as is, and
+the kretprobe has no further effect for that particular function instance.</p>
+<p>Multiple entry and return handler invocations are matched using the unique
+kretprobe_instance object associated with them. Additionally, a user
+may also specify per return-instance private data to be part of each
+kretprobe_instance object. This is especially useful when sharing private
+data between corresponding user entry and return handlers. The size of each
+private data object can be specified at kretprobe registration time by
+setting the data_size field of the kretprobe struct. This data can be
+accessed through the data field of each kretprobe_instance object.</p>
+<p>In case probed function is entered but there is no kretprobe_instance
+object available, then in addition to incrementing the nmissed count,
+the user entry_handler invocation is also skipped.</p>
+</section>
+</section>
+<section id="how-does-jump-optimization-work">
+<span id="kprobes-jump-optimization"></span><h3>How Does Jump Optimization Work?<a class="headerlink" href="#how-does-jump-optimization-work" title="Link to this heading">¶</a></h3>
+<p>If your kernel is built with CONFIG_OPTPROBES=y (currently this flag
+is automatically set ‘y’ on x86/x86-64, non-preemptive kernel) and
+the “debug.kprobes_optimization” kernel parameter is set to 1 (see
+sysctl(8)), Kprobes tries to reduce probe-hit overhead by using a jump
+instruction instead of a breakpoint instruction at each probepoint.</p>
+<section id="init-a-kprobe">
+<h4>Init a Kprobe<a class="headerlink" href="#init-a-kprobe" title="Link to this heading">¶</a></h4>
+<p>When a probe is registered, before attempting this optimization,
+Kprobes inserts an ordinary, breakpoint-based kprobe at the specified
+address. So, even if it’s not possible to optimize this particular
+probepoint, there’ll be a probe there.</p>
+</section>
+<section id="safety-check">
+<h4>Safety Check<a class="headerlink" href="#safety-check" title="Link to this heading">¶</a></h4>
+<p>Before optimizing a probe, Kprobes performs the following safety checks:</p>
+<ul class="simple">
+<li><p>Kprobes verifies that the region that will be replaced by the jump
+instruction (the “optimized region”) lies entirely within one function.
+(A jump instruction is multiple bytes, and so may overlay multiple
+instructions.)</p></li>
+<li><p>Kprobes analyzes the entire function and verifies that there is no
+jump into the optimized region.  Specifically:</p>
+<ul>
+<li><p>the function contains no indirect jump;</p></li>
+<li><p>the function contains no instruction that causes an exception (since
+the fixup code triggered by the exception could jump back into the
+optimized region -- Kprobes checks the exception tables to verify this);</p></li>
+<li><p>there is no near jump to the optimized region (other than to the first
+byte).</p></li>
+</ul>
+</li>
+<li><p>For each instruction in the optimized region, Kprobes verifies that
+the instruction can be executed out of line.</p></li>
+</ul>
+</section>
+<section id="preparing-detour-buffer">
+<h4>Preparing Detour Buffer<a class="headerlink" href="#preparing-detour-buffer" title="Link to this heading">¶</a></h4>
+<p>Next, Kprobes prepares a “detour” buffer, which contains the following
+instruction sequence:</p>
+<ul class="simple">
+<li><p>code to push the CPU’s registers (emulating a breakpoint trap)</p></li>
+<li><p>a call to the trampoline code which calls user’s probe handlers.</p></li>
+<li><p>code to restore registers</p></li>
+<li><p>the instructions from the optimized region</p></li>
+<li><p>a jump back to the original execution path.</p></li>
+</ul>
+</section>
+<section id="pre-optimization">
+<h4>Pre-optimization<a class="headerlink" href="#pre-optimization" title="Link to this heading">¶</a></h4>
+<p>After preparing the detour buffer, Kprobes verifies that none of the
+following situations exist:</p>
+<ul class="simple">
+<li><p>The probe has a post_handler.</p></li>
+<li><p>Other instructions in the optimized region are probed.</p></li>
+<li><p>The probe is disabled.</p></li>
+</ul>
+<p>In any of the above cases, Kprobes won’t start optimizing the probe.
+Since these are temporary situations, Kprobes tries to start
+optimizing it again if the situation is changed.</p>
+<p>If the kprobe can be optimized, Kprobes enqueues the kprobe to an
+optimizing list, and kicks the kprobe-optimizer workqueue to optimize
+it.  If the to-be-optimized probepoint is hit before being optimized,
+Kprobes returns control to the original instruction path by setting
+the CPU’s instruction pointer to the copied code in the detour buffer
+-- thus at least avoiding the single-step.</p>
+</section>
+<section id="optimization">
+<h4>Optimization<a class="headerlink" href="#optimization" title="Link to this heading">¶</a></h4>
+<p>The Kprobe-optimizer doesn’t insert the jump instruction immediately;
+rather, it calls <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a> for safety first, because it’s
+possible for a CPU to be interrupted in the middle of executing the
+optimized region <a class="footnote-reference brackets" href="#id5" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.  As you know, <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a> can ensure
+that all interruptions that were active when <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a>
+was called are done, but only if CONFIG_PREEMPT=n.  So, this version
+of kprobe optimization supports only kernels with CONFIG_PREEMPT=n <a class="footnote-reference brackets" href="#id6" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>4<span class="fn-bracket">]</span></a>.</p>
+<p>After that, the Kprobe-optimizer calls <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">stop_machine()</span></code> to replace
+the optimized region with a jump instruction to the detour buffer,
+using <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">text_poke_smp()</span></code>.</p>
+</section>
+<section id="unoptimization">
+<h4>Unoptimization<a class="headerlink" href="#unoptimization" title="Link to this heading">¶</a></h4>
+<p>When an optimized kprobe is unregistered, disabled, or blocked by
+another kprobe, it will be unoptimized.  If this happens before
+the optimization is complete, the kprobe is just dequeued from the
+optimized list.  If the optimization has been done, the jump is
+replaced with the original code (except for an int3 breakpoint in
+the first byte) by using <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">text_poke_smp()</span></code>.</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id5" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">3</a><span class="fn-bracket">]</span></span>
+<p>Please imagine that the 2nd instruction is interrupted and then
+the optimizer replaces the 2nd instruction with the jump <em>address</em>
+while the interrupt handler is running. When the interrupt
+returns to original address, there is no valid instruction,
+and it causes an unexpected result.</p>
+</aside>
+<aside class="footnote brackets" id="id6" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id4">4</a><span class="fn-bracket">]</span></span>
+<p>This optimization-safety checking may be replaced with the
+stop-machine method that ksplice uses for supporting a CONFIG_PREEMPT=y
+kernel.</p>
+</aside>
+</aside>
+<p>NOTE for geeks:
+The jump optimization changes the kprobe’s pre_handler behavior.
+Without optimization, the pre_handler can change the kernel’s execution
+path by changing regs-&gt;ip and returning 1.  However, when the probe
+is optimized, that modification is ignored.  Thus, if you want to
+tweak the kernel’s execution path, you need to suppress optimization,
+using one of the following techniques:</p>
+<ul class="simple">
+<li><p>Specify an empty function for the kprobe’s post_handler.</p></li>
+</ul>
+<p>or</p>
+<ul class="simple">
+<li><p>Execute ‘sysctl -w debug.kprobes_optimization=n’</p></li>
+</ul>
+</section>
+</section>
+<section id="blacklist">
+<span id="kprobes-blacklist"></span><h3>Blacklist<a class="headerlink" href="#blacklist" title="Link to this heading">¶</a></h3>
+<p>Kprobes can probe most of the kernel except itself. This means
+that there are some functions where kprobes cannot probe. Probing
+(trapping) such functions can cause a recursive trap (e.g. double
+fault) or the nested probe handler may never be called.
+Kprobes manages such functions as a blacklist.
+If you want to add a function into the blacklist, you just need
+to (1) include linux/kprobes.h and (2) use <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">NOKPROBE_SYMBOL()</span></code> macro
+to specify a blacklisted function.
+Kprobes checks the given probe address against the blacklist and
+rejects registering it, if the given address is in the blacklist.</p>
+</section>
+</section>
+<section id="architectures-supported">
+<span id="kprobes-archs-supported"></span><h2>Architectures Supported<a class="headerlink" href="#architectures-supported" title="Link to this heading">¶</a></h2>
+<p>Kprobes and return probes are implemented on the following
+architectures:</p>
+<ul class="simple">
+<li><p>i386 (Supports jump optimization)</p></li>
+<li><p>x86_64 (AMD-64, EM64T) (Supports jump optimization)</p></li>
+<li><p>ppc64</p></li>
+<li><p>sparc64 (Return probes not yet implemented.)</p></li>
+<li><p>arm</p></li>
+<li><p>ppc</p></li>
+<li><p>mips</p></li>
+<li><p>s390</p></li>
+<li><p>parisc</p></li>
+<li><p>loongarch</p></li>
+<li><p>riscv</p></li>
+</ul>
+</section>
+<section id="configuring-kprobes">
+<h2>Configuring Kprobes<a class="headerlink" href="#configuring-kprobes" title="Link to this heading">¶</a></h2>
+<p>When configuring the kernel using make menuconfig/xconfig/oldconfig,
+ensure that CONFIG_KPROBES is set to “y”, look for “Kprobes” under
+“General architecture-dependent options”.</p>
+<p>So that you can load and unload Kprobes-based instrumentation modules,
+make sure “Loadable module support” (CONFIG_MODULES) and “Module
+unloading” (CONFIG_MODULE_UNLOAD) are set to “y”.</p>
+<p>Also make sure that CONFIG_KALLSYMS and perhaps even CONFIG_KALLSYMS_ALL
+are set to “y”, since <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">kallsyms_lookup_name()</span></code> is used by the in-kernel
+kprobe address resolution code.</p>
+<p>If you need to insert a probe in the middle of a function, you may find
+it useful to “Compile the kernel with debug info” (CONFIG_DEBUG_INFO),
+so you can use “objdump -d -l vmlinux” to see the source-to-object
+code mapping.</p>
+</section>
+<section id="api-reference">
+<h2>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h2>
+<p>The Kprobes API includes a “register” function and an “unregister”
+function for each type of probe. The API also includes “register_*probes”
+and “unregister_*probes” functions for (un)registering arrays of probes.
+Here are terse, mini-man-page specifications for these functions and
+the associated probe handlers that you’ll write. See the files in the
+samples/kprobes/ sub-directory for examples.</p>
+<section id="register-kprobe">
+<h3>register_kprobe<a class="headerlink" href="#register-kprobe" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/kprobes.h&gt;
+int register_kprobe(struct kprobe *kp);
+</pre></div>
+</div>
+<p>Sets a breakpoint at the address kp-&gt;addr.  When the breakpoint is hit, Kprobes
+calls kp-&gt;pre_handler.  After the probed instruction is single-stepped, Kprobe
+calls kp-&gt;post_handler.  Any or all handlers can be NULL. If kp-&gt;flags is set
+KPROBE_FLAG_DISABLED, that kp will be registered but disabled, so, its handlers
+aren’t hit until calling enable_kprobe(kp).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ol class="arabic">
+<li><p>With the introduction of the “symbol_name” field to <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kprobe</span></code>,
+the probepoint address resolution will now be taken care of by the kernel.
+The following will now work:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>kp.symbol_name = &quot;symbol_name&quot;;
+</pre></div>
+</div>
+<p>(64-bit powerpc intricacies such as function descriptors are handled
+transparently)</p>
+</li>
+<li><p>Use the “offset” field of <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">kprobe</span></code> if the offset into the symbol
+to install a probepoint is known. This field is used to calculate the
+probepoint.</p></li>
+<li><p>Specify either the kprobe “symbol_name” OR the “addr”. If both are
+specified, kprobe registration will fail with -EINVAL.</p></li>
+<li><p>With CISC architectures (such as i386 and x86_64), the kprobes code
+does not validate if the kprobe.addr is at an instruction boundary.
+Use “offset” with caution.</p></li>
+</ol>
+</div>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">register_kprobe()</span></code> returns 0 on success, or a negative errno otherwise.</p>
+<p>User’s pre-handler (kp-&gt;pre_handler):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/kprobes.h&gt;
+#include &lt;linux/ptrace.h&gt;
+int pre_handler(struct kprobe *p, struct pt_regs *regs);
+</pre></div>
+</div>
+<p>Called with p pointing to the kprobe associated with the breakpoint,
+and regs pointing to the <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">containing</span></code> the registers saved when
+the breakpoint was hit.  Return 0 here unless you’re a Kprobes geek.</p>
+<p>User’s post-handler (kp-&gt;post_handler):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/kprobes.h&gt;
+#include &lt;linux/ptrace.h&gt;
+void post_handler(struct kprobe *p, struct pt_regs *regs,
+                  unsigned long flags);
+</pre></div>
+</div>
+<p>p and regs are as described for the pre_handler.  flags always seems
+to be zero.</p>
+</section>
+<section id="register-kretprobe">
+<h3>register_kretprobe<a class="headerlink" href="#register-kretprobe" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/kprobes.h&gt;
+int register_kretprobe(struct kretprobe *rp);
+</pre></div>
+</div>
+<p>Establishes a return probe for the function whose address is
+rp-&gt;kp.addr.  When that function returns, Kprobes calls rp-&gt;handler.
+You must set rp-&gt;maxactive appropriately before you call
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">register_kretprobe()</span></code>; see “How Does a Return Probe Work?” for details.</p>
+<p><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">register_kretprobe()</span></code> returns 0 on success, or a negative errno
+otherwise.</p>
+<p>User’s return-probe handler (rp-&gt;handler):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/kprobes.h&gt;
+#include &lt;linux/ptrace.h&gt;
+int kretprobe_handler(struct kretprobe_instance *ri,
+                      struct pt_regs *regs);
+</pre></div>
+</div>
+<p>regs is as described for kprobe.pre_handler.  ri points to the
+kretprobe_instance object, of which the following fields may be
+of interest:</p>
+<ul class="simple">
+<li><p>ret_addr: the return address</p></li>
+<li><p>rp: points to the corresponding kretprobe object</p></li>
+<li><p>task: points to the corresponding task struct</p></li>
+<li><dl class="simple">
+<dt>data: points to per return-instance private data; see “Kretprobe</dt><dd><p>entry-handler” for details.</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>The regs_return_value(regs) macro provides a simple abstraction to
+extract the return value from the appropriate register as defined by
+the architecture’s ABI.</p>
+<p>The handler’s return value is currently ignored.</p>
+</section>
+<section id="unregister-probe">
+<h3>unregister_*probe<a class="headerlink" href="#unregister-probe" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/kprobes.h&gt;
+void unregister_kprobe(struct kprobe *kp);
+void unregister_kretprobe(struct kretprobe *rp);
+</pre></div>
+</div>
+<p>Removes the specified probe.  The unregister function can be called
+at any time after the probe has been registered.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If the functions find an incorrect probe (ex. an unregistered probe),
+they clear the addr field of the probe.</p>
+</div>
+</section>
+<section id="register-probes">
+<h3>register_*probes<a class="headerlink" href="#register-probes" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/kprobes.h&gt;
+int register_kprobes(struct kprobe **kps, int num);
+int register_kretprobes(struct kretprobe **rps, int num);
+</pre></div>
+</div>
+<p>Registers each of the num probes in the specified array.  If any
+error occurs during registration, all probes in the array, up to
+the bad probe, are safely unregistered before the register_*probes
+function returns.</p>
+<ul class="simple">
+<li><p>kps/rps: an array of pointers to <code class="docutils literal notranslate"><span class="pre">*probe</span></code> data structures</p></li>
+<li><p>num: the number of the array entries.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You have to allocate(or define) an array of pointers and set all
+of the array entries before using these functions.</p>
+</div>
+</section>
+<section id="unregister-probes">
+<h3>unregister_*probes<a class="headerlink" href="#unregister-probes" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/kprobes.h&gt;
+void unregister_kprobes(struct kprobe **kps, int num);
+void unregister_kretprobes(struct kretprobe **rps, int num);
+</pre></div>
+</div>
+<p>Removes each of the num probes in the specified array at once.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If the functions find some incorrect probes (ex. unregistered
+probes) in the specified array, they clear the addr field of those
+incorrect probes. However, other probes in the array are
+unregistered correctly.</p>
+</div>
+</section>
+<section id="disable-probe">
+<h3>disable_*probe<a class="headerlink" href="#disable-probe" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/kprobes.h&gt;
+int disable_kprobe(struct kprobe *kp);
+int disable_kretprobe(struct kretprobe *rp);
+</pre></div>
+</div>
+<p>Temporarily disables the specified <code class="docutils literal notranslate"><span class="pre">*probe</span></code>. You can enable it again by using
+enable_*<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">probe()</span></code>. You must specify the probe which has been registered.</p>
+</section>
+<section id="enable-probe">
+<h3>enable_*probe<a class="headerlink" href="#enable-probe" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/kprobes.h&gt;
+int enable_kprobe(struct kprobe *kp);
+int enable_kretprobe(struct kretprobe *rp);
+</pre></div>
+</div>
+<p>Enables <code class="docutils literal notranslate"><span class="pre">*probe</span></code> which has been disabled by disable_*<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">probe()</span></code>. You must specify
+the probe which has been registered.</p>
+</section>
+</section>
+<section id="kprobes-features-and-limitations">
+<h2>Kprobes Features and Limitations<a class="headerlink" href="#kprobes-features-and-limitations" title="Link to this heading">¶</a></h2>
+<p>Kprobes allows multiple probes at the same address. Also,
+a probepoint for which there is a post_handler cannot be optimized.
+So if you install a kprobe with a post_handler, at an optimized
+probepoint, the probepoint will be unoptimized automatically.</p>
+<p>In general, you can install a probe anywhere in the kernel.
+In particular, you can probe interrupt handlers.  Known exceptions
+are discussed in this section.</p>
+<p>The register_*probe functions will return -EINVAL if you attempt
+to install a probe in the code that implements Kprobes (mostly
+kernel/kprobes.c and <code class="docutils literal notranslate"><span class="pre">arch/*/kernel/kprobes.c</span></code>, but also functions such
+as do_page_fault and notifier_call_chain).</p>
+<p>If you install a probe in an inline-able function, Kprobes makes
+no attempt to chase down all inline instances of the function and
+install probes there.  gcc may inline a function without being asked,
+so keep this in mind if you’re not seeing the probe hits you expect.</p>
+<p>A probe handler can modify the environment of the probed function
+-- e.g., by modifying kernel data structures, or by modifying the
+contents of the pt_regs struct (which are restored to the registers
+upon return from the breakpoint).  So Kprobes can be used, for example,
+to install a bug fix or to inject faults for testing.  Kprobes, of
+course, has no way to distinguish the deliberately injected faults
+from the accidental ones.  Don’t drink and probe.</p>
+<p>Kprobes makes no attempt to prevent probe handlers from stepping on
+each other -- e.g., probing <a class="reference internal" href="../core-api/printk-basics.html#c.printk" title="printk"><code class="xref c c-func docutils literal notranslate"><span class="pre">printk()</span></code></a> and then calling <a class="reference internal" href="../core-api/printk-basics.html#c.printk" title="printk"><code class="xref c c-func docutils literal notranslate"><span class="pre">printk()</span></code></a> from a
+probe handler.  If a probe handler hits a probe, that second probe’s
+handlers won’t be run in that instance, and the kprobe.nmissed member
+of the second probe will be incremented.</p>
+<p>As of Linux v2.6.15-rc1, multiple handlers (or multiple instances of
+the same handler) may run concurrently on different CPUs.</p>
+<p>Kprobes does not use mutexes or allocate memory except during
+registration and unregistration.</p>
+<p>Probe handlers are run with preemption disabled or interrupt disabled,
+which depends on the architecture and optimization state.  (e.g.,
+kretprobe handlers and optimized kprobe handlers run without interrupt
+disabled on x86/x86-64).  In any case, your handler should not yield
+the CPU (e.g., by attempting to acquire a semaphore, or waiting I/O).</p>
+<p>Since a return probe is implemented by replacing the return
+address with the trampoline’s address, stack backtraces and calls
+to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">__builtin_return_address()</span></code> will typically yield the trampoline’s
+address instead of the real return address for kretprobed functions.
+(As far as we can tell, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">__builtin_return_address()</span></code> is used only
+for instrumentation and error reporting.)</p>
+<p>If the number of times a function is called does not match the number
+of times it returns, registering a return probe on that function may
+produce undesirable results. In such a case, a line:
+kretprobe BUG!: Processing kretprobe d000000000041aa8 &#64; c00000000004f48c
+gets printed. With this information, one will be able to correlate the
+exact instance of the kretprobe that caused the problem. We have the
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">do_exit()</span></code> case covered. <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">do_execve()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">do_fork()</span></code> are not an issue.
+We’re unaware of other specific cases where this could be a problem.</p>
+<p>If, upon entry to or exit from a function, the CPU is running on
+a stack other than that of the current task, registering a return
+probe on that function may produce undesirable results.  For this
+reason, Kprobes doesn’t support return probes (or kprobes)
+on the x86_64 version of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">__switch_to()</span></code>; the registration functions
+return -EINVAL.</p>
+<p>On x86/x86-64, since the Jump Optimization of Kprobes modifies
+instructions widely, there are some limitations to optimization. To
+explain it, we introduce some terminology. Imagine a 3-instruction
+sequence consisting of a two 2-byte instructions and one 3-byte
+instruction.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>        IA
+        |
+[-2][-1][0][1][2][3][4][5][6][7]
+        [ins1][ins2][  ins3 ]
+        [&lt;-     DCR       -&gt;]
+        [&lt;- JTPR -&gt;]
+
+ins1: 1st Instruction
+ins2: 2nd Instruction
+ins3: 3rd Instruction
+IA:  Insertion Address
+JTPR: Jump Target Prohibition Region
+DCR: Detoured Code Region
+</pre></div>
+</div>
+<p>The instructions in DCR are copied to the out-of-line buffer
+of the kprobe, because the bytes in DCR are replaced by
+a 5-byte jump instruction. So there are several limitations.</p>
+<ol class="loweralpha simple">
+<li><p>The instructions in DCR must be relocatable.</p></li>
+<li><p>The instructions in DCR must not include a call instruction.</p></li>
+<li><p>JTPR must not be targeted by any jump or call instruction.</p></li>
+<li><p>DCR must not straddle the border between functions.</p></li>
+</ol>
+<p>Anyway, these limitations are checked by the in-kernel instruction
+decoder, so you don’t need to worry about that.</p>
+</section>
+<section id="probe-overhead">
+<h2>Probe Overhead<a class="headerlink" href="#probe-overhead" title="Link to this heading">¶</a></h2>
+<p>On a typical CPU in use in 2005, a kprobe hit takes 0.5 to 1.0
+microseconds to process.  Specifically, a benchmark that hits the same
+probepoint repeatedly, firing a simple handler each time, reports 1-2
+million hits per second, depending on the architecture.  A return-probe
+hit typically takes 50-75% longer than a kprobe hit.
+When you have a return probe set on a function, adding a kprobe at
+the entry to that function adds essentially no overhead.</p>
+<p>Here are sample overhead figures (in usec) for different architectures:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>k = kprobe; r = return probe; kr = kprobe + return probe
+on same function
+
+i386: Intel Pentium M, 1495 MHz, 2957.31 bogomips
+k = 0.57 usec; r = 0.92; kr = 0.99
+
+x86_64: AMD Opteron 246, 1994 MHz, 3971.48 bogomips
+k = 0.49 usec; r = 0.80; kr = 0.82
+
+ppc64: POWER5 (gr), 1656 MHz (SMT disabled, 1 virtual CPU per physical CPU)
+k = 0.77 usec; r = 1.26; kr = 1.45
+</pre></div>
+</div>
+<section id="optimized-probe-overhead">
+<h3>Optimized Probe Overhead<a class="headerlink" href="#optimized-probe-overhead" title="Link to this heading">¶</a></h3>
+<p>Typically, an optimized kprobe hit takes 0.07 to 0.1 microseconds to
+process. Here are sample overhead figures (in usec) for x86 architectures:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>k = unoptimized kprobe, b = boosted (single-step skipped), o = optimized kprobe,
+r = unoptimized kretprobe, rb = boosted kretprobe, ro = optimized kretprobe.
+
+i386: Intel(R) Xeon(R) E5410, 2.33GHz, 4656.90 bogomips
+k = 0.80 usec; b = 0.33; o = 0.05; r = 1.10; rb = 0.61; ro = 0.33
+
+x86-64: Intel(R) Xeon(R) E5410, 2.33GHz, 4656.90 bogomips
+k = 0.99 usec; b = 0.43; o = 0.06; r = 1.24; rb = 0.68; ro = 0.30
+</pre></div>
+</div>
+</section>
+</section>
+<section id="todo">
+<h2>TODO<a class="headerlink" href="#todo" title="Link to this heading">¶</a></h2>
+<ol class="loweralpha simple">
+<li><p>SystemTap (<a class="reference external" href="http://sourceware.org/systemtap">http://sourceware.org/systemtap</a>): Provides a simplified
+programming interface for probe-based instrumentation.  Try it out.</p></li>
+<li><p>Kernel return probes for sparc64.</p></li>
+<li><p>Support for other architectures.</p></li>
+<li><p>User-space probes.</p></li>
+<li><p>Watchpoint probes (which fire on data references).</p></li>
+</ol>
+</section>
+<section id="kprobes-example">
+<h2>Kprobes Example<a class="headerlink" href="#kprobes-example" title="Link to this heading">¶</a></h2>
+<p>See samples/kprobes/kprobe_example.c</p>
+</section>
+<section id="kretprobes-example">
+<h2>Kretprobes Example<a class="headerlink" href="#kretprobes-example" title="Link to this heading">¶</a></h2>
+<p>See samples/kprobes/kretprobe_example.c</p>
+</section>
+<section id="deprecated-features">
+<h2>Deprecated Features<a class="headerlink" href="#deprecated-features" title="Link to this heading">¶</a></h2>
+<p>Jprobes is now a deprecated feature. People who are depending on it should
+migrate to other tracing features or use older kernels. Please consider to
+migrate your tool to one of the following options:</p>
+<ul>
+<li><p>Use trace-event to trace target function with arguments.</p>
+<p>trace-event is a low-overhead (and almost no visible overhead if it
+is off) statically defined event interface. You can define new events
+and trace it via ftrace or any other tracing tools.</p>
+<p>See the following urls:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference external" href="https://lwn.net/Articles/379903/">https://lwn.net/Articles/379903/</a></p></li>
+<li><p><a class="reference external" href="https://lwn.net/Articles/381064/">https://lwn.net/Articles/381064/</a></p></li>
+<li><p><a class="reference external" href="https://lwn.net/Articles/383362/">https://lwn.net/Articles/383362/</a></p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>Use ftrace dynamic events (kprobe event) with perf-probe.</p>
+<p>If you build your kernel with debug info (CONFIG_DEBUG_INFO=y), you can
+find which register/stack is assigned to which local variable or arguments
+by using perf-probe and set up new event to trace it.</p>
+<p>See following documents:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="kprobetrace.html"><span class="doc">Kprobe-based Event Tracing</span></a></p></li>
+<li><p><a class="reference internal" href="events.html"><span class="doc">Event Tracing</span></a></p></li>
+<li><p>tools/perf/Documentation/perf-probe.txt</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="the-kprobes-debugfs-interface">
+<h2>The kprobes debugfs interface<a class="headerlink" href="#the-kprobes-debugfs-interface" title="Link to this heading">¶</a></h2>
+<p>With recent kernels (&gt; 2.6.20) the list of registered kprobes is visible
+under the /sys/kernel/debug/kprobes/ directory (assuming debugfs is mounted at //sys/kernel/debug).</p>
+<p>/sys/kernel/debug/kprobes/list: Lists all registered probes on the system:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>c015d71a  k  vfs_read+0x0
+c03dedc5  r  tcp_v4_rcv+0x0
+</pre></div>
+</div>
+<p>The first column provides the kernel address where the probe is inserted.
+The second column identifies the type of probe (k - kprobe and r - kretprobe)
+while the third column specifies the symbol+offset of the probe.
+If the probed function belongs to a module, the module name is also
+specified. Following columns show probe status. If the probe is on
+a virtual address that is no longer valid (module init sections, module
+virtual addresses that correspond to modules that’ve been unloaded),
+such probes are marked with [GONE]. If the probe is temporarily disabled,
+such probes are marked with [DISABLED]. If the probe is optimized, it is
+marked with [OPTIMIZED]. If the probe is ftrace-based, it is marked with
+[FTRACE].</p>
+<p>/sys/kernel/debug/kprobes/enabled: Turn kprobes ON/OFF forcibly.</p>
+<p>Provides a knob to globally and forcibly turn registered kprobes ON or OFF.
+By default, all kprobes are enabled. By echoing “0” to this file, all
+registered probes will be disarmed, till such time a “1” is echoed to this
+file. Note that this knob just disarms and arms all kprobes and doesn’t
+change each probe’s disabling state. This means that disabled kprobes (marked
+[DISABLED]) will be not enabled if you turn ON all kprobes by this knob.</p>
+</section>
+<section id="the-kprobes-sysctl-interface">
+<h2>The kprobes sysctl interface<a class="headerlink" href="#the-kprobes-sysctl-interface" title="Link to this heading">¶</a></h2>
+<p>/proc/sys/debug/kprobes-optimization: Turn kprobes optimization ON/OFF.</p>
+<p>When CONFIG_OPTPROBES=y, this sysctl interface appears and it provides
+a knob to globally and forcibly turn jump optimization (see section
+<a class="reference internal" href="#kprobes-jump-optimization"><span class="std std-ref">How Does Jump Optimization Work?</span></a>) ON or OFF. By default, jump optimization
+is allowed (ON). If you echo “0” to this file or set
+“debug.kprobes_optimization” to 0 via sysctl, all optimized probes will be
+unoptimized, and any new probes registered after that will not be optimized.</p>
+<p>Note that this knob <em>changes</em> the optimized state. This means that optimized
+probes (marked [OPTIMIZED]) will be unoptimized ([OPTIMIZED] tag will be
+removed). If the knob is turned on, they will be optimized again.</p>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Link to this heading">¶</a></h2>
+<p>For additional information on Kprobes, refer to the following URLs:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://lwn.net/Articles/132196/">https://lwn.net/Articles/132196/</a></p></li>
+<li><p><a class="reference external" href="https://www.kernel.org/doc/ols/2006/ols2006v2-pages-109-124.pdf">https://www.kernel.org/doc/ols/2006/ols2006v2-pages-109-124.pdf</a></p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/trace/kprobes.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

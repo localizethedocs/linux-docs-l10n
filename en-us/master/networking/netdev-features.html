@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Netdev features mess and how to get out from it alive &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/networking/netdev-features.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Network Devices, the Kernel, and You!" href="netdevices.html" />
+    <link rel="prev" title="Netconsole" href="netconsole.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Networking</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../netlabel/index.html">NetLabel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../infiniband/index.html">InfiniBand</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../isdn/index.html">ISDN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mhi/index.html">MHI</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/networking/netdev-features.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="netdev-features-mess-and-how-to-get-out-from-it-alive">
+<h1>Netdev features mess and how to get out from it alive<a class="headerlink" href="#netdev-features-mess-and-how-to-get-out-from-it-alive" title="Link to this heading">¶</a></h1>
+<dl class="simple">
+<dt>Author:</dt><dd><p>Michał Mirosław &lt;<a class="reference external" href="mailto:mirq-linux&#37;&#52;&#48;rere&#46;qmqm&#46;pl">mirq-linux<span>&#64;</span>rere<span>&#46;</span>qmqm<span>&#46;</span>pl</a>&gt;</p>
+</dd>
+</dl>
+<section id="part-i-feature-sets">
+<h2>Part I: Feature sets<a class="headerlink" href="#part-i-feature-sets" title="Link to this heading">¶</a></h2>
+<p>Long gone are the days when a network card would just take and give packets
+verbatim.  Today’s devices add multiple features and bugs (read: offloads)
+that relieve an OS of various tasks like generating and checking checksums,
+splitting packets, classifying them.  Those capabilities and their state
+are commonly referred to as netdev features in Linux kernel world.</p>
+<p>There are currently three sets of features relevant to the driver, and
+one used internally by network core:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>netdev-&gt;hw_features set contains features whose state may possibly
+be changed (enabled or disabled) for a particular device by user’s
+request.  This set should be initialized in ndo_init callback and not
+changed later.</p></li>
+<li><p>netdev-&gt;features set contains features which are currently enabled
+for a device.  This should be changed only by network core or in
+error paths of ndo_set_features callback.</p></li>
+<li><p>netdev-&gt;vlan_features set contains features whose state is inherited
+by child VLAN devices (limits netdev-&gt;features set).  This is currently
+used for all VLAN devices whether tags are stripped or inserted in
+hardware or software.</p></li>
+<li><p>netdev-&gt;wanted_features set contains feature set requested by user.
+This set is filtered by ndo_fix_features callback whenever it or
+some device-specific conditions change. This set is internal to
+networking core and should not be referenced in drivers.</p></li>
+</ol>
+</div></blockquote>
+</section>
+<section id="part-ii-controlling-enabled-features">
+<h2>Part II: Controlling enabled features<a class="headerlink" href="#part-ii-controlling-enabled-features" title="Link to this heading">¶</a></h2>
+<p>When current feature set (netdev-&gt;features) is to be changed, new set
+is calculated and filtered by calling ndo_fix_features callback
+and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">netdev_fix_features()</span></code>. If the resulting set differs from current
+set, it is passed to ndo_set_features callback and (if the callback
+returns success) replaces value stored in netdev-&gt;features.
+NETDEV_FEAT_CHANGE notification is issued after that whenever current
+set might have changed.</p>
+<dl class="simple">
+<dt>The following events trigger recalculation:</dt><dd><ol class="arabic simple">
+<li><p>device’s registration, after ndo_init returned success</p></li>
+<li><p>user requested changes in features state</p></li>
+<li><p><a class="reference internal" href="kapi.html#c.netdev_update_features" title="netdev_update_features"><code class="xref c c-func docutils literal notranslate"><span class="pre">netdev_update_features()</span></code></a> is called</p></li>
+</ol>
+</dd>
+</dl>
+<p>ndo_*_features callbacks are called with rtnl_lock held. Missing callbacks
+are treated as always returning success.</p>
+<p>A driver that wants to trigger recalculation must do so by calling
+<a class="reference internal" href="kapi.html#c.netdev_update_features" title="netdev_update_features"><code class="xref c c-func docutils literal notranslate"><span class="pre">netdev_update_features()</span></code></a> while holding rtnl_lock. This should not be done
+from ndo_*_features callbacks. netdev-&gt;features should not be modified by
+driver except by means of ndo_fix_features callback.</p>
+</section>
+<section id="part-iii-implementation-hints">
+<h2>Part III: Implementation hints<a class="headerlink" href="#part-iii-implementation-hints" title="Link to this heading">¶</a></h2>
+<blockquote>
+<div><ul class="simple">
+<li><p>ndo_fix_features:</p></li>
+</ul>
+</div></blockquote>
+<p>All dependencies between features should be resolved here. The resulting
+set can be reduced further by networking core imposed limitations (as coded
+in <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">netdev_fix_features()</span></code>). For this reason it is safer to disable a feature
+when its dependencies are not met instead of forcing the dependency on.</p>
+<p>This callback should not modify hardware nor driver state (should be
+stateless).  It can be called multiple times between successive
+ndo_set_features calls.</p>
+<p>Callback must not alter features contained in NETIF_F_SOFT_FEATURES or
+NETIF_F_NEVER_CHANGE sets. The exception is NETIF_F_VLAN_CHALLENGED but
+care must be taken as the change won’t affect already configured VLANs.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>ndo_set_features:</p></li>
+</ul>
+</div></blockquote>
+<p>Hardware should be reconfigured to match passed feature set. The set
+should not be altered unless some error condition happens that can’t
+be reliably detected in ndo_fix_features. In this case, the callback
+should update netdev-&gt;features to match resulting hardware state.
+Errors returned are not (and cannot be) propagated anywhere except dmesg.
+(Note: successful return is zero, &gt;0 means silent error.)</p>
+</section>
+<section id="part-iv-features">
+<h2>Part IV: Features<a class="headerlink" href="#part-iv-features" title="Link to this heading">¶</a></h2>
+<p>For current list of features, see include/linux/netdev_features.h.
+This section describes semantics of some of them.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Transmit checksumming</p></li>
+</ul>
+</div></blockquote>
+<p>For complete description, see comments near the top of include/linux/skbuff.h.</p>
+<p>Note: NETIF_F_HW_CSUM is a superset of NETIF_F_IP_CSUM + NETIF_F_IPV6_CSUM.
+It means that device can fill TCP/UDP-like checksum anywhere in the packets
+whatever headers there might be.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Transmit TCP segmentation offload</p></li>
+</ul>
+</div></blockquote>
+<p>NETIF_F_TSO_ECN means that hardware can properly split packets with CWR bit
+set, be it TCPv4 (when NETIF_F_TSO is enabled) or TCPv6 (NETIF_F_TSO6).</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Transmit UDP segmentation offload</p></li>
+</ul>
+</div></blockquote>
+<p>NETIF_F_GSO_UDP_L4 accepts a single UDP header with a payload that exceeds
+gso_size. On segmentation, it segments the payload on gso_size boundaries and
+replicates the network and UDP headers (fixing up the last one if less than
+gso_size).</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Transmit DMA from high memory</p></li>
+</ul>
+</div></blockquote>
+<p>On platforms where this is relevant, NETIF_F_HIGHDMA signals that
+ndo_start_xmit can handle skbs with frags in high memory.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Transmit scatter-gather</p></li>
+</ul>
+</div></blockquote>
+<p>Those features say that ndo_start_xmit can handle fragmented skbs:
+NETIF_F_SG --- paged skbs (<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">skb_shinfo()</span></code>-&gt;frags), NETIF_F_FRAGLIST ---
+chained skbs (skb-&gt;next/prev list).</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Software features</p></li>
+</ul>
+</div></blockquote>
+<p>Features contained in NETIF_F_SOFT_FEATURES are features of networking
+stack. Driver should not change behaviour based on them.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>VLAN challenged</p></li>
+</ul>
+</div></blockquote>
+<p>NETIF_F_VLAN_CHALLENGED should be set for devices which can’t cope with VLAN
+headers. Some drivers set this because the cards can’t handle the bigger MTU.
+[FIXME: Those cases could be fixed in VLAN code by allowing only reduced-MTU
+VLANs. This may be not useful, though.]</p>
+<ul class="simple">
+<li><p>rx-fcs</p></li>
+</ul>
+<p>This requests that the NIC append the Ethernet Frame Checksum (FCS)
+to the end of the skb data.  This allows sniffers and other tools to
+read the CRC recorded by the NIC on receipt of the packet.</p>
+<ul class="simple">
+<li><p>rx-all</p></li>
+</ul>
+<p>This requests that the NIC receive all possible frames, including errored
+frames (such as bad FCS, etc).  This can be helpful when sniffing a link with
+bad packets on it.  Some NICs may receive more packets if also put into normal
+PROMISC mode.</p>
+<ul class="simple">
+<li><p>rx-gro-hw</p></li>
+</ul>
+<p>This requests that the NIC enables Hardware GRO (generic receive offload).
+Hardware GRO is basically the exact reverse of TSO, and is generally
+stricter than Hardware LRO.  A packet stream merged by Hardware GRO must
+be re-segmentable by GSO or TSO back to the exact original packet stream.
+Hardware GRO is dependent on RXCSUM since every packet successfully merged
+by hardware must also have the checksum verified by hardware.</p>
+<ul class="simple">
+<li><p>hsr-tag-ins-offload</p></li>
+</ul>
+<p>This should be set for devices which insert an HSR (High-availability Seamless
+Redundancy) or PRP (Parallel Redundancy Protocol) tag automatically.</p>
+<ul class="simple">
+<li><p>hsr-tag-rm-offload</p></li>
+</ul>
+<p>This should be set for devices which remove HSR (High-availability Seamless
+Redundancy) or PRP (Parallel Redundancy Protocol) tags automatically.</p>
+<ul class="simple">
+<li><p>hsr-fwd-offload</p></li>
+</ul>
+<p>This should be set for devices which forward HSR (High-availability Seamless
+Redundancy) frames from one port to another in hardware.</p>
+<ul class="simple">
+<li><p>hsr-dup-offload</p></li>
+</ul>
+<p>This should be set for devices which duplicate outgoing HSR (High-availability
+Seamless Redundancy) or PRP (Parallel Redundancy Protocol) tags automatically
+frames in hardware.</p>
+<ul class="simple">
+<li><p>netmem-tx</p></li>
+</ul>
+<p>This should be set for devices which support netmem TX. See
+<a class="reference internal" href="netmem.html"><span class="doc">Netmem Support for Network Drivers</span></a></p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/networking/netdev-features.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

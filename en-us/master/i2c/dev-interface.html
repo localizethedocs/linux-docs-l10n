@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Implementing I2C device drivers in userspace &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/i2c/dev-interface.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Linux I2C and DMA" href="dma-considerations.html" />
+    <link rel="prev" title="Implementing I2C device drivers" href="writing-clients.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../accounting/index.html">Accounting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cpu-freq/index.html">CPUFreq - CPU frequency and voltage scaling code in the Linux(TM) kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../edac/index.html">EDAC Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../fpga/index.html">FPGA</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">I2C/SMBus Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../iio/index.html">Industrial I/O</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pcmcia/index.html">PCMCIA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../spi/index.html">Serial Peripheral Interface (SPI)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../w1/index.html">1-Wire Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../watchdog/index.html">Watchdog Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../virt/index.html">Virtualization Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../hwmon/index.html">Hardware Monitoring</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../accel/index.html">Compute Accelerators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../security/index.html">Security Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../crypto/index.html">Crypto API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../bpf/index.html">BPF Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../usb/index.html">USB support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../PCI/index.html">PCI Bus Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../misc-devices/index.html">Assorted Miscellaneous Devices Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../peci/index.html">PECI Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../wmi/index.html">WMI Subsystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tee/index.html">TEE Subsystem</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/i2c/dev-interface.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="implementing-i2c-device-drivers-in-userspace">
+<h1>Implementing I2C device drivers in userspace<a class="headerlink" href="#implementing-i2c-device-drivers-in-userspace" title="Link to this heading">¶</a></h1>
+<p>Usually, I2C devices are controlled by a kernel driver. But it is also
+possible to access all devices on an adapter from userspace, through
+the /dev interface. You need to load module i2c-dev for this.</p>
+<p>Each registered I2C adapter gets a number, counting from 0. You can
+examine /sys/class/i2c-dev/ to see what number corresponds to which adapter.
+Alternatively, you can run “i2cdetect -l” to obtain a formatted list of all
+I2C adapters present on your system at a given time. i2cdetect is part of
+the i2c-tools package.</p>
+<p>I2C device files are character device files with major device number 89
+and a minor device number corresponding to the number assigned as
+explained above. They should be called “i2c-%d” (i2c-0, i2c-1, ...,
+i2c-10, ...). All 256 minor device numbers are reserved for I2C.</p>
+<section id="c-example">
+<h2>C example<a class="headerlink" href="#c-example" title="Link to this heading">¶</a></h2>
+<p>So let’s say you want to access an I2C adapter from a C program.
+First, you need to include these two headers:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#include &lt;linux/i2c-dev.h&gt;
+#include &lt;i2c/smbus.h&gt;
+</pre></div>
+</div>
+<p>Now, you have to decide which adapter you want to access. You should
+inspect /sys/class/i2c-dev/ or run “i2cdetect -l” to decide this.
+Adapter numbers are assigned somewhat dynamically, so you can not
+assume much about them. They can even change from one boot to the next.</p>
+<p>Next thing, open the device file, as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int file;
+int adapter_nr = 2; /* probably dynamically determined */
+char filename[20];
+
+snprintf(filename, 19, &quot;/dev/i2c-%d&quot;, adapter_nr);
+file = open(filename, O_RDWR);
+if (file &lt; 0) {
+  /* ERROR HANDLING; you can check errno to see what went wrong */
+  exit(1);
+}
+</pre></div>
+</div>
+<p>When you have opened the device, you must specify with what device
+address you want to communicate:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int addr = 0x40; /* The I2C address */
+
+if (ioctl(file, I2C_SLAVE, addr) &lt; 0) {
+  /* ERROR HANDLING; you can check errno to see what went wrong */
+  exit(1);
+}
+</pre></div>
+</div>
+<p>Well, you are all set up now. You can now use SMBus commands or plain
+I2C to communicate with your device. SMBus commands are preferred if
+the device supports them. Both are illustrated below:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>__u8 reg = 0x10; /* Device register to access */
+__s32 res;
+char buf[10];
+
+/* Using SMBus commands */
+res = i2c_smbus_read_word_data(file, reg);
+if (res &lt; 0) {
+  /* ERROR HANDLING: I2C transaction failed */
+} else {
+  /* res contains the read word */
+}
+
+/*
+ * Using I2C Write, equivalent of
+ * i2c_smbus_write_word_data(file, reg, 0x6543)
+ */
+buf[0] = reg;
+buf[1] = 0x43;
+buf[2] = 0x65;
+if (write(file, buf, 3) != 3) {
+  /* ERROR HANDLING: I2C transaction failed */
+}
+
+/* Using I2C Read, equivalent of i2c_smbus_read_byte(file) */
+if (read(file, buf, 1) != 1) {
+  /* ERROR HANDLING: I2C transaction failed */
+} else {
+  /* buf[0] contains the read byte */
+}
+</pre></div>
+</div>
+<p>Note that only a subset of the I2C and SMBus protocols can be achieved by
+the means of read() and write() calls. In particular, so-called combined
+transactions (mixing read and write messages in the same transaction)
+aren’t supported. For this reason, this interface is almost never used by
+user-space programs.</p>
+<p>IMPORTANT: because of the use of inline functions, you <em>have</em> to use
+‘-O’ or some variation when you compile your program!</p>
+</section>
+<section id="full-interface-description">
+<h2>Full interface description<a class="headerlink" href="#full-interface-description" title="Link to this heading">¶</a></h2>
+<p>The following IOCTLs are defined:</p>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">ioctl(file,</span> <span class="pre">I2C_SLAVE,</span> <span class="pre">long</span> <span class="pre">addr)</span></code></dt><dd><p>Change slave address. The address is passed in the 7 lower bits of the
+argument (except for 10 bit addresses, passed in the 10 lower bits in this
+case).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ioctl(file,</span> <span class="pre">I2C_TENBIT,</span> <span class="pre">long</span> <span class="pre">select)</span></code></dt><dd><p>Selects ten bit addresses if select not equals 0, selects normal 7 bit
+addresses if select equals 0. Default 0.  This request is only valid
+if the adapter has I2C_FUNC_10BIT_ADDR.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ioctl(file,</span> <span class="pre">I2C_PEC,</span> <span class="pre">long</span> <span class="pre">select)</span></code></dt><dd><p>Selects SMBus PEC (packet error checking) generation and verification
+if select not equals 0, disables if select equals 0. Default 0.
+Used only for SMBus transactions.  This request only has an effect if the
+the adapter has I2C_FUNC_SMBUS_PEC; it is still safe if not, it just
+doesn’t have any effect.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ioctl(file,</span> <span class="pre">I2C_FUNCS,</span> <span class="pre">unsigned</span> <span class="pre">long</span> <span class="pre">*funcs)</span></code></dt><dd><p>Gets the adapter functionality and puts it in <code class="docutils literal notranslate"><span class="pre">*funcs</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ioctl(file,</span> <span class="pre">I2C_RDWR,</span> <span class="pre">struct</span> <span class="pre">i2c_rdwr_ioctl_data</span> <span class="pre">*msgset)</span></code></dt><dd><p>Do combined read/write transaction without stop in between.
+Only valid if the adapter has I2C_FUNC_I2C.  The argument is
+a pointer to a:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct i2c_rdwr_ioctl_data {
+  struct i2c_msg *msgs;  /* ptr to array of simple messages */
+  int nmsgs;             /* number of messages to exchange */
+}
+</pre></div>
+</div>
+<p>The msgs[] themselves contain further pointers into data buffers.
+The function will write or read data to or from that buffers depending
+on whether the I2C_M_RD flag is set in a particular message or not.
+The slave address and whether to use ten bit address mode has to be
+set in each message, overriding the values set with the above ioctl’s.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ioctl(file,</span> <span class="pre">I2C_SMBUS,</span> <span class="pre">struct</span> <span class="pre">i2c_smbus_ioctl_data</span> <span class="pre">*args)</span></code></dt><dd><p>If possible, use the provided <code class="docutils literal notranslate"><span class="pre">i2c_smbus_*</span></code> methods described below instead
+of issuing direct ioctls.</p>
+</dd>
+</dl>
+<p>You can do plain I2C transactions by using read(2) and write(2) calls.
+You do not need to pass the address byte; instead, set it through
+ioctl I2C_SLAVE before you try to access the device.</p>
+<p>You can do SMBus level transactions (see documentation file <a class="reference internal" href="smbus-protocol.html"><span class="doc">The SMBus Protocol</span></a>
+for details) through the following functions:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>__s32 i2c_smbus_write_quick(int file, __u8 value);
+__s32 i2c_smbus_read_byte(int file);
+__s32 i2c_smbus_write_byte(int file, __u8 value);
+__s32 i2c_smbus_read_byte_data(int file, __u8 command);
+__s32 i2c_smbus_write_byte_data(int file, __u8 command, __u8 value);
+__s32 i2c_smbus_read_word_data(int file, __u8 command);
+__s32 i2c_smbus_write_word_data(int file, __u8 command, __u16 value);
+__s32 i2c_smbus_process_call(int file, __u8 command, __u16 value);
+__s32 i2c_smbus_block_process_call(int file, __u8 command, __u8 length,
+                                   __u8 *values);
+__s32 i2c_smbus_read_block_data(int file, __u8 command, __u8 *values);
+__s32 i2c_smbus_write_block_data(int file, __u8 command, __u8 length,
+                                 __u8 *values);
+</pre></div>
+</div>
+<p>All these transactions return -1 on failure; you can read errno to see
+what happened. The ‘write’ transactions return 0 on success; the
+‘read’ transactions return the read value, except for read_block, which
+returns the number of values read. The block buffers need not be longer
+than 32 bytes.</p>
+<p>The above functions are made available by linking against the libi2c library,
+which is provided by the i2c-tools project.  See:
+<a class="reference external" href="https://git.kernel.org/pub/scm/utils/i2c-tools/i2c-tools.git/">https://git.kernel.org/pub/scm/utils/i2c-tools/i2c-tools.git/</a>.</p>
+</section>
+<section id="implementation-details">
+<h2>Implementation details<a class="headerlink" href="#implementation-details" title="Link to this heading">¶</a></h2>
+<p>For the interested, here’s the code flow which happens inside the kernel
+when you use the /dev interface to I2C:</p>
+<ol class="arabic">
+<li><p>Your program opens /dev/i2c-N and calls ioctl() on it, as described in
+section “C example” above.</p></li>
+<li><p>These open() and ioctl() calls are handled by the i2c-dev kernel
+driver: see i2c-dev.c:<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">i2cdev_open()</span></code> and i2c-dev.c:<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">i2cdev_ioctl()</span></code>,
+respectively. You can think of i2c-dev as a generic I2C chip driver
+that can be programmed from user-space.</p></li>
+<li><p>Some ioctl() calls are for administrative tasks and are handled by
+i2c-dev directly. Examples include I2C_SLAVE (set the address of the
+device you want to access) and I2C_PEC (enable or disable SMBus error
+checking on future transactions.)</p></li>
+<li><p>Other ioctl() calls are converted to in-kernel function calls by
+i2c-dev. Examples include I2C_FUNCS, which queries the I2C adapter
+functionality using i2c.h:<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">i2c_get_functionality()</span></code>, and I2C_SMBUS, which
+performs an SMBus transaction using i2c-core-smbus.c:<a class="reference internal" href="../driver-api/i2c.html#c.i2c_smbus_xfer" title="i2c_smbus_xfer"><code class="xref c c-func docutils literal notranslate"><span class="pre">i2c_smbus_xfer()</span></code></a>.</p>
+<p>The i2c-dev driver is responsible for checking all the parameters that
+come from user-space for validity. After this point, there is no
+difference between these calls that came from user-space through i2c-dev
+and calls that would have been performed by kernel I2C chip drivers
+directly. This means that I2C bus drivers don’t need to implement
+anything special to support access from user-space.</p>
+</li>
+<li><p>These i2c.h functions are wrappers to the actual implementation of
+your I2C bus driver. Each adapter must declare callback functions
+implementing these standard calls. i2c.h:<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">i2c_get_functionality()</span></code> calls
+i2c_adapter.algo-&gt;<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">functionality()</span></code>, while
+i2c-core-smbus.c:<a class="reference internal" href="../driver-api/i2c.html#c.i2c_smbus_xfer" title="i2c_smbus_xfer"><code class="xref c c-func docutils literal notranslate"><span class="pre">i2c_smbus_xfer()</span></code></a> calls either
+adapter.algo-&gt;<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">smbus_xfer()</span></code> if it is implemented, or if not,
+i2c-core-smbus.c:<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">i2c_smbus_xfer_emulated()</span></code> which in turn calls
+i2c_adapter.algo-&gt;<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">master_xfer()</span></code>.</p></li>
+</ol>
+<p>After your I2C bus driver has processed these requests, execution runs
+up the call chain, with almost no processing done, except by i2c-dev to
+package the returned data, if any, in suitable format for the ioctl.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/i2c/dev-interface.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
