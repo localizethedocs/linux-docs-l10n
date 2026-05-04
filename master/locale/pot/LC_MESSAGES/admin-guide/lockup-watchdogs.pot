@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"POT-Creation-Date: 2026-05-04 10:14+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -41,11 +41,11 @@ msgstr ""
 #: ../../../admin-guide/lockup-watchdogs.rst:18
 msgid ""
 "A 'hardlockup' is defined as a bug that causes the CPU to loop in kernel "
-"mode for more than 10 seconds (see \"Implementation\" below for details), "
-"without letting other interrupts have a chance to run. Similarly to the "
-"softlockup case, the current stack trace is displayed upon detection and the "
-"system will stay locked up unless the default behavior is changed, which can "
-"be done through a sysctl, 'hardlockup_panic', a compile time knob, "
+"mode for several seconds (see \"Implementation\" below for details), without "
+"letting other interrupts have a chance to run. Similarly to the softlockup "
+"case, the current stack trace is displayed upon detection and the system "
+"will stay locked up unless the default behavior is changed, which can be "
+"done through a sysctl, 'hardlockup_panic', a compile time knob, "
 "\"BOOTPARAM_HARDLOCKUP_PANIC\", and a kernel parameter, "
 "\"nmi_watchdog\" (see \"Documentation/admin-guide/kernel-parameters.rst\" "
 "for details)."
@@ -59,54 +59,195 @@ msgid ""
 msgstr ""
 
 #: ../../../admin-guide/lockup-watchdogs.rst:34
-msgid "Implementation"
+msgid "Configuration"
 msgstr ""
 
 #: ../../../admin-guide/lockup-watchdogs.rst:36
 msgid ""
-"The soft and hard lockup detectors are built on top of the hrtimer and perf "
-"subsystems, respectively. A direct consequence of this is that, in "
-"principle, they should work in any architecture where these subsystems are "
-"present."
+"A kernel knob is provided that allows administrators to configure this "
+"period. The \"watchdog_thresh\" parameter (default 10 seconds) controls the "
+"threshold. The right value for a particular environment is a trade-off "
+"between fast response to lockups and detection overhead."
 msgstr ""
 
-#: ../../../admin-guide/lockup-watchdogs.rst:41
+#: ../../../admin-guide/lockup-watchdogs.rst:42
+msgid "Implementation"
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:44
 msgid ""
-"A periodic hrtimer runs to generate interrupts and kick the watchdog job. An "
-"NMI perf event is generated every \"watchdog_thresh\" (compile-time "
-"initialized to 10 and configurable through sysctl of the same name) seconds "
-"to check for hardlockups. If any CPU in the system does not receive any "
-"hrtimer interrupt during that time the 'hardlockup detector' (the handler "
-"for the NMI perf event) will generate a kernel warning or call panic, "
-"depending on the configuration."
+"The soft and hard lockup detectors are built around an hrtimer. In addition, "
+"the softlockup detector regularly schedules a job, and the hard lockup "
+"detector might use Perf/NMI events on architectures that support it."
 msgstr ""
 
 #: ../../../admin-guide/lockup-watchdogs.rst:50
-msgid ""
-"The watchdog job runs in a stop scheduling thread that updates a timestamp "
-"every time it is scheduled. If that timestamp is not updated for "
-"2*watchdog_thresh seconds (the softlockup threshold) the 'softlockup "
-"detector' (coded inside the hrtimer callback function) will dump useful "
-"debug information to the system log, after which it will call panic if it "
-"was instructed to do so or resume execution of other kernel code."
+msgid "Frequency and Heartbeats"
 msgstr ""
 
-#: ../../../admin-guide/lockup-watchdogs.rst:58
-msgid ""
-"The period of the hrtimer is 2*watchdog_thresh/5, which means it has two or "
-"three chances to generate an interrupt before the hardlockup detector kicks "
-"in."
+#: ../../../admin-guide/lockup-watchdogs.rst:52
+msgid "The core of the detectors is an hrtimer. It serves multiple purposes:"
 msgstr ""
 
-#: ../../../admin-guide/lockup-watchdogs.rst:62
-msgid ""
-"As explained above, a kernel knob is provided that allows administrators to "
-"configure the period of the hrtimer and the perf event. The right value for "
-"a particular environment is a trade-off between fast response to lockups and "
-"detection overhead."
+#: ../../../admin-guide/lockup-watchdogs.rst:54
+msgid "schedules watchdog job for the softlockup detector"
 msgstr ""
 
-#: ../../../admin-guide/lockup-watchdogs.rst:67
+#: ../../../admin-guide/lockup-watchdogs.rst:55
+msgid "bumps the interrupt counter for hardlockup detectors (heartbeat)"
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:56
+msgid "detects softlockups"
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:57
+msgid "detects hardlockups in Buddy mode"
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:59
+msgid ""
+"The period of this hrtimer is 2*watchdog_thresh/5, which is 4 seconds by "
+"default. The hrtimer has two or three chances to generate an interrupt "
+"(heartbeat) before the hardlockup detector kicks in."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:64
+msgid "Softlockup Detector"
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:66
+msgid ""
+"The watchdog job is scheduled by the hrtimer and runs in a stop scheduling "
+"thread. It updates a timestamp every time it is scheduled. If that timestamp "
+"is not updated for 2*watchdog_thresh seconds (the softlockup threshold) the "
+"'softlockup detector' (coded inside the hrtimer callback function) will dump "
+"useful debug information to the system log, after which it will call panic "
+"if it was instructed to do so or resume execution of other kernel code."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:75
+msgid "Hardlockup Detector (NMI/Perf)"
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:77
+msgid ""
+"On architectures that support NMI (Non-Maskable Interrupt) perf events, a "
+"periodic NMI is generated every \"watchdog_thresh\" seconds."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:80
+msgid ""
+"If any CPU in the system does not receive any hrtimer interrupt (heartbeat) "
+"during the \"watchdog_thresh\" window, the 'hardlockup detector' (the "
+"handler for the NMI perf event) will generate a kernel warning or call panic."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:85
+msgid "**Detection Overhead (NMI):**"
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:87
+msgid ""
+"The time to detect a lockup can vary depending on when the lockup occurs "
+"relative to the NMI check window. Examples below assume a watchdog_thresh of "
+"10."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:90
+msgid ""
+"**Best Case:** The lockup occurs just before the first heartbeat is due. The "
+"detector will notice the missing hrtimer interrupt almost immediately during "
+"the next check."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:104
+msgid ""
+"**Worst Case:** The lockup occurs shortly after a valid interrupt "
+"(heartbeat) which itself happened just after the NMI check. The next NMI "
+"check sees that the interrupt count has changed (due to that one heartbeat), "
+"assumes the CPU is healthy, and resets the baseline. The lockup is only "
+"detected at the subsequent check."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:121
+msgid "Hardlockup Detector (Buddy)"
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:123
+msgid ""
+"On architectures or configurations where NMI perf events are not available "
+"(or disabled), the kernel may use the \"buddy\" hardlockup detector. This "
+"mechanism requires SMP (Symmetric Multi-Processing)."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:127
+msgid ""
+"In this mode, each CPU is assigned a \"buddy\" CPU to monitor. The "
+"monitoring CPU runs its own hrtimer (the same one used for softlockup "
+"detection) and checks if the buddy CPU's hrtimer interrupt count has "
+"increased."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:132
+msgid ""
+"To ensure timeliness and avoid false positives, the buddy system performs "
+"checks at every hrtimer interval (2*watchdog_thresh/5, which is 4 seconds by "
+"default). It uses a missed-interrupt threshold of 3. If the buddy's "
+"interrupt count has not changed for 3 consecutive checks, it is assumed that "
+"the buddy CPU is hardlocked (interrupts disabled). The monitoring CPU will "
+"then trigger the hardlockup response (warning or panic)."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:139
+msgid "**Detection Overhead (Buddy):**"
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:141
+msgid "With a default check interval of 4 seconds (watchdog_thresh = 10):"
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:143
+msgid "**Best case:** Lockup occurs just before a check."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:144
+msgid "Detected in ~8s (0s till 1st check + 4s till 2nd + 4s till 3rd)."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:145
+msgid "**Worst case:** Lockup occurs just after a check."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:146
+msgid "Detected in ~12s (4s till 1st check + 4s till 2nd + 4s till 3rd)."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:148
+msgid "**Limitations of the Buddy Detector:**"
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:150
+msgid ""
+"**All-CPU Lockup:** If all CPUs lock up simultaneously, the buddy detector "
+"cannot detect the condition because the monitoring CPUs are also frozen."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:153
+msgid ""
+"**Stack Traces:** Unlike the NMI detector, the buddy detector cannot "
+"directly interrupt the locked CPU to grab a stack trace. It relies on "
+"architecture-specific mechanisms (like NMI backtrace support) to try and "
+"retrieve the status of the locked CPU. If such support is missing, the log "
+"may only show that a lockup occurred without providing the locked CPU's "
+"stack."
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:161
+msgid "Watchdog Core Exclusion"
+msgstr ""
+
+#: ../../../admin-guide/lockup-watchdogs.rst:163
 msgid ""
 "By default, the watchdog runs on all online cores.  However, on a kernel "
 "configured with NO_HZ_FULL, by default the watchdog runs only on the "
@@ -121,7 +262,7 @@ msgid ""
 "that we will continue to detect lockups properly on those cores."
 msgstr ""
 
-#: ../../../admin-guide/lockup-watchdogs.rst:80
+#: ../../../admin-guide/lockup-watchdogs.rst:176
 msgid ""
 "In either case, the set of cores excluded from running the watchdog may be "
 "adjusted via the kernel.watchdog_cpumask sysctl.  For nohz_full cores, this "

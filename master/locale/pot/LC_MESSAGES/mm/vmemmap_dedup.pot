@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"POT-Creation-Date: 2026-05-04 10:14+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -53,7 +53,7 @@ msgid ""
 "Within the HugeTLB subsystem, only the first 4 ``struct page`` are used to "
 "contain unique information about a HugeTLB page. ``__NR_USED_SUBPAGE`` "
 "provides this upper limit. The only 'useful' information in the remaining "
-"``struct page`` is the compound_head field, and this field is the same for "
+"``struct page`` is the compound_info field, and this field is the same for "
 "all tail pages."
 msgstr ""
 
@@ -196,32 +196,37 @@ msgstr ""
 
 #: ../../../mm/vmemmap_dedup.rst:127
 msgid ""
-"The value of page->compound_head is the same for all tail pages. The first "
-"page of ``struct page`` (page 0) associated with the HugeTLB page contains "
-"the 4 ``struct page`` necessary to describe the HugeTLB. The only use of the "
-"remaining pages of ``struct page`` (page 1 to page 7) is to point to page-"
-">compound_head. Therefore, we can remap pages 1 to 7 to page 0. Only 1 page "
-"of ``struct page`` will be used for each HugeTLB page. This will allow us to "
-"free the remaining 7 pages to the buddy allocator."
+"The first page of ``struct page`` (page 0) associated with the HugeTLB page "
+"contains the 4 ``struct page`` necessary to describe the HugeTLB. The "
+"remaining pages of ``struct page`` (page 1 to page 7) are tail pages."
 msgstr ""
 
-#: ../../../mm/vmemmap_dedup.rst:135
+#: ../../../mm/vmemmap_dedup.rst:131
+msgid ""
+"The optimization is only applied when the size of the struct page is a power "
+"of 2. In this case, all tail pages of the same order are identical. See "
+"compound_head(). This allows us to remap the tail pages of the vmemmap to a "
+"shared, read-only page. The head page is also remapped to a new page. This "
+"allows the original vmemmap pages to be freed."
+msgstr ""
+
+#: ../../../mm/vmemmap_dedup.rst:137
 msgid "Here is how things look after remapping::"
 msgstr ""
 
-#: ../../../mm/vmemmap_dedup.rst:160
+#: ../../../mm/vmemmap_dedup.rst:162
 msgid ""
 "When a HugeTLB is freed to the buddy system, we should allocate 7 pages for "
 "vmemmap pages and restore the previous mapping relationship."
 msgstr ""
 
-#: ../../../mm/vmemmap_dedup.rst:163
+#: ../../../mm/vmemmap_dedup.rst:165
 msgid ""
 "For the HugeTLB page of the pud level mapping. It is similar to the former. "
 "We also can use this approach to free (PAGE_SIZE - 1) vmemmap pages."
 msgstr ""
 
-#: ../../../mm/vmemmap_dedup.rst:166
+#: ../../../mm/vmemmap_dedup.rst:168
 msgid ""
 "Apart from the HugeTLB page of the pmd/pud level mapping, some architectures "
 "(e.g. aarch64) provides a contiguous bit in the translation table entries "
@@ -229,55 +234,42 @@ msgid ""
 "entries that can be cached in a single TLB entry."
 msgstr ""
 
-#: ../../../mm/vmemmap_dedup.rst:171
+#: ../../../mm/vmemmap_dedup.rst:173
 msgid ""
 "The contiguous bit is used to increase the mapping size at the pmd and pte "
 "(last) level. So this type of HugeTLB page can be optimized only when its "
 "size of the ``struct page`` structs is greater than **1** page."
 msgstr ""
 
-#: ../../../mm/vmemmap_dedup.rst:175
-msgid ""
-"Notice: The head vmemmap page is not freed to the buddy allocator and all "
-"tail vmemmap pages are mapped to the head vmemmap page frame. So we can see "
-"more than one ``struct page`` struct with ``PG_head`` (e.g. 8 per 2 MB "
-"HugeTLB page) associated with each HugeTLB page. The ``compound_head()`` can "
-"handle this correctly. There is only **one** head ``struct page``, the tail "
-"``struct page`` with ``PG_head`` are fake head ``struct page``.  We need an "
-"approach to distinguish between those two different types of ``struct page`` "
-"so that ``compound_head()`` can return the real head ``struct page`` when "
-"the parameter is the tail ``struct page`` but with ``PG_head``."
-msgstr ""
-
-#: ../../../mm/vmemmap_dedup.rst:186
+#: ../../../mm/vmemmap_dedup.rst:178
 msgid "Device DAX"
 msgstr ""
 
-#: ../../../mm/vmemmap_dedup.rst:188
+#: ../../../mm/vmemmap_dedup.rst:180
 msgid ""
 "The device-dax interface uses the same tail deduplication technique "
 "explained in the previous chapter, except when used with the vmemmap in the "
 "device (altmap)."
 msgstr ""
 
-#: ../../../mm/vmemmap_dedup.rst:192
+#: ../../../mm/vmemmap_dedup.rst:184
 msgid ""
 "The following page sizes are supported in DAX: PAGE_SIZE (4K on x86_64), "
 "PMD_SIZE (2M on x86_64) and PUD_SIZE (1G on x86_64). For powerpc equivalent "
 "details see Documentation/arch/powerpc/vmemmap_dedup.rst"
 msgstr ""
 
-#: ../../../mm/vmemmap_dedup.rst:196
+#: ../../../mm/vmemmap_dedup.rst:188
 msgid "The differences with HugeTLB are relatively minor."
 msgstr ""
 
-#: ../../../mm/vmemmap_dedup.rst:198
+#: ../../../mm/vmemmap_dedup.rst:190
 msgid ""
 "It only use 3 ``struct page`` for storing all information as opposed to 4 on "
 "HugeTLB pages."
 msgstr ""
 
-#: ../../../mm/vmemmap_dedup.rst:201
+#: ../../../mm/vmemmap_dedup.rst:193
 msgid ""
 "There's no remapping of vmemmap given that device-dax memory is not part of "
 "System RAM ranges initialized at boot. Thus the tail page deduplication "
@@ -286,11 +278,11 @@ msgid ""
 "vmemmap page. This results in only half of the savings compared to HugeTLB."
 msgstr ""
 
-#: ../../../mm/vmemmap_dedup.rst:207
+#: ../../../mm/vmemmap_dedup.rst:199
 msgid "Deduplicated tail pages are not mapped read-only."
 msgstr ""
 
-#: ../../../mm/vmemmap_dedup.rst:209
+#: ../../../mm/vmemmap_dedup.rst:201
 msgid ""
 "Here's how things look like on device-dax after the sections are populated::"
 msgstr ""

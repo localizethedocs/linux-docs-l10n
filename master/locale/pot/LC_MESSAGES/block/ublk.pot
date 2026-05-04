@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-16 08:44+0000\n"
+"POT-Creation-Date: 2026-05-04 10:14+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -802,7 +802,7 @@ msgstr ""
 msgid "The uring_cmd won't be completed"
 msgstr ""
 
-#: ../../../block/ublk.rst:480
+#: ../../../block/ublk.rst:480 ../../../block/ublk.rst:576
 msgid "Limitations"
 msgstr ""
 
@@ -822,21 +822,207 @@ msgid ""
 msgstr ""
 
 #: ../../../block/ublk.rst:489
-msgid "References"
+msgid "Shared Memory Zero Copy (UBLK_F_SHMEM_ZC)"
 msgstr ""
 
 #: ../../../block/ublk.rst:491
+msgid ""
+"The ``UBLK_F_SHMEM_ZC`` feature provides an alternative zero-copy path that "
+"works by sharing physical memory pages between the client application and "
+"the ublk server. Unlike the io_uring fixed buffer approach above, shared "
+"memory zero copy does not require io_uring buffer registration per I/O — "
+"instead, it relies on the kernel matching physical pages at I/O time. This "
+"allows the ublk server to access the shared buffer directly, which is "
+"unlikely for the io_uring fixed buffer approach."
+msgstr ""
+
+#: ../../../block/ublk.rst:501
+msgid "Motivation"
+msgstr ""
+
+#: ../../../block/ublk.rst:503
+msgid ""
+"Shared memory zero copy takes a different approach: if the client "
+"application and the ublk server both map the same physical memory, there is "
+"nothing to copy. The kernel detects the shared pages automatically and tells "
+"the server where the data already lives."
+msgstr ""
+
+#: ../../../block/ublk.rst:508
+msgid ""
+"``UBLK_F_SHMEM_ZC`` can be thought of as a supplement for optimized client "
+"applications — when the client is willing to allocate I/O buffers from "
+"shared memory, the entire data path becomes zero-copy."
+msgstr ""
+
+#: ../../../block/ublk.rst:513
+msgid "Use Cases"
+msgstr ""
+
+#: ../../../block/ublk.rst:515
+msgid ""
+"This feature is useful when the client application can be configured to use "
+"a specific shared memory region for its I/O buffers:"
+msgstr ""
+
+#: ../../../block/ublk.rst:518
+msgid ""
+"**Custom storage clients** that allocate I/O buffers from shared memory "
+"(memfd, hugetlbfs) and issue direct I/O to the ublk device"
+msgstr ""
+
+#: ../../../block/ublk.rst:520
+msgid "**Database engines** that use pre-allocated buffer pools with O_DIRECT"
+msgstr ""
+
+#: ../../../block/ublk.rst:523
+msgid "How It Works"
+msgstr ""
+
+#: ../../../block/ublk.rst:525
+msgid ""
+"The ublk server and client both ``mmap()`` the same file (memfd or "
+"hugetlbfs) with ``MAP_SHARED``. This gives both processes access to the same "
+"physical pages."
+msgstr ""
+
+#: ../../../block/ublk.rst:529
+msgid "The ublk server registers its mapping with the kernel::"
+msgstr ""
+
+#: ../../../block/ublk.rst:534
+msgid "The kernel pins the pages and builds a PFN lookup tree."
+msgstr ""
+
+#: ../../../block/ublk.rst:536
+msgid ""
+"When the client issues direct I/O (``O_DIRECT``) to ``/dev/ublkb*``, the "
+"kernel checks whether the I/O buffer pages match any registered pages by "
+"comparing PFNs."
+msgstr ""
+
+#: ../../../block/ublk.rst:540
+msgid ""
+"On a match, the kernel sets ``UBLK_IO_F_SHMEM_ZC`` in the I/O descriptor and "
+"encodes the buffer index and offset in ``addr``::"
+msgstr ""
+
+#: ../../../block/ublk.rst:550
+msgid ""
+"If pages do not match (e.g., the client used a non-shared buffer), the I/O "
+"falls back to the normal copy path silently."
+msgstr ""
+
+#: ../../../block/ublk.rst:553
+msgid "The shared memory can be set up via two methods:"
+msgstr ""
+
+#: ../../../block/ublk.rst:555
+msgid ""
+"**Socket-based**: the client sends a memfd to the ublk server via "
+"``SCM_RIGHTS`` on a unix socket. The server mmaps and registers it."
+msgstr ""
+
+#: ../../../block/ublk.rst:557
+msgid ""
+"**Hugetlbfs-based**: both processes ``mmap(MAP_SHARED)`` the same hugetlbfs "
+"file. No IPC needed — same file gives same physical pages."
+msgstr ""
+
+#: ../../../block/ublk.rst:561
+msgid "Advantages"
+msgstr ""
+
+#: ../../../block/ublk.rst:563
+msgid ""
+"**Simple**: no per-I/O buffer registration or unregistration commands. Once "
+"the shared buffer is registered, all matching I/O is zero-copy automatically."
+msgstr ""
+
+#: ../../../block/ublk.rst:566
+msgid ""
+"**Direct buffer access**: the ublk server can read and write the shared "
+"buffer directly via its own mmap, without going through io_uring fixed "
+"buffer operations. This is more friendly for server implementations."
+msgstr ""
+
+#: ../../../block/ublk.rst:569
+msgid ""
+"**Fast**: PFN matching is a single maple tree lookup per bvec. No io_uring "
+"command round-trips for buffer management."
+msgstr ""
+
+#: ../../../block/ublk.rst:571
+msgid ""
+"**Compatible**: non-matching I/O silently falls back to the copy path. The "
+"device works normally for any client, with zero-copy as an optimization when "
+"shared memory is available."
+msgstr ""
+
+#: ../../../block/ublk.rst:578
+msgid ""
+"**Requires client cooperation**: the client must allocate its I/O buffers "
+"from the shared memory region. This requires a custom or configured client — "
+"standard applications using their own buffers will not benefit."
+msgstr ""
+
+#: ../../../block/ublk.rst:582
+msgid ""
+"**Direct I/O only**: buffered I/O (without ``O_DIRECT``) goes through the "
+"page cache, which allocates its own pages. These kernel-allocated pages will "
+"never match the registered shared buffer. Only ``O_DIRECT`` puts the "
+"client's buffer pages directly into the block I/O."
+msgstr ""
+
+#: ../../../block/ublk.rst:586
+msgid ""
+"**Contiguous data only**: each I/O request's data must be contiguous within "
+"a single registered buffer. Scatter/gather I/O that spans multiple non-"
+"adjacent registered buffers cannot use the zero-copy path."
+msgstr ""
+
+#: ../../../block/ublk.rst:591
+msgid "Control Commands"
+msgstr ""
+
+#: ../../../block/ublk.rst:593
+msgid "``UBLK_U_CMD_REG_BUF``"
+msgstr ""
+
+#: ../../../block/ublk.rst:595
+msgid ""
+"Register a shared memory buffer. ``ctrl_cmd.addr`` points to a ``struct "
+"ublk_shmem_buf_reg`` containing the buffer virtual address and size. Returns "
+"the assigned buffer index (>= 0) on success. The kernel pins pages and "
+"builds the PFN lookup tree. Queue freeze is handled internally."
+msgstr ""
+
+#: ../../../block/ublk.rst:601
+msgid "``UBLK_U_CMD_UNREG_BUF``"
+msgstr ""
+
+#: ../../../block/ublk.rst:603
+msgid ""
+"Unregister a previously registered buffer. ``ctrl_cmd.data[0]`` is the "
+"buffer index. Unpins pages and removes PFN entries from the lookup tree."
+msgstr ""
+
+#: ../../../block/ublk.rst:608
+msgid "References"
+msgstr ""
+
+#: ../../../block/ublk.rst:610
 msgid "https://github.com/ming1/ubdsrv"
 msgstr ""
 
-#: ../../../block/ublk.rst:493
+#: ../../../block/ublk.rst:612
 msgid "https://github.com/ming1/ubdsrv/tree/master/lib"
 msgstr ""
 
-#: ../../../block/ublk.rst:495
+#: ../../../block/ublk.rst:614
 msgid "https://gitlab.com/rwmjones/libnbd/-/tree/nbdublk"
 msgstr ""
 
-#: ../../../block/ublk.rst:497
+#: ../../../block/ublk.rst:616
 msgid "https://github.com/ming1/ubdsrv/blob/master/README"
 msgstr ""
