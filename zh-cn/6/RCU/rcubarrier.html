@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>RCU and Unloadable Modules &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/RCU/rcubarrier.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="PROPER CARE AND FEEDING OF RETURN VALUES FROM rcu_dereference()" href="rcu_dereference.html" />
+    <link rel="prev" title="Lockdep-RCU Splat" href="lockdep-splat.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core-api/index.html">Core API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-entry-and-exit">Low level entry and exit</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../core-api/index.html#concurrency-primitives">Concurrency primitives</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/refcount-vs-atomic.html">refcount_t API compared to atomic_t</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/irq/index.html">IRQs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/local_ops.html">Semantics and Behavior of Local Atomic Operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/padata.html">The padata parallel execution mechanism</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">RCU Handbook</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/wrappers/memory-barriers.html">Linux kernel memory barriers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#memory-management">Memory management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/RCU/rcubarrier.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="rcu-and-unloadable-modules">
+<span id="rcu-barrier"></span><h1>RCU and Unloadable Modules<a class="headerlink" href="#rcu-and-unloadable-modules" title="Link to this heading">¶</a></h1>
+<p>[Originally published in LWN Jan. 14, 2007: <a class="reference external" href="http://lwn.net/Articles/217484/">http://lwn.net/Articles/217484/</a>]</p>
+<p>RCU updaters sometimes use <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> to initiate an asynchronous wait for
+a grace period to elapse.  This primitive takes a pointer to an rcu_head
+<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">placed</span></code> within the RCU-protected data structure and another pointer
+to a function that may be invoked later to free that structure. Code to
+delete an element p from the linked list from IRQ context might then be
+as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>list_del_rcu(p);
+call_rcu(&amp;p-&gt;rcu, p_callback);
+</pre></div>
+</div>
+<p>Since <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> never blocks, this code can safely be used from within
+IRQ context. The function <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">p_callback()</span></code> might be defined as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static void p_callback(struct rcu_head *rp)
+{
+        struct pstruct *p = container_of(rp, struct pstruct, rcu);
+
+        kfree(p);
+}
+</pre></div>
+</div>
+<section id="unloading-modules-that-use-call-rcu">
+<h2>Unloading Modules That Use call_rcu()<a class="headerlink" href="#unloading-modules-that-use-call-rcu" title="Link to this heading">¶</a></h2>
+<p>But what if the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">p_callback()</span></code> function is defined in an unloadable module?</p>
+<p>If we unload the module while some RCU callbacks are pending,
+the CPUs executing these callbacks are going to be severely
+disappointed when they are later invoked, as fancifully depicted at
+<a class="reference external" href="http://lwn.net/images/ns/kernel/rcu-drop.jpg">http://lwn.net/images/ns/kernel/rcu-drop.jpg</a>.</p>
+<p>We could try placing a <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a> in the module-exit code path,
+but this is not sufficient. Although <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a> does wait for a
+grace period to elapse, it does not wait for the callbacks to complete.</p>
+<p>One might be tempted to try several back-to-back <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a>
+calls, but this is still not guaranteed to work. If there is a very
+heavy RCU-callback load, then some of the callbacks might be deferred in
+order to allow other processing to proceed. For but one example, such
+deferral is required in realtime kernels in order to avoid excessive
+scheduling latencies.</p>
+</section>
+<section id="id1">
+<h2>rcu_barrier()<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
+<p>This situation can be handled by the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> primitive.  Rather
+than waiting for a grace period to elapse, <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> waits for all
+outstanding RCU callbacks to complete.  Please note that <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a>
+does <strong>not</strong> imply <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a>, in particular, if there are no RCU
+callbacks queued anywhere, <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> is within its rights to return
+immediately, without waiting for anything, let alone a grace period.</p>
+<p>Pseudo-code using <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> is as follows:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Prevent any new RCU callbacks from being posted.</p></li>
+<li><p>Execute <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a>.</p></li>
+<li><p>Allow the module to be unloaded.</p></li>
+</ol>
+</div></blockquote>
+<p>There is also an <a class="reference internal" href="../core-api/kernel-api.html#c.srcu_barrier" title="srcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">srcu_barrier()</span></code></a> function for SRCU, and you of course
+must match the flavor of <a class="reference internal" href="../core-api/kernel-api.html#c.srcu_barrier" title="srcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">srcu_barrier()</span></code></a> with that of <a class="reference internal" href="../core-api/kernel-api.html#c.call_srcu" title="call_srcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_srcu()</span></code></a>.
+If your module uses multiple srcu_struct structures, then it must also
+use multiple invocations of <a class="reference internal" href="../core-api/kernel-api.html#c.srcu_barrier" title="srcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">srcu_barrier()</span></code></a> when unloading that module.
+For example, if it uses <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a>, <a class="reference internal" href="../core-api/kernel-api.html#c.call_srcu" title="call_srcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_srcu()</span></code></a> on srcu_struct_1, and
+<a class="reference internal" href="../core-api/kernel-api.html#c.call_srcu" title="call_srcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_srcu()</span></code></a> on srcu_struct_2, then the following three lines of code
+will be required when unloading:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>1  rcu_barrier();
+2  srcu_barrier(&amp;srcu_struct_1);
+3  srcu_barrier(&amp;srcu_struct_2);
+</pre></div>
+</div>
+<p>If latency is of the essence, workqueues could be used to run these
+three functions concurrently.</p>
+<p>An ancient version of the rcutorture module makes use of <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a>
+in its exit function as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span> 1  static void
+ 2  rcu_torture_cleanup(void)
+ 3  {
+ 4    int i;
+ 5
+ 6    fullstop = 1;
+ 7    if (shuffler_task != NULL) {
+ 8      VERBOSE_PRINTK_STRING(&quot;Stopping rcu_torture_shuffle task&quot;);
+ 9      kthread_stop(shuffler_task);
+10    }
+11    shuffler_task = NULL;
+12
+13    if (writer_task != NULL) {
+14      VERBOSE_PRINTK_STRING(&quot;Stopping rcu_torture_writer task&quot;);
+15      kthread_stop(writer_task);
+16    }
+17    writer_task = NULL;
+18
+19    if (reader_tasks != NULL) {
+20      for (i = 0; i &lt; nrealreaders; i++) {
+21        if (reader_tasks[i] != NULL) {
+22          VERBOSE_PRINTK_STRING(
+23            &quot;Stopping rcu_torture_reader task&quot;);
+24          kthread_stop(reader_tasks[i]);
+25        }
+26        reader_tasks[i] = NULL;
+27      }
+28      kfree(reader_tasks);
+29      reader_tasks = NULL;
+30    }
+31    rcu_torture_current = NULL;
+32
+33    if (fakewriter_tasks != NULL) {
+34      for (i = 0; i &lt; nfakewriters; i++) {
+35        if (fakewriter_tasks[i] != NULL) {
+36          VERBOSE_PRINTK_STRING(
+37            &quot;Stopping rcu_torture_fakewriter task&quot;);
+38          kthread_stop(fakewriter_tasks[i]);
+39        }
+40        fakewriter_tasks[i] = NULL;
+41      }
+42      kfree(fakewriter_tasks);
+43      fakewriter_tasks = NULL;
+44    }
+45
+46    if (stats_task != NULL) {
+47      VERBOSE_PRINTK_STRING(&quot;Stopping rcu_torture_stats task&quot;);
+48      kthread_stop(stats_task);
+49    }
+50    stats_task = NULL;
+51
+52    /* Wait for all RCU callbacks to fire. */
+53    rcu_barrier();
+54
+55    rcu_torture_stats_print(); /* -After- the stats thread is stopped! */
+56
+57    if (cur_ops-&gt;cleanup != NULL)
+58      cur_ops-&gt;cleanup();
+59    if (atomic_read(&amp;n_rcu_torture_error))
+60      rcu_torture_print_module_parms(&quot;End of test: FAILURE&quot;);
+61    else
+62      rcu_torture_print_module_parms(&quot;End of test: SUCCESS&quot;);
+63  }
+</pre></div>
+</div>
+<p>Line 6 sets a global variable that prevents any RCU callbacks from
+re-posting themselves. This will not be necessary in most cases, since
+RCU callbacks rarely include calls to <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a>. However, the rcutorture
+module is an exception to this rule, and therefore needs to set this
+global variable.</p>
+<p>Lines 7-50 stop all the kernel tasks associated with the rcutorture
+module. Therefore, once execution reaches line 53, no more rcutorture
+RCU callbacks will be posted. The <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> call on line 53 waits
+for any pre-existing callbacks to complete.</p>
+<p>Then lines 55-62 print status and do operation-specific cleanup, and
+then return, permitting the module-unload operation to be completed.</p>
+<dl class="simple" id="rcubarrier-quiz-1">
+<dt>Quick Quiz #1:</dt><dd><p>Is there any other situation where <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> might
+be required?</p>
+</dd>
+</dl>
+<p><a class="reference internal" href="#answer-rcubarrier-quiz-1"><span class="std std-ref">Answer to Quick Quiz #1</span></a></p>
+<p>Your module might have additional complications. For example, if your
+module invokes <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a> from timers, you will need to first refrain
+from posting new timers, cancel (or wait for) all the already-posted
+timers, and only then invoke <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> to wait for any remaining
+RCU callbacks to complete.</p>
+<p>Of course, if your module uses <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a>, you will need to invoke
+<a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> before unloading.  Similarly, if your module uses
+<a class="reference internal" href="../core-api/kernel-api.html#c.call_srcu" title="call_srcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_srcu()</span></code></a>, you will need to invoke <a class="reference internal" href="../core-api/kernel-api.html#c.srcu_barrier" title="srcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">srcu_barrier()</span></code></a> before unloading,
+and on the same srcu_struct structure.  If your module uses <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a>
+<strong>and</strong> <a class="reference internal" href="../core-api/kernel-api.html#c.call_srcu" title="call_srcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_srcu()</span></code></a>, then (as noted above) you will need to invoke
+<a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> <strong>and</strong> <a class="reference internal" href="../core-api/kernel-api.html#c.srcu_barrier" title="srcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">srcu_barrier()</span></code></a>.</p>
+</section>
+<section id="implementing-rcu-barrier">
+<h2>Implementing rcu_barrier()<a class="headerlink" href="#implementing-rcu-barrier" title="Link to this heading">¶</a></h2>
+<p>Dipankar Sarma's implementation of <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> makes use of the fact
+that RCU callbacks are never reordered once queued on one of the per-CPU
+queues. His implementation queues an RCU callback on each of the per-CPU
+callback queues, and then waits until they have all started executing, at
+which point, all earlier RCU callbacks are guaranteed to have completed.</p>
+<p>The original code for <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> was roughly as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span> 1  void rcu_barrier(void)
+ 2  {
+ 3    BUG_ON(in_interrupt());
+ 4    /* Take cpucontrol mutex to protect against CPU hotplug */
+ 5    mutex_lock(&amp;rcu_barrier_mutex);
+ 6    init_completion(&amp;rcu_barrier_completion);
+ 7    atomic_set(&amp;rcu_barrier_cpu_count, 1);
+ 8    on_each_cpu(rcu_barrier_func, NULL, 0, 1);
+ 9    if (atomic_dec_and_test(&amp;rcu_barrier_cpu_count))
+10      complete(&amp;rcu_barrier_completion);
+11    wait_for_completion(&amp;rcu_barrier_completion);
+12    mutex_unlock(&amp;rcu_barrier_mutex);
+13  }
+</pre></div>
+</div>
+<p>Line 3 verifies that the caller is in process context, and lines 5 and 12
+use rcu_barrier_mutex to ensure that only one <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> is using the
+global completion and counters at a time, which are initialized on lines
+6 and 7. Line 8 causes each CPU to invoke <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_func()</span></code>, which is
+shown below. Note that the final &quot;1&quot; in <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">on_each_cpu()</span></code>'s argument list
+ensures that all the calls to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_func()</span></code> will have completed
+before <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">on_each_cpu()</span></code> returns. Line 9 removes the initial count from
+rcu_barrier_cpu_count, and if this count is now zero, line 10 finalizes
+the completion, which prevents line 11 from blocking.  Either way,
+line 11 then waits (if needed) for the completion.</p>
+<dl class="simple" id="rcubarrier-quiz-2">
+<dt>Quick Quiz #2:</dt><dd><p>Why doesn't line 8 initialize rcu_barrier_cpu_count to zero,
+thereby avoiding the need for lines 9 and 10?</p>
+</dd>
+</dl>
+<p><a class="reference internal" href="#answer-rcubarrier-quiz-2"><span class="std std-ref">Answer to Quick Quiz #2</span></a></p>
+<p>This code was rewritten in 2008 and several times thereafter, but this
+still gives the general idea.</p>
+<p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_func()</span></code> runs on each CPU, where it invokes <a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a>
+to post an RCU callback, as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span> 1  static void rcu_barrier_func(void *notused)
+ 2  {
+ 3    int cpu = smp_processor_id();
+ 4    struct rcu_data *rdp = &amp;per_cpu(rcu_data, cpu);
+ 5    struct rcu_head *head;
+ 6
+ 7    head = &amp;rdp-&gt;barrier;
+ 8    atomic_inc(&amp;rcu_barrier_cpu_count);
+ 9    call_rcu(head, rcu_barrier_callback);
+10  }
+</pre></div>
+</div>
+<p>Lines 3 and 4 locate RCU's internal per-CPU rcu_data structure,
+which contains the <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">rcu_head</span></code> that needed for the later call to
+<a class="reference internal" href="../core-api/kernel-api.html#c.call_rcu" title="call_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">call_rcu()</span></code></a>. Line 7 picks up a pointer to this <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">rcu_head</span></code>, and line
+8 increments the global counter. This counter will later be decremented
+by the callback. Line 9 then registers the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_callback()</span></code> on
+the current CPU's queue.</p>
+<p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_callback()</span></code> function simply atomically decrements the
+rcu_barrier_cpu_count variable and finalizes the completion when it
+reaches zero, as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>1  static void rcu_barrier_callback(struct rcu_head *notused)
+2  {
+3    if (atomic_dec_and_test(&amp;rcu_barrier_cpu_count))
+4      complete(&amp;rcu_barrier_completion);
+5  }
+</pre></div>
+</div>
+<dl class="simple" id="rcubarrier-quiz-3">
+<dt>Quick Quiz #3:</dt><dd><p>What happens if CPU 0's <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_func()</span></code> executes
+immediately (thus incrementing rcu_barrier_cpu_count to the
+value one), but the other CPU's <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_func()</span></code> invocations
+are delayed for a full grace period? Couldn't this result in
+<a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> returning prematurely?</p>
+</dd>
+</dl>
+<p><a class="reference internal" href="#answer-rcubarrier-quiz-3"><span class="std std-ref">Answer to Quick Quiz #3</span></a></p>
+<p>The current <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> implementation is more complex, due to the need
+to avoid disturbing idle CPUs (especially on battery-powered systems)
+and the need to minimally disturb non-idle CPUs in real-time systems.
+In addition, a great many optimizations have been applied.  However,
+the code above illustrates the concepts.</p>
+</section>
+<section id="rcu-barrier-summary">
+<h2>rcu_barrier() Summary<a class="headerlink" href="#rcu-barrier-summary" title="Link to this heading">¶</a></h2>
+<p>The <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> primitive is used relatively infrequently, since most
+code using RCU is in the core kernel rather than in modules. However, if
+you are using RCU from an unloadable module, you need to use <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a>
+so that your module may be safely unloaded.</p>
+</section>
+<section id="answers-to-quick-quizzes">
+<h2>Answers to Quick Quizzes<a class="headerlink" href="#answers-to-quick-quizzes" title="Link to this heading">¶</a></h2>
+<dl id="answer-rcubarrier-quiz-1">
+<dt>Quick Quiz #1:</dt><dd><p>Is there any other situation where <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> might
+be required?</p>
+</dd>
+<dt>Answer:</dt><dd><p>Interestingly enough, <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> was not originally
+implemented for module unloading. Nikita Danilov was using
+RCU in a filesystem, which resulted in a similar situation at
+filesystem-unmount time. Dipankar Sarma coded up <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a>
+in response, so that Nikita could invoke it during the
+filesystem-unmount process.</p>
+<p>Much later, yours truly hit the RCU module-unload problem when
+implementing rcutorture, and found that <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> solves
+this problem as well.</p>
+</dd>
+</dl>
+<p><a class="reference internal" href="#rcubarrier-quiz-1"><span class="std std-ref">Back to Quick Quiz #1</span></a></p>
+<dl id="answer-rcubarrier-quiz-2">
+<dt>Quick Quiz #2:</dt><dd><p>Why doesn't line 8 initialize rcu_barrier_cpu_count to zero,
+thereby avoiding the need for lines 9 and 10?</p>
+</dd>
+<dt>Answer:</dt><dd><p>Suppose that the <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">on_each_cpu()</span></code> function shown on line 8 was
+delayed, so that CPU 0's <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_func()</span></code> executed and
+the corresponding grace period elapsed, all before CPU 1's
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_func()</span></code> started executing.  This would result in
+rcu_barrier_cpu_count being decremented to zero, so that line
+11's <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">wait_for_completion()</span></code> would return immediately, failing to
+wait for CPU 1's callbacks to be invoked.</p>
+<p>Note that this was not a problem when the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> code
+was first added back in 2005.  This is because <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">on_each_cpu()</span></code>
+disables preemption, which acted as an RCU read-side critical
+section, thus preventing CPU 0's grace period from completing
+until <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">on_each_cpu()</span></code> had dealt with all of the CPUs.</p>
+<p>However, with the RCU flavor consolidation around v4.20, this
+possibility was once again ruled out, because the consolidated
+RCU once again waits on nonpreemptible regions of code.</p>
+<p>Nevertheless, that extra count might still be a good idea.
+Relying on these sort of accidents of implementation can result
+in later surprise bugs when the implementation changes.</p>
+</dd>
+</dl>
+<p><a class="reference internal" href="#rcubarrier-quiz-2"><span class="std std-ref">Back to Quick Quiz #2</span></a></p>
+<dl id="answer-rcubarrier-quiz-3">
+<dt>Quick Quiz #3:</dt><dd><p>What happens if CPU 0's <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_func()</span></code> executes
+immediately (thus incrementing rcu_barrier_cpu_count to the
+value one), but the other CPU's <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_func()</span></code> invocations
+are delayed for a full grace period? Couldn't this result in
+<a class="reference internal" href="../core-api/kernel-api.html#c.rcu_barrier" title="rcu_barrier"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_barrier()</span></code></a> returning prematurely?</p>
+</dd>
+<dt>Answer:</dt><dd><p>This cannot happen. The reason is that <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">on_each_cpu()</span></code> has its last
+argument, the wait flag, set to &quot;1&quot;. This flag is passed through
+to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">smp_call_function()</span></code> and further to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">smp_call_function_on_cpu()</span></code>,
+causing this latter to spin until the cross-CPU invocation of
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_func()</span></code> has completed. This by itself would prevent
+a grace period from completing on non-CONFIG_PREEMPTION kernels,
+since each CPU must undergo a context switch (or other quiescent
+state) before the grace period can complete. However, this is
+of no use in CONFIG_PREEMPTION kernels.</p>
+<p>Therefore, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">on_each_cpu()</span></code> disables preemption across its call
+to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">smp_call_function()</span></code> and also across the local call to
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_func()</span></code>. Because recent RCU implementations treat
+preemption-disabled regions of code as RCU read-side critical
+sections, this prevents grace periods from completing. This
+means that all CPUs have executed <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_func()</span></code> before
+the first <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_barrier_callback()</span></code> can possibly execute, in turn
+preventing rcu_barrier_cpu_count from prematurely reaching zero.</p>
+<p>But if <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">on_each_cpu()</span></code> ever decides to forgo disabling preemption,
+as might well happen due to real-time latency considerations,
+initializing rcu_barrier_cpu_count to one will save the day.</p>
+</dd>
+</dl>
+<p><a class="reference internal" href="#rcubarrier-quiz-3"><span class="std std-ref">Back to Quick Quiz #3</span></a></p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/RCU/rcubarrier.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

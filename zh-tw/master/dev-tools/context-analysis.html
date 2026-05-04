@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Compiler-Based Context Analysis &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/dev-tools/context-analysis.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜尋" href="../search.html" />
+    <link rel="next" title="Sparse" href="sparse.html" />
+    <link rel="prev" title="Coccinelle" href="coccinelle.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">7.0.0-rc7</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">開發過程</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">所有開發過程文件</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">授權規則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">開發工具</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="testing-overview.html">內核測試指南</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checkpatch.html">Checkpatch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="clang-format.html">clang-format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="coccinelle.html">Coccinelle</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Compiler-Based Context Analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#programming-model">Programming Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#background">Background</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="sparse.html">Sparse</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kcov.html">KCOV: code coverage for fuzzing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gcov.html">Using gcov with the Linux kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kasan.html">Kernel Address Sanitizer (KASAN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kmsan.html">Kernel Memory Sanitizer (KMSAN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ubsan.html">Undefined Behavior Sanitizer - UBSAN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kmemleak.html">Kernel Memory Leak Detector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kcsan.html">Kernel Concurrency Sanitizer (KCSAN)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lkmm/index.html">Linux Kernel Memory Consistency Model (LKMM)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kfence.html">Kernel Electric-Fence (KFENCE)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kselftest.html">Linux Kernel Selftests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="kunit/index.html">KUnit - Linux Kernel Unit Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ktap.html">The Kernel Test Anything Protocol (KTAP), version 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="checkuapi.html">UAPI Checker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gpio-sloppy-logic-analyzer.html">Linux Kernel GPIO based sloppy logic analyzer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="autofdo.html">Using AutoFDO with the Linux kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="propeller.html">Using Propeller with the Linux kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="container.html">Containerized Builds</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU 架構</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/dev-tools/context-analysis.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="compiler-based-context-analysis">
+<span id="context-analysis"></span><h1>Compiler-Based Context Analysis<a class="headerlink" href="#compiler-based-context-analysis" title="連結到這個標頭">¶</a></h1>
+<p>Context Analysis is a language extension, which enables statically checking
+that required contexts are active (or inactive) by acquiring and releasing
+user-definable &quot;context locks&quot;. An obvious application is lock-safety checking
+for the kernel's various synchronization primitives (each of which represents a
+&quot;context lock&quot;), and checking that locking rules are not violated.</p>
+<p>The Clang compiler currently supports the full set of context analysis
+features. To enable for Clang, configure the kernel with:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>CONFIG_WARN_CONTEXT_ANALYSIS=y
+</pre></div>
+</div>
+<p>The feature requires Clang 22 or later.</p>
+<p>The analysis is <em>opt-in by default</em>, and requires declaring which modules and
+subsystems should be analyzed in the respective <cite>Makefile</cite>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>CONTEXT_ANALYSIS_mymodule.o := y
+</pre></div>
+</div>
+<p>Or for all translation units in the directory:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>CONTEXT_ANALYSIS := y
+</pre></div>
+</div>
+<p>It is possible to enable the analysis tree-wide, however, which will result in
+numerous false positive warnings currently and is <em>not</em> generally recommended:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>CONFIG_WARN_CONTEXT_ANALYSIS_ALL=y
+</pre></div>
+</div>
+<section id="programming-model">
+<h2>Programming Model<a class="headerlink" href="#programming-model" title="連結到這個標頭">¶</a></h2>
+<p>The below describes the programming model around using context lock types.</p>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>Enabling context analysis can be seen as enabling a dialect of Linux C with
+a Context System. Some valid patterns involving complex control-flow are
+constrained (such as conditional acquisition and later conditional release
+in the same function).</p>
+</div>
+<p>Context analysis is a way to specify permissibility of operations to depend on
+context locks being held (or not held). Typically we are interested in
+protecting data and code in a critical section by requiring a specific context
+to be active, for example by holding a specific lock. The analysis ensures that
+callers cannot perform an operation without the required context being active.</p>
+<p>Context locks are associated with named structs, along with functions that
+operate on <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">instances</span></code> to acquire and release the associated context lock.</p>
+<p>Context locks can be held either exclusively or shared. This mechanism allows
+assigning more precise privileges when a context is active, typically to
+distinguish where a thread may only read (shared) or also write (exclusive) to
+data guarded within a context.</p>
+<p>The set of contexts that are actually active in a given thread at a given point
+in program execution is a run-time concept. The static analysis works by
+calculating an approximation of that set, called the context environment. The
+context environment is calculated for every program point, and describes the
+set of contexts that are statically known to be active, or inactive, at that
+particular point. This environment is a conservative approximation of the full
+set of contexts that will actually be active in a thread at run-time.</p>
+<p>More details are also documented <a class="reference external" href="https://clang.llvm.org/docs/ThreadSafetyAnalysis.html">here</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>Clang's analysis explicitly does not infer context locks acquired or
+released by inline functions. It requires explicit annotations to (a) assert
+that it's not a bug if a context lock is released or acquired, and (b) to
+retain consistency between inline and non-inline function declarations.</p>
+</div>
+<section id="supported-kernel-primitives">
+<h3>Supported Kernel Primitives<a class="headerlink" href="#supported-kernel-primitives" title="連結到這個標頭">¶</a></h3>
+<p>Currently the following synchronization primitives are supported:
+<cite>raw_spinlock_t</cite>, <cite>spinlock_t</cite>, <cite>rwlock_t</cite>, <cite>mutex</cite>, <cite>seqlock_t</cite>,
+<cite>bit_spinlock</cite>, RCU, SRCU (<cite>srcu_struct</cite>), <cite>rw_semaphore</cite>, <cite>local_lock_t</cite>,
+<cite>ww_mutex</cite>.</p>
+<p>To initialize variables guarded by a context lock with an initialization
+function (<code class="docutils literal notranslate"><span class="pre">type_init(&amp;lock)</span></code>), prefer using <code class="docutils literal notranslate"><span class="pre">guard(type_init)(&amp;lock)</span></code> or
+<code class="docutils literal notranslate"><span class="pre">scoped_guard(type_init,</span> <span class="pre">&amp;lock)</span> <span class="pre">{</span> <span class="pre">...</span> <span class="pre">}</span></code> to initialize such guarded members
+or globals in the enclosing scope. This initializes the context lock and treats
+the context as active within the initialization scope (initialization implies
+exclusive access to the underlying object).</p>
+<p>For example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct my_data {
+        spinlock_t lock;
+        int counter __guarded_by(&amp;lock);
+};
+
+void init_my_data(struct my_data *d)
+{
+        ...
+        guard(spinlock_init)(&amp;d-&gt;lock);
+        d-&gt;counter = 0;
+        ...
+}
+</pre></div>
+</div>
+<p>Alternatively, initializing guarded variables can be done with context analysis
+disabled, preferably in the smallest possible scope (due to lack of any other
+checking): either with a <code class="docutils literal notranslate"><span class="pre">context_unsafe(var</span> <span class="pre">=</span> <span class="pre">init)</span></code> expression, or by
+marking small initialization functions with the <code class="docutils literal notranslate"><span class="pre">__context_unsafe(init)</span></code>
+attribute.</p>
+<p>Lockdep assertions, such as <cite><code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">lockdep_assert_held()</span></code></cite>, inform the compiler's
+context analysis that the associated synchronization primitive is held after
+the assertion. This avoids false positives in complex control-flow scenarios
+and encourages the use of Lockdep where static analysis is limited. For
+example, this is useful when a function doesn't <em>always</em> require a lock, making
+<cite><a class="reference internal" href="#c.__must_hold" title="__must_hold"><code class="xref c c-func docutils literal notranslate"><span class="pre">__must_hold()</span></code></a></cite> inappropriate.</p>
+</section>
+<section id="keywords">
+<h3>Keywords<a class="headerlink" href="#keywords" title="連結到這個標頭">¶</a></h3>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__guarded_by">
+<span class="sig-name descname"><span class="n"><span class="pre">__guarded_by</span></span></span><a class="headerlink" href="#c.__guarded_by" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__guarded_by</span> <span class="pre">(...)</span></code></p>
+<blockquote>
+<div><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">member</span></code> and globals attribute, declares variable only accessible within active context</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">...</span></code></dt><dd><p>variable arguments</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Declares that the <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">member</span></code> or global variable is only accessible within
+the context entered by the given context lock. Read operations on the data
+require shared access, while write operations require exclusive access.</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">some_state</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">spinlock_t</span><span class="w"> </span><span class="n">lock</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="n">counter</span><span class="w"> </span><span class="nf">__guarded_by</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lock</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__pt_guarded_by">
+<span class="sig-name descname"><span class="n"><span class="pre">__pt_guarded_by</span></span></span><a class="headerlink" href="#c.__pt_guarded_by" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__pt_guarded_by</span> <span class="pre">(...)</span></code></p>
+<blockquote>
+<div><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">member</span></code> and globals attribute, declares pointed-to data only accessible within active context</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">...</span></code></dt><dd><p>variable arguments</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Declares that the data pointed to by the <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">member</span></code> pointer or global
+pointer is only accessible within the context entered by the given context
+lock. Read operations on the data require shared access, while write
+operations require exclusive access.</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">some_state</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">spinlock_t</span><span class="w"> </span><span class="n">lock</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="o">*</span><span class="n">counter</span><span class="w"> </span><span class="n">__pt_guarded_by</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lock</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.context_lock_struct">
+<span class="sig-name descname"><span class="n"><span class="pre">context_lock_struct</span></span></span><a class="headerlink" href="#c.context_lock_struct" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">context_lock_struct</span> <span class="pre">(name,</span> <span class="pre">...)</span></code></p>
+<blockquote>
+<div><p>declare or define a context lock struct</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">name</span></code></dt><dd><p><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">name</span></code></p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">...</span></code></dt><dd><p>variable arguments</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Helper to declare or define a <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">type</span></code> that is also a context lock.</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">context_lock_struct</span><span class="p">(</span><span class="n">my_handle</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">foo</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">long</span><span class="w"> </span><span class="n">bar</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">some_state</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="p">...</span>
+<span class="p">};</span>
+<span class="c1">// ... declared elsewhere ...</span>
+<span class="n">context_lock_struct</span><span class="p">(</span><span class="n">some_state</span><span class="p">);</span>
+</pre></div>
+</div>
+<p><strong>Note</strong></p>
+<p>The implementation defines several helper functions that can acquire
+and release the context lock.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.disable_context_analysis">
+<span class="sig-name descname"><span class="n"><span class="pre">disable_context_analysis</span></span></span><a class="headerlink" href="#c.disable_context_analysis" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">disable_context_analysis</span> <span class="pre">()</span></code></p>
+<blockquote>
+<div><blockquote>
+<div><p>disables context analysis</p>
+</div></blockquote>
+<p><strong>描述</strong></p>
+<p>Disables context analysis. Must be paired with a later
+<a class="reference internal" href="#c.enable_context_analysis" title="enable_context_analysis"><code class="xref c c-func docutils literal notranslate"><span class="pre">enable_context_analysis()</span></code></a>.</p>
+</div></blockquote>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.enable_context_analysis">
+<span class="sig-name descname"><span class="n"><span class="pre">enable_context_analysis</span></span></span><a class="headerlink" href="#c.enable_context_analysis" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">enable_context_analysis</span> <span class="pre">()</span></code></p>
+<blockquote>
+<div><blockquote>
+<div><p>re-enables context analysis</p>
+</div></blockquote>
+<p><strong>描述</strong></p>
+<p>Re-enables context analysis. Must be paired with a prior
+<a class="reference internal" href="#c.disable_context_analysis" title="disable_context_analysis"><code class="xref c c-func docutils literal notranslate"><span class="pre">disable_context_analysis()</span></code></a>.</p>
+</div></blockquote>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.context_unsafe">
+<span class="sig-name descname"><span class="n"><span class="pre">context_unsafe</span></span></span><a class="headerlink" href="#c.context_unsafe" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">context_unsafe</span> <span class="pre">(...)</span></code></p>
+<blockquote>
+<div><p>disable context checking for contained code</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">...</span></code></dt><dd><p>variable arguments</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Disables context checking for contained statements or expression.</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">some_data</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">spinlock_t</span><span class="w"> </span><span class="n">lock</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">counter</span><span class="w"> </span><span class="nf">__guarded_by</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lock</span><span class="p">);</span>
+<span class="p">};</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">foo</span><span class="p">(</span><span class="k">struct</span><span class="w"> </span><span class="nc">some_data</span><span class="w"> </span><span class="o">*</span><span class="n">d</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">        </span><span class="c1">// ...</span>
+<span class="w">        </span><span class="c1">// other code that is still checked ...</span>
+<span class="w">        </span><span class="c1">// ...</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">context_unsafe</span><span class="p">(</span><span class="n">d</span><span class="o">-&gt;</span><span class="n">counter</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__context_unsafe">
+<span class="sig-name descname"><span class="n"><span class="pre">__context_unsafe</span></span></span><a class="headerlink" href="#c.__context_unsafe" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__context_unsafe</span> <span class="pre">(comment)</span></code></p>
+<blockquote>
+<div><p>function attribute, disable context checking</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">comment</span></code></dt><dd><p>comment explaining why opt-out is safe</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Function attribute denoting that context analysis is disabled for the
+whole function. Forces adding an inline comment as argument.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.token_context_lock">
+<span class="sig-name descname"><span class="n"><span class="pre">token_context_lock</span></span></span><a class="headerlink" href="#c.token_context_lock" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">token_context_lock</span> <span class="pre">(name,</span> <span class="pre">...)</span></code></p>
+<blockquote>
+<div><p>declare an abstract global context lock instance</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">name</span></code></dt><dd><p>token context lock name</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">...</span></code></dt><dd><p>variable arguments</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Helper that declares an abstract global context lock instance <strong>name</strong>, but not
+backed by a real data structure (linker error if accidentally referenced).
+The type name is <cite>__ctx_lock_**name**</cite>.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.token_context_lock_instance">
+<span class="sig-name descname"><span class="n"><span class="pre">token_context_lock_instance</span></span></span><a class="headerlink" href="#c.token_context_lock_instance" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">token_context_lock_instance</span> <span class="pre">(ctx,</span> <span class="pre">name)</span></code></p>
+<blockquote>
+<div><p>declare another instance of a global context lock</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ctx</span></code></dt><dd><p>token context lock previously declared with <a class="reference internal" href="#c.token_context_lock" title="token_context_lock"><code class="xref c c-func docutils literal notranslate"><span class="pre">token_context_lock()</span></code></a></p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">name</span></code></dt><dd><p>name of additional global context lock instance</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Helper that declares an additional instance <strong>name</strong> of the same token context
+lock class <strong>ctx</strong>. This is helpful where multiple related token contexts are
+declared, to allow using the same underlying type (<cite>__ctx_lock_**ctx**</cite>) as
+function arguments.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__must_hold">
+<span class="sig-name descname"><span class="n"><span class="pre">__must_hold</span></span></span><a class="headerlink" href="#c.__must_hold" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__must_hold</span> <span class="pre">(...)</span></code></p>
+<blockquote>
+<div><p>function attribute, caller must hold exclusive context lock</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">...</span></code></dt><dd><p>variable arguments</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Function attribute declaring that the caller must hold the given context
+lock instance(s) exclusively.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__must_not_hold">
+<span class="sig-name descname"><span class="n"><span class="pre">__must_not_hold</span></span></span><a class="headerlink" href="#c.__must_not_hold" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__must_not_hold</span> <span class="pre">(...)</span></code></p>
+<blockquote>
+<div><p>function attribute, caller must not hold context lock</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">...</span></code></dt><dd><p>variable arguments</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Function attribute declaring that the caller must not hold the given context
+lock instance(s).</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__acquires">
+<span class="sig-name descname"><span class="n"><span class="pre">__acquires</span></span></span><a class="headerlink" href="#c.__acquires" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__acquires</span> <span class="pre">(...)</span></code></p>
+<blockquote>
+<div><p>function attribute, function acquires context lock exclusively</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">...</span></code></dt><dd><p>variable arguments</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Function attribute declaring that the function acquires the given context
+lock instance(s) exclusively, but does not release them.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__cond_acquires">
+<span class="sig-name descname"><span class="n"><span class="pre">__cond_acquires</span></span></span><a class="headerlink" href="#c.__cond_acquires" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__cond_acquires</span> <span class="pre">(ret,</span> <span class="pre">x)</span></code></p>
+<blockquote>
+<div><p>function attribute, function conditionally acquires a context lock exclusively</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ret</span></code></dt><dd><p>abstract value returned by function if context lock acquired</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">x</span></code></dt><dd><p>context lock instance pointer</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Function attribute declaring that the function conditionally acquires the
+given context lock instance <strong>x</strong> exclusively, but does not release it. The
+function return value <strong>ret</strong> denotes when the context lock is acquired.</p>
+<p><strong>ret</strong> may be one of: true, false, nonzero, 0, nonnull, NULL.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__releases">
+<span class="sig-name descname"><span class="n"><span class="pre">__releases</span></span></span><a class="headerlink" href="#c.__releases" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__releases</span> <span class="pre">(...)</span></code></p>
+<blockquote>
+<div><p>function attribute, function releases a context lock exclusively</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">...</span></code></dt><dd><p>variable arguments</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Function attribute declaring that the function releases the given context
+lock instance(s) exclusively. The associated context(s) must be active on
+entry.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__acquire">
+<span class="sig-name descname"><span class="n"><span class="pre">__acquire</span></span></span><a class="headerlink" href="#c.__acquire" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__acquire</span> <span class="pre">(x)</span></code></p>
+<blockquote>
+<div><p>function to acquire context lock exclusively</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">x</span></code></dt><dd><p>context lock instance pointer</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>No-op function that acquires the given context lock instance <strong>x</strong> exclusively.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__release">
+<span class="sig-name descname"><span class="n"><span class="pre">__release</span></span></span><a class="headerlink" href="#c.__release" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__release</span> <span class="pre">(x)</span></code></p>
+<blockquote>
+<div><p>function to release context lock exclusively</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">x</span></code></dt><dd><p>context lock instance pointer</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>No-op function that releases the given context lock instance <strong>x</strong>.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__must_hold_shared">
+<span class="sig-name descname"><span class="n"><span class="pre">__must_hold_shared</span></span></span><a class="headerlink" href="#c.__must_hold_shared" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__must_hold_shared</span> <span class="pre">(...)</span></code></p>
+<blockquote>
+<div><p>function attribute, caller must hold shared context lock</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">...</span></code></dt><dd><p>variable arguments</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Function attribute declaring that the caller must hold the given context
+lock instance(s) with shared access.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__acquires_shared">
+<span class="sig-name descname"><span class="n"><span class="pre">__acquires_shared</span></span></span><a class="headerlink" href="#c.__acquires_shared" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__acquires_shared</span> <span class="pre">(...)</span></code></p>
+<blockquote>
+<div><p>function attribute, function acquires context lock shared</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">...</span></code></dt><dd><p>variable arguments</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Function attribute declaring that the function acquires the given
+context lock instance(s) with shared access, but does not release them.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__cond_acquires_shared">
+<span class="sig-name descname"><span class="n"><span class="pre">__cond_acquires_shared</span></span></span><a class="headerlink" href="#c.__cond_acquires_shared" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__cond_acquires_shared</span> <span class="pre">(ret,</span> <span class="pre">x)</span></code></p>
+<blockquote>
+<div><p>function attribute, function conditionally acquires a context lock shared</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ret</span></code></dt><dd><p>abstract value returned by function if context lock acquired</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">x</span></code></dt><dd><p>context lock instance pointer</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Function attribute declaring that the function conditionally acquires the
+given context lock instance <strong>x</strong> with shared access, but does not release it.
+The function return value <strong>ret</strong> denotes when the context lock is acquired.</p>
+<p><strong>ret</strong> may be one of: true, false, nonzero, 0, nonnull, NULL.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__releases_shared">
+<span class="sig-name descname"><span class="n"><span class="pre">__releases_shared</span></span></span><a class="headerlink" href="#c.__releases_shared" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__releases_shared</span> <span class="pre">(...)</span></code></p>
+<blockquote>
+<div><p>function attribute, function releases a context lock shared</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">...</span></code></dt><dd><p>variable arguments</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>Function attribute declaring that the function releases the given context
+lock instance(s) with shared access. The associated context(s) must be
+active on entry.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__acquire_shared">
+<span class="sig-name descname"><span class="n"><span class="pre">__acquire_shared</span></span></span><a class="headerlink" href="#c.__acquire_shared" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__acquire_shared</span> <span class="pre">(x)</span></code></p>
+<blockquote>
+<div><p>function to acquire context lock shared</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">x</span></code></dt><dd><p>context lock instance pointer</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>No-op function that acquires the given context lock instance <strong>x</strong> with shared
+access.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__release_shared">
+<span class="sig-name descname"><span class="n"><span class="pre">__release_shared</span></span></span><a class="headerlink" href="#c.__release_shared" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__release_shared</span> <span class="pre">(x)</span></code></p>
+<blockquote>
+<div><p>function to release context lock shared</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">x</span></code></dt><dd><p>context lock instance pointer</p>
+</dd>
+</dl>
+<p><strong>描述</strong></p>
+<p>No-op function that releases the given context lock instance <strong>x</strong> with shared
+access.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__acquire_ret">
+<span class="sig-name descname"><span class="n"><span class="pre">__acquire_ret</span></span></span><a class="headerlink" href="#c.__acquire_ret" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__acquire_ret</span> <span class="pre">(call,</span> <span class="pre">ret_expr)</span></code></p>
+<blockquote>
+<div><p>helper to acquire context lock of return value</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">call</span></code></dt><dd><p>call expression</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ret_expr</span></code></dt><dd><p>acquire expression that uses __ret</p>
+</dd>
+</dl>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.__acquire_shared_ret">
+<span class="sig-name descname"><span class="n"><span class="pre">__acquire_shared_ret</span></span></span><a class="headerlink" href="#c.__acquire_shared_ret" title="連結到這個定義">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__acquire_shared_ret</span> <span class="pre">(call,</span> <span class="pre">ret_expr)</span></code></p>
+<blockquote>
+<div><p>helper to acquire context lock shared of return value</p>
+</div></blockquote>
+<div class="kernelindent docutils container">
+<p><strong>參數</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">call</span></code></dt><dd><p>call expression</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ret_expr</span></code></dt><dd><p>acquire shared expression that uses __ret</p>
+</dd>
+</dl>
+</div>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>The function attribute <cite>__no_context_analysis</cite> is reserved for internal
+implementation of context lock types, and should be avoided in normal code.</p>
+</div>
+</section>
+</section>
+<section id="background">
+<h2>Background<a class="headerlink" href="#background" title="連結到這個標頭">¶</a></h2>
+<p>Clang originally called the feature <a class="reference external" href="https://clang.llvm.org/docs/ThreadSafetyAnalysis.html">Thread Safety Analysis</a>, with some keywords
+and documentation still using the thread-safety-analysis-only terminology. This
+was later changed and the feature became more flexible, gaining the ability to
+define custom &quot;capabilities&quot;. Its foundations can be found in <a class="reference external" href="https://www.cs.cornell.edu/talc/papers/capabilities.pdf">Capability
+Systems</a>, used to
+specify the permissibility of operations to depend on some &quot;capability&quot; being
+held (or not held).</p>
+<p>Because the feature is not just able to express capabilities related to
+synchronization primitives, and &quot;capability&quot; is already overloaded in the
+kernel, the naming chosen for the kernel departs from Clang's initial &quot;Thread
+Safety&quot; and &quot;capability&quot; nomenclature; we refer to the feature as &quot;Context
+Analysis&quot; to avoid confusion. The internal implementation still makes
+references to Clang's terminology in a few places, such as <cite>-Wthread-safety</cite>
+being the warning option that also still appears in diagnostic messages.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/dev-tools/context-analysis.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
