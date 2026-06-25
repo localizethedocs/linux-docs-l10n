@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"POT-Creation-Date: 2026-06-22 13:37+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -93,32 +93,109 @@ msgid ""
 msgstr ""
 
 #: ../../../gpu/nova/core/vbios.rst:50
-msgid "VBIOS ROM Layout"
+msgid "IFR Header"
 msgstr ""
 
 #: ../../../gpu/nova/core/vbios.rst:51
 msgid ""
-"The VBIOS layout is roughly a series of concatenated images laid out as "
-"follows::"
+"On Kepler and later GPUs, the ROM begins with an Init-from-ROM (IFR) header "
+"rather than a standard PCI ROM signature (0xAA55). The driver must parse the "
+"IFR header to find where the PCI ROM images actually start."
 msgstr ""
 
-#: ../../../gpu/nova/core/vbios.rst:163
+#: ../../../gpu/nova/core/vbios.rst:55
+msgid ""
+"Init-from-ROM (IFR) is a special GPU feature used for power management on "
+"some Nvidia GPUs.  It references data in the VBIOS for its operation, but "
+"for drivers the important piece is a header that precedes the VBIOS PCI "
+"Expansion ROM."
+msgstr ""
+
+#: ../../../gpu/nova/core/vbios.rst:60
+msgid ""
+"Most such GPUs do not need to parse the IFR header in order to find the "
+"VBIOS, but the Nvidia GA100 is the exception.  GA100 lacks a display engine, "
+"so the PRAMIN method (which reads the VBIOS from VRAM via display hardware) "
+"is unavailable, forcing the driver to read the ROM directly via PROM. On "
+"other similar GPUs, either PRAMIN succeeds before PROM is tried, or the IFR "
+"hardware has already applied the ROM offset so that PROM reads transparently "
+"skip the IFR header."
+msgstr ""
+
+#: ../../../gpu/nova/core/vbios.rst:68
+msgid ""
+"The driver should first check for the standard 0xAA55 signature at offset 0. "
+"If found, there is no IFR header and the PCI ROM images start at offset 0. "
+"If not found, check for the IFR signature and parse the header to determine "
+"the PCI ROM image offset."
+msgstr ""
+
+#: ../../../gpu/nova/core/vbios.rst:74
+msgid "Fixed Header Format"
+msgstr ""
+
+#: ../../../gpu/nova/core/vbios.rst:76
+msgid "The IFR header begins with four 32-bit words at fixed offsets::"
+msgstr ""
+
+#: ../../../gpu/nova/core/vbios.rst:90
+msgid "Finding the PCI ROM Image Offset"
+msgstr ""
+
+#: ../../../gpu/nova/core/vbios.rst:92
+msgid "The method to find this offset depends on `VERSIONSW`."
+msgstr ""
+
+#: ../../../gpu/nova/core/vbios.rst:94
+msgid ""
+"**Version 1 and 2**: Read `FIXED_DATA_SIZE` from `FIXED1` to get the "
+"extended section offset. The PCI ROM image is the 32-bit value at "
+"`FIXED_DATA_SIZE + 4`."
+msgstr ""
+
+#: ../../../gpu/nova/core/vbios.rst:97
+msgid ""
+"**Version 3**: Read `TOTAL_DATA_SIZE` from `FIXED2`. The 32-bit value at "
+"that offset is a flash status offset. Add 4096 to get the ROM directory "
+"offset, `ROM_DIRECTORY_OFFSET`.  The ROM directory must have signature "
+"0x44524652 (ASCII \"RFRD\"). The PCI ROM image offset is the 32-bit value at "
+"`ROM_DIRECTORY_OFFSET + 8`."
+msgstr ""
+
+#: ../../../gpu/nova/core/vbios.rst:103
+msgid ""
+"The PCI ROM image offset must be 4-byte aligned. All offsets are relative to "
+"the start of ROM (BAR0 + 0x300000)."
+msgstr ""
+
+#: ../../../gpu/nova/core/vbios.rst:107
+msgid "VBIOS ROM Layout"
+msgstr ""
+
+#: ../../../gpu/nova/core/vbios.rst:108
+msgid ""
+"The VBIOS (PCI Expansion ROM) is a series of concatenated images laid out as "
+"follows. On GPUs with an IFR header, this layout begins at the image offset "
+"determined by parsing the IFR header. On older GPUs, it begins at offset 0::"
+msgstr ""
+
+#: ../../../gpu/nova/core/vbios.rst:222
 msgid ""
 "This diagram is created based on an GA-102 Ampere GPU as an example and "
 "could vary for future or other GPUs."
 msgstr ""
 
-#: ../../../gpu/nova/core/vbios.rst:167
+#: ../../../gpu/nova/core/vbios.rst:226
 msgid ""
 "For more explanations of acronyms, see the detailed descriptions in `vbios."
 "rs`."
 msgstr ""
 
-#: ../../../gpu/nova/core/vbios.rst:170
+#: ../../../gpu/nova/core/vbios.rst:229
 msgid "Falcon data Lookup"
 msgstr ""
 
-#: ../../../gpu/nova/core/vbios.rst:171
+#: ../../../gpu/nova/core/vbios.rst:230
 msgid ""
 "A key part of the VBIOS extraction code (vbios.rs) is to find the location "
 "of the Falcon data in the VBIOS which contains the PMU lookup table. This "
@@ -126,12 +203,12 @@ msgid ""
 "application ID."
 msgstr ""
 
-#: ../../../gpu/nova/core/vbios.rst:175
+#: ../../../gpu/nova/core/vbios.rst:234
 msgid ""
 "The location of the PMU lookup table is found by scanning the BIT (`BIOS "
-"Information Table`_) tokens for a token with the id "
-"`BIT_TOKEN_ID_FALCON_DATA` (0x70) which indicates the offset of the same "
-"from the start of the VBIOS image. Unfortunately, the offset does not "
-"account for the EFI image located between the PciAt and FwSec images. The "
-"`vbios.rs` code compensates for this with appropriate arithmetic."
+"Information Table`_) tokens for a token with the Falcon data token id (0x70) "
+"which indicates the offset of the same from the start of the VBIOS image. "
+"Unfortunately, the offset does not account for the EFI image located between "
+"the PciAt and FwSec images. The `vbios.rs` code compensates for this with "
+"appropriate arithmetic."
 msgstr ""
