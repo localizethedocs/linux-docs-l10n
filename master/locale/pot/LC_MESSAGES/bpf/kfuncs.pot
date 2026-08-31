@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-22 13:37+0000\n"
+"POT-Creation-Date: 2026-08-31 16:07+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -69,6 +69,8 @@ msgstr ""
 #: ../../../bpf/kfuncs.rst:37 ../../../bpf/kfuncs.rst:148
 #: ../../../bpf/kfuncs.rst:170 ../../../bpf/kfuncs.rst:187
 #: ../../../bpf/kfuncs.rst:215 ../../../bpf/kfuncs.rst:232
+#: ../../../bpf/kfuncs.rst:262 ../../../bpf/kfuncs.rst:274
+#: ../../../bpf/kfuncs.rst:296
 msgid "An example is given below::"
 msgstr ""
 
@@ -310,11 +312,77 @@ msgstr ""
 msgid "Or::"
 msgstr ""
 
+#: ../../../bpf/kfuncs.rst:254
+msgid "2.3.7 __const_map and __map Annotations"
+msgstr ""
+
 #: ../../../bpf/kfuncs.rst:256
+msgid ""
+"These annotations are used for ``struct bpf_map *`` arguments and "
+"distinguish a verifier-known map from an opaque one."
+msgstr ""
+
+#: ../../../bpf/kfuncs.rst:259
+msgid ""
+"``__const_map`` indicates a map must be known at the verification time, i.e. "
+"a concrete map fd the BPF program references directly."
+msgstr ""
+
+#: ../../../bpf/kfuncs.rst:270
+msgid ""
+"``__map`` indicates an opaque ``struct bpf_map *`` that may be resolved at "
+"run time. The argument may take either a map fd or a ``PTR_TO_BTF_ID`` "
+"``struct bpf_map`` pointer."
+msgstr ""
+
+#: ../../../bpf/kfuncs.rst:282
+msgid "2.3.8 __arena and __arena__nullable Annotations"
+msgstr ""
+
+#: ../../../bpf/kfuncs.rst:284
+msgid ""
+"Both annotations indicate that the pointer argument points into the calling "
+"program's arena. The JIT rebases the value at the call site so the kfunc "
+"receives a directly dereferenceable kernel address, subject to the access "
+"rules described in :ref:`BPF_kfunc_arena_access` (at most ``GUARD_SZ / 2``, "
+"32 KiB, past the pointer in a single unchecked access)."
+msgstr ""
+
+#: ../../../bpf/kfuncs.rst:290
+msgid ""
+"With ``__arena`` the rebase is unconditional and the argument is never NULL: "
+"a value whose lower 32 bits are zero arrives as the arena base address "
+"(arena offset 0). The kfunc must not check the argument for NULL. With "
+"``__arena__nullable`` such a value arrives as NULL instead and the kfunc "
+"must check before dereferencing."
+msgstr ""
+
+#: ../../../bpf/kfuncs.rst:303
+msgid ""
+"Calling such a kfunc requires the program to use an arena map and a JIT with "
+"arena argument support (currently x86-64 and arm64); verification fails "
+"otherwise. The program can pass any value without compromising the kernel. A "
+"value that does not point into the arena is a program bug."
+msgstr ""
+
+#: ../../../bpf/kfuncs.rst:308
+msgid ""
+"The suffixes have the same meaning on the arguments of struct_ops stub "
+"functions, with the conversion running in the opposite direction. The kernel "
+"caller passes the kernel arena address and the trampoline converts it while "
+"saving the arguments, so the callback receives an arena pointer it can "
+"dereference directly. With ``__arena`` the kernel caller must not pass NULL. "
+"With ``__arena__nullable`` a NULL kernel pointer arrives as NULL. However, "
+"there is no obligation to prove to the verifier that such a pointer is non-"
+"NULL before use, in-line with existing semantics of arena pointers used in a "
+"program (or obtained from any other source)."
+msgstr ""
+
+#: ../../../bpf/kfuncs.rst:321
 msgid "2.4 Using an existing kernel function"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:258
+#: ../../../bpf/kfuncs.rst:323
 msgid ""
 "When an existing function in the kernel is fit for consumption by BPF "
 "programs, it can be directly registered with the BPF subsystem. However, "
@@ -322,40 +390,51 @@ msgid ""
 "by the BPF program and whether it is safe to do so."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:264
+#: ../../../bpf/kfuncs.rst:329
 msgid "2.5 Annotating kfuncs"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:266
+#: ../../../bpf/kfuncs.rst:331
 msgid ""
 "In addition to kfuncs' arguments, verifier may need more information about "
 "the type of kfunc(s) being registered with the BPF subsystem. To do so, we "
 "define flags on a set of kfuncs as follows::"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:275
+#: ../../../bpf/kfuncs.rst:340
 msgid ""
 "This set encodes the BTF ID of each kfunc listed above, and encodes the "
-"flags along with it. Ofcourse, it is also allowed to specify no flags."
+"flags along with it. It is also allowed to specify no flags."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:278
+#: ../../../bpf/kfuncs.rst:343
 msgid ""
 "kfunc definitions should also always be annotated with the ``__bpf_kfunc`` "
-"macro. This prevents issues such as the compiler inlining the kfunc if it's "
-"a static kernel function, or the function being elided in an LTO build as "
-"it's not used in the rest of the kernel. Developers should not manually add "
-"annotations to their kfunc to prevent these issues. If an annotation is "
-"required to prevent such an issue with your kfunc, it is a bug and should be "
-"added to the definition of the macro so that other kfuncs are similarly "
-"protected. An example is given below::"
+"macro. This prevents issues such as the compiler inlining the kfunc, or the "
+"function being elided in an LTO build as it's not used in the rest of the "
+"kernel. Developers should not manually add annotations to their kfunc to "
+"prevent these issues. If an annotation is required to prevent such an issue "
+"with your kfunc, it is a bug and should be added to the definition of the "
+"macro so that other kfuncs are similarly protected. An example is given "
+"below::"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:293
+#: ../../../bpf/kfuncs.rst:356
+msgid ""
+"Note that kfuncs must not be declared ``static``. A kfunc can be called from "
+"a BPF program ``*.c`` file outside the compilation unit that defines it, so "
+"its externally visible name must remain available for BTF ID lookup. "
+"``static`` linkage allows the compiler to rename the function, which can "
+"break this BTF-based kfunc resolution. Further note that sparse may warn "
+"that an otherwise unreferenced kfunc should be static. Such warnings should "
+"be ignored for kfunc definitions."
+msgstr ""
+
+#: ../../../bpf/kfuncs.rst:365
 msgid "2.5.1 KF_ACQUIRE flag"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:295
+#: ../../../bpf/kfuncs.rst:367
 msgid ""
 "The KF_ACQUIRE flag is used to indicate that the kfunc returns a pointer to "
 "a refcounted object. The verifier will then ensure that the pointer to the "
@@ -365,11 +444,11 @@ msgid ""
 "all possible explored states of the program."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:303
+#: ../../../bpf/kfuncs.rst:375
 msgid "2.5.2 KF_RET_NULL flag"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:305
+#: ../../../bpf/kfuncs.rst:377
 msgid ""
 "The KF_RET_NULL flag is used to indicate that the pointer returned by the "
 "kfunc may be NULL. Hence, it forces the user to do a NULL check on the "
@@ -378,11 +457,11 @@ msgid ""
 "KF_ACQUIRE flag, but both are orthogonal to each other."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:312
+#: ../../../bpf/kfuncs.rst:384
 msgid "2.5.3 KF_RELEASE flag"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:314
+#: ../../../bpf/kfuncs.rst:386
 msgid ""
 "The KF_RELEASE flag is used to indicate that the kfunc releases the pointer "
 "passed in to it. There can be only one referenced pointer that can be passed "
@@ -390,21 +469,21 @@ msgid ""
 "invoking kfunc with this flag."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:320
+#: ../../../bpf/kfuncs.rst:392
 msgid "2.5.4 KF_SLEEPABLE flag"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:322
+#: ../../../bpf/kfuncs.rst:394
 msgid ""
 "The KF_SLEEPABLE flag is used for kfuncs that may sleep. Such kfuncs can "
 "only be called by sleepable BPF programs (BPF_F_SLEEPABLE)."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:326
+#: ../../../bpf/kfuncs.rst:398
 msgid "2.5.5 KF_DESTRUCTIVE flag"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:328
+#: ../../../bpf/kfuncs.rst:400
 msgid ""
 "The KF_DESTRUCTIVE flag is used to indicate functions calling which is "
 "destructive to the system. For example such a call can result in system "
@@ -413,11 +492,11 @@ msgid ""
 "be added later."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:335
+#: ../../../bpf/kfuncs.rst:407
 msgid "2.5.6 KF_RCU flag"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:337
+#: ../../../bpf/kfuncs.rst:409
 msgid ""
 "The KF_RCU flag allows kfuncs to opt out of the default trusted args "
 "requirement and accept RCU pointers with weaker guarantees. The kfuncs "
@@ -429,11 +508,11 @@ msgid ""
 "KF_ACQUIRE kfunc that is KF_RCU should very likely also be KF_RET_NULL."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:347
+#: ../../../bpf/kfuncs.rst:419
 msgid "2.5.7 KF_RCU_PROTECTED flag"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:349
+#: ../../../bpf/kfuncs.rst:421
 msgid ""
 "The KF_RCU_PROTECTED flag is used to indicate that the kfunc must be invoked "
 "in an RCU critical section. This is assumed by default in non-sleepable "
@@ -441,14 +520,14 @@ msgid ""
 "for sleepable ones."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:354
+#: ../../../bpf/kfuncs.rst:426
 msgid ""
 "If the kfunc returns a pointer value, this flag also enforces that the "
 "returned pointer is RCU protected, and can only be used while the RCU "
 "critical section is active."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:358
+#: ../../../bpf/kfuncs.rst:430
 msgid ""
 "The flag is distinct from the ``KF_RCU`` flag, which only ensures that its "
 "arguments are at least RCU protected pointers. This may transitively imply "
@@ -456,11 +535,11 @@ msgid ""
 "which require RCU protection but do not take RCU protected arguments."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:366
+#: ../../../bpf/kfuncs.rst:438
 msgid "2.5.8 KF_DEPRECATED flag"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:368
+#: ../../../bpf/kfuncs.rst:440
 msgid ""
 "The KF_DEPRECATED flag is used for kfuncs which are scheduled to be changed "
 "or removed in a subsequent kernel release. A kfunc that is marked with "
@@ -470,7 +549,7 @@ msgid ""
 "it if any is available, and possibly a rationale for why it is being removed."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:376
+#: ../../../bpf/kfuncs.rst:448
 msgid ""
 "Note that while on some occasions, a KF_DEPRECATED kfunc may continue to be "
 "supported and have its KF_DEPRECATED flag removed, it is likely to be far "
@@ -482,60 +561,70 @@ msgid ""
 "deprecate, or remove those kfuncs if and when such discussions occur."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:386
+#: ../../../bpf/kfuncs.rst:458
 msgid "2.5.9 KF_IMPLICIT_ARGS flag"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:388
+#: ../../../bpf/kfuncs.rst:460
 msgid ""
 "The KF_IMPLICIT_ARGS flag is used to indicate that the BPF signature of the "
 "kfunc is different from it's kernel signature, and the values for implicit "
 "arguments are provided at load time by the verifier."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:392
+#: ../../../bpf/kfuncs.rst:464
 msgid ""
 "Only arguments of specific types are implicit. Currently only ``struct "
 "bpf_prog_aux *`` type is supported."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:395
+#: ../../../bpf/kfuncs.rst:467
 msgid ""
 "A kfunc with KF_IMPLICIT_ARGS flag therefore has two types in BTF: one "
 "function matching the kernel declaration (with _impl suffix in the name by "
 "convention), and another matching the intended BPF API."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:399
+#: ../../../bpf/kfuncs.rst:471
 msgid ""
 "Verifier only allows calls to the non-_impl version of a kfunc, that uses a "
 "signature without the implicit arguments."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:402
+#: ../../../bpf/kfuncs.rst:474
 msgid "Example declaration:"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:410
+#: ../../../bpf/kfuncs.rst:482
 msgid "Example usage in BPF program:"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:418
+#: ../../../bpf/kfuncs.rst:490
 msgid "2.6 Registering the kfuncs"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:420
+#: ../../../bpf/kfuncs.rst:492
 msgid ""
 "Once the kfunc is prepared for use, the final step to making it visible is "
 "registering it with the BPF subsystem. Registration is done per BPF program "
 "type. An example is shown below::"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:441
+#: ../../../bpf/kfuncs.rst:512
+msgid ""
+"At kernel build time the ``resolve_btfids`` tool finds all kfuncs declared "
+"with ``BTF_KFUNCS_START()`` and emits their BTF annotations into the "
+"kernel's BTF. For each kfunc it emits a ``bpf_kfunc`` BTF decl tag, a "
+"``bpf_fastcall`` decl tag when the kfunc is flagged ``KF_FASTCALL``, and the "
+"``address_space(1)`` type attribute on the return value and/or arguments "
+"that use arena pointers (see sections 2.3.8 and 2.8)."
+msgstr ""
+
+#: ../../../bpf/kfuncs.rst:520
 msgid "2.7  Specifying no-cast aliases with ___init"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:443
+#: ../../../bpf/kfuncs.rst:522
 msgid ""
 "The verifier will always enforce that the BTF type of a pointer passed to a "
 "kfunc by a BPF program, matches the type of pointer specified in the kfunc "
@@ -544,11 +633,11 @@ msgid ""
 "their BTF_IDs differ."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:449
+#: ../../../bpf/kfuncs.rst:528
 msgid "For example, for the following type definition:"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:458
+#: ../../../bpf/kfuncs.rst:537
 msgid ""
 "The verifier would allow a ``struct bpf_cpumask *`` to be passed to a kfunc "
 "taking a ``cpumask_t *`` (which is a typedef of ``struct cpumask *``). For "
@@ -556,13 +645,13 @@ msgid ""
 "passed to bpf_cpumask_test_cpu()."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:463
+#: ../../../bpf/kfuncs.rst:542
 msgid ""
 "In some cases, this type-aliasing behavior is not desired. ``struct "
 "nf_conn___init`` is one such example:"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:472
+#: ../../../bpf/kfuncs.rst:551
 msgid ""
 "The C standard would consider these types to be equivalent, but it would not "
 "always be safe to pass either type to a trusted kfunc. ``struct "
@@ -572,18 +661,18 @@ msgid ""
 "``struct nf_conn *`` (e.g. ``bpf_ct_change_timeout()``)."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:479
+#: ../../../bpf/kfuncs.rst:558
 msgid ""
 "In order to accommodate such requirements, the verifier will enforce strict "
 "PTR_TO_BTF_ID type matching if two types have the exact same name, with one "
 "being suffixed with ``___init``."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:484
+#: ../../../bpf/kfuncs.rst:565
 msgid "2.8 Accessing arena memory through kfunc arguments"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:486
+#: ../../../bpf/kfuncs.rst:567
 msgid ""
 "A read or write at any address inside an arena does not oops the kernel. "
 "Unallocated arena pages are lazily backed by a scratch page and the access "
@@ -591,7 +680,7 @@ msgid ""
 "program's correctness is affected; the kernel itself remains intact."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:492
+#: ../../../bpf/kfuncs.rst:573
 msgid ""
 "The arena is followed by a ``GUARD_SZ / 2`` (32 KiB) guard region that is "
 "also covered by this recovery. A kfunc handed an arena pointer may therefore "
@@ -599,11 +688,11 @@ msgid ""
 "arena. Larger accesses must verify the range explicitly."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:500
+#: ../../../bpf/kfuncs.rst:581
 msgid "3. kfunc lifecycle expectations"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:502
+#: ../../../bpf/kfuncs.rst:583
 msgid ""
 "kfuncs provide a kernel <-> kernel API, and thus are not bound by any of the "
 "strict stability restrictions associated with kernel <-> user UAPIs. This "
@@ -612,7 +701,7 @@ msgid ""
 "defined in when it's deemed necessary."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:508
+#: ../../../bpf/kfuncs.rst:589
 msgid ""
 "Like any other change to the kernel, maintainers will not change or remove a "
 "kfunc without having a reasonable justification.  Whether or not they'll "
@@ -623,11 +712,11 @@ msgid ""
 "cost is of continuing to support the kfunc."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:516
+#: ../../../bpf/kfuncs.rst:597
 msgid "There are several implications of this:"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:518
+#: ../../../bpf/kfuncs.rst:599
 msgid ""
 "kfuncs that are widely used or have been in the kernel for a long time will "
 "be more difficult to justify being changed or removed by a maintainer. In "
@@ -639,7 +728,7 @@ msgid ""
 "discussions regarding those kfuncs when they occur upstream."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:527
+#: ../../../bpf/kfuncs.rst:608
 msgid ""
 "Unlike regular kernel symbols marked with EXPORT_SYMBOL_GPL, BPF programs "
 "that call kfuncs are generally not part of the kernel tree. This means that "
@@ -648,7 +737,7 @@ msgid ""
 "kernel symbol is changed."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:533
+#: ../../../bpf/kfuncs.rst:614
 msgid ""
 "Unlike with regular kernel symbols, this is expected behavior for BPF "
 "symbols, and out-of-tree BPF programs that use kfuncs should be considered "
@@ -658,7 +747,7 @@ msgid ""
 "users are taken into account."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:540
+#: ../../../bpf/kfuncs.rst:621
 msgid ""
 "A kfunc will never have any hard stability guarantees. BPF APIs cannot and "
 "will not ever hard-block a change in the kernel purely for stability "
@@ -671,11 +760,11 @@ msgid ""
 "but it is a possibility that must be accepted if one is to use kfuncs."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:552
+#: ../../../bpf/kfuncs.rst:633
 msgid "3.1 kfunc deprecation"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:554
+#: ../../../bpf/kfuncs.rst:635
 msgid ""
 "As described above, while sometimes a maintainer may find that a kfunc must "
 "be changed or removed immediately to accommodate some changes in their "
@@ -689,7 +778,7 @@ msgid ""
 "kfunc maintainer if it turns out that the kfunc is actually being used."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:565
+#: ../../../bpf/kfuncs.rst:646
 msgid ""
 "It's expected that the common case will be that kfuncs will go through a "
 "deprecation period rather than being changed or removed without warning. As "
@@ -699,7 +788,7 @@ msgid ""
 "following procedure is followed for removal:"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:572
+#: ../../../bpf/kfuncs.rst:653
 msgid ""
 "Any relevant information for deprecated kfuncs is documented in the kfunc's "
 "kernel docs. This documentation will typically include the kfunc's expected "
@@ -708,7 +797,7 @@ msgid ""
 "replacement exists), etc."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:578
+#: ../../../bpf/kfuncs.rst:659
 msgid ""
 "The deprecated kfunc is kept in the kernel for some period of time after it "
 "was first marked as deprecated. This time period will be chosen on a case-by-"
@@ -720,148 +809,148 @@ msgid ""
 "deprecation period has elapsed."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:587
+#: ../../../bpf/kfuncs.rst:668
 msgid ""
 "After the deprecation period the kfunc will be removed. At this point, BPF "
 "programs calling the kfunc will be rejected by the verifier."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:591
+#: ../../../bpf/kfuncs.rst:672
 msgid "4. Core kfuncs"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:593
+#: ../../../bpf/kfuncs.rst:674
 msgid ""
 "The BPF subsystem provides a number of \"core\" kfuncs that are potentially "
 "applicable to a wide variety of different possible use cases and programs. "
 "Those kfuncs are documented here."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:598
+#: ../../../bpf/kfuncs.rst:679
 msgid "4.1 struct task_struct * kfuncs"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:600
+#: ../../../bpf/kfuncs.rst:681
 msgid ""
 "There are a number of kfuncs that allow ``struct task_struct *`` objects to "
 "be used as kptrs:"
 msgstr ""
 
-#: ../../../bpf/kfuncs:603: ../kernel/bpf/helpers.c:2825
+#: ../../../bpf/kfuncs:684: ../kernel/bpf/helpers.c:2825
 msgid ""
 "Acquire a reference to a task. A task acquired by this kfunc which is not "
 "stored in a map as a kptr, must be released by calling bpf_task_release()."
 msgstr ""
 
-#: ../../../bpf/kfuncs:603: ../kernel/bpf/helpers.c:2829
-#: ../kernel/bpf/helpers.c:2842 ../../../bpf/kfuncs:675:
-#: ../kernel/bpf/helpers.c:2988 ../../../bpf/kfuncs:715:
+#: ../../../bpf/kfuncs:684: ../kernel/bpf/helpers.c:2829
+#: ../kernel/bpf/helpers.c:2842 ../../../bpf/kfuncs:756:
+#: ../kernel/bpf/helpers.c:2988 ../../../bpf/kfuncs:796:
 #: ../kernel/bpf/helpers.c:2858 ../kernel/bpf/helpers.c:2869
-#: ../../../bpf/kfuncs:728: ../kernel/bpf/helpers.c:2887
-#: ../../../bpf/kfuncs:731: ../kernel/bpf/helpers.c:2908
+#: ../../../bpf/kfuncs:809: ../kernel/bpf/helpers.c:2887
+#: ../../../bpf/kfuncs:812: ../kernel/bpf/helpers.c:2908
 msgid "**Parameters**"
 msgstr ""
 
-#: ../../../bpf/kfuncs:603: ../kernel/bpf/helpers.c:2831
+#: ../../../bpf/kfuncs:684: ../kernel/bpf/helpers.c:2831
 #: ../kernel/bpf/helpers.c:2844
 msgid "``struct task_struct *p``"
 msgstr ""
 
-#: ../../../bpf/kfuncs:603: ../kernel/bpf/helpers.c:2828
+#: ../../../bpf/kfuncs:684: ../kernel/bpf/helpers.c:2828
 msgid "The task on which a reference is being acquired."
 msgstr ""
 
-#: ../../../bpf/kfuncs:603: ../kernel/bpf/helpers.c:2838
+#: ../../../bpf/kfuncs:684: ../kernel/bpf/helpers.c:2838
 msgid "Release the reference acquired on a task."
 msgstr ""
 
-#: ../../../bpf/kfuncs:603: ../kernel/bpf/helpers.c:2839
+#: ../../../bpf/kfuncs:684: ../kernel/bpf/helpers.c:2839
 msgid "The task on which a reference is being released."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:606
+#: ../../../bpf/kfuncs.rst:687
 msgid ""
 "These kfuncs are useful when you want to acquire or release a reference to a "
 "``struct task_struct *`` that was passed as e.g. a tracepoint arg, or a "
 "struct_ops callback arg. For example:"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:633
+#: ../../../bpf/kfuncs.rst:714
 msgid ""
 "References acquired on ``struct task_struct *`` objects are RCU protected. "
 "Therefore, when in an RCU read region, you can obtain a pointer to a task "
 "embedded in a map value without having to acquire a reference:"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:671
+#: ../../../bpf/kfuncs.rst:752
 msgid ""
 "A BPF program can also look up a task from a pid. This can be useful if the "
 "caller doesn't have a trusted pointer to a ``struct task_struct *`` object "
 "that it can acquire a reference on with bpf_task_acquire()."
 msgstr ""
 
-#: ../../../bpf/kfuncs:675: ../kernel/bpf/helpers.c:2984
+#: ../../../bpf/kfuncs:756: ../kernel/bpf/helpers.c:2984
 msgid ""
 "Find a struct task_struct from its pid by looking it up in the root pid "
 "namespace idr. If a task is returned, it must either be stored in a map, or "
 "released with bpf_task_release()."
 msgstr ""
 
-#: ../../../bpf/kfuncs:675: ../kernel/bpf/helpers.c:2990
+#: ../../../bpf/kfuncs:756: ../kernel/bpf/helpers.c:2990
 msgid "``s32 pid``"
 msgstr ""
 
-#: ../../../bpf/kfuncs:675: ../kernel/bpf/helpers.c:2987
+#: ../../../bpf/kfuncs:756: ../kernel/bpf/helpers.c:2987
 msgid "The pid of the task being looked up."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:678
+#: ../../../bpf/kfuncs.rst:759
 msgid "Here is an example of it being used:"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:711
+#: ../../../bpf/kfuncs.rst:792
 msgid "4.2 struct cgroup * kfuncs"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:713
+#: ../../../bpf/kfuncs.rst:794
 msgid "``struct cgroup *`` objects also have acquire and release functions:"
 msgstr ""
 
-#: ../../../bpf/kfuncs:715: ../kernel/bpf/helpers.c:2854
+#: ../../../bpf/kfuncs:796: ../kernel/bpf/helpers.c:2854
 msgid ""
 "Acquire a reference to a cgroup. A cgroup acquired by this kfunc which is "
 "not stored in a map as a kptr, must be released by calling "
 "bpf_cgroup_release()."
 msgstr ""
 
-#: ../../../bpf/kfuncs:715: ../kernel/bpf/helpers.c:2860
-#: ../kernel/bpf/helpers.c:2871 ../../../bpf/kfuncs:728:
+#: ../../../bpf/kfuncs:796: ../kernel/bpf/helpers.c:2860
+#: ../kernel/bpf/helpers.c:2871 ../../../bpf/kfuncs:809:
 #: ../kernel/bpf/helpers.c:2889
 msgid "``struct cgroup *cgrp``"
 msgstr ""
 
-#: ../../../bpf/kfuncs:715: ../kernel/bpf/helpers.c:2857
+#: ../../../bpf/kfuncs:796: ../kernel/bpf/helpers.c:2857
 msgid "The cgroup on which a reference is being acquired."
 msgstr ""
 
-#: ../../../bpf/kfuncs:715: ../kernel/bpf/helpers.c:2865
+#: ../../../bpf/kfuncs:796: ../kernel/bpf/helpers.c:2865
 msgid ""
 "Release the reference acquired on a cgroup. If this kfunc is invoked in an "
 "RCU read region, the cgroup is guaranteed to not be freed until the current "
 "grace period has ended, even if its refcount drops to 0."
 msgstr ""
 
-#: ../../../bpf/kfuncs:715: ../kernel/bpf/helpers.c:2869
+#: ../../../bpf/kfuncs:796: ../kernel/bpf/helpers.c:2869
 msgid "The cgroup on which a reference is being released."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:718
+#: ../../../bpf/kfuncs.rst:799
 msgid ""
 "These kfuncs are used in exactly the same manner as bpf_task_acquire() and "
 "bpf_task_release() respectively, so we won't provide examples for them."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:723
+#: ../../../bpf/kfuncs.rst:804
 msgid ""
 "Other kfuncs available for interacting with ``struct cgroup *`` objects are "
 "bpf_cgroup_ancestor() and bpf_cgroup_from_id(), allowing callers to access "
@@ -869,52 +958,52 @@ msgid ""
 "return a cgroup kptr."
 msgstr ""
 
-#: ../../../bpf/kfuncs:728: ../kernel/bpf/helpers.c:2883
+#: ../../../bpf/kfuncs:809: ../kernel/bpf/helpers.c:2883
 msgid ""
 "Perform a lookup on an entry in a cgroup's ancestor array. A cgroup returned "
 "by this kfunc which is not subsequently stored in a map, must be released by "
 "calling bpf_cgroup_release()."
 msgstr ""
 
-#: ../../../bpf/kfuncs:728: ../kernel/bpf/helpers.c:2886
+#: ../../../bpf/kfuncs:809: ../kernel/bpf/helpers.c:2886
 msgid "The cgroup for which we're performing a lookup."
 msgstr ""
 
-#: ../../../bpf/kfuncs:728: ../kernel/bpf/helpers.c:2888
+#: ../../../bpf/kfuncs:809: ../kernel/bpf/helpers.c:2888
 msgid "``int level``"
 msgstr ""
 
-#: ../../../bpf/kfuncs:728: ../kernel/bpf/helpers.c:2887
+#: ../../../bpf/kfuncs:809: ../kernel/bpf/helpers.c:2887
 msgid "The level of ancestor to look up."
 msgstr ""
 
-#: ../../../bpf/kfuncs:731: ../kernel/bpf/helpers.c:2904
+#: ../../../bpf/kfuncs:812: ../kernel/bpf/helpers.c:2904
 msgid ""
 "Find a cgroup from its ID. A cgroup returned by this kfunc which is not "
 "subsequently stored in a map, must be released by calling "
 "bpf_cgroup_release()."
 msgstr ""
 
-#: ../../../bpf/kfuncs:731: ../kernel/bpf/helpers.c:2910
+#: ../../../bpf/kfuncs:812: ../kernel/bpf/helpers.c:2910
 msgid "``u64 cgid``"
 msgstr ""
 
-#: ../../../bpf/kfuncs:731: ../kernel/bpf/helpers.c:2907
+#: ../../../bpf/kfuncs:812: ../kernel/bpf/helpers.c:2907
 msgid "cgroup id."
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:734
+#: ../../../bpf/kfuncs.rst:815
 msgid ""
 "Eventually, BPF should be updated to allow this to happen with a normal "
 "memory load in the program itself. This is currently not possible without "
 "more work in the verifier. bpf_cgroup_ancestor() can be used as follows:"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:762
+#: ../../../bpf/kfuncs.rst:843
 msgid "4.3 struct cpumask * kfuncs"
 msgstr ""
 
-#: ../../../bpf/kfuncs.rst:764
+#: ../../../bpf/kfuncs.rst:845
 msgid ""
 "BPF provides a set of kfuncs that can be used to query, allocate, mutate, "
 "and destroy struct cpumask * objects. Please refer to :ref:`cpumasks-header-"
