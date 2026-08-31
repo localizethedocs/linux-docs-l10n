@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-22 13:37+0000\n"
+"POT-Creation-Date: 2026-08-31 16:07+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -300,4 +300,172 @@ msgstr ""
 msgid ""
 "In case the compiler does not support address spaces, inline assembly can be "
 "used for FS/GS based addressing mode::"
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:203
+msgid "Complexities with GS handling on context switches"
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:206
+msgid "History"
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:208
+msgid ""
+"In 32-bit, data segments need reloading on entry to the kernel, and "
+"restoring on exit to userspace.  Only the segment selector is necessary, as "
+"all segment data resides in the GDT/LDT.  Bases in the GDT/LDT are 32 bits "
+"wide.  The segment selector values are user-chosen, and effectively "
+"arbitrary."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:213
+msgid ""
+"The 32-bit mechanism is slow, so in 64-bit, segments were made mostly flat "
+"so as to not need reloading on entry/exit.  FS and GS segment bases were "
+"extended to 64 bits, and became accessible via MSRs. Also, a separate "
+"GS_SHADOW value was introduced.  The SWAPGS instruction swaps GS_BASE and "
+"GS_SHADOW, as the only action needed on entry/exit."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:219
+msgid ""
+"64-bit userspace needed to make the prctl() ARCH_SET_GS have a base value "
+"greater than 32 bits, and a side effect of this syscall was to zero the GS "
+"selector."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:223
+msgid ""
+"Then the FSGSBASE instructions came along, and userspace could finally "
+"choose an arbitrary base address not previously registered via the syscall.  "
+"Linux's ABI promises to preserve both the selector value and the full base, "
+"even when they are disconnected."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:228
+msgid ""
+"When looking at the hardware capabilities, there are multiple x86 "
+"instructions which modify GS:"
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:231
+msgid "SWAPGS"
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:233
+msgid ""
+"Swaps the value in MSR_KERNEL_GS_BASE with the active GS.base in the hidden "
+"portion of the GS selector register."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:236
+msgid "MOV <segment selector>, GS"
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:238
+msgid ""
+"(legacy path, non-FRED) Loads GS with the selector specified in <segment "
+"selector> and fetches the GS descriptor attributes, limit and base from the "
+"GDT/LDT.  Writes a 32-bit base into the active GS.base, zero-extending it "
+"into the 64-bit base register. It does not touch MSR_KERNEL_GS_BASE."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:243
+msgid ""
+"The problem with this is that because it writes the *current* GS.base, it "
+"corrupts the active kernel per-CPU pointer (in %gs)."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:246
+msgid "LKGS <selector>"
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:248
+msgid ""
+"(FRED path, replaces MOV GS) Like MOV GS in that it loads the selector and "
+"descriptor attributes, but it redirects the base write - instead of updating "
+"the active GS.base, it writes the descriptor base into IA32_KERNEL_GS_BASE "
+"(i.e. MSR_KERNEL_GS_BASE)."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:253
+msgid ""
+"Critical caveat: it only writes a zero-extended 32-bit value, because GDT/"
+"LDT descriptors only encode 32-bit bases. This means it cannot correctly "
+"represent a full 64-bit user-space GS base (e.g. a TLS pointer), so a full "
+"64-bit WRMSR is still required afterwards."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:258
+msgid ""
+"This instruction ensures that the kernel's per-CPU pointer stays good, and "
+"does not need custom error handling."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:261
+msgid ""
+"MOV GS and LKGS are the only way to update the other fields of the GS "
+"descriptor."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:264
+msgid "WRGSBASE <reg>"
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:266
+msgid ""
+"In 64-bit mode, it writes a full 64-bit value directly into the currently "
+"active GS.base as FS.base and GS.base in 64-bit mode are expanded to 64-bit "
+"to cover the full address space."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:270
+msgid ""
+"The problem in kernel context: the currently active GS.base belongs to the "
+"kernel, not the user task. So using this during context switching would "
+"corrupt the kernel's own GS.base, unless surrounded by SWAPGS (only safe in "
+"IDT mode)."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:275
+msgid ""
+"In the remaining modes, the upper 32 bits of the base are cleared instead."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:277
+msgid "WRMSR MSR_KERNEL_GS_BASE / WRMSRNS MSR_KERNEL_GS_BASE"
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:279
+msgid ""
+"Writes a full 64-bit value into MSR_KERNEL_GS_BASE, which holds the inactive "
+"(user-space) GS.base - the one that gets swapped into the active GS.base on "
+"SWAPGS. This is the only instruction that can correctly set a 64-bit user GS."
+"base during a context switch from kernel mode."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:284
+msgid ""
+"The non-serializing nature of the write was accomplished by the two vendors "
+"differently. AMD, starting with Zen4, made it the default through:"
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:287
+msgid ""
+"CPUID_Fn80000021_EAX [Extended Feature 2 EAX] (Core::X86::Cpuid::"
+"FeatureExt2Eax)[1], FsGsKernelGsBaseNonSerializing which is fixed to 1"
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:291
+msgid ""
+"and Intel through the WRMSRNS instruction which is the non-serializing "
+"variant."
+msgstr ""
+
+#: ../../../arch/x86/x86_64/fsgs.rst:294
+msgid ""
+"Btw, while running in kernel mode, MSR_KERNEL_GS_BASE contains actually the "
+"*user* GS.base. Thus, the naming can be confusing. Unless one thinks of it "
+"as the kernel's access to GS.base as MSRs are accessible only in CPL0."
 msgstr ""

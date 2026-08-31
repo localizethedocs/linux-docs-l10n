@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-22 13:37+0000\n"
+"POT-Creation-Date: 2026-08-31 16:07+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -309,10 +309,130 @@ msgid ""
 msgstr ""
 
 #: ../../../admin-guide/bootconfig.rst:238
-msgid "Kernel parameters via Boot Config"
+msgid "Rendering Embedded kernel.* Keys at Build Time"
 msgstr ""
 
 #: ../../../admin-guide/bootconfig.rst:240
+msgid ""
+"By default, the embedded bootconfig (``CONFIG_BOOT_CONFIG_EMBED=y``) is "
+"parsed at runtime, after ``parse_early_param()`` has already run. Early "
+"parameter handlers (``mem=``, ``earlycon=``, ``loglevel=``, ...) therefore "
+"cannot see values supplied via the embedded ``kernel`` subtree."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:245
+msgid ""
+"``CONFIG_CMDLINE_FROM_BOOTCONFIG`` resolves this by rendering the ``kernel`` "
+"subtree of ``CONFIG_BOOT_CONFIG_EMBED_FILE`` into a flat cmdline string at "
+"kernel build time (via ``tools/bootconfig -C``) and prepending it to "
+"``boot_command_line`` during early architecture setup, so the keys are "
+"visible to ``parse_early_param()``."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:251
+msgid ""
+"The option requires ``CONFIG_BOOT_CONFIG_EMBED=y``, a non-empty "
+"``CONFIG_BOOT_CONFIG_EMBED_FILE``, ``CONFIG_CMDLINE`` to be empty, and an "
+"architecture that selects ``CONFIG_ARCH_SUPPORTS_CMDLINE_FROM_BOOTCONFIG``. "
+"Currently only x86 selects it; on other architectures the embedded "
+"bootconfig still works, but only through the late runtime parser."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:257
+msgid ""
+"The same ``bootconfig`` opt-in applies as elsewhere: the rendered keys are "
+"prepended only when ``bootconfig`` (in any form) appears on the kernel "
+"command line, or when ``CONFIG_BOOT_CONFIG_FORCE`` is set, which defaults to "
+"``y`` when ``CONFIG_BOOT_CONFIG_EMBED`` is set."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:262
+msgid "For example, given::"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:269
+msgid ""
+"the kernel boots as if ``loglevel=7 mem=4G`` had been prepended to the "
+"bootloader command line, with the values visible to early-parsed handlers. "
+"Comma-separated values are still expanded into multiple cmdline entries per "
+"the bootconfig array convention -- the embedded ``kernel.earlycon = "
+"\"uart8250,io,0x3f8\"`` must be quoted to land as a single ``earlycon=`` "
+"entry, exactly as for the runtime parser."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:276
+msgid ""
+"If the rendered string would not fit in ``COMMAND_LINE_SIZE`` together with "
+"the existing command line, the prepend is skipped and an error is logged, so "
+"an oversized embedded bootconfig cannot brick a boot."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:281
+msgid "Interaction with other command line and bootconfig sources"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:283
+msgid ""
+"With ``CONFIG_CMDLINE_FROM_BOOTCONFIG=y`` the rendered ``kernel`` subtree "
+"behaves like a build-time command line (similar to ``CONFIG_CMDLINE``), not "
+"like a bootconfig source. It is prepended to ``boot_command_line`` in "
+"``setup_arch()``, before ``parse_early_param()`` and long before the runtime "
+"parser looks at an initrd. Options can reach the kernel from up to four "
+"places:"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:290
+msgid ""
+"Bootloader command line: the arguments the boot loader passes. The embedded "
+"cmdline is prepended in front of them, so for last-one-wins parameters a "
+"bootloader option still overrides the embedded value. Visible in /proc/"
+"cmdline."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:294
+msgid ""
+"Embedded cmdline (this option): the rendered ``kernel`` subtree, prepended "
+"early so it is seen by ``parse_early_param()``. Visible in /proc/cmdline."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:297
+msgid ""
+"Initrd bootconfig: parsed late in ``setup_boot_config()``; its ``kernel`` "
+"keys are placed ahead of ``boot_command_line``, i.e. before the embedded "
+"cmdline, so last-wins favors the embedded values. As a bootconfig source, an "
+"initrd bootconfig still replaces the embedded bootconfig. Visible in /proc/"
+"cmdline and /proc/bootconfig."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:302
+msgid ""
+"Embedded bootconfig (runtime): parsed late, only when no initrd bootconfig "
+"is present. Visible in /proc/cmdline and /proc/bootconfig."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:305
+msgid ""
+"So with this option the embedded ``kernel.*`` values take precedence over an "
+"initrd bootconfig's ``kernel.*`` values: for early parameters the initrd is "
+"not parsed yet, and for ordinary parameters the embedded keys land later in "
+"the command line. If you need an initrd bootconfig to override the embedded "
+"``kernel.*`` keys, leave this option off and rely on the runtime parser."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:312
+msgid ""
+"The rendered string is part of the command line, so it appears in /proc/"
+"cmdline. It is deliberately not shown in /proc/bootconfig: that file keeps "
+"reporting the parsed bootconfig tree -- the initrd bootconfig if present, "
+"otherwise the embedded bootconfig -- independent of whether build-time "
+"cmdline rendering is enabled."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:319
+msgid "Kernel parameters via Boot Config"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig.rst:321
 msgid ""
 "In addition to the kernel command line, the boot config can be used for "
 "passing the kernel parameters. All the key-value pairs under ``kernel`` key "
@@ -324,27 +444,27 @@ msgid ""
 "general, earlier parameter will be overwritten by later one.)::"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:251
+#: ../../../admin-guide/bootconfig.rst:332
 msgid "Here is an example of the bootconfig file for kernel/init parameters.::"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:260
+#: ../../../admin-guide/bootconfig.rst:341
 msgid "This will be copied into the kernel cmdline string as the following::"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:264
+#: ../../../admin-guide/bootconfig.rst:345
 msgid "If user gives some other command line like,::"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:268
+#: ../../../admin-guide/bootconfig.rst:349
 msgid "The final kernel cmdline will be the following::"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:274
+#: ../../../admin-guide/bootconfig.rst:355
 msgid "Config File Limitation"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:276
+#: ../../../admin-guide/bootconfig.rst:357
 msgid ""
 "Currently the maximum config size is 32KB and the total key-words (not key-"
 "value entries) must be under 1024 nodes. Note: this is not the number of "
@@ -359,17 +479,17 @@ msgid ""
 "notice it before boot."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:291
+#: ../../../admin-guide/bootconfig.rst:372
 msgid "Bootconfig APIs"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:293
+#: ../../../admin-guide/bootconfig.rst:374
 msgid ""
 "User can query or loop on key-value pairs, also it is possible to find a "
 "root (prefix) key node and find key-values under that node."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:296
+#: ../../../admin-guide/bootconfig.rst:377
 msgid ""
 "If you have a key string, you can query the value directly with the key "
 "using xbc_find_value(). If you want to know what keys exist in the boot "
@@ -378,40 +498,40 @@ msgid ""
 "array's value, e.g.::"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:309
+#: ../../../admin-guide/bootconfig.rst:390
 msgid ""
 "If you want to focus on keys which have a prefix string, you can use "
 "xbc_find_node() to find a node by the prefix string, and iterate keys under "
 "the prefix node with xbc_node_for_each_key_value()."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:313
+#: ../../../admin-guide/bootconfig.rst:394
 msgid ""
 "But the most typical usage is to get the named value under prefix or get the "
 "named array under prefix as below::"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:323
+#: ../../../admin-guide/bootconfig.rst:404
 msgid ""
 "This accesses a value of \"key.prefix.option\" and an array of \"key.prefix."
 "array-option\"."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:326
+#: ../../../admin-guide/bootconfig.rst:407
 msgid ""
 "Locking is not needed, since after initialization, the config becomes read-"
 "only. All data and keys must be copied if you need to modify it."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig.rst:331
+#: ../../../admin-guide/bootconfig.rst:412
 msgid "Functions and structures"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:31
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:31
 msgid "Calculate checksum of bootconfig"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:35
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:35
 #: ../include/linux/bootconfig.h:80 ../include/linux/bootconfig.h:91
 #: ../include/linux/bootconfig.h:102 ../include/linux/bootconfig.h:113
 #: ../include/linux/bootconfig.h:142 ../include/linux/bootconfig.h:158
@@ -419,32 +539,33 @@ msgstr ""
 #: ../include/linux/bootconfig.h:201 ../include/linux/bootconfig.h:213
 #: ../include/linux/bootconfig.h:225 ../include/linux/bootconfig.h:245
 #: ../include/linux/bootconfig.h:258 ../include/linux/bootconfig.h:276
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:90
-#: ../lib/bootconfig.c:119 ../lib/bootconfig.c:133 ../lib/bootconfig.c:144
-#: ../lib/bootconfig.c:156 ../lib/bootconfig.c:168 ../lib/bootconfig.c:182
-#: ../lib/bootconfig.c:218 ../lib/bootconfig.c:249 ../lib/bootconfig.c:283
-#: ../lib/bootconfig.c:339 ../lib/bootconfig.c:389 ../lib/bootconfig.c:420
-#: ../lib/bootconfig.c:984 ../lib/bootconfig.c:1003
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:73
+#: ../lib/bootconfig.c:110 ../lib/bootconfig.c:132 ../lib/bootconfig.c:216
+#: ../lib/bootconfig.c:245 ../lib/bootconfig.c:259 ../lib/bootconfig.c:270
+#: ../lib/bootconfig.c:282 ../lib/bootconfig.c:294 ../lib/bootconfig.c:308
+#: ../lib/bootconfig.c:344 ../lib/bootconfig.c:375 ../lib/bootconfig.c:409
+#: ../lib/bootconfig.c:465 ../lib/bootconfig.c:515 ../lib/bootconfig.c:546
+#: ../lib/bootconfig.c:1130 ../lib/bootconfig.c:1149
 msgid "**Parameters**"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:37
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:37
 msgid "``const void *data``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:32
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:32
 msgid "Bootconfig data."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:34
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:34
 msgid "``uint32_t size``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:33
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:33
 msgid "The size of the bootconfig data."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:35
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:35
 #: ../include/linux/bootconfig.h:79 ../include/linux/bootconfig.h:90
 #: ../include/linux/bootconfig.h:101 ../include/linux/bootconfig.h:112
 #: ../include/linux/bootconfig.h:142 ../include/linux/bootconfig.h:157
@@ -452,106 +573,107 @@ msgstr ""
 #: ../include/linux/bootconfig.h:201 ../include/linux/bootconfig.h:213
 #: ../include/linux/bootconfig.h:227 ../include/linux/bootconfig.h:246
 #: ../include/linux/bootconfig.h:258 ../include/linux/bootconfig.h:277
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:3
-#: ../lib/bootconfig.c:90 ../lib/bootconfig.c:132 ../lib/bootconfig.c:143
-#: ../lib/bootconfig.c:155 ../lib/bootconfig.c:167 ../lib/bootconfig.c:181
-#: ../lib/bootconfig.c:218 ../lib/bootconfig.c:250 ../lib/bootconfig.c:285
-#: ../lib/bootconfig.c:339 ../lib/bootconfig.c:389 ../lib/bootconfig.c:421
-#: ../lib/bootconfig.c:983 ../lib/bootconfig.c:1005
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:3
+#: ../lib/bootconfig.c:73 ../lib/bootconfig.c:133 ../lib/bootconfig.c:216
+#: ../lib/bootconfig.c:258 ../lib/bootconfig.c:269 ../lib/bootconfig.c:281
+#: ../lib/bootconfig.c:293 ../lib/bootconfig.c:307 ../lib/bootconfig.c:344
+#: ../lib/bootconfig.c:376 ../lib/bootconfig.c:411 ../lib/bootconfig.c:465
+#: ../lib/bootconfig.c:515 ../lib/bootconfig.c:547 ../lib/bootconfig.c:1129
+#: ../lib/bootconfig.c:1151
 msgid "**Description**"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:34
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:34
 msgid ""
 "Calculate the checksum value of the bootconfig data. The checksum will be "
 "used with the BOOTCONFIG_MAGIC and the size for embedding the bootconfig in "
 "the initrd image."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:76
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:76
 msgid "Test the node is a value node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:82
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:82
 #: ../include/linux/bootconfig.h:93 ../include/linux/bootconfig.h:104
 #: ../include/linux/bootconfig.h:115 ../include/linux/bootconfig.h:172
-#: ../include/linux/bootconfig.h:278 ../../../admin-guide/bootconfig:334:
-#: ../lib/bootconfig.c:135 ../lib/bootconfig.c:146 ../lib/bootconfig.c:158
-#: ../lib/bootconfig.c:170 ../lib/bootconfig.c:184 ../lib/bootconfig.c:282
-#: ../lib/bootconfig.c:338
+#: ../include/linux/bootconfig.h:278 ../../../admin-guide/bootconfig:415:
+#: ../lib/bootconfig.c:261 ../lib/bootconfig.c:272 ../lib/bootconfig.c:284
+#: ../lib/bootconfig.c:296 ../lib/bootconfig.c:310 ../lib/bootconfig.c:408
+#: ../lib/bootconfig.c:464
 msgid "``struct xbc_node *node``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:77
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:77
 #: ../include/linux/bootconfig.h:88 ../include/linux/bootconfig.h:99
 #: ../include/linux/bootconfig.h:110 ../include/linux/bootconfig.h:198
 #: ../include/linux/bootconfig.h:210 ../include/linux/bootconfig.h:222
 #: ../include/linux/bootconfig.h:242 ../include/linux/bootconfig.h:273
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:141
-#: ../lib/bootconfig.c:153 ../lib/bootconfig.c:165 ../lib/bootconfig.c:179
-#: ../lib/bootconfig.c:215 ../lib/bootconfig.c:246
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:267
+#: ../lib/bootconfig.c:279 ../lib/bootconfig.c:291 ../lib/bootconfig.c:305
+#: ../lib/bootconfig.c:341 ../lib/bootconfig.c:372
 msgid "An XBC node."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:78
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:78
 msgid ""
 "Test the **node** is a value node and return true if a value node, false if "
 "not."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:87
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:87
 msgid "Test the node is a key node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:89
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:89
 msgid ""
 "Test the **node** is a key node and return true if a key node, false if not."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:98
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:98
 msgid "Test the node is an arraied value node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:100
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:100
 msgid "Test the **node** is an arraied value node."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:109
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:109
 msgid "Test the node is a leaf key node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:111
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:111
 msgid ""
 "Test the **node** is a leaf key node which is a key node and has a value "
 "node or no child. Returns true if it is a leaf node, or false if not. Note "
 "that the leaf node can have subkey nodes in addition to the value node."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:138
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:138
 msgid "Find a value which matches the key"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:144
-#: ../include/linux/bootconfig.h:160 ../../../admin-guide/bootconfig:334:
-#: ../lib/bootconfig.c:217 ../lib/bootconfig.c:248
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:144
+#: ../include/linux/bootconfig.h:160 ../../../admin-guide/bootconfig:415:
+#: ../lib/bootconfig.c:343 ../lib/bootconfig.c:374
 msgid "``const char *key``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:139
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:139
 #: ../include/linux/bootconfig.h:155
 msgid "Search key"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:141
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:249
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:141
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:375
 msgid "``struct xbc_node **vnode``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:140
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:140
 msgid "A container pointer of XBC value node."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:141
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:141
 msgid ""
 "Search a value whose key matches **key** from whole of XBC tree and return "
 "the value if found. Found value node is stored in ***vnode**. Note that this "
@@ -559,137 +681,137 @@ msgid ""
 "value) entry."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:154
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:154
 msgid "Find a node which matches the key"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:156
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:156
 msgid ""
 "Search a (key) node whose key matches **key** from whole of XBC tree and "
 "return the node if found. If not found, returns NULL."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:166
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:166
 msgid "Return the first subkey node if exists"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:167
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:167
 msgid "Parent node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:168
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:168
 msgid ""
 "Return the first subkey node of the **node**. If the **node** has no child "
 "or only value node, this will return NULL."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:185
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:185
 msgid "``xbc_array_for_each_value (anode, value)``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:183
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:183
 msgid "Iterate value nodes on an array"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:189
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:189
 #: ../include/linux/bootconfig.h:225
 msgid "``anode``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:184
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:184
 msgid "An XBC arraied value node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:186
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:186
 #: ../include/linux/bootconfig.h:226 ../include/linux/bootconfig.h:245
 #: ../include/linux/bootconfig.h:257
 msgid "``value``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:185
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:185
 msgid "A value"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:186
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:186
 msgid ""
 "Iterate array value nodes and values starts from **anode**. This is expected "
 "to be used with xbc_find_value() and xbc_node_find_value(), so that user can "
 "process each array entry node."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:199
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:199
 msgid "``xbc_node_for_each_child (parent, child)``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:197
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:197
 msgid "Iterate child nodes"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:203
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:203
 #: ../include/linux/bootconfig.h:215
 msgid "``parent``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:200
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:200
 #: ../include/linux/bootconfig.h:212
 msgid "``child``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:199
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:199
 #: ../include/linux/bootconfig.h:211
 msgid "Iterated XBC node."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:200
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:200
 msgid ""
 "Iterate child nodes of **parent**. Each child nodes are stored to **child**. "
 "The **child** can be mixture of a value node and subkey nodes."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:211
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:211
 msgid "``xbc_node_for_each_subkey (parent, child)``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:209
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:209
 msgid "Iterate child subkey nodes"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:212
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:212
 msgid ""
 "Iterate subkey nodes of **parent**. Each child nodes are stored to "
 "**child**. The **child** is only the subkey node."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:223
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:223
 msgid "``xbc_node_for_each_array_value (node, key, anode, value)``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:221
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:221
 msgid "Iterate array entries of geven key"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:227
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:227
 #: ../include/linux/bootconfig.h:247
 msgid "``node``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:224
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:224
 msgid "``key``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:223
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:223
 msgid "A key string searched under **node**"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:224
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:224
 msgid "Iterated XBC node of array entry."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:225
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:225
 msgid "Iterated value of array entry."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:226
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:226
 msgid ""
 "Iterate array entries of given **key** under **node**. Each array entry node "
 "is stored to **anode** and **value**. If the **node** doesn't have **key** "
@@ -699,164 +821,242 @@ msgid ""
 "testing the key-value pair existence."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:243
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:243
 msgid "``xbc_node_for_each_key_value (node, knode, value)``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:241
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:241
 msgid "Iterate key-value pairs under a node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:244
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:244
 #: ../include/linux/bootconfig.h:260
 msgid "``knode``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:243
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:243
 #: ../include/linux/bootconfig.h:255
 msgid "Iterated key node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:244
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:244
 #: ../include/linux/bootconfig.h:256
 msgid "Iterated value string"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:245
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:245
 msgid ""
 "Iterate key-value pairs under **node**. Each key node and value string are "
 "stored in **knode** and **value** respectively."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:256
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:256
 msgid "``xbc_for_each_key_value (knode, value)``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:254
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:254
 msgid "Iterate key-value pairs"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:257
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:257
 msgid ""
 "Iterate key-value pairs in whole XBC tree. Each key node and value string "
 "are stored in **knode** and **value** respectively."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:272
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:272
 msgid "Compose full key string of the XBC node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:275
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:283
-#: ../lib/bootconfig.c:422
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:275
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:409
+#: ../lib/bootconfig.c:548
 msgid "``char *buf``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:274
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:282
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:274
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:408
 msgid "A buffer to store the key."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:276
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:284
-#: ../lib/bootconfig.c:419 ../lib/bootconfig.c:1002
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:276
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:72
+#: ../lib/bootconfig.c:410 ../lib/bootconfig.c:545 ../lib/bootconfig.c:1148
 msgid "``size_t size``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:275
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:283
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:275
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:409
 msgid "The size of the **buf**."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:333: ../include/linux/bootconfig.h:276
+#: ../../../admin-guide/bootconfig:414: ../include/linux/bootconfig.h:276
 msgid ""
 "Compose the full-length key of the **node** into **buf**. Returns the total "
 "length of the key stored in **buf**. Or returns -EINVAL if **node** is NULL, "
 "and -ERANGE if the key depth is deeper than max depth."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:86
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:69
+msgid "Prepend embedded bootconfig cmdline"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:75
+msgid "``char *dst``"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:70
+msgid "cmdline buffer to prepend into (must already contain a NUL byte)"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:71
+msgid "total capacity of **dst** in bytes"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:72
+msgid ""
+"Prepend the build-time-rendered \"kernel\" subtree of the embedded "
+"bootconfig to **dst**. The rendered string already ends with a single space "
+"(the xbc_snprint_cmdline() invariant), which serves as the separator between "
+"the embedded keys and any existing content of **dst**. On overflow, log an "
+"error and leave **dst** untouched rather than silently truncating: booting "
+"without the embedded values is better than refusing to boot, and the error "
+"message tells the user why their embedded keys are missing."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:81
+msgid ""
+"Intended to be called from setup_arch() before parse_early_param() so that "
+"early_param() handlers see the embedded values."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:106
+msgid "Did the embedded cmdline get prepended?"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:112
+#: ../lib/bootconfig.c:247
+msgid "``void``"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1
+msgid "no arguments"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:107
+msgid ""
+"Return true if xbc_prepend_embedded_cmdline() actually prepended the "
+"embedded \"kernel\" subtree. setup_boot_config() uses this to avoid "
+"rendering the same keys a second time."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:128
+msgid "Was \"bootconfig\" passed on the cmdline?"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:134
+msgid "``const char *boot_cmdline``"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:129
+msgid "kernel command line to inspect (not modified)"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:131
+msgid "``int *end_offset``"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:130
+msgid ""
+"if non-NULL, set to the offset of the init arguments that follow a \"--\" "
+"separator, or 0 when there is none"
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:132
+msgid ""
+"Parse a private copy of **boot_cmdline** (parse_args() is destructive) and "
+"report whether \"bootconfig\" is present before the \"--\" separator. "
+"setup_arch() uses this to gate prepending the build-time embedded cmdline; "
+"setup_boot_config() uses it for the runtime opt-in and to locate the init "
+"arguments via **end_offset**. Sharing one parser keeps the early and late "
+"paths agreeing on what counts as opt-in. CONFIG_BOOT_CONFIG_FORCE is not "
+"folded in here; callers apply it where they need it."
+msgstr ""
+
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:212
 msgid "Get the information of loaded boot config"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:92
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:218
 msgid "``int *node_size``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:87
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:213
 msgid "A pointer to store the number of nodes."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:89
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:215
 msgid "``size_t *data_size``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:88
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:214
 msgid "A pointer to store the size of bootconfig data."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:89
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:215
 msgid ""
 "Get the number of used nodes in **node_size** if it is not NULL, and the "
 "size of bootconfig data in **data_size** if it is not NULL. Return 0 if the "
 "boot config is initialized, or return -ENODEV."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:115
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:241
 msgid "Get the root node of extended boot config"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:121
-msgid "``void``"
-msgstr ""
-
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:1
-msgid "no arguments"
-msgstr ""
-
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:116
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:242
 msgid ""
 "Return the address of root node of extended boot config. If the extended "
 "boot config is not initialized, return NULL."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:129
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:255
 msgid "Get the index of XBC node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:130
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:256
 msgid "A target node of getting index."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:131
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:257
 msgid "Return the index number of **node** in XBC node list."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:140
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:266
 msgid "Get the parent XBC node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:142
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:268
 msgid ""
 "Return the parent node of **node**. If the node is top node of the tree, "
 "return NULL."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:152
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:278
 msgid "Get the child XBC node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:154
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:280
 msgid ""
 "Return the first child node of **node**. If the node has no child, return "
 "NULL."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:164
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:290
 msgid "Get the next sibling XBC node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:166
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:292
 msgid ""
 "Return the NEXT sibling node of **node**. If the node has no next sibling, "
 "return NULL. Note that even if this returns NULL, it doesn't mean **node** "
@@ -864,46 +1064,46 @@ msgid ""
 "**node** or not.)"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:178
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:304
 msgid "Get the data of XBC node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:180
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:306
 msgid ""
 "Return the data (which is always a null terminated string) of **node**. If "
 "the node has invalid data, warn and return NULL."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:214
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:340
 msgid "Find a subkey node which matches given key"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:220
-#: ../lib/bootconfig.c:251
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:346
+#: ../lib/bootconfig.c:377
 msgid "``struct xbc_node *parent``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:216
-#: ../lib/bootconfig.c:247
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:342
+#: ../lib/bootconfig.c:373
 msgid "A key string."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:217
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:343
 msgid ""
 "Search a key node under **parent** which matches **key**. The **key** can "
 "contain several words jointed with '.'. If **parent** is NULL, this searches "
 "the node from whole tree. Return NULL if no node is matched."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:245
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:371
 msgid "Find a value node which matches given key"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:248
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:374
 msgid "A container pointer of found XBC node."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:249
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:375
 msgid ""
 "Search a value node under **parent** whose (parent) key node matches "
 "**key**, store it in ***vnode**, and returns the value string. The **key** "
@@ -914,24 +1114,24 @@ msgid ""
 "will return the value of the first entry if the value is an array."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:279
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:405
 msgid "Compose partial key string of the XBC node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:285
-#: ../lib/bootconfig.c:341 ../lib/bootconfig.c:391 ../lib/bootconfig.c:420
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:411
+#: ../lib/bootconfig.c:467 ../lib/bootconfig.c:517 ../lib/bootconfig.c:546
 msgid "``struct xbc_node *root``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:280
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:406
 msgid "Root XBC node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:281
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:407
 msgid "Target XBC node."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:284
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:410
 msgid ""
 "Compose the partial key of the **node** into **buf**, which is starting "
 "right after **root** (**root** is not included.) If **root** is NULL, this "
@@ -942,39 +1142,39 @@ msgid ""
 "xbc_find_node() to list up all (child) keys under given key."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:335
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:461
 msgid "Find the next leaf node under given node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:336
-#: ../lib/bootconfig.c:386
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:462
+#: ../lib/bootconfig.c:512
 msgid "An XBC root node"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:337
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:463
 msgid "An XBC node which starts from."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:338
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:464
 msgid ""
 "Search the next leaf node (which means the terminal key node) of **node** "
 "under **root** node (including **root** node itself). Return the next node "
 "or NULL if next leaf node is not found."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:385
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:511
 msgid "Find the next key-value pair nodes"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:388
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:514
 msgid "``struct xbc_node **leaf``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:387
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:513
 msgid "A container pointer of XBC node which starts from."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:388
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:514
 msgid ""
 "Search the next leaf node (which means the terminal key node) of ***leaf** "
 "under **root** node. Returns the value and update ***leaf** if next leaf "
@@ -983,23 +1183,23 @@ msgid ""
 "the value is an array."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:416
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:542
 msgid "Render bootconfig keys under **root** as a cmdline string"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:417
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:543
 msgid "Destination buffer (may be NULL when **size** is 0 to query the length)"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:418
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:544
 msgid "Size of **buf** in bytes"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:419
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:545
 msgid "Subtree root whose key=value pairs should be rendered"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:420
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:546
 msgid ""
 "Walk all key/value pairs under **root** and emit them as a space-separated "
 "cmdline string into **buf**. Values containing whitespace are quoted with "
@@ -1008,57 +1208,57 @@ msgid ""
 "failure."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:980
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1126
 msgid "Clean up all parsed bootconfig"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:986
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1132
 msgid "``bool early``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:981
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1127
 msgid "Set true if this is called before budy system is initialized."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:982
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1128
 msgid ""
 "This clears all data structures of parsed bootconfig on memory. If you need "
 "to reuse xbc_init() with new boot config, you can use this."
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:999
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1145
 msgid "Parse given XBC file and build XBC internal tree"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:1005
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1151
 msgid "``const char *data``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:1000
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1146
 msgid "The boot config text original data"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:1001
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1147
 msgid "The size of **data**"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:1003
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1149
 msgid "``const char **emsg``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:1002
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1148
 msgid "A pointer of const char * to store the error message"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:1004
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1150
 msgid "``int *epos``"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:1003
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1149
 msgid "A pointer of int to store the error position"
 msgstr ""
 
-#: ../../../admin-guide/bootconfig:334: ../lib/bootconfig.c:1004
+#: ../../../admin-guide/bootconfig:415: ../lib/bootconfig.c:1150
 msgid ""
 "This parses the boot config text in **data**. **size** must be smaller than "
 "XBC_DATA_MAX. Return the number of stored nodes (>0) if succeeded, or -errno "

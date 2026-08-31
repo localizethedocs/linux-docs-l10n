@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"POT-Creation-Date: 2026-08-31 16:07+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -109,13 +109,13 @@ msgstr ""
 msgid ""
 "Cyclic work: real-time thread sleeps waiting for the next cycle. For this "
 "case, only the `clock_nanosleep` syscall should be used with `TIMER_ABSTIME` "
-"(to avoid time drift) and `CLOCK_MONOTONIC` (to avoid the clock being "
-"changed). No other method is safe for real-time. For example, threads "
-"waiting for timerfd can be woken by softirq which provides no real-time "
-"guarantee."
+"(to avoid time drift). Additionally, `CLOCK_REALTIME` should not be used (to "
+"avoid the clock being changed). No other method is safe for real-time. For "
+"example, threads waiting for timerfd can be woken by softirq which provides "
+"no real-time guarantee."
 msgstr ""
 
-#: ../../../trace/rv/monitor_rtapp.rst:60
+#: ../../../trace/rv/monitor_rtapp.rst:61
 msgid ""
 "Real-time thread waiting for something to happen (e.g. another thread "
 "releasing shared resources, or a completion signal from another thread). In "
@@ -130,47 +130,53 @@ msgstr ""
 
 #: ../../../trace/rv/monitor_rtapp.rst:70
 msgid ""
+"Real-time thread waiting for events using `epoll_wait`, which is a real-time-"
+"safe syscall for sleeping as it uses PI-aware locking."
+msgstr ""
+
+#: ../../../trace/rv/monitor_rtapp.rst:73
+msgid ""
 "Beside the reason for sleeping, the eventual waker should also be real-time-"
 "safe. Namely, one of:"
 msgstr ""
 
-#: ../../../trace/rv/monitor_rtapp.rst:73
+#: ../../../trace/rv/monitor_rtapp.rst:76
 msgid "An equal-or-higher-priority thread"
 msgstr ""
 
-#: ../../../trace/rv/monitor_rtapp.rst:74
+#: ../../../trace/rv/monitor_rtapp.rst:77
 msgid "Hard interrupt handler"
 msgstr ""
 
-#: ../../../trace/rv/monitor_rtapp.rst:75
+#: ../../../trace/rv/monitor_rtapp.rst:78
 msgid "Non-maskable interrupt handler"
 msgstr ""
 
-#: ../../../trace/rv/monitor_rtapp.rst:77
+#: ../../../trace/rv/monitor_rtapp.rst:80
 msgid "This monitor's warning usually means one of the following:"
 msgstr ""
 
-#: ../../../trace/rv/monitor_rtapp.rst:79
+#: ../../../trace/rv/monitor_rtapp.rst:82
 msgid ""
 "Real-time thread is blocked by a non-real-time thread (e.g. due to "
 "contention on a mutex without priority inheritance). This is priority "
 "inversion."
 msgstr ""
 
-#: ../../../trace/rv/monitor_rtapp.rst:82
+#: ../../../trace/rv/monitor_rtapp.rst:85
 msgid ""
 "Time-critical work waits for something which is not safe for real-time (e.g. "
 "timerfd)."
 msgstr ""
 
-#: ../../../trace/rv/monitor_rtapp.rst:84
+#: ../../../trace/rv/monitor_rtapp.rst:87
 msgid ""
 "The work executed by the real-time thread does not need to run at real-time "
 "priority at all.  This is not a problem for the real-time thread itself, but "
 "it is potentially taking the CPU away from other important real-time work."
 msgstr ""
 
-#: ../../../trace/rv/monitor_rtapp.rst:88
+#: ../../../trace/rv/monitor_rtapp.rst:91
 msgid ""
 "Application developers may purposely choose to have their real-time "
 "application sleep in a way that is not safe for real-time. It is debatable "
@@ -178,35 +184,25 @@ msgid ""
 "to make a proper assessment."
 msgstr ""
 
-#: ../../../trace/rv/monitor_rtapp.rst:93
+#: ../../../trace/rv/monitor_rtapp.rst:96
 msgid "The monitor's specification is::"
 msgstr ""
 
-#: ../../../trace/rv/monitor_rtapp.rst:117
+#: ../../../trace/rv/monitor_rtapp.rst:119
 msgid ""
-"Beside the scenarios described above, this specification also handle some "
-"special cases:"
-msgstr ""
-
-#: ../../../trace/rv/monitor_rtapp.rst:120
-msgid ""
-"`KERNEL_THREAD`: kernel tasks do not have any pattern that can be recognized "
-"as valid real-time sleeping reasons. Therefore sleeping reason is not "
-"checked for kernel tasks."
+"`ABORT_SLEEP` represents a task restoring its state to `TASK_RUNNING` before "
+"entering the scheduler. In this case, the task does not actually block, so "
+"the task is back to runnable without any wakeup sequence unsafe for real-"
+"time."
 msgstr ""
 
 #: ../../../trace/rv/monitor_rtapp.rst:123
 msgid ""
-"`KTHREAD_SHOULD_STOP`: a non-real-time thread may stop a real-time kernel "
-"thread by waking it and waiting for it to exit (`kthread_stop()`). This "
-"wakeup is safe for real-time."
+"Beside the scenarios described above, this specification also defines an "
+"allow list to handle some special cases:"
 msgstr ""
 
 #: ../../../trace/rv/monitor_rtapp.rst:126
-msgid "`ALLOWLIST`: to handle known false positives with the kernel."
-msgstr ""
-
-#: ../../../trace/rv/monitor_rtapp.rst:127
 msgid ""
 "`BLOCK_ON_RT_MUTEX` is included in the allowlist due to its implementation. "
 "In the release path of rt_mutex, a boosted task is de-boosted before waking "
@@ -215,8 +211,30 @@ msgid ""
 "real-time-safe because preemption is disabled for the duration."
 msgstr ""
 
-#: ../../../trace/rv/monitor_rtapp.rst:132
+#: ../../../trace/rv/monitor_rtapp.rst:131
 msgid ""
 "`FUTEX_LOCK_PI` is included in the allowlist for the same reason as "
 "`BLOCK_ON_RT_MUTEX`."
+msgstr ""
+
+#: ../../../trace/rv/monitor_rtapp.rst:135
+msgid "Monitor wakeup"
+msgstr ""
+
+#: ../../../trace/rv/monitor_rtapp.rst:137
+msgid ""
+"The `wakeup` monitor reports real-time threads being woken by lower-priority "
+"threads, which is a hint of priority inversion. Its specification is::"
+msgstr ""
+
+#: ../../../trace/rv/monitor_rtapp.rst:146
+msgid ""
+"The `sleep` monitor already reports this type of problem. The difference is "
+"the context in which the problem is reported. While the `sleep` monitor "
+"reports the problem in the context of the wakee, this `wakeup` monitor "
+"reports the problem in the context of the waker. This monitor complement the "
+"`sleep` monitor, giving user better understanding of the issue. For "
+"instance, to debug a lower-priority task waking a higher-priority task "
+"scenario, user can enable both `wakeup` monitor and `sleep` monitor to get "
+"the stack traces of both tasks."
 msgstr ""
