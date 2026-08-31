@@ -1,0 +1,301 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-10-06 15:47+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../power/suspend-and-cpuhotplug.rst:3
+msgid "Interaction of Suspend code (S3) with the CPU hotplug infrastructure"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:5
+msgid "2011 - 2014 Srivatsa S. Bhat <srivatsa.bhat@linux.vnet.ibm.com>"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:9
+msgid "I. Differences between CPU hotplug and Suspend-to-RAM"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:11
+msgid ""
+"How does the regular CPU hotplug code differ from how the Suspend-to-RAM "
+"infrastructure uses it internally? And where do they share common code?"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:14
+msgid "Well, a picture is worth a thousand words... So ASCII art follows :-)"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:16
+msgid ""
+"[This depicts the current design in the kernel, and focuses only on the "
+"interactions involving the freezer and CPU hotplug and also tries to explain "
+"the locking involved. It outlines the notifications involved as well. But "
+"please note that here, only the call paths are illustrated, with the aim of "
+"describing where they take different paths and where they share code. What "
+"happens when regular CPU hotplug and Suspend-to-RAM race with each other is "
+"not depicted here.]"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:24
+msgid "On a high level, the suspend-resume cycle goes like this::"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:30
+msgid "More details follow::"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:93
+msgid ""
+"Resuming back is likewise, with the counterparts being (in the order of "
+"execution during resume):"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:96
+msgid "thaw_secondary_cpus() which involves::"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:104
+msgid "thaw tasks"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:105
+msgid "send PM_POST_SUSPEND notifications"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:106
+msgid "Release system_transition_mutex lock."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:109
+msgid ""
+"It is to be noted here that the system_transition_mutex lock is acquired at "
+"the very beginning, when we are just starting out to suspend, and then "
+"released only after the entire cycle is complete (i.e., suspend + resume)."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:153
+msgid ""
+"So, as can be seen from the two diagrams (the parts marked as \"Common "
+"code\"), regular CPU hotplug and the suspend code path converge at the "
+"_cpu_down() and _cpu_up() functions. They differ in the arguments passed to "
+"these functions, in that during regular CPU hotplug, 0 is passed for the "
+"'tasks_frozen' argument. But during suspend, since the tasks are already "
+"frozen by the time the non-boot CPUs are offlined or onlined, the _cpu_*() "
+"functions are called with the 'tasks_frozen' argument set to 1. [See below "
+"for some known issues regarding this.]"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:164
+msgid "Important files and functions/entry points:"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:166
+msgid "kernel/power/process.c : freeze_processes(), thaw_processes()"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:167
+msgid ""
+"kernel/power/suspend.c : suspend_prepare(), suspend_enter(), suspend_finish()"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:168
+msgid ""
+"kernel/cpu.c: cpu_[up|down](), _cpu_[up|down](), [disable|"
+"enable]_nonboot_cpus()"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:174
+msgid "II. What are the issues involved in CPU hotplug?"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:176
+msgid ""
+"There are some interesting situations involving CPU hotplug and microcode "
+"update on the CPUs, as discussed below:"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:179
+msgid ""
+"[Please bear in mind that the kernel requests the microcode images from "
+"userspace, using the request_firmware() function defined in drivers/base/"
+"firmware_loader/main.c]"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:184
+msgid "When all the CPUs are identical:"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:186
+msgid ""
+"This is the most common situation and it is quite straightforward: we want "
+"to apply the same microcode revision to each of the CPUs. To give an example "
+"of x86, the collect_cpu_info() function defined in arch/x86/kernel/"
+"microcode_core.c helps in discovering the type of the CPU and thereby in "
+"applying the correct microcode revision to it. But note that the kernel does "
+"not maintain a common microcode image for the all CPUs, in order to handle "
+"case 'b' described below."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:195
+msgid "When some of the CPUs are different than the rest:"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:197
+msgid ""
+"In this case since we probably need to apply different microcode revisions "
+"to different CPUs, the kernel maintains a copy of the correct microcode "
+"image for each CPU (after appropriate CPU type/model discovery using "
+"functions such as collect_cpu_info())."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:203
+msgid ""
+"When a CPU is physically hot-unplugged and a new (and possibly different "
+"type of) CPU is hot-plugged into the system:"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:206
+msgid ""
+"In the current design of the kernel, whenever a CPU is taken offline during "
+"a regular CPU hotplug operation, upon receiving the CPU_DEAD notification "
+"(which is sent by the CPU hotplug code), the microcode update driver's "
+"callback for that event reacts by freeing the kernel's copy of the microcode "
+"image for that CPU."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:212
+msgid ""
+"Hence, when a new CPU is brought online, since the kernel finds that it "
+"doesn't have the microcode image, it does the CPU type/model discovery "
+"afresh and then requests the userspace for the appropriate microcode image "
+"for that CPU, which is subsequently applied."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:217
+msgid ""
+"For example, in x86, the mc_cpu_callback() function (which is the microcode "
+"update driver's callback registered for CPU hotplug events) calls "
+"microcode_update_cpu() which would call microcode_init_cpu() in this case, "
+"instead of microcode_resume_cpu() when it finds that the kernel doesn't have "
+"a valid microcode image. This ensures that the CPU type/model discovery is "
+"performed and the right microcode is applied to the CPU after getting it "
+"from userspace."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:226
+msgid "Handling microcode update during suspend/hibernate:"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:228
+msgid ""
+"Strictly speaking, during a CPU hotplug operation which does not involve "
+"physically removing or inserting CPUs, the CPUs are not actually powered off "
+"during a CPU offline. They are just put to the lowest C-states possible. "
+"Hence, in such a case, it is not really necessary to re-apply microcode when "
+"the CPUs are brought back online, since they wouldn't have lost the image "
+"during the CPU offline operation."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:235
+msgid ""
+"This is the usual scenario encountered during a resume after a suspend. "
+"However, in the case of hibernation, since all the CPUs are completely "
+"powered off, during restore it becomes necessary to apply the microcode "
+"images to all the CPUs."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:240
+msgid ""
+"[Note that we don't expect someone to physically pull out nodes and insert "
+"nodes with a different type of CPUs in-between a suspend-resume or a "
+"hibernate/restore cycle.]"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:244
+msgid ""
+"In the current design of the kernel however, during a CPU offline operation "
+"as part of the suspend/hibernate cycle (cpuhp_tasks_frozen is set), the "
+"existing copy of microcode image in the kernel is not freed up. And during "
+"the CPU online operations (during resume/restore), since the kernel finds "
+"that it already has copies of the microcode images for all the CPUs, it just "
+"applies them to the CPUs, avoiding any re-discovery of CPU type/model and "
+"the need for validating whether the microcode revisions are right for the "
+"CPUs or not (due to the above assumption that physical CPU hotplug will not "
+"be done in-between suspend/resume or hibernate/restore cycles)."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:257
+msgid "III. Known problems"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:259
+msgid ""
+"Are there any known problems when regular CPU hotplug and suspend race with "
+"each other?"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:262
+msgid "Yes, they are listed below:"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:264
+msgid ""
+"When invoking regular CPU hotplug, the 'tasks_frozen' argument passed to the "
+"_cpu_down() and _cpu_up() functions is *always* 0. This might not reflect "
+"the true current state of the system, since the tasks could have been frozen "
+"by an out-of-band event such as a suspend operation in progress. Hence, the "
+"cpuhp_tasks_frozen variable will not reflect the frozen state and the CPU "
+"hotplug callbacks which evaluate that variable might execute the wrong code "
+"path."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:272
+msgid ""
+"If a regular CPU hotplug stress test happens to race with the freezer due to "
+"a suspend operation in progress at the same time, then we could hit the "
+"situation described below:"
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:276
+msgid ""
+"A regular cpu online operation continues its journey from userspace into the "
+"kernel, since the freezing has not yet begun."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:278
+msgid "Then freezer gets to work and freezes userspace."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:279
+msgid ""
+"If cpu online has not yet completed the microcode update stuff by now, it "
+"will now start waiting on the frozen userspace in the TASK_UNINTERRUPTIBLE "
+"state, in order to get the microcode image."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:282
+msgid ""
+"Now the freezer continues and tries to freeze the remaining tasks. But due "
+"to this wait mentioned above, the freezer won't be able to freeze the cpu "
+"online hotplug task and hence freezing of tasks fails."
+msgstr ""
+
+#: ../../../power/suspend-and-cpuhotplug.rst:286
+msgid ""
+"As a result of this task freezing failure, the suspend operation gets "
+"aborted."
+msgstr ""
