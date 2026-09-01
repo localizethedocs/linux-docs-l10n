@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>MMUv3 initialization sequence &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/arch/xtensa/mmu.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜索" href="../../search.html" />
+    <link rel="next" title="Feature status on xtensa architecture" href="features.html" />
+    <link rel="prev" title="Passing boot parameters to the kernel" href="booting.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">CPU architectures</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../arc/index.html">ARC architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../arm/index.html">ARM Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../arm64/index.html">ARM64 Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loongarch/index.html">LoongArch Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../m68k/index.html">m68k Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../mips/index.html">MIPS-specific Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../nios2/index.html">Nios II Specific Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../openrisc/index.html">OpenRISC Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../parisc/index.html">PA-RISC Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../powerpc/index.html">powerpc</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../riscv/index.html">RISC-V architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../s390/index.html">s390 Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../sh/index.html">SuperH Interfaces Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../sparc/index.html">Sparc Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../x86/index.html">x86-specific Documentation</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html">Xtensa Architecture</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="atomctl.html">Atomic Operation Control (ATOMCTL) Register</a></li>
+<li class="toctree-l3"><a class="reference internal" href="booting.html">Passing boot parameters to the kernel</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">MMUv3 initialization sequence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="features.html">Feature status on xtensa architecture</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/arch/xtensa/mmu.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="mmuv3-initialization-sequence">
+<h1>MMUv3 initialization sequence<a class="headerlink" href="#mmuv3-initialization-sequence" title="Link to this heading">¶</a></h1>
+<p>The code in the initialize_mmu macro sets up MMUv3 memory mapping
+identically to MMUv2 fixed memory mapping. Depending on
+CONFIG_INITIALIZE_XTENSA_MMU_INSIDE_VMLINUX symbol this code is
+located in addresses it was linked for (symbol undefined), or not
+(symbol defined), so it needs to be position-independent.</p>
+<p>The code has the following assumptions:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>This code fragment is run only on an MMU v3.</p></li>
+<li><p>TLBs are in their reset state.</p></li>
+<li><p>ITLBCFG and DTLBCFG are zero (reset state).</p></li>
+<li><p>RASID is 0x04030201 (reset state).</p></li>
+<li><p>PS.RING is zero (reset state).</p></li>
+<li><p>LITBASE is zero (reset state, PC-relative literals); required to be PIC.</p></li>
+</ul>
+</div></blockquote>
+<p>TLB setup proceeds along the following steps.</p>
+<blockquote>
+<div><p>Legend:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>VA = virtual address (two upper nibbles of it);</p></li>
+<li><p>PA = physical address (two upper nibbles of it);</p></li>
+<li><p>pc = physical range that contains this code;</p></li>
+</ul>
+</div></blockquote>
+</div></blockquote>
+<p>After step 2, we jump to virtual address in the range 0x40000000..0x5fffffff
+or 0x00000000..0x1fffffff, depending on whether the kernel was loaded below
+0x40000000 or above. That address corresponds to next instruction to execute
+in this code. After step 4, we jump to intended (linked) address of this code.
+The scheme below assumes that the kernel is loaded below 0x40000000.</p>
+<blockquote>
+<div><table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><ul class="simple">
+<li></li>
+</ul>
+</th>
+<th class="head"><p>Step0</p></th>
+<th class="head"><p>Step1</p></th>
+<th class="head"><p>Step2</p></th>
+<th class="head"><p>Step3</p></th>
+<th class="head"></th>
+<th class="head"><p>Step4</p></th>
+<th class="head"><p>Step5</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>VA</p></th>
+<th class="head"><p>PA</p></th>
+<th class="head"><p>PA</p></th>
+<th class="head"><p>PA</p></th>
+<th class="head"><p>PA</p></th>
+<th class="head"><p>VA</p></th>
+<th class="head"><p>PA</p></th>
+<th class="head"><p>PA</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td><p>E0..FF</p></td>
+<td><p>-&gt; E0</p></td>
+<td><p>-&gt; E0</p></td>
+<td><p>-&gt; E0</p></td>
+<td></td>
+<td><p>F0..FF</p></td>
+<td><p>-&gt; F0</p></td>
+<td><p>-&gt; F0</p></td>
+</tr>
+<tr class="row-even"><td><p>C0..DF</p></td>
+<td><p>-&gt; C0</p></td>
+<td><p>-&gt; C0</p></td>
+<td><p>-&gt; C0</p></td>
+<td></td>
+<td><p>E0..EF</p></td>
+<td><p>-&gt; F0</p></td>
+<td><p>-&gt; F0</p></td>
+</tr>
+<tr class="row-odd"><td><p>A0..BF</p></td>
+<td><p>-&gt; A0</p></td>
+<td><p>-&gt; A0</p></td>
+<td><p>-&gt; A0</p></td>
+<td></td>
+<td><p>D8..DF</p></td>
+<td><p>-&gt; 00</p></td>
+<td><p>-&gt; 00</p></td>
+</tr>
+<tr class="row-even"><td><p>80..9F</p></td>
+<td><p>-&gt; 80</p></td>
+<td><p>-&gt; 80</p></td>
+<td><p>-&gt; 80</p></td>
+<td></td>
+<td><p>D0..D7</p></td>
+<td><p>-&gt; 00</p></td>
+<td><p>-&gt; 00</p></td>
+</tr>
+<tr class="row-odd"><td><p>60..7F</p></td>
+<td><p>-&gt; 60</p></td>
+<td><p>-&gt; 60</p></td>
+<td><p>-&gt; 60</p></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>40..5F</p></td>
+<td><p>-&gt; 40</p></td>
+<td></td>
+<td><p>-&gt; pc</p></td>
+<td><p>-&gt; pc</p></td>
+<td><p>40..5F</p></td>
+<td><p>-&gt; pc</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>20..3F</p></td>
+<td><p>-&gt; 20</p></td>
+<td><p>-&gt; 20</p></td>
+<td><p>-&gt; 20</p></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>00..1F</p></td>
+<td><p>-&gt; 00</p></td>
+<td><p>-&gt; 00</p></td>
+<td><p>-&gt; 00</p></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<p>The default location of IO peripherals is above 0xf0000000. This may be changed
+using a &quot;ranges&quot; property in a device tree simple-bus node. See the Devicetree
+Specification, section 4.5 for details on the syntax and semantics of
+simple-bus nodes. The following limitations apply:</p>
+<ol class="arabic simple">
+<li><p>Only top level simple-bus nodes are considered</p></li>
+<li><p>Only one (first) simple-bus node is considered</p></li>
+<li><p>Empty &quot;ranges&quot; properties are not supported</p></li>
+<li><p>Only the first triplet in the &quot;ranges&quot; property is considered</p></li>
+<li><p>The parent-bus-address value is rounded down to the nearest 256MB boundary</p></li>
+<li><p>The IO area covers the entire 256MB segment of parent-bus-address; the
+&quot;ranges&quot; triplet length field is ignored</p></li>
+</ol>
+<section id="mmuv3-address-space-layouts">
+<h2>MMUv3 address space layouts.<a class="headerlink" href="#mmuv3-address-space-layouts" title="Link to this heading">¶</a></h2>
+<p>Default MMUv2-compatible layout:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>                      Symbol                   VADDR       Size
++------------------+
+| Userspace        |                           0x00000000  TASK_SIZE
++------------------+                           0x40000000
++------------------+
+| Page table       |  XCHAL_PAGE_TABLE_VADDR   0x80000000  XCHAL_PAGE_TABLE_SIZE
++------------------+
+| KASAN shadow map |  KASAN_SHADOW_START       0x80400000  KASAN_SHADOW_SIZE
++------------------+                           0x8e400000
++------------------+
+| VMALLOC area     |  VMALLOC_START            0xc0000000  128MB - 64KB
++------------------+  VMALLOC_END
++------------------+
+| Cache aliasing   |  TLBTEMP_BASE_1           0xc8000000  DCACHE_WAY_SIZE
+| remap area 1     |
++------------------+
+| Cache aliasing   |  TLBTEMP_BASE_2                       DCACHE_WAY_SIZE
+| remap area 2     |
++------------------+
++------------------+
+| KMAP area        |  PKMAP_BASE                           PTRS_PER_PTE *
+|                  |                                       DCACHE_N_COLORS *
+|                  |                                       PAGE_SIZE
+|                  |                                       (4MB * DCACHE_N_COLORS)
++------------------+
+| Atomic KMAP area |  FIXADDR_START                        KM_TYPE_NR *
+|                  |                                       NR_CPUS *
+|                  |                                       DCACHE_N_COLORS *
+|                  |                                       PAGE_SIZE
++------------------+  FIXADDR_TOP              0xcffff000
++------------------+
+| Cached KSEG      |  XCHAL_KSEG_CACHED_VADDR  0xd0000000  128MB
++------------------+
+| Uncached KSEG    |  XCHAL_KSEG_BYPASS_VADDR  0xd8000000  128MB
++------------------+
+| Cached KIO       |  XCHAL_KIO_CACHED_VADDR   0xe0000000  256MB
++------------------+
+| Uncached KIO     |  XCHAL_KIO_BYPASS_VADDR   0xf0000000  256MB
++------------------+
+</pre></div>
+</div>
+<p>256MB cached + 256MB uncached layout:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>                      Symbol                   VADDR       Size
++------------------+
+| Userspace        |                           0x00000000  TASK_SIZE
++------------------+                           0x40000000
++------------------+
+| Page table       |  XCHAL_PAGE_TABLE_VADDR   0x80000000  XCHAL_PAGE_TABLE_SIZE
++------------------+
+| KASAN shadow map |  KASAN_SHADOW_START       0x80400000  KASAN_SHADOW_SIZE
++------------------+                           0x8e400000
++------------------+
+| VMALLOC area     |  VMALLOC_START            0xa0000000  128MB - 64KB
++------------------+  VMALLOC_END
++------------------+
+| Cache aliasing   |  TLBTEMP_BASE_1           0xa8000000  DCACHE_WAY_SIZE
+| remap area 1     |
++------------------+
+| Cache aliasing   |  TLBTEMP_BASE_2                       DCACHE_WAY_SIZE
+| remap area 2     |
++------------------+
++------------------+
+| KMAP area        |  PKMAP_BASE                           PTRS_PER_PTE *
+|                  |                                       DCACHE_N_COLORS *
+|                  |                                       PAGE_SIZE
+|                  |                                       (4MB * DCACHE_N_COLORS)
++------------------+
+| Atomic KMAP area |  FIXADDR_START                        KM_TYPE_NR *
+|                  |                                       NR_CPUS *
+|                  |                                       DCACHE_N_COLORS *
+|                  |                                       PAGE_SIZE
++------------------+  FIXADDR_TOP              0xaffff000
++------------------+
+| Cached KSEG      |  XCHAL_KSEG_CACHED_VADDR  0xb0000000  256MB
++------------------+
+| Uncached KSEG    |  XCHAL_KSEG_BYPASS_VADDR  0xc0000000  256MB
++------------------+
++------------------+
+| Cached KIO       |  XCHAL_KIO_CACHED_VADDR   0xe0000000  256MB
++------------------+
+| Uncached KIO     |  XCHAL_KIO_BYPASS_VADDR   0xf0000000  256MB
++------------------+
+</pre></div>
+</div>
+<p>512MB cached + 512MB uncached layout:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>                      Symbol                   VADDR       Size
++------------------+
+| Userspace        |                           0x00000000  TASK_SIZE
++------------------+                           0x40000000
++------------------+
+| Page table       |  XCHAL_PAGE_TABLE_VADDR   0x80000000  XCHAL_PAGE_TABLE_SIZE
++------------------+
+| KASAN shadow map |  KASAN_SHADOW_START       0x80400000  KASAN_SHADOW_SIZE
++------------------+                           0x8e400000
++------------------+
+| VMALLOC area     |  VMALLOC_START            0x90000000  128MB - 64KB
++------------------+  VMALLOC_END
++------------------+
+| Cache aliasing   |  TLBTEMP_BASE_1           0x98000000  DCACHE_WAY_SIZE
+| remap area 1     |
++------------------+
+| Cache aliasing   |  TLBTEMP_BASE_2                       DCACHE_WAY_SIZE
+| remap area 2     |
++------------------+
++------------------+
+| KMAP area        |  PKMAP_BASE                           PTRS_PER_PTE *
+|                  |                                       DCACHE_N_COLORS *
+|                  |                                       PAGE_SIZE
+|                  |                                       (4MB * DCACHE_N_COLORS)
++------------------+
+| Atomic KMAP area |  FIXADDR_START                        KM_TYPE_NR *
+|                  |                                       NR_CPUS *
+|                  |                                       DCACHE_N_COLORS *
+|                  |                                       PAGE_SIZE
++------------------+  FIXADDR_TOP              0x9ffff000
++------------------+
+| Cached KSEG      |  XCHAL_KSEG_CACHED_VADDR  0xa0000000  512MB
++------------------+
+| Uncached KSEG    |  XCHAL_KSEG_BYPASS_VADDR  0xc0000000  512MB
++------------------+
+| Cached KIO       |  XCHAL_KIO_CACHED_VADDR   0xe0000000  256MB
++------------------+
+| Uncached KIO     |  XCHAL_KIO_BYPASS_VADDR   0xf0000000  256MB
++------------------+
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/arch/xtensa/mmu.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

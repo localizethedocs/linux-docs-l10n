@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Physical Memory Model &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/mm/memory-model.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="When do you need to notify inside page table lock ?" href="mmu_notifier.html" />
+    <link rel="prev" title="Kernel Samepage Merging" href="ksm.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/mm/memory-model.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="physical-memory-model">
+<h1>Physical Memory Model<a class="headerlink" href="#physical-memory-model" title="Link to this heading">¶</a></h1>
+<p>Physical memory in a system may be addressed in different ways. The
+simplest case is when the physical memory starts at address 0 and
+spans a contiguous range up to the maximal address. It could be,
+however, that this range contains small holes that are not accessible
+for the CPU. Then there could be several contiguous ranges at
+completely distinct addresses. And, don't forget about NUMA, where
+different memory banks are attached to different CPUs.</p>
+<p>Linux abstracts this diversity using one of the two memory models:
+FLATMEM and SPARSEMEM. Each architecture defines what
+memory models it supports, what the default memory model is and
+whether it is possible to manually override that default.</p>
+<p>All the memory models track the status of physical page frames using
+<code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code> arranged in one or more arrays.</p>
+<p>Regardless of the selected memory model, there exists one-to-one
+mapping between the physical page frame number (PFN) and the
+corresponding <cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code></cite>.</p>
+<p>Each memory model defines <code class="xref c c-func docutils literal notranslate"><span class="pre">pfn_to_page()</span></code> and <code class="xref c c-func docutils literal notranslate"><span class="pre">page_to_pfn()</span></code>
+helpers that allow the conversion from PFN to <cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code></cite> and vice
+versa.</p>
+<section id="flatmem">
+<h2>FLATMEM<a class="headerlink" href="#flatmem" title="Link to this heading">¶</a></h2>
+<p>The simplest memory model is FLATMEM. This model is suitable for
+non-NUMA systems with contiguous, or mostly contiguous, physical
+memory.</p>
+<p>In the FLATMEM memory model, there is a global <cite>mem_map</cite> array that
+maps the entire physical memory. For most architectures, the holes
+have entries in the <cite>mem_map</cite> array. The <cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code></cite> objects
+corresponding to the holes are never fully initialized.</p>
+<p>To allocate the <cite>mem_map</cite> array, architecture specific setup code should
+call <code class="xref c c-func docutils literal notranslate"><span class="pre">free_area_init()</span></code> function. Yet, the mappings array is not
+usable until the call to <a class="reference internal" href="../core-api/boot-time-mm.html#c.memblock_free_all" title="memblock_free_all"><code class="xref c c-func docutils literal notranslate"><span class="pre">memblock_free_all()</span></code></a> that hands all the
+memory to the page allocator.</p>
+<p>An architecture may free parts of the <cite>mem_map</cite> array that do not cover the
+actual physical pages. In such case, the architecture specific
+<a class="reference internal" href="../core-api/mm-api.html#c.pfn_valid" title="pfn_valid"><code class="xref c c-func docutils literal notranslate"><span class="pre">pfn_valid()</span></code></a> implementation should take the holes in the
+<cite>mem_map</cite> into account.</p>
+<p>With FLATMEM, the conversion between a PFN and the <cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code></cite> is
+straightforward: <cite>PFN - ARCH_PFN_OFFSET</cite> is an index to the
+<cite>mem_map</cite> array.</p>
+<p>The <cite>ARCH_PFN_OFFSET</cite> defines the first page frame number for
+systems with physical memory starting at address different from 0.</p>
+</section>
+<section id="sparsemem">
+<h2>SPARSEMEM<a class="headerlink" href="#sparsemem" title="Link to this heading">¶</a></h2>
+<p>SPARSEMEM is the most versatile memory model available in Linux and it
+is the only memory model that supports several advanced features such
+as hot-plug and hot-remove of the physical memory, alternative memory
+maps for non-volatile memory devices and deferred initialization of
+the memory map for larger systems.</p>
+<p>The SPARSEMEM model presents the physical memory as a collection of
+sections. A section is represented with <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">mem_section</span></code>
+that contains <cite>section_mem_map</cite> that is, logically, a pointer to an
+array of <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">pages</span></code>. However, it is stored with some other magic
+that aids the sections management. The section size and maximal number
+of section is specified using <cite>SECTION_SIZE_BITS</cite> and
+<cite>MAX_PHYSMEM_BITS</cite> constants defined by each architecture that
+supports SPARSEMEM. While <cite>MAX_PHYSMEM_BITS</cite> is an actual width of a
+physical address that an architecture supports, the
+<cite>SECTION_SIZE_BITS</cite> is an arbitrary value.</p>
+<p>The maximal number of sections is denoted <cite>NR_MEM_SECTIONS</cite> and
+defined as</p>
+<div class="math notranslate nohighlight">
+\[NR\_MEM\_SECTIONS = 2 ^ {(MAX\_PHYSMEM\_BITS - SECTION\_SIZE\_BITS)}\]</div>
+<p>The <cite>mem_section</cite> objects are arranged in a two-dimensional array
+called <cite>mem_sections</cite>. The size and placement of this array depend
+on <cite>CONFIG_SPARSEMEM_EXTREME</cite> and the maximal possible number of
+sections:</p>
+<ul class="simple">
+<li><p>When <cite>CONFIG_SPARSEMEM_EXTREME</cite> is disabled, the <cite>mem_sections</cite>
+array is static and has <cite>NR_MEM_SECTIONS</cite> rows. Each row holds a
+single <cite>mem_section</cite> object.</p></li>
+<li><p>When <cite>CONFIG_SPARSEMEM_EXTREME</cite> is enabled, the <cite>mem_sections</cite>
+array is dynamically allocated. Each row contains PAGE_SIZE worth of
+<cite>mem_section</cite> objects and the number of rows is calculated to fit
+all the memory sections.</p></li>
+</ul>
+<p>The architecture setup code should call <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">sparse_init()</span></code> to
+initialize the memory sections and the memory maps.</p>
+<p>With SPARSEMEM there are two possible ways to convert a PFN to the
+corresponding <cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code></cite> - a &quot;classic sparse&quot; and &quot;sparse
+vmemmap&quot;. The selection is made at build time and it is determined by
+the value of <cite>CONFIG_SPARSEMEM_VMEMMAP</cite>.</p>
+<p>The classic sparse encodes the section number of a page in page-&gt;flags
+and uses high bits of a PFN to access the section that maps that page
+frame. Inside a section, the PFN is the index to the array of pages.</p>
+<p>The sparse vmemmap uses a virtually mapped memory map to optimize
+pfn_to_page and page_to_pfn operations. There is a global <cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span>
+<span class="pre">page</span></code> *vmemmap</cite> pointer that points to a virtually contiguous array of
+<cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code></cite> objects. A PFN is an index to that array and the
+offset of the <cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code></cite> from <cite>vmemmap</cite> is the PFN of that
+page.</p>
+<p>To use vmemmap, an architecture has to reserve a range of virtual
+addresses that will map the physical pages containing the memory
+map and make sure that <cite>vmemmap</cite> points to that range. In addition,
+the architecture should implement <code class="xref c c-func docutils literal notranslate"><span class="pre">vmemmap_populate()</span></code> method
+that will allocate the physical memory and create page tables for the
+virtual memory map. If an architecture does not have any special
+requirements for the vmemmap mappings, it can use default
+<code class="xref c c-func docutils literal notranslate"><span class="pre">vmemmap_populate_basepages()</span></code> provided by the generic memory
+management.</p>
+<p>The virtually mapped memory map allows storing <cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code></cite> objects
+for persistent memory devices in pre-allocated storage on those
+devices. This storage is represented with <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">vmem_altmap</span></code>
+that is eventually passed to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">vmemmap_populate()</span></code> through a long chain
+of function calls. The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">vmemmap_populate()</span></code> implementation may use the
+<cite>vmem_altmap</cite> along with <code class="xref c c-func docutils literal notranslate"><span class="pre">vmemmap_alloc_block_buf()</span></code> helper to
+allocate memory map on the persistent memory device.</p>
+</section>
+<section id="zone-device">
+<h2>ZONE_DEVICE<a class="headerlink" href="#zone-device" title="Link to this heading">¶</a></h2>
+<p>The <cite>ZONE_DEVICE</cite> facility builds upon <cite>SPARSEMEM_VMEMMAP</cite> to offer
+<cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code></cite> <cite>mem_map</cite> services for device driver identified physical
+address ranges. The &quot;device&quot; aspect of <cite>ZONE_DEVICE</cite> relates to the fact
+that the page objects for these address ranges are never marked online,
+and that a reference must be taken against the device, not just the page
+to keep the memory pinned for active use. <cite>ZONE_DEVICE</cite>, via
+<a class="reference internal" href="../core-api/mm-api.html#c.devm_memremap_pages" title="devm_memremap_pages"><code class="xref c c-func docutils literal notranslate"><span class="pre">devm_memremap_pages()</span></code></a>, performs just enough memory hotplug to
+turn on <code class="xref c c-func docutils literal notranslate"><span class="pre">pfn_to_page()</span></code>, <code class="xref c c-func docutils literal notranslate"><span class="pre">page_to_pfn()</span></code>, and
+<code class="xref c c-func docutils literal notranslate"><span class="pre">get_user_pages()</span></code> service for the given range of pfns. Since the
+page reference count never drops below 1 the page is never tracked as
+free memory and the page's <cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">list_head</span></code> lru</cite> space is repurposed
+for back referencing to the host device / driver that mapped the memory.</p>
+<p>While <cite>SPARSEMEM</cite> presents memory as a collection of sections,
+optionally collected into memory blocks, <cite>ZONE_DEVICE</cite> users have a need
+for smaller granularity of populating the <cite>mem_map</cite>. Given that
+<cite>ZONE_DEVICE</cite> memory is never marked online it is subsequently never
+subject to its memory ranges being exposed through the sysfs memory
+hotplug api on memory block boundaries. The implementation relies on
+this lack of user-api constraint to allow sub-section sized memory
+ranges to be specified to <code class="xref c c-func docutils literal notranslate"><span class="pre">arch_add_memory()</span></code>, the top-half of
+memory hotplug. Sub-section support allows for 2MB as the cross-arch
+common alignment granularity for <a class="reference internal" href="../core-api/mm-api.html#c.devm_memremap_pages" title="devm_memremap_pages"><code class="xref c c-func docutils literal notranslate"><span class="pre">devm_memremap_pages()</span></code></a>.</p>
+<p>The users of <cite>ZONE_DEVICE</cite> are:</p>
+<ul class="simple">
+<li><p>pmem: Map platform persistent memory to be used as a direct-I/O target
+via DAX mappings.</p></li>
+<li><p>hmm: Extend <cite>ZONE_DEVICE</cite> with <cite>-&gt;<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">page_fault()</span></code></cite> and <cite>-&gt;<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">folio_free()</span></code></cite>
+event callbacks to allow a device-driver to coordinate memory management
+events related to device-memory, typically GPU memory. See
+<a class="reference internal" href="hmm.html"><span class="doc">Heterogeneous Memory Management (HMM)</span></a>.</p></li>
+<li><p>p2pdma: Create <cite><code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">page</span></code></cite> objects to allow peer devices in a
+PCI/-E topology to coordinate direct-DMA operations between themselves,
+i.e. bypass host memory.</p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/mm/memory-model.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

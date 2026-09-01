@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>VFIO AP Locks Overview &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/arch/s390/vfio-ap-locking.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜索" href="../../search.html" />
+    <link rel="next" title="vfio-ccw: the basic infrastructure" href="vfio-ccw.html" />
+    <link rel="prev" title="Adjunct Processor (AP) facility" href="vfio-ap.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">CPU architectures</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../arc/index.html">ARC architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../arm/index.html">ARM Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../arm64/index.html">ARM64 Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../loongarch/index.html">LoongArch Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../m68k/index.html">m68k Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../mips/index.html">MIPS-specific Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../nios2/index.html">Nios II Specific Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../openrisc/index.html">OpenRISC Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../parisc/index.html">PA-RISC Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../powerpc/index.html">powerpc</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../riscv/index.html">RISC-V architecture</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html">s390 Architecture</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="cds.html">Linux for S/390 and zSeries</a></li>
+<li class="toctree-l3"><a class="reference internal" href="3270.html">IBM 3270 Display System support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="driver-model.html">S/390 driver model interfaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mm.html">Memory Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="monreader.html">Linux API for read access to z/VM Monitor Records</a></li>
+<li class="toctree-l3"><a class="reference internal" href="qeth.html">IBM s390 QDIO Ethernet Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="s390dbf.html">S390 Debug Feature</a></li>
+<li class="toctree-l3"><a class="reference internal" href="vfio-ap.html">Adjunct Processor (AP) facility</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">VFIO AP Locks Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="vfio-ccw.html">vfio-ccw: the basic infrastructure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="zfcpdump.html">The s390 SCSI dump tool (zfcpdump)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="common_io.html">S/390 common I/O-Layer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pci.html">S/390 PCI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="text_files.html">ibm 3270 changelog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="text_files.html#ibm-3270-config3270-sh">ibm 3270 config3270.sh</a></li>
+<li class="toctree-l3"><a class="reference internal" href="features.html">Feature status on s390 architecture</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../sh/index.html">SuperH Interfaces Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../sparc/index.html">Sparc Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../x86/index.html">x86-specific Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../xtensa/index.html">Xtensa Architecture</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/arch/s390/vfio-ap-locking.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="vfio-ap-locks-overview">
+<h1>VFIO AP Locks Overview<a class="headerlink" href="#vfio-ap-locks-overview" title="Link to this heading">¶</a></h1>
+<p>This document describes the locks that are pertinent to the secure operation
+of the vfio_ap device driver. Throughout this document, the following variables
+will be used to denote instances of the structures herein described:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">ap_matrix_dev</span><span class="w"> </span><span class="o">*</span><span class="n">matrix_dev</span><span class="p">;</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">ap_matrix_mdev</span><span class="w"> </span><span class="o">*</span><span class="n">matrix_mdev</span><span class="p">;</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">kvm</span><span class="w"> </span><span class="o">*</span><span class="n">kvm</span><span class="p">;</span>
+</pre></div>
+</div>
+<section id="the-matrix-devices-lock-drivers-s390-crypto-vfio-ap-private-h">
+<h2>The Matrix Devices Lock (drivers/s390/crypto/vfio_ap_private.h)<a class="headerlink" href="#the-matrix-devices-lock-drivers-s390-crypto-vfio-ap-private-h" title="Link to this heading">¶</a></h2>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">ap_matrix_dev</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="p">...</span>
+<span class="w">      </span><span class="k">struct</span><span class="w"> </span><span class="nc">list_head</span><span class="w"> </span><span class="n">mdev_list</span><span class="p">;</span>
+<span class="w">      </span><span class="k">struct</span><span class="w"> </span><span class="nc">mutex</span><span class="w"> </span><span class="n">mdevs_lock</span><span class="p">;</span>
+<span class="w">      </span><span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The Matrix Devices Lock (matrix_dev-&gt;mdevs_lock) is implemented as a global
+mutex contained within the single object of <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">ap_matrix_dev</span></code>. This lock
+controls access to all fields contained within each matrix_mdev
+(matrix_dev-&gt;mdev_list). This lock must be held while reading from, writing to
+or using the data from a field contained within a matrix_mdev instance
+representing one of the vfio_ap device driver's mediated devices.</p>
+</section>
+<section id="the-kvm-lock-include-linux-kvm-host-h">
+<h2>The KVM Lock (include/linux/kvm_host.h)<a class="headerlink" href="#the-kvm-lock-include-linux-kvm-host-h" title="Link to this heading">¶</a></h2>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">kvm</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="p">...</span>
+<span class="w">      </span><span class="k">struct</span><span class="w"> </span><span class="nc">mutex</span><span class="w"> </span><span class="n">lock</span><span class="p">;</span>
+<span class="w">      </span><span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The KVM Lock (kvm-&gt;lock) controls access to the state data for a KVM guest. This
+lock must be held by the vfio_ap device driver while one or more AP adapters,
+domains or control domains are being plugged into or unplugged from the guest.</p>
+<p>The KVM pointer is stored in the in the matrix_mdev instance
+(matrix_mdev-&gt;kvm = kvm) containing the state of the mediated device that has
+been attached to the KVM guest.</p>
+</section>
+<section id="the-guests-lock-drivers-s390-crypto-vfio-ap-private-h">
+<h2>The Guests Lock (drivers/s390/crypto/vfio_ap_private.h)<a class="headerlink" href="#the-guests-lock-drivers-s390-crypto-vfio-ap-private-h" title="Link to this heading">¶</a></h2>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">ap_matrix_dev</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="p">...</span>
+<span class="w">      </span><span class="k">struct</span><span class="w"> </span><span class="nc">list_head</span><span class="w"> </span><span class="n">mdev_list</span><span class="p">;</span>
+<span class="w">      </span><span class="k">struct</span><span class="w"> </span><span class="nc">mutex</span><span class="w"> </span><span class="n">guests_lock</span><span class="p">;</span>
+<span class="w">      </span><span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The Guests Lock (matrix_dev-&gt;guests_lock) controls access to the
+matrix_mdev instances (matrix_dev-&gt;mdev_list) that represent mediated devices
+that hold the state for the mediated devices that have been attached to a
+KVM guest. This lock must be held:</p>
+<ol class="arabic">
+<li><p>To control access to the KVM pointer (matrix_mdev-&gt;kvm) while the vfio_ap
+device driver is using it to plug/unplug AP devices passed through to the KVM
+guest.</p></li>
+<li><p>To add matrix_mdev instances to or remove them from matrix_dev-&gt;mdev_list.
+This is necessary to ensure the proper locking order when the list is perused
+to find an ap_matrix_mdev instance for the purpose of plugging/unplugging
+AP devices passed through to a KVM guest.</p>
+<p>For example, when a queue device is removed from the vfio_ap device driver,
+if the adapter is passed through to a KVM guest, it will have to be
+unplugged. In order to figure out whether the adapter is passed through,
+the matrix_mdev object to which the queue is assigned will have to be
+found. The KVM pointer (matrix_mdev-&gt;kvm) can then be used to determine if
+the mediated device is passed through (matrix_mdev-&gt;kvm != NULL) and if so,
+to unplug the adapter.</p>
+</li>
+</ol>
+<p>It is not necessary to take the Guests Lock to access the KVM pointer if the
+pointer is not used to plug/unplug devices passed through to the KVM guest;
+however, in this case, the Matrix Devices Lock (matrix_dev-&gt;mdevs_lock) must be
+held in order to access the KVM pointer since it is set and cleared under the
+protection of the Matrix Devices Lock. A case in point is the function that
+handles interception of the PQAP(AQIC) instruction sub-function. This handler
+needs to access the KVM pointer only for the purposes of setting or clearing IRQ
+resources, so only the matrix_dev-&gt;mdevs_lock needs to be held.</p>
+</section>
+<section id="the-pqap-hook-lock-arch-s390-include-asm-kvm-host-h">
+<h2>The PQAP Hook Lock (arch/s390/include/asm/kvm_host.h)<a class="headerlink" href="#the-pqap-hook-lock-arch-s390-include-asm-kvm-host-h" title="Link to this heading">¶</a></h2>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">typedef</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">crypto_hook</span><span class="p">)(</span><span class="k">struct</span><span class="w"> </span><span class="nc">kvm_vcpu</span><span class="w"> </span><span class="o">*</span><span class="n">vcpu</span><span class="p">);</span>
+
+<span class="k">struct</span><span class="w"> </span><span class="nc">kvm_s390_crypto</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="p">...</span>
+<span class="w">      </span><span class="k">struct</span><span class="w"> </span><span class="nc">rw_semaphore</span><span class="w"> </span><span class="n">pqap_hook_rwsem</span><span class="p">;</span>
+<span class="w">      </span><span class="n">crypto_hook</span><span class="w"> </span><span class="o">*</span><span class="n">pqap_hook</span><span class="p">;</span>
+<span class="w">      </span><span class="p">...</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>The PQAP Hook Lock is a r/w semaphore that controls access to the function
+pointer of the handler <code class="docutils literal notranslate"><span class="pre">(*kvm-&gt;arch.crypto.pqap_hook)</span></code> to invoke when the
+PQAP(AQIC) instruction sub-function is intercepted by the host. The lock must be
+held in write mode when pqap_hook value is set, and in read mode when the
+pqap_hook function is called.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/arch/s390/vfio-ap-locking.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

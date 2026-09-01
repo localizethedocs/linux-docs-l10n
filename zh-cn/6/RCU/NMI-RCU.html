@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Using RCU to Protect Dynamic NMI Handlers &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/RCU/NMI-RCU.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="RCU on Uniprocessor Systems" href="UP.html" />
+    <link rel="prev" title="Using RCU to Protect Read-Mostly Linked Lists" href="listRCU.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core-api/index.html">Core API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-entry-and-exit">Low level entry and exit</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../core-api/index.html#concurrency-primitives">Concurrency primitives</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/refcount-vs-atomic.html">refcount_t API compared to atomic_t</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/irq/index.html">IRQs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/local_ops.html">Semantics and Behavior of Local Atomic Operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/padata.html">The padata parallel execution mechanism</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">RCU Handbook</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/wrappers/memory-barriers.html">Linux kernel memory barriers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#memory-management">Memory management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/RCU/NMI-RCU.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="using-rcu-to-protect-dynamic-nmi-handlers">
+<span id="nmi-rcu-doc"></span><h1>Using RCU to Protect Dynamic NMI Handlers<a class="headerlink" href="#using-rcu-to-protect-dynamic-nmi-handlers" title="Link to this heading">¶</a></h1>
+<p>Although RCU is usually used to protect read-mostly data structures,
+it is possible to use RCU to provide dynamic non-maskable interrupt
+handlers, as well as dynamic irq handlers.  This document describes
+how to do this, drawing loosely from Zwane Mwaikambo's NMI-timer
+work in an old version of &quot;arch/x86/kernel/traps.c&quot;.</p>
+<p>The relevant pieces of code are listed below, each followed by a
+brief explanation:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static int dummy_nmi_callback(struct pt_regs *regs, int cpu)
+{
+        return 0;
+}
+</pre></div>
+</div>
+<p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dummy_nmi_callback()</span></code> function is a &quot;dummy&quot; NMI handler that does
+nothing, but returns zero, thus saying that it did nothing, allowing
+the NMI handler to take the default machine-specific action:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static nmi_callback_t nmi_callback = dummy_nmi_callback;
+</pre></div>
+</div>
+<p>This nmi_callback variable is a global function pointer to the current
+NMI handler:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void do_nmi(struct pt_regs * regs, long error_code)
+{
+        int cpu;
+
+        nmi_enter();
+
+        cpu = smp_processor_id();
+        ++nmi_count(cpu);
+
+        if (!rcu_dereference_sched(nmi_callback)(regs, cpu))
+                default_do_nmi(regs);
+
+        nmi_exit();
+}
+</pre></div>
+</div>
+<p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">do_nmi()</span></code> function processes each NMI.  It first disables preemption
+in the same way that a hardware irq would, then increments the per-CPU
+count of NMIs.  It then invokes the NMI handler stored in the nmi_callback
+function pointer.  If this handler returns zero, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">do_nmi()</span></code> invokes the
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">default_do_nmi()</span></code> function to handle a machine-specific NMI.  Finally,
+preemption is restored.</p>
+<p>In theory, <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_sched" title="rcu_dereference_sched"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_sched()</span></code></a> is not needed, since this code runs
+only on i386, which in theory does not need <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_sched" title="rcu_dereference_sched"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_sched()</span></code></a>
+anyway.  However, in practice it is a good documentation aid, particularly
+for anyone attempting to do something similar on Alpha or on systems
+with aggressive optimizing compilers.</p>
+<dl class="simple">
+<dt>Quick Quiz:</dt><dd><p>Why might the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_sched" title="rcu_dereference_sched"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_sched()</span></code></a> be necessary on Alpha, given that the code referenced by the pointer is read-only?</p>
+</dd>
+</dl>
+<p><a class="reference internal" href="#answer-quick-quiz-nmi"><span class="std std-ref">Answer to Quick Quiz</span></a></p>
+<p>Back to the discussion of NMI and RCU:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void set_nmi_callback(nmi_callback_t callback)
+{
+        rcu_assign_pointer(nmi_callback, callback);
+}
+</pre></div>
+</div>
+<p>The <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">set_nmi_callback()</span></code> function registers an NMI handler.  Note that any
+data that is to be used by the callback must be initialized up -before-
+the call to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">set_nmi_callback()</span></code>.  On architectures that do not order
+writes, the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_assign_pointer" title="rcu_assign_pointer"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_assign_pointer()</span></code></a> ensures that the NMI handler sees the
+initialized values:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void unset_nmi_callback(void)
+{
+        rcu_assign_pointer(nmi_callback, dummy_nmi_callback);
+}
+</pre></div>
+</div>
+<p>This function unregisters an NMI handler, restoring the original
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">dummy_nmi_handler()</span></code>.  However, there may well be an NMI handler
+currently executing on some other CPU.  We therefore cannot free
+up any data structures used by the old NMI handler until execution
+of it completes on all other CPUs.</p>
+<p>One way to accomplish this is via <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a>, perhaps as
+follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>unset_nmi_callback();
+synchronize_rcu();
+kfree(my_nmi_data);
+</pre></div>
+</div>
+<p>This works because (as of v4.20) <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a> blocks until all
+CPUs complete any preemption-disabled segments of code that they were
+executing.
+Since NMI handlers disable preemption, <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a> is guaranteed
+not to return until all ongoing NMI handlers exit.  It is therefore safe
+to free up the handler's data as soon as <a class="reference internal" href="../core-api/kernel-api.html#c.synchronize_rcu" title="synchronize_rcu"><code class="xref c c-func docutils literal notranslate"><span class="pre">synchronize_rcu()</span></code></a> returns.</p>
+<p>Important note: for this to work, the architecture in question must
+invoke <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">nmi_enter()</span></code> and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">nmi_exit()</span></code> on NMI entry and exit, respectively.</p>
+<dl id="answer-quick-quiz-nmi">
+<dt>Answer to Quick Quiz:</dt><dd><p>Why might the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_sched" title="rcu_dereference_sched"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_sched()</span></code></a> be necessary on Alpha, given that the code referenced by the pointer is read-only?</p>
+<p>The caller to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">set_nmi_callback()</span></code> might well have
+initialized some data that is to be used by the new NMI
+handler.  In this case, the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_sched" title="rcu_dereference_sched"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_sched()</span></code></a> would
+be needed, because otherwise a CPU that received an NMI
+just after the new handler was set might see the pointer
+to the new NMI handler, but the old pre-initialized
+version of the handler's data.</p>
+<p>This same sad story can happen on other CPUs when using
+a compiler with aggressive pointer-value speculation
+optimizations.  (But please don't!)</p>
+<p>More important, the <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_sched" title="rcu_dereference_sched"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_sched()</span></code></a> makes it
+clear to someone reading the code that the pointer is
+being protected by RCU-sched.</p>
+</dd>
+</dl>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/RCU/NMI-RCU.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

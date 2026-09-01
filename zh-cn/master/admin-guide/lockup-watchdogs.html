@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Softlockup detector and hardlockup detector (aka nmi_watchdog) &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/lockup-watchdogs.html" />
+    <link rel="icon" href="../_static/logo.svg"/>
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="&lt;no title&gt;" href="RAS/index.html" />
+    <link rel="prev" title="Reducing OS jitter due to per-cpu kthreads" href="kernel-per-CPU-kthreads.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">7.1.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reporting-regressions.html">Reporting regressions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quickly-build-trimmed-linux.html">How to quickly build a trimmed Linux kernel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="verify-bugs-and-bisect-regressions.html">How to verify bugs and bisect regressions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bug-hunting.html">Bug hunting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="bug-bisect.html">Bisecting a regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tainted-kernels.html">Tainted kernels</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ramoops.html">Ramoops oops/panic logger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dynamic-debug-howto.html">Dynamic debug</a></li>
+<li class="toctree-l3"><a class="reference internal" href="init.html">Explaining the &quot;No working init found.&quot; boot hang message</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kdump/index.html">Documentation for Kdump - The kexec-based Crash Dumping Solution</a></li>
+<li class="toctree-l3"><a class="reference internal" href="perf/index.html">Performance monitor support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pstore-blk.html">pstore block oops/panic logger</a></li>
+<li class="toctree-l3"><a class="reference internal" href="clearing-warn-once.html">Clearing WARN_ONCE</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kernel-per-CPU-kthreads.html">Reducing OS jitter due to per-cpu kthreads</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Softlockup detector and hardlockup detector (aka nmi_watchdog)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RAS/main.html">Reliability, Availability and Serviceability (RAS)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RAS/error-decoding.html">Error decoding</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RAS/address-translation.html">Address translation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sysrq.html">Linux Magic System Request Key Hacks</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-kernel-subsystems">Core-kernel subsystems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/admin-guide/lockup-watchdogs.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="softlockup-detector-and-hardlockup-detector-aka-nmi-watchdog">
+<h1>Softlockup detector and hardlockup detector (aka nmi_watchdog)<a class="headerlink" href="#softlockup-detector-and-hardlockup-detector-aka-nmi-watchdog" title="Link to this heading">¶</a></h1>
+<p>The Linux kernel can act as a watchdog to detect both soft and hard
+lockups.</p>
+<p>A 'softlockup' is defined as a bug that causes the kernel to loop in
+kernel mode for more than 20 seconds (see &quot;Implementation&quot; below for
+details), without giving other tasks a chance to run. The current
+stack trace is displayed upon detection and, by default, the system
+will stay locked up. Alternatively, the kernel can be configured to
+panic; a sysctl, &quot;kernel.softlockup_panic&quot;, a kernel parameter,
+&quot;softlockup_panic&quot; (see &quot;<a class="reference internal" href="kernel-parameters.html"><span class="doc">The kernel's command-line parameters</span></a>&quot; for
+details), and a compile option, &quot;BOOTPARAM_SOFTLOCKUP_PANIC&quot;, are
+provided for this.</p>
+<p>A 'hardlockup' is defined as a bug that causes the CPU to loop in
+kernel mode for several seconds (see &quot;Implementation&quot; below for
+details), without letting other interrupts have a chance to run.
+Similarly to the softlockup case, the current stack trace is displayed
+upon detection and the system will stay locked up unless the default
+behavior is changed, which can be done through a sysctl,
+'hardlockup_panic', a compile time knob, &quot;BOOTPARAM_HARDLOCKUP_PANIC&quot;,
+and a kernel parameter, &quot;nmi_watchdog&quot;
+(see &quot;<a class="reference internal" href="kernel-parameters.html"><span class="doc">The kernel's command-line parameters</span></a>&quot; for details).</p>
+<p>The panic option can be used in combination with panic_timeout (this
+timeout is set through the confusingly named &quot;kernel.panic&quot; sysctl),
+to cause the system to reboot automatically after a specified amount
+of time.</p>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">¶</a></h2>
+<p>A kernel knob is provided that allows administrators to configure
+this period. The &quot;watchdog_thresh&quot; parameter (default 10 seconds)
+controls the threshold. The right value for a particular environment
+is a trade-off between fast response to lockups and detection overhead.</p>
+</section>
+<section id="implementation">
+<h2>Implementation<a class="headerlink" href="#implementation" title="Link to this heading">¶</a></h2>
+<p>The soft and hard lockup detectors are built around an hrtimer.
+In addition, the softlockup detector regularly schedules a job, and
+the hard lockup detector might use Perf/NMI events on architectures
+that support it.</p>
+<section id="frequency-and-heartbeats">
+<h3>Frequency and Heartbeats<a class="headerlink" href="#frequency-and-heartbeats" title="Link to this heading">¶</a></h3>
+<p>The core of the detectors is an hrtimer. It serves multiple purposes:</p>
+<ul class="simple">
+<li><p>schedules watchdog job for the softlockup detector</p></li>
+<li><p>bumps the interrupt counter for hardlockup detectors (heartbeat)</p></li>
+<li><p>detects softlockups</p></li>
+<li><p>detects hardlockups in Buddy mode</p></li>
+</ul>
+<p>The period of this hrtimer is 2*watchdog_thresh/5, which is 4 seconds
+by default. The hrtimer has two or three chances to generate an interrupt
+(heartbeat) before the hardlockup detector kicks in.</p>
+</section>
+<section id="softlockup-detector">
+<h3>Softlockup Detector<a class="headerlink" href="#softlockup-detector" title="Link to this heading">¶</a></h3>
+<p>The watchdog job is scheduled by the hrtimer and runs in a stop scheduling
+thread. It updates a timestamp every time it is scheduled. If that timestamp
+is not updated for 2*watchdog_thresh seconds (the softlockup threshold) the
+'softlockup detector' (coded inside the hrtimer callback function)
+will dump useful debug information to the system log, after which it
+will call panic if it was instructed to do so or resume execution of
+other kernel code.</p>
+</section>
+<section id="hardlockup-detector-nmi-perf">
+<h3>Hardlockup Detector (NMI/Perf)<a class="headerlink" href="#hardlockup-detector-nmi-perf" title="Link to this heading">¶</a></h3>
+<p>On architectures that support NMI (Non-Maskable Interrupt) perf events,
+a periodic NMI is generated every &quot;watchdog_thresh&quot; seconds.</p>
+<p>If any CPU in the system does not receive any hrtimer interrupt
+(heartbeat) during the &quot;watchdog_thresh&quot; window, the 'hardlockup
+detector' (the handler for the NMI perf event) will generate a kernel
+warning or call panic.</p>
+<p><strong>Detection Overhead (NMI):</strong></p>
+<p>The time to detect a lockup can vary depending on when the lockup
+occurs relative to the NMI check window. Examples below assume a watchdog_thresh of 10.</p>
+<ul>
+<li><p><strong>Best Case:</strong> The lockup occurs just before the first heartbeat is
+due. The detector will notice the missing hrtimer interrupt almost
+immediately during the next check.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Time 100.0: cpu 1 heartbeat
+Time 100.1: hardlockup_check, cpu1 stores its state
+Time 103.9: Hard Lockup on cpu1
+Time 104.0: cpu 1 heartbeat never comes
+Time 110.1: hardlockup_check, cpu1 checks the state again, should be the same, declares lockup
+
+Time to detection: ~6 seconds
+</pre></div>
+</div>
+</li>
+<li><p><strong>Worst Case:</strong> The lockup occurs shortly after a valid interrupt
+(heartbeat) which itself happened just after the NMI check. The next
+NMI check sees that the interrupt count has changed (due to that one
+heartbeat), assumes the CPU is healthy, and resets the baseline. The
+lockup is only detected at the subsequent check.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Time 100.0: hardlockup_check, cpu1 stores its state
+Time 100.1: cpu 1 heartbeat
+Time 100.2: Hard Lockup on cpu1
+Time 110.0: hardlockup_check, cpu1 stores its state (misses lockup as state changed)
+Time 120.0: hardlockup_check, cpu1 checks the state again, should be the same, declares lockup
+
+Time to detection: ~20 seconds
+</pre></div>
+</div>
+</li>
+</ul>
+</section>
+<section id="hardlockup-detector-buddy">
+<h3>Hardlockup Detector (Buddy)<a class="headerlink" href="#hardlockup-detector-buddy" title="Link to this heading">¶</a></h3>
+<p>On architectures or configurations where NMI perf events are not
+available (or disabled), the kernel may use the &quot;buddy&quot; hardlockup
+detector. This mechanism requires SMP (Symmetric Multi-Processing).</p>
+<p>In this mode, each CPU is assigned a &quot;buddy&quot; CPU to monitor. The
+monitoring CPU runs its own hrtimer (the same one used for softlockup
+detection) and checks if the buddy CPU's hrtimer interrupt count has
+increased.</p>
+<p>To ensure timeliness and avoid false positives, the buddy system performs
+checks at every hrtimer interval (2*watchdog_thresh/5, which is 4 seconds
+by default). It uses a missed-interrupt threshold of 3. If the buddy's
+interrupt count has not changed for 3 consecutive checks, it is assumed
+that the buddy CPU is hardlocked (interrupts disabled). The monitoring
+CPU will then trigger the hardlockup response (warning or panic).</p>
+<p><strong>Detection Overhead (Buddy):</strong></p>
+<p>With a default check interval of 4 seconds (watchdog_thresh = 10):</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>Best case:</strong> Lockup occurs just before a check.</dt><dd><p>Detected in ~8s (0s till 1st check + 4s till 2nd + 4s till 3rd).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>Worst case:</strong> Lockup occurs just after a check.</dt><dd><p>Detected in ~12s (4s till 1st check + 4s till 2nd + 4s till 3rd).</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p><strong>Limitations of the Buddy Detector:</strong></p>
+<ol class="arabic simple">
+<li><p><strong>All-CPU Lockup:</strong> If all CPUs lock up simultaneously, the buddy
+detector cannot detect the condition because the monitoring CPUs
+are also frozen.</p></li>
+<li><p><strong>Stack Traces:</strong> Unlike the NMI detector, the buddy detector
+cannot directly interrupt the locked CPU to grab a stack trace.
+It relies on architecture-specific mechanisms (like NMI backtrace
+support) to try and retrieve the status of the locked CPU. If
+such support is missing, the log may only show that a lockup
+occurred without providing the locked CPU's stack.</p></li>
+</ol>
+</section>
+</section>
+<section id="watchdog-core-exclusion">
+<h2>Watchdog Core Exclusion<a class="headerlink" href="#watchdog-core-exclusion" title="Link to this heading">¶</a></h2>
+<p>By default, the watchdog runs on all online cores.  However, on a
+kernel configured with NO_HZ_FULL, by default the watchdog runs only
+on the housekeeping cores, not the cores specified in the &quot;nohz_full&quot;
+boot argument.  If we allowed the watchdog to run by default on
+the &quot;nohz_full&quot; cores, we would have to run timer ticks to activate
+the scheduler, which would prevent the &quot;nohz_full&quot; functionality
+from protecting the user code on those cores from the kernel.
+Of course, disabling it by default on the nohz_full cores means that
+when those cores do enter the kernel, by default we will not be
+able to detect if they lock up.  However, allowing the watchdog
+to continue to run on the housekeeping (non-tickless) cores means
+that we will continue to detect lockups properly on those cores.</p>
+<p>In either case, the set of cores excluded from running the watchdog
+may be adjusted via the kernel.watchdog_cpumask sysctl.  For
+nohz_full cores, this may be useful for debugging a case where the
+kernel seems to be hanging on the nohz_full cores.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/admin-guide/lockup-watchdogs.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
