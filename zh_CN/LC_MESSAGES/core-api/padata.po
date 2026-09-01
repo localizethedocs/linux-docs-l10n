@@ -1,0 +1,804 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel 6\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-06 07:31+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../core-api/padata.rst:5
+msgid "The padata parallel execution mechanism"
+msgstr ""
+
+#: ../../../core-api/padata.rst:0
+msgid "Date"
+msgstr ""
+
+#: ../../../core-api/padata.rst:7
+msgid "May 2020"
+msgstr ""
+
+#: ../../../core-api/padata.rst:9
+msgid ""
+"Padata is a mechanism by which the kernel can farm jobs out to be done in "
+"parallel on multiple CPUs while optionally retaining their ordering."
+msgstr ""
+
+#: ../../../core-api/padata.rst:12
+msgid ""
+"It was originally developed for IPsec, which needs to perform encryption and "
+"decryption on large numbers of packets without reordering those packets.  "
+"This is currently the sole consumer of padata's serialized job support."
+msgstr ""
+
+#: ../../../core-api/padata.rst:16
+msgid ""
+"Padata also supports multithreaded jobs, splitting up the job evenly while "
+"load balancing and coordinating between threads."
+msgstr ""
+
+#: ../../../core-api/padata.rst:20
+msgid "Running Serialized Jobs"
+msgstr ""
+
+#: ../../../core-api/padata.rst:23
+msgid "Initializing"
+msgstr ""
+
+#: ../../../core-api/padata.rst:25
+msgid ""
+"The first step in using padata to run serialized jobs is to set up a "
+"padata_instance structure for overall control of how jobs are to be run::"
+msgstr ""
+
+#: ../../../core-api/padata.rst:32
+msgid "'name' simply identifies the instance."
+msgstr ""
+
+#: ../../../core-api/padata.rst:34
+msgid "Then, complete padata initialization by allocating a padata_shell::"
+msgstr ""
+
+#: ../../../core-api/padata.rst:38
+msgid ""
+"A padata_shell is used to submit a job to padata and allows a series of such "
+"jobs to be serialized independently.  A padata_instance may have one or more "
+"padata_shells associated with it, each allowing a separate series of jobs."
+msgstr ""
+
+#: ../../../core-api/padata.rst:43
+msgid "Modifying cpumasks"
+msgstr ""
+
+#: ../../../core-api/padata.rst:45
+msgid ""
+"The CPUs used to run jobs can be changed in two ways, programmatically with "
+"padata_set_cpumask() or via sysfs.  The former is defined::"
+msgstr ""
+
+#: ../../../core-api/padata.rst:51
+msgid ""
+"Here cpumask_type is one of PADATA_CPU_PARALLEL or PADATA_CPU_SERIAL, where "
+"a parallel cpumask describes which processors will be used to execute jobs "
+"submitted to this instance in parallel and a serial cpumask defines which "
+"processors are allowed to be used as the serialization callback processor. "
+"cpumask specifies the new cpumask to use."
+msgstr ""
+
+#: ../../../core-api/padata.rst:57
+msgid ""
+"There may be sysfs files for an instance's cpumasks.  For example, pcrypt's "
+"live in /sys/kernel/pcrypt/<instance-name>.  Within an instance's directory "
+"there are two files, parallel_cpumask and serial_cpumask, and either cpumask "
+"may be changed by echoing a bitmask into the file, for example::"
+msgstr ""
+
+#: ../../../core-api/padata.rst:64
+msgid ""
+"Reading one of these files shows the user-supplied cpumask, which may be "
+"different from the 'usable' cpumask."
+msgstr ""
+
+#: ../../../core-api/padata.rst:67
+msgid ""
+"Padata maintains two pairs of cpumasks internally, the user-supplied "
+"cpumasks and the 'usable' cpumasks.  (Each pair consists of a parallel and a "
+"serial cpumask.)  The user-supplied cpumasks default to all possible CPUs on "
+"instance allocation and may be changed as above.  The usable cpumasks are "
+"always a subset of the user-supplied cpumasks and contain only the online "
+"CPUs in the user-supplied masks; these are the cpumasks padata actually "
+"uses.  So it is legal to supply a cpumask to padata that contains offline "
+"CPUs.  Once an offline CPU in the user-supplied cpumask comes online, padata "
+"is going to use it."
+msgstr ""
+
+#: ../../../core-api/padata.rst:77
+msgid ""
+"Changing the CPU masks are expensive operations, so it should not be done "
+"with great frequency."
+msgstr ""
+
+#: ../../../core-api/padata.rst:81
+msgid "Running A Job"
+msgstr ""
+
+#: ../../../core-api/padata.rst:83
+msgid ""
+"Actually submitting work to the padata instance requires the creation of a "
+"padata_priv structure, which represents one job::"
+msgstr ""
+
+#: ../../../core-api/padata.rst:92
+msgid ""
+"This structure will almost certainly be embedded within some larger "
+"structure specific to the work to be done.  Most of its fields are private "
+"to padata, but the structure should be zeroed at initialisation time, and "
+"the parallel() and serial() functions should be provided.  Those functions "
+"will be called in the process of getting the work done as we will see "
+"momentarily."
+msgstr ""
+
+#: ../../../core-api/padata.rst:99
+msgid "The submission of the job is done with::"
+msgstr ""
+
+#: ../../../core-api/padata.rst:104
+msgid ""
+"The ps and padata structures must be set up as described above; cb_cpu "
+"points to the preferred CPU to be used for the final callback when the job "
+"is done; it must be in the current instance's CPU mask (if not the cb_cpu "
+"pointer is updated to point to the CPU actually chosen).  The return value "
+"from padata_do_parallel() is zero on success, indicating that the job is in "
+"progress. -EBUSY means that somebody, somewhere else is messing with the "
+"instance's CPU mask, while -EINVAL is a complaint about cb_cpu not being in "
+"the serial cpumask, no online CPUs in the parallel or serial cpumasks, or a "
+"stopped instance."
+msgstr ""
+
+#: ../../../core-api/padata.rst:114
+msgid ""
+"Each job submitted to padata_do_parallel() will, in turn, be passed to "
+"exactly one call to the above-mentioned parallel() function, on one CPU, so "
+"true parallelism is achieved by submitting multiple jobs.  parallel() runs "
+"with software interrupts disabled and thus cannot sleep.  The parallel() "
+"function gets the padata_priv structure pointer as its lone parameter; "
+"information about the actual work to be done is probably obtained by using "
+"container_of() to find the enclosing structure."
+msgstr ""
+
+#: ../../../core-api/padata.rst:122
+msgid ""
+"Note that parallel() has no return value; the padata subsystem assumes that "
+"parallel() will take responsibility for the job from this point.  The job "
+"need not be completed during this call, but, if parallel() leaves work "
+"outstanding, it should be prepared to be called again with a new job before "
+"the previous one completes."
+msgstr ""
+
+#: ../../../core-api/padata.rst:129
+msgid "Serializing Jobs"
+msgstr ""
+
+#: ../../../core-api/padata.rst:131
+msgid ""
+"When a job does complete, parallel() (or whatever function actually finishes "
+"the work) should inform padata of the fact with a call to::"
+msgstr ""
+
+#: ../../../core-api/padata.rst:136
+msgid ""
+"At some point in the future, padata_do_serial() will trigger a call to the "
+"serial() function in the padata_priv structure.  That call will happen on "
+"the CPU requested in the initial call to padata_do_parallel(); it, too, is "
+"run with local software interrupts disabled. Note that this call may be "
+"deferred for a while since the padata code takes pains to ensure that jobs "
+"are completed in the order in which they were submitted."
+msgstr ""
+
+#: ../../../core-api/padata.rst:145
+msgid "Destroying"
+msgstr ""
+
+#: ../../../core-api/padata.rst:147
+msgid ""
+"Cleaning up a padata instance predictably involves calling the two free "
+"functions that correspond to the allocation in reverse::"
+msgstr ""
+
+#: ../../../core-api/padata.rst:153
+msgid ""
+"It is the user's responsibility to ensure all outstanding jobs are complete "
+"before any of the above are called."
+msgstr ""
+
+#: ../../../core-api/padata.rst:157
+msgid "Running Multithreaded Jobs"
+msgstr ""
+
+#: ../../../core-api/padata.rst:159
+msgid ""
+"A multithreaded job has a main thread and zero or more helper threads, with "
+"the main thread participating in the job and then waiting until all helpers "
+"have finished.  padata splits the job into units called chunks, where a "
+"chunk is a piece of the job that one thread completes in one call to the "
+"thread function."
+msgstr ""
+
+#: ../../../core-api/padata.rst:164
+msgid ""
+"A user has to do three things to run a multithreaded job.  First, describe "
+"the job by defining a padata_mt_job structure, which is explained in the "
+"Interface section.  This includes a pointer to the thread function, which "
+"padata will call each time it assigns a job chunk to a thread.  Then, define "
+"the thread function, which accepts three arguments, ``start``, ``end``, and "
+"``arg``, where the first two delimit the range that the thread operates on "
+"and the last is a pointer to the job's shared state, if any.  Prepare the "
+"shared state, which is typically allocated on the main thread's stack.  "
+"Last, call padata_do_multithreaded(), which will return once the job is "
+"finished."
+msgstr ""
+
+#: ../../../core-api/padata.rst:175
+msgid "Interface"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:26
+msgid "Represents one job"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:30
+#: ../include/linux/padata.h:51 ../include/linux/padata.h:62
+#: ../include/linux/padata.h:75 ../include/linux/padata.h:86
+#: ../include/linux/padata.h:110 ../include/linux/padata.h:127
+#: ../include/linux/padata.h:154
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:42
+#: ../include/linux/padata.h:58 ../include/linux/padata.h:70
+#: ../include/linux/padata.h:82 ../include/linux/padata.h:99
+#: ../include/linux/padata.h:119 ../include/linux/padata.h:140
+#: ../include/linux/padata.h:171
+msgid "**Members**"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:28
+#: ../include/linux/padata.h:49 ../include/linux/padata.h:113
+msgid "``list``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:29
+msgid "List entry, to attach to the padata lists."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:29
+#: ../include/linux/padata.h:62 ../include/linux/padata.h:111
+msgid "``pd``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:30
+msgid "Pointer to the internal control structure."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:30
+msgid "``cb_cpu``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:31
+msgid "Callback cpu for serializatioon."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:31
+#: ../include/linux/padata.h:89
+msgid "``seq_nr``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:32
+#: ../include/linux/padata.h:90
+msgid "Sequence number of the parallelized data object."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:32
+msgid "``info``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:33
+msgid "Used to pass information from the parallel to the serial function."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:33
+msgid "``parallel``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:34
+msgid "Parallel execution function."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:34
+#: ../include/linux/padata.h:60
+msgid "``serial``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:35
+msgid "Serial complete function."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:47
+msgid "one per work type per CPU"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:50
+msgid "List head."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:50
+#: ../include/linux/padata.h:159
+msgid "``lock``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:51
+msgid "List lock."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:58
+msgid "The percpu padata serial queue"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:61
+msgid "List to wait for serialization after reordering."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:61
+msgid "``work``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:62
+msgid "work struct for serialization."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:63
+msgid "Backpointer to the internal control structure."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:71
+msgid "The cpumasks for the parallel/serial workers"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:73
+msgid "``pcpu``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:74
+msgid "cpumask for the parallel workers."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:74
+msgid "``cbcpu``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:75
+msgid "cpumask for the serial (callback) workers."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:82
+msgid ""
+"Internal control structure, covers everything that depends on the cpumask in "
+"use."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:85
+msgid "``ps``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:86
+msgid "padata_shell object."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:86
+msgid "``reorder_list``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:87
+msgid "percpu reorder lists"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:87
+msgid "``squeue``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:88
+msgid "percpu padata queues used for serialuzation."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:88
+msgid "``refcnt``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:89
+msgid "Number of objects holding a reference on this parallel_data."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:90
+msgid "``processed``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:91
+msgid "Number of already processed objects."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:91
+msgid "``cpu``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:92
+msgid "Next CPU to be processed."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:92
+#: ../include/linux/padata.h:157
+msgid "``cpumask``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:93
+msgid "The cpumasks in use for parallel and serial workers."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:106
+msgid ""
+"Wrapper around struct parallel_data, its purpose is to allow the underlying "
+"control structure to be replaced on the fly using RCU."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:110
+msgid "``pinst``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:111
+msgid "padat instance."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:112
+msgid "Actual parallel_data structure which may be substituted on the fly."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:112
+msgid "``opd``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:113
+msgid "Pointer to old pd to be freed by padata_replace."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:114
+msgid "List entry in padata_instance list."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:123
+msgid "represents one multithreaded job"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:125
+msgid "``thread_fn``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:126
+msgid "Called for each chunk of work that a padata thread does."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:126
+msgid "``fn_arg``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:127
+msgid "The thread function argument."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:127
+msgid "``start``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:128
+msgid "The start of the job (units are job-specific)."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:128
+msgid "``size``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:129
+msgid "size of this node's work (units are job-specific)."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:129
+msgid "``align``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:130
+msgid ""
+"Ranges passed to the thread function fall on this boundary, with the "
+"possible exceptions of the beginning and end of the job."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:131
+msgid "``min_chunk``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:132
+msgid ""
+"The minimum chunk size in job-specific units.  This allows the client to "
+"communicate the minimum amount of work that's appropriate for one worker "
+"thread to do at once."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:134
+msgid "``max_threads``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:135
+msgid ""
+"Max threads to use for the job, actual number may be less depending on task "
+"size and minimum chunk size."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:136
+msgid "``numa_aware``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:137
+msgid "Distribute jobs to different nodes with CPU in a round robin fashion."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:150
+msgid "The overall control structure."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:152
+msgid "``cpu_online_node``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:153
+msgid "Linkage for CPU online callback."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:153
+msgid "``cpu_dead_node``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:154
+msgid "Linkage for CPU offline callback."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:154
+msgid "``parallel_wq``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:155
+msgid "The workqueue used for parallel work."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:155
+msgid "``serial_wq``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:156
+msgid "The workqueue used for serial work."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:156
+msgid "``pslist``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:157
+msgid "List of padata_shell objects attached to this instance."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:158
+msgid "User supplied cpumasks for parallel and serial works."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:158
+msgid "``kobj``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:159
+msgid "padata instance kernel object."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:160
+msgid "padata instance lock."
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:160
+msgid "``flags``"
+msgstr ""
+
+#: ../../../core-api/padata:177: ../include/linux/padata.h:161
+msgid "padata flags."
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:165
+msgid "padata parallelization function"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:169 ../kernel/padata.c:356
+#: ../kernel/padata.c:443 ../kernel/padata.c:694 ../kernel/padata.c:950
+#: ../kernel/padata.c:1023 ../kernel/padata.c:1034 ../kernel/padata.c:1073
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:171 ../kernel/padata.c:1075
+msgid "``struct padata_shell *ps``"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:167
+msgid "padatashell"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:169 ../kernel/padata.c:358
+msgid "``struct padata_priv *padata``"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:168
+msgid "object to be parallelized"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:170
+msgid "``int *cb_cpu``"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:169
+msgid ""
+"pointer to the CPU that the serialization callback function should run on.  "
+"If it's not in the serial cpumask of **pinst** (i.e. cpumask.cbcpu), this "
+"function selects a fallback CPU and if none found, returns -EINVAL."
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:174 ../kernel/padata.c:356
+#: ../kernel/padata.c:442
+msgid "**Description**"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:173
+msgid "The parallelization callback function will run with BHs off."
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:175
+msgid "**Note**"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:175
+msgid ""
+"Every object which is parallelized by padata_do_parallel must be seen by "
+"padata_do_serial."
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:178 ../kernel/padata.c:697
+#: ../kernel/padata.c:949 ../kernel/padata.c:1034
+msgid "**Return**"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:178
+msgid "0 on success or else negative error code."
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:352
+msgid "padata serialization function"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:354
+msgid "object to be serialized."
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:355
+msgid ""
+"padata_do_serial must be called for every parallelized object. The "
+"serialization callback function will run with BHs off."
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:439
+msgid "run a multithreaded job"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:445
+msgid "``struct padata_mt_job *job``"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:440
+msgid "Description of the job."
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:441
+msgid "See the definition of struct padata_mt_job for more details."
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:690
+msgid ""
+"Sets specified by **cpumask_type** cpumask to the value equivalent to "
+"**cpumask**."
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:696 ../kernel/padata.c:1025
+#: ../kernel/padata.c:1036
+msgid "``struct padata_instance *pinst``"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:692
+msgid "padata instance"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:694
+msgid "``int cpumask_type``"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:693
+msgid ""
+"PADATA_CPU_SERIAL or PADATA_CPU_PARALLEL corresponding to parallel and "
+"serial cpumasks respectively."
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:696
+msgid "``cpumask_var_t cpumask``"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:695
+msgid "the cpumask to use"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:697
+msgid "0 on success or negative error code"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:946
+msgid "allocate and initialize a padata instance"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:952
+msgid "``const char *name``"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:947
+msgid "used to identify the instance"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:949
+msgid "new instance on success, NULL on error"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:1019
+msgid "free a padata instance"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:1021
+msgid "padata instance to free"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:1030
+msgid "Allocate and initialize padata shell."
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:1032
+msgid "Parent padata_instance object."
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:1034
+msgid "new shell on success, NULL on error"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:1069
+msgid "free a padata shell"
+msgstr ""
+
+#: ../../../core-api/padata:178: ../kernel/padata.c:1071
+msgid "padata shell to free"
+msgstr ""
