@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-06 09:14+0000\n"
+"POT-Creation-Date: 2026-08-31 16:07+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -211,4 +211,171 @@ msgid ""
 "validate real-time network communication. It can be thought of as a "
 "\"cyclictest\" for networking and also serves as a starting point for "
 "application development."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:135
+msgid "Firmware"
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:137
+msgid ""
+"The firmware often plays a significant role in system operation because it "
+"can perform tasks that the kernel cannot directly access, and in some cases "
+"it can even preempt or intercept the kernel."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:141
+msgid ""
+"A common example of firmware assisting the kernel is when it provides a "
+"generic interface to a resource. Instead of accessing an RTC chip through an "
+"I2C host controller, the kernel may query the firmware for the current time, "
+"and the firmware then accesses the RTC behind the scenes."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:146
+msgid ""
+"Firmware can also intercept kernel execution by providing services that "
+"temporarily take control of the system. One example is memory scrubbing, "
+"where the firmware periodically pauses the kernel, reads back portions of "
+"system memory, and then returns control. During this time, the kernel is "
+"effectively interrupted. In contrast, some systems provide hardware-based "
+"memory scrubbing, which operates independently of firmware or software. See "
+"Documentation/edac/scrub.rst for details."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:155
+msgid ""
+"If the kernel is intercepted for longer periods then these periods can be "
+"made visible with the hardware latency detector. See Documentation/trace/"
+"hwlat_detector.rst."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:159
+msgid ""
+"The kernel can also be intercepted in response to specific events, such as "
+"overheating. In this case, the firmware may throttle the CPU or shut it down "
+"immediately to prevent hardware damage."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:163
+msgid ""
+"Unless the firmware is well documented, it should be thoroughly tested to "
+"uncover any unexpected behaviour."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:167
+msgid "EFI"
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:169
+msgid ""
+"EFI provides runtime services that act as a communication interface between "
+"the firmware and the operating system. One such service is reading and "
+"writing EFI variables, which are used, for example, to determine the boot "
+"source."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:173
+msgid ""
+"Invoking a runtime service may require the architecture to disable kernel "
+"preemption or interrupts during the call. This means the duration of a "
+"service invocation directly affects the system’s observable latency. There "
+"is also nothing that prevents a service call from disabling interrupts "
+"internally while it runs."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:179
+msgid ""
+"For these reasons, EFI runtime services are disabled by default on a "
+"PREEMPT_RT kernel. They can still be enabled at boot time or via a Kconfig "
+"option if required. The native EFI runtime service implementation (where "
+"both the EFI service and the kernel are either 32-bit or 64-bit executables) "
+"uses a wrapper mechanism that invokes the service through a dedicated "
+"workqueue. This workqueue is named efi_runtime, and it can be restricted to "
+"a housekeeping CPU using the ``/sys/devices/virtual/workqueue/efi_runtime/"
+"cpumask`` sysfs file. Assigning it to a housekeeping CPU ensures that "
+"potentially long service invocations do not impact the real-time workload "
+"which is restricted to other CPUs."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:190
+msgid ""
+"It must also be verified that the runtime services behave as expected. Some "
+"implementations on the x86 architecture pause all other CPUs while one CPU "
+"performs the service call. In such cases, the interruption affects all CPUs, "
+"and restricting the workqueue to a single CPU provides no benefit."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:196
+msgid "OP-TEE (ARM)"
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:198
+msgid ""
+"Execution flows from the normal world (Linux) into the secure world (OP-TEE) "
+"through the secure monitor at EL3. The transition is initiated by the `smc` "
+"(Secure Monitor Call) opcode or the `hvc` (Hypervisor Call) opcode together "
+"with a function identifier. The calling convention defines two types of "
+"calls: **yielding calls** and **fast calls**:"
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:204
+msgid ""
+"A **yielding call** unmasks interrupts before handling the requested "
+"service, allowing normal world interrupts to occur."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:206
+msgid ""
+"A **fast call** handles the requested service atomically, without allowing "
+"interrupts from either the normal world or the secure world."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:209
+msgid ""
+"In addition, the secure world (EL3 and OP-TEE) can receive interrupts routed "
+"to the secure world. While a secure world interrupt is being serviced, "
+"normal world interrupts are masked and cannot preempt the operation."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:213
+msgid ""
+"The transition from normal world to secure monitor to OP-TEE and back "
+"introduces additional latency due to world switching and context save/"
+"restore. This overhead is typically a few microseconds and usually remains "
+"within the noise floor."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:218
+msgid ""
+"It is worth noting that the normal world cannot mask secure interrupts, "
+"while the secure world can mask normal-world interrupts during execution. "
+"How OP-TEE affects real-time workloads depends on whether secure interrupts "
+"are enabled and which OP-TEE services are invoked."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:223
+msgid ""
+"A practical concern is any fast call that runs longer than expected, for "
+"example a function that occasionally performs a long-running cryptographic "
+"computation. Another example that may block in an unexpected way are OP-TEE "
+"drivers that issue RPC requests. An OP-TEE service in the secure world (RPMB "
+"for instance) may need to issue a request back to the normal world (the "
+"Linux driver) in order to complete the operation. While Linux remains "
+"preemptible, the thread that issued the request stays blocked until the RPC "
+"completes and the secure function call returns."
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:232
+msgid ""
+"The TF-A project provides documentation on interrupt management: https://"
+"trustedfirmware-a.readthedocs.io/en/latest/design/interrupt-framework-design."
+"html#interrupt-management-framework"
+msgstr ""
+
+#: ../../../core-api/real-time/hardware.rst:235
+msgid ""
+"The OP-TEE project provides documentation on how interrupts are handled: "
+"https://optee.readthedocs.io/en/latest/architecture/core.html#interrupt-"
+"handling"
 msgstr ""
