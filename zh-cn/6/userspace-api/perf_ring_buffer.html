@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Perf ring buffer &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/userspace-api/perf_ring_buffer.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="NT synchronization primitive driver" href="ntsync.html" />
+    <link rel="prev" title="Platform Profile Selection (e.g. /sys/firmware/acpi/platform_profile)" href="sysfs-platform_profile.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Userspace API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#system-calls">System calls</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#security-related-interfaces">Security-related interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#devices-and-i-o">Devices and I/O</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#everything-else">Everything else</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="ELF.html">Linux-specific ELF idiosyncrasies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="liveupdate.html">Live Update uAPI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="netlink/index.html">Netlink Handbook</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sysfs-platform_profile.html">Platform Profile Selection (e.g. /sys/firmware/acpi/platform_profile)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="vduse.html">VDUSE - &quot;vDPA Device in Userspace&quot;</a></li>
+<li class="toctree-l3"><a class="reference internal" href="futex2.html">futex2</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Perf ring buffer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ntsync.html">NT synchronization primitive driver</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/userspace-api/perf_ring_buffer.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="perf-ring-buffer">
+<h1>Perf ring buffer<a class="headerlink" href="#perf-ring-buffer" title="Link to this heading">¶</a></h1>
+<section id="introduction">
+<h2>1. Introduction<a class="headerlink" href="#introduction" title="Link to this heading">¶</a></h2>
+<p>The ring buffer is a fundamental mechanism for data transfer.  perf uses
+ring buffers to transfer event data from kernel to user space, another
+kind of ring buffer which is so called auxiliary (AUX) ring buffer also
+plays an important role for hardware tracing with Intel PT, Arm
+CoreSight, etc.</p>
+<p>The ring buffer implementation is critical but it's also a very
+challenging work.  On the one hand, the kernel and perf tool in the user
+space use the ring buffer to exchange data and stores data into data
+file, thus the ring buffer needs to transfer data with high throughput;
+on the other hand, the ring buffer management should avoid significant
+overload to distract profiling results.</p>
+<p>This documentation dives into the details for perf ring buffer with two
+parts: firstly it explains the perf ring buffer implementation, then the
+second part discusses the AUX ring buffer mechanism.</p>
+</section>
+<section id="ring-buffer-implementation">
+<h2>2. Ring buffer implementation<a class="headerlink" href="#ring-buffer-implementation" title="Link to this heading">¶</a></h2>
+<section id="basic-algorithm">
+<h3>2.1 Basic algorithm<a class="headerlink" href="#basic-algorithm" title="Link to this heading">¶</a></h3>
+<p>That said, a typical ring buffer is managed by a head pointer and a tail
+pointer; the head pointer is manipulated by a writer and the tail
+pointer is updated by a reader respectively.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>+---------------------------+
+|   |   |***|***|***|   |   |
++---------------------------+
+        `-&gt; Tail    `-&gt; Head
+
+* : the data is filled by the writer.
+
+        Figure 1. Ring buffer
+</pre></div>
+</div>
+<p>Perf uses the same way to manage its ring buffer.  In the implementation
+there are two key data structures held together in a set of consecutive
+pages, the control structure and then the ring buffer itself.  The page
+with the control structure in is known as the &quot;user page&quot;.  Being held
+in continuous virtual addresses simplifies locating the ring buffer
+address, it is in the pages after the page with the user page.</p>
+<p>The control structure is named as <code class="docutils literal notranslate"><span class="pre">perf_event_mmap_page</span></code>, it contains a
+head pointer <code class="docutils literal notranslate"><span class="pre">data_head</span></code> and a tail pointer <code class="docutils literal notranslate"><span class="pre">data_tail</span></code>.  When the
+kernel starts to fill records into the ring buffer, it updates the head
+pointer to reserve the memory so later it can safely store events into
+the buffer.  On the other side, when the user page is a writable mapping,
+the perf tool has the permission to update the tail pointer after consuming
+data from the ring buffer.  Yet another case is for the user page's
+read-only mapping, which is to be addressed in the section
+<a class="reference internal" href="#writing-samples-into-buffer"><span class="std std-ref">2.3.3 Writing samples into buffer</span></a>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>      user page                          ring buffer
++---------+---------+   +---------------------------------------+
+|data_head|data_tail|...|   |   |***|***|***|***|***|   |   |   |
++---------+---------+   +---------------------------------------+
+    `          `----------------^                   ^
+     `----------------------------------------------|
+
+          * : the data is filled by the writer.
+
+            Figure 2. Perf ring buffer
+</pre></div>
+</div>
+<p>When using the <code class="docutils literal notranslate"><span class="pre">perf</span> <span class="pre">record</span></code> tool, we can specify the ring buffer size
+with option <code class="docutils literal notranslate"><span class="pre">-m</span></code> or <code class="docutils literal notranslate"><span class="pre">--mmap-pages=</span></code>, the given size will be rounded up
+to a power of two that is a multiple of a page size.  Though the kernel
+allocates at once for all memory pages, it's deferred to map the pages
+to VMA area until the perf tool accesses the buffer from the user space.
+In other words, at the first time accesses the buffer's page from user
+space in the perf tool, a data abort exception for page fault is taken
+and the kernel uses this occasion to map the page into process VMA
+(see <code class="docutils literal notranslate"><span class="pre">perf_mmap_fault()</span></code>), thus the perf tool can continue to access
+the page after returning from the exception.</p>
+</section>
+<section id="ring-buffer-for-different-tracing-modes">
+<h3>2.2 Ring buffer for different tracing modes<a class="headerlink" href="#ring-buffer-for-different-tracing-modes" title="Link to this heading">¶</a></h3>
+<p>The perf profiles programs with different modes: default mode, per thread
+mode, per cpu mode, and system wide mode.  This section describes these
+modes and how the ring buffer meets requirements for them.  At last we
+will review the race conditions caused by these modes.</p>
+<section id="default-mode">
+<h4>2.2.1 Default mode<a class="headerlink" href="#default-mode" title="Link to this heading">¶</a></h4>
+<p>Usually we execute <code class="docutils literal notranslate"><span class="pre">perf</span> <span class="pre">record</span></code> command followed by a profiling program
+name, like below command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>perf record test_program
+</pre></div>
+</div>
+<p>This command doesn't specify any options for CPU and thread modes, the
+perf tool applies the default mode on the perf event.  It maps all the
+CPUs in the system and the profiled program's PID on the perf event, and
+it enables inheritance mode on the event so that child tasks inherits
+the events.  As a result, the perf event is attributed as:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>evsel::cpus::map[]    = { 0 .. _SC_NPROCESSORS_ONLN-1 }
+evsel::threads::map[] = { pid }
+evsel::attr::inherit  = 1
+</pre></div>
+</div>
+<p>These attributions finally will be reflected on the deployment of ring
+buffers.  As shown below, the perf tool allocates individual ring buffer
+for each CPU, but it only enables events for the profiled program rather
+than for all threads in the system.  The <em>T1</em> thread represents the
+thread context of the 'test_program', whereas <em>T2</em> and <em>T3</em> are irrelevant
+threads in the system.   The perf samples are exclusively collected for
+the <em>T1</em> thread and stored in the ring buffer associated with the CPU on
+which the <em>T1</em> thread is running.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>          T1                      T2                 T1
+        +----+              +-----------+          +----+
+CPU0    |xxxx|              |xxxxxxxxxxx|          |xxxx|
+        +----+--------------+-----------+----------+----+--------&gt;
+          |                                          |
+          v                                          v
+        +-----------------------------------------------------+
+        |                  Ring buffer 0                      |
+        +-----------------------------------------------------+
+
+               T1
+             +-----+
+CPU1         |xxxxx|
+        -----+-----+---------------------------------------------&gt;
+                |
+                v
+        +-----------------------------------------------------+
+        |                  Ring buffer 1                      |
+        +-----------------------------------------------------+
+
+                                    T1              T3
+                                  +----+        +-------+
+CPU2                              |xxxx|        |xxxxxxx|
+        --------------------------+----+--------+-------+--------&gt;
+                                    |
+                                    v
+        +-----------------------------------------------------+
+        |                  Ring buffer 2                      |
+        +-----------------------------------------------------+
+
+                          T1
+                   +--------------+
+CPU3               |xxxxxxxxxxxxxx|
+        -----------+--------------+------------------------------&gt;
+                          |
+                          v
+        +-----------------------------------------------------+
+        |                  Ring buffer 3                      |
+        +-----------------------------------------------------+
+
+        T1: Thread 1; T2: Thread 2; T3: Thread 3
+        x: Thread is in running state
+
+            Figure 3. Ring buffer for default mode
+</pre></div>
+</div>
+</section>
+<section id="per-thread-mode">
+<h4>2.2.2 Per-thread mode<a class="headerlink" href="#per-thread-mode" title="Link to this heading">¶</a></h4>
+<p>By specifying option <code class="docutils literal notranslate"><span class="pre">--per-thread</span></code> in perf command, e.g.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>perf record --per-thread test_program
+</pre></div>
+</div>
+<p>The perf event doesn't map to any CPUs and is only bound to the
+profiled process, thus, the perf event's attributions are:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>evsel::cpus::map[0]   = { -1 }
+evsel::threads::map[] = { pid }
+evsel::attr::inherit  = 0
+</pre></div>
+</div>
+<p>In this mode, a single ring buffer is allocated for the profiled thread;
+if the thread is scheduled on a CPU, the events on that CPU will be
+enabled; and if the thread is scheduled out from the CPU, the events on
+the CPU will be disabled.  When the thread is migrated from one CPU to
+another, the events are to be disabled on the previous CPU and enabled
+on the next CPU correspondingly.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>          T1                      T2                 T1
+        +----+              +-----------+          +----+
+CPU0    |xxxx|              |xxxxxxxxxxx|          |xxxx|
+        +----+--------------+-----------+----------+----+--------&gt;
+          |                                           |
+          |    T1                                     |
+          |  +-----+                                  |
+CPU1      |  |xxxxx|                                  |
+        --|--+-----+----------------------------------|----------&gt;
+          |     |                                     |
+          |     |                   T1            T3  |
+          |     |                 +----+        +---+ |
+CPU2      |     |                 |xxxx|        |xxx| |
+        --|-----|-----------------+----+--------+---+-|----------&gt;
+          |     |                   |                 |
+          |     |         T1        |                 |
+          |     |  +--------------+ |                 |
+CPU3      |     |  |xxxxxxxxxxxxxx| |                 |
+        --|-----|--+--------------+-|-----------------|----------&gt;
+          |     |         |         |                 |
+          v     v         v         v                 v
+        +-----------------------------------------------------+
+        |                  Ring buffer                        |
+        +-----------------------------------------------------+
+
+        T1: Thread 1
+        x: Thread is in running state
+
+            Figure 4. Ring buffer for per-thread mode
+</pre></div>
+</div>
+<p>When perf runs in per-thread mode, a ring buffer is allocated for the
+profiled thread <em>T1</em>.  The ring buffer is dedicated for thread <em>T1</em>, if the
+thread <em>T1</em> is running, the perf events will be recorded into the ring
+buffer; when the thread is sleeping, all associated events will be
+disabled, thus no trace data will be recorded into the ring buffer.</p>
+</section>
+<section id="per-cpu-mode">
+<h4>2.2.3 Per-CPU mode<a class="headerlink" href="#per-cpu-mode" title="Link to this heading">¶</a></h4>
+<p>The option <code class="docutils literal notranslate"><span class="pre">-C</span></code> is used to collect samples on the list of CPUs, for
+example the below perf command receives option <code class="docutils literal notranslate"><span class="pre">-C</span> <span class="pre">0,2</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>perf record -C 0,2 test_program
+</pre></div>
+</div>
+<p>It maps the perf event to CPUs 0 and 2, and the event is not associated to any
+PID.  Thus the perf event attributions are set as:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>evsel::cpus::map[0]   = { 0, 2 }
+evsel::threads::map[] = { -1 }
+evsel::attr::inherit  = 0
+</pre></div>
+</div>
+<p>This results in the session of <code class="docutils literal notranslate"><span class="pre">perf</span> <span class="pre">record</span></code> will sample all threads on CPU0
+and CPU2, and be terminated until test_program exits.  Even there have tasks
+running on CPU1 and CPU3, since the ring buffer is absent for them, any
+activities on these two CPUs will be ignored.  A usage case is to combine the
+options for per-thread mode and per-CPU mode, e.g. the options <code class="docutils literal notranslate"><span class="pre">–C</span> <span class="pre">0,2</span></code> and
+<code class="docutils literal notranslate"><span class="pre">––per–thread</span></code> are specified together, the samples are recorded only when
+the profiled thread is scheduled on any of the listed CPUs.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>          T1                      T2                 T1
+        +----+              +-----------+          +----+
+CPU0    |xxxx|              |xxxxxxxxxxx|          |xxxx|
+        +----+--------------+-----------+----------+----+--------&gt;
+          |                       |                  |
+          v                       v                  v
+        +-----------------------------------------------------+
+        |                  Ring buffer 0                      |
+        +-----------------------------------------------------+
+
+               T1
+             +-----+
+CPU1         |xxxxx|
+        -----+-----+---------------------------------------------&gt;
+
+                                    T1              T3
+                                  +----+        +-------+
+CPU2                              |xxxx|        |xxxxxxx|
+        --------------------------+----+--------+-------+--------&gt;
+                                    |               |
+                                    v               v
+        +-----------------------------------------------------+
+        |                  Ring buffer 1                      |
+        +-----------------------------------------------------+
+
+                          T1
+                   +--------------+
+CPU3               |xxxxxxxxxxxxxx|
+        -----------+--------------+------------------------------&gt;
+
+        T1: Thread 1; T2: Thread 2; T3: Thread 3
+        x: Thread is in running state
+
+            Figure 5. Ring buffer for per-CPU mode
+</pre></div>
+</div>
+</section>
+<section id="system-wide-mode">
+<h4>2.2.4 System wide mode<a class="headerlink" href="#system-wide-mode" title="Link to this heading">¶</a></h4>
+<p>By using option <code class="docutils literal notranslate"><span class="pre">–a</span></code> or <code class="docutils literal notranslate"><span class="pre">––all–cpus</span></code>, perf collects samples on all CPUs
+for all tasks, we call it as the system wide mode, the command is:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>perf record -a test_program
+</pre></div>
+</div>
+<p>Similar to the per-CPU mode, the perf event doesn't bind to any PID, and
+it maps to all CPUs in the system:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>evsel::cpus::map[]    = { 0 .. _SC_NPROCESSORS_ONLN-1 }
+evsel::threads::map[] = { -1 }
+evsel::attr::inherit  = 0
+</pre></div>
+</div>
+<p>In the system wide mode, every CPU has its own ring buffer, all threads
+are monitored during the running state and the samples are recorded into
+the ring buffer belonging to the CPU which the events occurred on.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>          T1                      T2                 T1
+        +----+              +-----------+          +----+
+CPU0    |xxxx|              |xxxxxxxxxxx|          |xxxx|
+        +----+--------------+-----------+----------+----+--------&gt;
+          |                       |                  |
+          v                       v                  v
+        +-----------------------------------------------------+
+        |                  Ring buffer 0                      |
+        +-----------------------------------------------------+
+
+               T1
+             +-----+
+CPU1         |xxxxx|
+        -----+-----+---------------------------------------------&gt;
+                |
+                v
+        +-----------------------------------------------------+
+        |                  Ring buffer 1                      |
+        +-----------------------------------------------------+
+
+                                    T1              T3
+                                  +----+        +-------+
+CPU2                              |xxxx|        |xxxxxxx|
+        --------------------------+----+--------+-------+--------&gt;
+                                    |               |
+                                    v               v
+        +-----------------------------------------------------+
+        |                  Ring buffer 2                      |
+        +-----------------------------------------------------+
+
+                          T1
+                   +--------------+
+CPU3               |xxxxxxxxxxxxxx|
+        -----------+--------------+------------------------------&gt;
+                          |
+                          v
+        +-----------------------------------------------------+
+        |                  Ring buffer 3                      |
+        +-----------------------------------------------------+
+
+        T1: Thread 1; T2: Thread 2; T3: Thread 3
+        x: Thread is in running state
+
+            Figure 6. Ring buffer for system wide mode
+</pre></div>
+</div>
+</section>
+</section>
+<section id="accessing-buffer">
+<h3>2.3 Accessing buffer<a class="headerlink" href="#accessing-buffer" title="Link to this heading">¶</a></h3>
+<p>Based on the understanding of how the ring buffer is allocated in
+various modes, this section explains access the ring buffer.</p>
+<section id="producer-consumer-model">
+<h4>2.3.1 Producer-consumer model<a class="headerlink" href="#producer-consumer-model" title="Link to this heading">¶</a></h4>
+<p>In the Linux kernel, the PMU events can produce samples which are stored
+into the ring buffer; the perf command in user space consumes the
+samples by reading out data from the ring buffer and finally saves the
+data into the file for post analysis.  It’s a typical producer-consumer
+model for using the ring buffer.</p>
+<p>The perf process polls on the PMU events and sleeps when no events are
+incoming.  To prevent frequent exchanges between the kernel and user
+space, the kernel event core layer introduces a watermark, which is
+stored in the <code class="docutils literal notranslate"><span class="pre">perf_buffer::watermark</span></code>.  When a sample is recorded into
+the ring buffer, and if the used buffer exceeds the watermark, the
+kernel wakes up the perf process to read samples from the ring buffer.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>                   Perf
+                   / | Read samples
+         Polling  /  `--------------|               Ring buffer
+                 v                  v    ;---------------------v
++----------------+     +---------+---------+   +-------------------+
+|Event wait queue|     |data_head|data_tail|   |***|***|   |   |***|
++----------------+     +---------+---------+   +-------------------+
+         ^                  ^ `------------------------^
+         | Wake up tasks    | Store samples
+      +-----------------------------+
+      |  Kernel event core layer    |
+      +-----------------------------+
+
+          * : the data is filled by the writer.
+
+            Figure 7. Writing and reading the ring buffer
+</pre></div>
+</div>
+<p>When the kernel event core layer notifies the user space, because
+multiple events might share the same ring buffer for recording samples,
+the core layer iterates every event associated with the ring buffer and
+wakes up tasks waiting on the event.  This is fulfilled by the kernel
+function <code class="docutils literal notranslate"><span class="pre">ring_buffer_wakeup()</span></code>.</p>
+<p>After the perf process is woken up, it starts to check the ring buffers
+one by one, if it finds any ring buffer containing samples it will read
+out the samples for statistics or saving into the data file.  Given the
+perf process is able to run on any CPU, this leads to the ring buffer
+potentially being accessed from multiple CPUs simultaneously, which
+causes race conditions.  The race condition handling is described in the
+section <a class="reference internal" href="#memory-synchronization"><span class="std std-ref">2.3.5 Memory synchronization</span></a>.</p>
+</section>
+<section id="properties-of-the-ring-buffers">
+<h4>2.3.2 Properties of the ring buffers<a class="headerlink" href="#properties-of-the-ring-buffers" title="Link to this heading">¶</a></h4>
+<p>Linux kernel supports two write directions for the ring buffer: forward and
+backward.  The forward writing saves samples from the beginning of the ring
+buffer, the backward writing stores data from the end of the ring buffer with
+the reversed direction.  The perf tool determines the writing direction.</p>
+<p>Additionally, the tool can map buffers in either read-write mode or read-only
+mode to the user space.</p>
+<p>The ring buffer in the read-write mode is mapped with the property
+<code class="docutils literal notranslate"><span class="pre">PROT_READ</span> <span class="pre">|</span> <span class="pre">PROT_WRITE</span></code>.  With the write permission, the perf tool
+updates the <code class="docutils literal notranslate"><span class="pre">data_tail</span></code> to indicate the data start position.  Combining
+with the head pointer <code class="docutils literal notranslate"><span class="pre">data_head</span></code>, which works as the end position of
+the current data, the perf tool can easily know where read out the data
+from.</p>
+<p>Alternatively, in the read-only mode, only the kernel keeps to update
+the <code class="docutils literal notranslate"><span class="pre">data_head</span></code> while the user space cannot access the <code class="docutils literal notranslate"><span class="pre">data_tail</span></code> due
+to the mapping property <code class="docutils literal notranslate"><span class="pre">PROT_READ</span></code>.</p>
+<p>As a result, the matrix below illustrates the various combinations of
+direction and mapping characteristics.  The perf tool employs two of these
+combinations to support buffer types: the non-overwrite buffer and the
+overwritable buffer.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 33.3%" />
+<col style="width: 33.3%" />
+<col style="width: 33.3%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Mapping mode</p></th>
+<th class="head"><p>Forward</p></th>
+<th class="head"><p>Backward</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>read-write</p></td>
+<td><p>Non-overwrite ring buffer</p></td>
+<td><p>Not used</p></td>
+</tr>
+<tr class="row-odd"><td><p>read-only</p></td>
+<td><p>Not used</p></td>
+<td><p>Overwritable ring buffer</p></td>
+</tr>
+</tbody>
+</table>
+<p>The non-overwrite ring buffer uses the read-write mapping with forward
+writing.  It starts to save data from the beginning of the ring buffer
+and wrap around when overflow, which is used with the read-write mode in
+the normal ring buffer.  When the consumer doesn't keep up with the
+producer, it would lose some data, the kernel keeps how many records it
+lost and generates the <code class="docutils literal notranslate"><span class="pre">PERF_RECORD_LOST</span></code> records in the next time
+when it finds a space in the ring buffer.</p>
+<p>The overwritable ring buffer uses the backward writing with the
+read-only mode.  It saves the data from the end of the ring buffer and
+the <code class="docutils literal notranslate"><span class="pre">data_head</span></code> keeps the position of current data, the perf always
+knows where it starts to read and until the end of the ring buffer, thus
+it don't need the <code class="docutils literal notranslate"><span class="pre">data_tail</span></code>.  In this mode, it will not generate the
+<code class="docutils literal notranslate"><span class="pre">PERF_RECORD_LOST</span></code> records.</p>
+</section>
+<section id="writing-samples-into-buffer">
+<span id="id1"></span><h4>2.3.3 Writing samples into buffer<a class="headerlink" href="#writing-samples-into-buffer" title="Link to this heading">¶</a></h4>
+<p>When a sample is taken and saved into the ring buffer, the kernel
+prepares sample fields based on the sample type; then it prepares the
+info for writing ring buffer which is stored in the structure
+<code class="docutils literal notranslate"><span class="pre">perf_output_handle</span></code>.  In the end, the kernel outputs the sample into
+the ring buffer and updates the head pointer in the user page so the
+perf tool can see the latest value.</p>
+<p>The structure <code class="docutils literal notranslate"><span class="pre">perf_output_handle</span></code> serves as a temporary context for
+tracking the information related to the buffer.  The advantages of it is
+that it enables concurrent writing to the buffer by different events.
+For example, a software event and a hardware PMU event both are enabled
+for profiling, two instances of <code class="docutils literal notranslate"><span class="pre">perf_output_handle</span></code> serve as separate
+contexts for the software event and the hardware event respectively.
+This allows each event to reserve its own memory space for populating
+the record data.</p>
+</section>
+<section id="reading-samples-from-buffer">
+<h4>2.3.4 Reading samples from buffer<a class="headerlink" href="#reading-samples-from-buffer" title="Link to this heading">¶</a></h4>
+<p>In the user space, the perf tool utilizes the <code class="docutils literal notranslate"><span class="pre">perf_event_mmap_page</span></code>
+structure to handle the head and tail of the buffer.  It also uses
+<code class="docutils literal notranslate"><span class="pre">perf_mmap</span></code> structure to keep track of a context for the ring buffer, this
+context includes information about the buffer's starting and ending
+addresses.  Additionally, the mask value can be utilized to compute the
+circular buffer pointer even for an overflow.</p>
+<p>Similar to the kernel, the perf tool in the user space first reads out
+the recorded data from the ring buffer, and then updates the buffer's
+tail pointer <code class="docutils literal notranslate"><span class="pre">perf_event_mmap_page::data_tail</span></code>.</p>
+</section>
+<section id="memory-synchronization">
+<span id="id2"></span><h4>2.3.5 Memory synchronization<a class="headerlink" href="#memory-synchronization" title="Link to this heading">¶</a></h4>
+<p>The modern CPUs with relaxed memory model cannot promise the memory
+ordering, this means it’s possible to access the ring buffer and the
+<code class="docutils literal notranslate"><span class="pre">perf_event_mmap_page</span></code> structure out of order.  To assure the specific
+sequence for memory accessing perf ring buffer, memory barriers are
+used to assure the data dependency.  The rationale for the memory
+synchronization is as below:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Kernel                          User space
+
+if (LOAD -&gt;data_tail) {         LOAD -&gt;data_head
+                 (A)            smp_rmb()        (C)
+  STORE $data                   LOAD $data
+  smp_wmb()      (B)            smp_mb()         (D)
+  STORE -&gt;data_head             STORE -&gt;data_tail
+}
+</pre></div>
+</div>
+<p>The comments in tools/include/linux/ring_buffer.h gives nice description
+for why and how to use memory barriers, here we will just provide an
+alternative explanation:</p>
+<p>(A) is a control dependency so that CPU assures order between checking
+pointer <code class="docutils literal notranslate"><span class="pre">perf_event_mmap_page::data_tail</span></code> and filling sample into ring
+buffer;</p>
+<p>(D) pairs with (A).  (D) separates the ring buffer data reading from
+writing the pointer <code class="docutils literal notranslate"><span class="pre">data_tail</span></code>, perf tool first consumes samples and then
+tells the kernel that the data chunk has been released.  Since a reading
+operation is followed by a writing operation, thus (D) is a full memory
+barrier.</p>
+<p>(B) is a writing barrier in the middle of two writing operations, which
+makes sure that recording a sample must be prior to updating the head
+pointer.</p>
+<p>(C) pairs with (B).  (C) is a read memory barrier to ensure the head
+pointer is fetched before reading samples.</p>
+<p>To implement the above algorithm, the <code class="docutils literal notranslate"><span class="pre">perf_output_put_handle()</span></code> function
+in the kernel and two helpers <code class="docutils literal notranslate"><span class="pre">ring_buffer_read_head()</span></code> and
+<code class="docutils literal notranslate"><span class="pre">ring_buffer_write_tail()</span></code> in the user space are introduced, they rely
+on memory barriers as described above to ensure the data dependency.</p>
+<p>Some architectures support one-way permeable barrier with load-acquire
+and store-release operations, these barriers are more relaxed with less
+performance penalty, so (C) and (D) can be optimized to use barriers
+<code class="docutils literal notranslate"><span class="pre">smp_load_acquire()</span></code> and <code class="docutils literal notranslate"><span class="pre">smp_store_release()</span></code> respectively.</p>
+<p>If an architecture doesn’t support load-acquire and store-release in its
+memory model, it will roll back to the old fashion of memory barrier
+operations.  In this case, <code class="docutils literal notranslate"><span class="pre">smp_load_acquire()</span></code> encapsulates
+<code class="docutils literal notranslate"><span class="pre">READ_ONCE()</span></code> + <code class="docutils literal notranslate"><span class="pre">smp_mb()</span></code>, since <code class="docutils literal notranslate"><span class="pre">smp_mb()</span></code> is costly,
+<code class="docutils literal notranslate"><span class="pre">ring_buffer_read_head()</span></code> doesn't invoke <code class="docutils literal notranslate"><span class="pre">smp_load_acquire()</span></code> and it uses
+the barriers <code class="docutils literal notranslate"><span class="pre">READ_ONCE()</span></code> + <code class="docutils literal notranslate"><span class="pre">smp_rmb()</span></code> instead.</p>
+</section>
+</section>
+</section>
+<section id="the-mechanism-of-aux-ring-buffer">
+<h2>3. The mechanism of AUX ring buffer<a class="headerlink" href="#the-mechanism-of-aux-ring-buffer" title="Link to this heading">¶</a></h2>
+<p>In this chapter, we will explain the implementation of the AUX ring
+buffer.  In the first part it will discuss the connection between the
+AUX ring buffer and the regular ring buffer, then the second part will
+examine how the AUX ring buffer co-works with the regular ring buffer,
+as well as the additional features introduced by the AUX ring buffer for
+the sampling mechanism.</p>
+<section id="the-relationship-between-aux-and-regular-ring-buffers">
+<h3>3.1 The relationship between AUX and regular ring buffers<a class="headerlink" href="#the-relationship-between-aux-and-regular-ring-buffers" title="Link to this heading">¶</a></h3>
+<p>Generally, the AUX ring buffer is an auxiliary for the regular ring
+buffer.  The regular ring buffer is primarily used to store the event
+samples and every event format complies with the definition in the
+union <code class="docutils literal notranslate"><span class="pre">perf_event</span></code>; the AUX ring buffer is for recording the hardware
+trace data and the trace data format is hardware IP dependent.</p>
+<p>The general use and advantage of the AUX ring buffer is that it is
+written directly by hardware rather than by the kernel.  For example,
+regular profile samples that write to the regular ring buffer cause an
+interrupt.  Tracing execution requires a high number of samples and
+using interrupts would be overwhelming for the regular ring buffer
+mechanism.  Having an AUX buffer allows for a region of memory more
+decoupled from the kernel and written to directly by hardware tracing.</p>
+<p>The AUX ring buffer reuses the same algorithm with the regular ring
+buffer for the buffer management.  The control structure
+<code class="docutils literal notranslate"><span class="pre">perf_event_mmap_page</span></code> extends the new fields <code class="docutils literal notranslate"><span class="pre">aux_head</span></code> and <code class="docutils literal notranslate"><span class="pre">aux_tail</span></code>
+for the head and tail pointers of the AUX ring buffer.</p>
+<p>During the initialisation phase, besides the mmap()-ed regular ring
+buffer, the perf tool invokes a second syscall in the
+<code class="docutils literal notranslate"><span class="pre">auxtrace_mmap__mmap()</span></code> function for the mmap of the AUX buffer with
+non-zero file offset; <code class="docutils literal notranslate"><span class="pre">rb_alloc_aux()</span></code> in the kernel allocates pages
+correspondingly, these pages will be deferred to map into VMA when
+handling the page fault, which is the same lazy mechanism with the
+regular ring buffer.</p>
+<p>AUX events and AUX trace data are two different things.  Let's see an
+example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>perf record -a -e cycles -e cs_etm// -- sleep 2
+</pre></div>
+</div>
+<p>The above command enables two events: one is the event <em>cycles</em> from PMU
+and another is the AUX event <em>cs_etm</em> from Arm CoreSight, both are saved
+into the regular ring buffer while the CoreSight's AUX trace data is
+stored in the AUX ring buffer.</p>
+<p>As a result, we can see the regular ring buffer and the AUX ring buffer
+are allocated in pairs.  The perf in default mode allocates the regular
+ring buffer and the AUX ring buffer per CPU-wise, which is the same as
+the system wide mode, however, the default mode records samples only for
+the profiled program, whereas the latter mode profiles for all programs
+in the system.  For per-thread mode, the perf tool allocates only one
+regular ring buffer and one AUX ring buffer for the whole session.  For
+the per-CPU mode, the perf allocates two kinds of ring buffers for
+selected CPUs specified by the option <code class="docutils literal notranslate"><span class="pre">-C</span></code>.</p>
+<p>The below figure demonstrates the buffers' layout in the system wide
+mode; if there are any activities on one CPU, the AUX event samples and
+the hardware trace data will be recorded into the dedicated buffers for
+the CPU.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>          T1                      T2                 T1
+        +----+              +-----------+          +----+
+CPU0    |xxxx|              |xxxxxxxxxxx|          |xxxx|
+        +----+--------------+-----------+----------+----+--------&gt;
+          |                       |                  |
+          v                       v                  v
+        +-----------------------------------------------------+
+        |                  Ring buffer 0                      |
+        +-----------------------------------------------------+
+          |                       |                  |
+          v                       v                  v
+        +-----------------------------------------------------+
+        |               AUX Ring buffer 0                     |
+        +-----------------------------------------------------+
+
+               T1
+             +-----+
+CPU1         |xxxxx|
+        -----+-----+---------------------------------------------&gt;
+                |
+                v
+        +-----------------------------------------------------+
+        |                  Ring buffer 1                      |
+        +-----------------------------------------------------+
+                |
+                v
+        +-----------------------------------------------------+
+        |               AUX Ring buffer 1                     |
+        +-----------------------------------------------------+
+
+                                    T1              T3
+                                  +----+        +-------+
+CPU2                              |xxxx|        |xxxxxxx|
+        --------------------------+----+--------+-------+--------&gt;
+                                    |               |
+                                    v               v
+        +-----------------------------------------------------+
+        |                  Ring buffer 2                      |
+        +-----------------------------------------------------+
+                                    |               |
+                                    v               v
+        +-----------------------------------------------------+
+        |               AUX Ring buffer 2                     |
+        +-----------------------------------------------------+
+
+                          T1
+                   +--------------+
+CPU3               |xxxxxxxxxxxxxx|
+        -----------+--------------+------------------------------&gt;
+                          |
+                          v
+        +-----------------------------------------------------+
+        |                  Ring buffer 3                      |
+        +-----------------------------------------------------+
+                          |
+                          v
+        +-----------------------------------------------------+
+        |               AUX Ring buffer 3                     |
+        +-----------------------------------------------------+
+
+        T1: Thread 1; T2: Thread 2; T3: Thread 3
+        x: Thread is in running state
+
+            Figure 8. AUX ring buffer for system wide mode
+</pre></div>
+</div>
+</section>
+<section id="aux-events">
+<h3>3.2 AUX events<a class="headerlink" href="#aux-events" title="Link to this heading">¶</a></h3>
+<p>Similar to <code class="docutils literal notranslate"><span class="pre">perf_output_begin()</span></code> and <code class="docutils literal notranslate"><span class="pre">perf_output_end()</span></code>'s working for the
+regular ring buffer, <code class="docutils literal notranslate"><span class="pre">perf_aux_output_begin()</span></code> and <code class="docutils literal notranslate"><span class="pre">perf_aux_output_end()</span></code>
+serve for the AUX ring buffer for processing the hardware trace data.</p>
+<p>Once the hardware trace data is stored into the AUX ring buffer, the PMU
+driver will stop hardware tracing by calling the <code class="docutils literal notranslate"><span class="pre">pmu::stop()</span></code> callback.
+Similar to the regular ring buffer, the AUX ring buffer needs to apply
+the memory synchronization mechanism as discussed in the section
+<a class="reference internal" href="#memory-synchronization"><span class="std std-ref">2.3.5 Memory synchronization</span></a>.  Since the AUX ring buffer is managed by the
+PMU driver, the barrier (B), which is a writing barrier to ensure the trace
+data is externally visible prior to updating the head pointer, is asked
+to be implemented in the PMU driver.</p>
+<p>Then <code class="docutils literal notranslate"><span class="pre">pmu::stop()</span></code> can safely call the <code class="docutils literal notranslate"><span class="pre">perf_aux_output_end()</span></code> function to
+finish two things:</p>
+<ul class="simple">
+<li><p>It fills an event <code class="docutils literal notranslate"><span class="pre">PERF_RECORD_AUX</span></code> into the regular ring buffer, this
+event delivers the information of the start address and data size for a
+chunk of hardware trace data has been stored into the AUX ring buffer;</p></li>
+<li><p>Since the hardware trace driver has stored new trace data into the AUX
+ring buffer, the argument <em>size</em> indicates how many bytes have been
+consumed by the hardware tracing, thus <code class="docutils literal notranslate"><span class="pre">perf_aux_output_end()</span></code> updates the
+header pointer <code class="docutils literal notranslate"><span class="pre">perf_buffer::aux_head</span></code> to reflect the latest buffer usage.</p></li>
+</ul>
+<p>At the end, the PMU driver will restart hardware tracing.  During this
+temporary suspending period, it will lose hardware trace data, which
+will introduce a discontinuity during decoding phase.</p>
+<p>The event <code class="docutils literal notranslate"><span class="pre">PERF_RECORD_AUX</span></code> presents an AUX event which is handled in the
+kernel, but it lacks the information for saving the AUX trace data in
+the perf file.  When the perf tool copies the trace data from AUX ring
+buffer to the perf data file, it synthesizes a <code class="docutils literal notranslate"><span class="pre">PERF_RECORD_AUXTRACE</span></code>
+event which is not a kernel ABI, it's defined by the perf tool to describe
+which portion of data in the AUX ring buffer is saved.  Afterwards, the perf
+tool reads out the AUX trace data from the perf file based on the
+<code class="docutils literal notranslate"><span class="pre">PERF_RECORD_AUXTRACE</span></code> events, and the <code class="docutils literal notranslate"><span class="pre">PERF_RECORD_AUX</span></code> event is used to
+decode a chunk of data by correlating with time order.</p>
+</section>
+<section id="snapshot-mode">
+<h3>3.3 Snapshot mode<a class="headerlink" href="#snapshot-mode" title="Link to this heading">¶</a></h3>
+<p>Perf supports snapshot mode for AUX ring buffer, in this mode, users
+only record AUX trace data at a specific time point which users are
+interested in.  E.g. below gives an example of how to take snapshots
+with 1 second interval with Arm CoreSight:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>perf record -e cs_etm//u -S -a program &amp;
+PERFPID=$!
+while true; do
+    kill -USR2 $PERFPID
+    sleep 1
+done
+</pre></div>
+</div>
+<p>The main flow for snapshot mode is:</p>
+<ul class="simple">
+<li><p>Before a snapshot is taken, the AUX ring buffer acts in free run mode.
+During free run mode the perf doesn't record any of the AUX events and
+trace data;</p></li>
+<li><p>Once the perf tool receives the <em>USR2</em> signal, it triggers the callback
+function <code class="docutils literal notranslate"><span class="pre">auxtrace_record::snapshot_start()</span></code> to deactivate hardware
+tracing.  The kernel driver then populates the AUX ring buffer with the
+hardware trace data, and the event <code class="docutils literal notranslate"><span class="pre">PERF_RECORD_AUX</span></code> is stored in the
+regular ring buffer;</p></li>
+<li><p>Then perf tool takes a snapshot, <code class="docutils literal notranslate"><span class="pre">record__read_auxtrace_snapshot()</span></code>
+reads out the hardware trace data from the AUX ring buffer and saves it
+into perf data file;</p></li>
+<li><p>After the snapshot is finished, <code class="docutils literal notranslate"><span class="pre">auxtrace_record::snapshot_finish()</span></code>
+restarts the PMU event for AUX tracing.</p></li>
+</ul>
+<p>The perf only accesses the head pointer <code class="docutils literal notranslate"><span class="pre">perf_event_mmap_page::aux_head</span></code>
+in snapshot mode and doesn’t touch tail pointer <code class="docutils literal notranslate"><span class="pre">aux_tail</span></code>, this is
+because the AUX ring buffer can overflow in free run mode, the tail
+pointer is useless in this case.  Alternatively, the callback
+<code class="docutils literal notranslate"><span class="pre">auxtrace_record::find_snapshot()</span></code> is introduced for making the decision
+of whether the AUX ring buffer has been wrapped around or not, at the
+end it fixes up the AUX buffer's head which are used to calculate the
+trace data size.</p>
+<p>As we know, the buffers' deployment can be per-thread mode, per-CPU
+mode, or system wide mode, and the snapshot can be applied to any of
+these modes.  Below is an example of taking snapshot with system wide
+mode.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>                                     Snapshot is taken
+                                             |
+                                             v
+                    +------------------------+
+                    |  AUX Ring buffer 0     | &lt;- aux_head
+                    +------------------------+
+                                             v
+            +--------------------------------+
+            |          AUX Ring buffer 1     | &lt;- aux_head
+            +--------------------------------+
+                                             v
++--------------------------------------------+
+|                      AUX Ring buffer 2     | &lt;- aux_head
++--------------------------------------------+
+                                             v
+     +---------------------------------------+
+     |                 AUX Ring buffer 3     | &lt;- aux_head
+     +---------------------------------------+
+
+            Figure 9. Snapshot with system wide mode
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/userspace-api/perf_ring_buffer.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

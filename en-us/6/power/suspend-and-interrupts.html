@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>System Suspend and Device Interrupts &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/power/suspend-and-interrupts.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Using swap files with software suspend (swsusp)" href="swsusp-and-swap-files.html" />
+    <link rel="prev" title="Interaction of Suspend code (S3) with the CPU hotplug infrastructure" href="suspend-and-cpuhotplug.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/power/suspend-and-interrupts.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="system-suspend-and-device-interrupts">
+<h1>System Suspend and Device Interrupts<a class="headerlink" href="#system-suspend-and-device-interrupts" title="Link to this heading">¶</a></h1>
+<p>Copyright (C) 2014 Intel Corp.
+Author: Rafael J. Wysocki &lt;<a class="reference external" href="mailto:rafael&#46;j&#46;wysocki&#37;&#52;&#48;intel&#46;com">rafael<span>&#46;</span>j<span>&#46;</span>wysocki<span>&#64;</span>intel<span>&#46;</span>com</a>&gt;</p>
+<section id="suspending-and-resuming-device-irqs">
+<h2>Suspending and Resuming Device IRQs<a class="headerlink" href="#suspending-and-resuming-device-irqs" title="Link to this heading">¶</a></h2>
+<p>Device interrupt request lines (IRQs) are generally disabled during system
+suspend after the “late” phase of suspending devices (that is, after all of the
+-&gt;prepare, -&gt;suspend and -&gt;suspend_late callbacks have been executed for all
+devices).  That is done by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">suspend_device_irqs()</span></code>.</p>
+<p>The rationale for doing so is that after the “late” phase of device suspend
+there is no legitimate reason why any interrupts from suspended devices should
+trigger and if any devices have not been suspended properly yet, it is better to
+block interrupts from them anyway.  Also, in the past we had problems with
+interrupt handlers for shared IRQs that device drivers implementing them were
+not prepared for interrupts triggering after their devices had been suspended.
+In some cases they would attempt to access, for example, memory address spaces
+of suspended devices and cause unpredictable behavior to ensue as a result.
+Unfortunately, such problems are very difficult to debug and the introduction
+of <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">suspend_device_irqs()</span></code>, along with the “noirq” phase of device suspend and
+resume, was the only practical way to mitigate them.</p>
+<p>Device IRQs are re-enabled during system resume, right before the “early” phase
+of resuming devices (that is, before starting to execute -&gt;resume_early
+callbacks for devices).  The function doing that is <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">resume_device_irqs()</span></code>.</p>
+</section>
+<section id="the-irqf-no-suspend-flag">
+<h2>The IRQF_NO_SUSPEND Flag<a class="headerlink" href="#the-irqf-no-suspend-flag" title="Link to this heading">¶</a></h2>
+<p>There are interrupts that can legitimately trigger during the entire system
+suspend-resume cycle, including the “noirq” phases of suspending and resuming
+devices as well as during the time when nonboot CPUs are taken offline and
+brought back online.  That applies to timer interrupts in the first place,
+but also to IPIs and to some other special-purpose interrupts.</p>
+<p>The IRQF_NO_SUSPEND flag is used to indicate that to the IRQ subsystem when
+requesting a special-purpose interrupt.  It causes <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">suspend_device_irqs()</span></code> to
+leave the corresponding IRQ enabled so as to allow the interrupt to work as
+expected during the suspend-resume cycle, but does not guarantee that the
+interrupt will wake the system from a suspended state -- for such cases it is
+necessary to use <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">enable_irq_wake()</span></code>.</p>
+<p>Note that the IRQF_NO_SUSPEND flag affects the entire IRQ and not just one
+user of it.  Thus, if the IRQ is shared, all of the interrupt handlers installed
+for it will be executed as usual after <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">suspend_device_irqs()</span></code>, even if the
+IRQF_NO_SUSPEND flag was not passed to <a class="reference internal" href="../core-api/genericirq.html#c.request_irq" title="request_irq"><code class="xref c c-func docutils literal notranslate"><span class="pre">request_irq()</span></code></a> (or equivalent) by some of
+the IRQ’s users.  For this reason, using IRQF_NO_SUSPEND and IRQF_SHARED at the
+same time should be avoided.</p>
+</section>
+<section id="system-wakeup-interrupts-enable-irq-wake-and-disable-irq-wake">
+<h2>System Wakeup Interrupts, enable_irq_wake() and disable_irq_wake()<a class="headerlink" href="#system-wakeup-interrupts-enable-irq-wake-and-disable-irq-wake" title="Link to this heading">¶</a></h2>
+<p>System wakeup interrupts generally need to be configured to wake up the system
+from sleep states, especially if they are used for different purposes (e.g. as
+I/O interrupts) in the working state.</p>
+<p>That may involve turning on a special signal handling logic within the platform
+(such as an SoC) so that signals from a given line are routed in a different way
+during system sleep so as to trigger a system wakeup when needed.  For example,
+the platform may include a dedicated interrupt controller used specifically for
+handling system wakeup events.  Then, if a given interrupt line is supposed to
+wake up the system from sleep states, the corresponding input of that interrupt
+controller needs to be enabled to receive signals from the line in question.
+After wakeup, it generally is better to disable that input to prevent the
+dedicated controller from triggering interrupts unnecessarily.</p>
+<p>The IRQ subsystem provides two helper functions to be used by device drivers for
+those purposes.  Namely, <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">enable_irq_wake()</span></code> turns on the platform’s logic for
+handling the given IRQ as a system wakeup interrupt line and <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">disable_irq_wake()</span></code>
+turns that logic off.</p>
+<p>Calling <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">enable_irq_wake()</span></code> causes <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">suspend_device_irqs()</span></code> to treat the given IRQ
+in a special way.  Namely, the IRQ remains enabled, but on the first interrupt
+it will be disabled, marked as pending and “suspended” so that it will be
+re-enabled by <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">resume_device_irqs()</span></code> during the subsequent system resume.  Also
+the PM core is notified about the event which causes the system suspend in
+progress to be aborted (that doesn’t have to happen immediately, but at one
+of the points where the suspend thread looks for pending wakeup events).</p>
+<p>This way every interrupt from a wakeup interrupt source will either cause the
+system suspend currently in progress to be aborted or wake up the system if
+already suspended.  However, after <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">suspend_device_irqs()</span></code> interrupt handlers are
+not executed for system wakeup IRQs.  They are only executed for IRQF_NO_SUSPEND
+IRQs at that time, but those IRQs should not be configured for system wakeup
+using <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">enable_irq_wake()</span></code>.</p>
+</section>
+<section id="interrupts-and-suspend-to-idle">
+<h2>Interrupts and Suspend-to-Idle<a class="headerlink" href="#interrupts-and-suspend-to-idle" title="Link to this heading">¶</a></h2>
+<p>Suspend-to-idle (also known as the “freeze” sleep state) is a relatively new
+system sleep state that works by idling all of the processors and waiting for
+interrupts right after the “noirq” phase of suspending devices.</p>
+<p>Of course, this means that all of the interrupts with the IRQF_NO_SUSPEND flag
+set will bring CPUs out of idle while in that state, but they will not cause the
+IRQ subsystem to trigger a system wakeup.</p>
+<p>System wakeup interrupts, in turn, will trigger wakeup from suspend-to-idle in
+analogy with what they do in the full system suspend case.  The only difference
+is that the wakeup from suspend-to-idle is signaled using the usual working
+state interrupt delivery mechanisms and doesn’t require the platform to use
+any special interrupt handling logic for it to work.</p>
+</section>
+<section id="irqf-no-suspend-and-enable-irq-wake">
+<h2>IRQF_NO_SUSPEND and enable_irq_wake()<a class="headerlink" href="#irqf-no-suspend-and-enable-irq-wake" title="Link to this heading">¶</a></h2>
+<p>There are very few valid reasons to use both <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">enable_irq_wake()</span></code> and the
+IRQF_NO_SUSPEND flag on the same IRQ, and it is never valid to use both for the
+same device.</p>
+<p>First of all, if the IRQ is not shared, the rules for handling IRQF_NO_SUSPEND
+interrupts (interrupt handlers are invoked after <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">suspend_device_irqs()</span></code>) are
+directly at odds with the rules for handling system wakeup interrupts (interrupt
+handlers are not invoked after <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">suspend_device_irqs()</span></code>).</p>
+<p>Second, both <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">enable_irq_wake()</span></code> and IRQF_NO_SUSPEND apply to entire IRQs and not
+to individual interrupt handlers, so sharing an IRQ between a system wakeup
+interrupt source and an IRQF_NO_SUSPEND interrupt source does not generally
+make sense.</p>
+<p>In rare cases an IRQ can be shared between a wakeup device driver and an
+IRQF_NO_SUSPEND user. In order for this to be safe, the wakeup device driver
+must be able to discern spurious IRQs from genuine wakeup events (signalling
+the latter to the core with <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pm_system_wakeup()</span></code>), must use <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">enable_irq_wake()</span></code> to
+ensure that the IRQ will function as a wakeup source, and must request the IRQ
+with IRQF_COND_SUSPEND to tell the core that it meets these requirements. If
+these requirements are not met, it is not valid to use IRQF_COND_SUSPEND.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/power/suspend-and-interrupts.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
