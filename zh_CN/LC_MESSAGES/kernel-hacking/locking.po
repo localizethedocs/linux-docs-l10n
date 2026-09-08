@@ -1,0 +1,3094 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel 6\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-06 07:31+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../kernel-hacking/locking.rst:5
+msgid "Unreliable Guide To Locking"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:0
+msgid "Author"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:7
+msgid "Rusty Russell"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:10
+msgid "Introduction"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:12
+msgid ""
+"Welcome, to Rusty's Remarkably Unreliable Guide to Kernel Locking issues. "
+"This document describes the locking systems in the Linux Kernel in 2.6."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:16
+msgid ""
+"With the wide availability of HyperThreading, and preemption in the Linux "
+"Kernel, everyone hacking on the kernel needs to know the fundamentals of "
+"concurrency and locking for SMP."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:21
+msgid "The Problem With Concurrency"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:23
+msgid "(Skip this if you know what a Race Condition is)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:25
+msgid "In a normal program, you can increment a counter like so:"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:32
+msgid "This is what they would expect to happen:"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:35
+msgid "Expected Results"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:38
+#: ../../../kernel-hacking/locking.rst:58
+msgid "Instance 1"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:38
+#: ../../../kernel-hacking/locking.rst:58
+msgid "Instance 2"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:40
+#: ../../../kernel-hacking/locking.rst:60
+#: ../../../kernel-hacking/locking.rst:62
+msgid "read very_important_count (5)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:42
+#: ../../../kernel-hacking/locking.rst:64
+#: ../../../kernel-hacking/locking.rst:66
+msgid "add 1 (6)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:44
+#: ../../../kernel-hacking/locking.rst:68
+#: ../../../kernel-hacking/locking.rst:70
+msgid "write very_important_count (6)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:46
+msgid "read very_important_count (6)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:48
+msgid "add 1 (7)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:50
+msgid "write very_important_count (7)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:53
+msgid "This is what might happen:"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:55
+msgid "Possible Results"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:75
+msgid "Race Conditions and Critical Regions"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:77
+msgid ""
+"This overlap, where the result depends on the relative timing of multiple "
+"tasks, is called a race condition. The piece of code containing the "
+"concurrency issue is called a critical region. And especially since Linux "
+"starting running on SMP machines, they became one of the major issues in "
+"kernel design and implementation."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:83
+msgid ""
+"Preemption can have the same effect, even if there is only one CPU: by "
+"preempting one task during the critical region, we have exactly the same "
+"race condition. In this case the thread which preempts might run the "
+"critical region itself."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:88
+msgid ""
+"The solution is to recognize when these simultaneous accesses occur, and use "
+"locks to make sure that only one instance can enter the critical region at "
+"any time. There are many friendly primitives in the Linux kernel to help you "
+"do this. And then there are the unfriendly primitives, but I'll pretend they "
+"don't exist."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:95
+msgid "Locking in the Linux Kernel"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:97
+msgid "If I could give you one piece of advice on locking: **keep it simple**."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:99
+msgid "Be reluctant to introduce new locks."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:102
+msgid "Two Main Types of Kernel Locks: Spinlocks and Mutexes"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:104
+msgid ""
+"There are two main types of kernel locks. The fundamental type is the "
+"spinlock (``include/asm/spinlock.h``), which is a very simple single-holder "
+"lock: if you can't get the spinlock, you keep trying (spinning) until you "
+"can. Spinlocks are very small and fast, and can be used anywhere."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:110
+msgid ""
+"The second type is a mutex (``include/linux/mutex.h``): it is like a "
+"spinlock, but you may block holding a mutex. If you can't lock a mutex, your "
+"task will suspend itself, and be woken up when the mutex is released. This "
+"means the CPU can do something else while you are waiting. There are many "
+"cases when you simply can't sleep (see `What Functions Are Safe To Call From "
+"Interrupts?`_), and so have to use a spinlock instead."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:118
+msgid ""
+"Neither type of lock is recursive: see `Deadlock: Simple and Advanced`_."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:122
+msgid "Locks and Uniprocessor Kernels"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:124
+msgid ""
+"For kernels compiled without ``CONFIG_SMP``, and without ``CONFIG_PREEMPT`` "
+"spinlocks do not exist at all. This is an excellent design decision: when no-"
+"one else can run at the same time, there is no reason to have a lock."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:129
+msgid ""
+"If the kernel is compiled without ``CONFIG_SMP``, but ``CONFIG_PREEMPT`` is "
+"set, then spinlocks simply disable preemption, which is sufficient to "
+"prevent any races. For most purposes, we can think of preemption as "
+"equivalent to SMP, and not worry about it separately."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:134
+msgid ""
+"You should always test your locking code with ``CONFIG_SMP`` and "
+"``CONFIG_PREEMPT`` enabled, even if you don't have an SMP test box, because "
+"it will still catch some kinds of locking bugs."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:138
+msgid ""
+"Mutexes still exist, because they are required for synchronization between "
+"user contexts, as we will see below."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:142
+msgid "Locking Only In User Context"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:144
+msgid ""
+"If you have a data structure which is only ever accessed from user context, "
+"then you can use a simple mutex (``include/linux/mutex.h``) to protect it. "
+"This is the most trivial case: you initialize the mutex. Then you can call "
+"mutex_lock_interruptible() to grab the mutex, and mutex_unlock() to release "
+"it. There is also a mutex_lock(), which should be avoided, because it will "
+"not return if a signal is received."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:152
+msgid ""
+"Example: ``net/netfilter/nf_sockopt.c`` allows registration of new "
+"setsockopt() and getsockopt() calls, with nf_register_sockopt(). "
+"Registration and de-registration are only done on module load and unload "
+"(and boot time, where there is no concurrency), and the list of "
+"registrations is only consulted for an unknown setsockopt() or getsockopt() "
+"system call. The ``nf_sockopt_mutex`` is perfect to protect this, especially "
+"since the setsockopt and getsockopt calls may well sleep."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:162
+msgid "Locking Between User Context and Softirqs"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:164
+msgid ""
+"If a softirq shares data with user context, you have two problems. Firstly, "
+"the current user context can be interrupted by a softirq, and secondly, the "
+"critical region could be entered from another CPU. This is where "
+"spin_lock_bh() (``include/linux/spinlock.h``) is used. It disables softirqs "
+"on that CPU, then grabs the lock. spin_unlock_bh() does the reverse. (The "
+"'_bh' suffix is a historical reference to \"Bottom Halves\", the old name "
+"for software interrupts. It should really be called spin_lock_softirq()' in "
+"a perfect world)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:174
+msgid ""
+"Note that you can also use spin_lock_irq() or spin_lock_irqsave() here, "
+"which stop hardware interrupts as well: see `Hard IRQ Context`_."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:178
+msgid ""
+"This works perfectly for UP as well: the spin lock vanishes, and this macro "
+"simply becomes local_bh_disable() (``include/linux/interrupt.h``), which "
+"protects you from the softirq being run."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:184
+msgid "Locking Between User Context and Tasklets"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:186
+msgid ""
+"This is exactly the same as above, because tasklets are actually run from a "
+"softirq."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:190
+msgid "Locking Between User Context and Timers"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:192
+msgid ""
+"This, too, is exactly the same as above, because timers are actually run "
+"from a softirq. From a locking point of view, tasklets and timers are "
+"identical."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:197
+msgid "Locking Between Tasklets/Timers"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:199
+msgid ""
+"Sometimes a tasklet or timer might want to share data with another tasklet "
+"or timer."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:203
+msgid "The Same Tasklet/Timer"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:205
+msgid ""
+"Since a tasklet is never run on two CPUs at once, you don't need to worry "
+"about your tasklet being reentrant (running twice at once), even on SMP."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:210
+msgid "Different Tasklets/Timers"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:212
+msgid ""
+"If another tasklet/timer wants to share data with your tasklet or timer , "
+"you will both need to use spin_lock() and spin_unlock() calls. "
+"spin_lock_bh() is unnecessary here, as you are already in a tasklet, and "
+"none will be run on the same CPU."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:219
+msgid "Locking Between Softirqs"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:221
+msgid ""
+"Often a softirq might want to share data with itself or a tasklet/timer."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:224
+msgid "The Same Softirq"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:226
+msgid ""
+"The same softirq can run on the other CPUs: you can use a per-CPU array (see "
+"`Per-CPU Data`_) for better performance. If you're going so far as to use a "
+"softirq, you probably care about scalable performance enough to justify the "
+"extra complexity."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:231
+msgid "You'll need to use spin_lock() and spin_unlock() for shared data."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:235
+msgid "Different Softirqs"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:237
+msgid ""
+"You'll need to use spin_lock() and spin_unlock() for shared data, whether it "
+"be a timer, tasklet, different softirq or the same or another softirq: any "
+"of them could be running on a different CPU."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:243
+msgid "Hard IRQ Context"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:245
+msgid ""
+"Hardware interrupts usually communicate with a tasklet or softirq. "
+"Frequently this involves putting work in a queue, which the softirq will "
+"take out."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:250
+msgid "Locking Between Hard IRQ and Softirqs/Tasklets"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:252
+msgid ""
+"If a hardware irq handler shares data with a softirq, you have two concerns. "
+"Firstly, the softirq processing can be interrupted by a hardware interrupt, "
+"and secondly, the critical region could be entered by a hardware interrupt "
+"on another CPU. This is where spin_lock_irq() is used. It is defined to "
+"disable interrupts on that cpu, then grab the lock. spin_unlock_irq() does "
+"the reverse."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:260
+msgid ""
+"The irq handler does not need to use spin_lock_irq(), because the softirq "
+"cannot run while the irq handler is running: it can use spin_lock(), which "
+"is slightly faster. The only exception would be if a different hardware irq "
+"handler uses the same lock: spin_lock_irq() will stop that from interrupting "
+"us."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:266
+msgid ""
+"This works perfectly for UP as well: the spin lock vanishes, and this macro "
+"simply becomes local_irq_disable() (``include/asm/smp.h``), which protects "
+"you from the softirq/tasklet/BH being run."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:271
+msgid ""
+"spin_lock_irqsave() (``include/linux/spinlock.h``) is a variant which saves "
+"whether interrupts were on or off in a flags word, which is passed to "
+"spin_unlock_irqrestore(). This means that the same code can be used inside "
+"an hard irq handler (where interrupts are already off) and in softirqs "
+"(where the irq disabling is required)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:278
+msgid ""
+"Note that softirqs (and hence tasklets and timers) are run on return from "
+"hardware interrupts, so spin_lock_irq() also stops these. In that sense, "
+"spin_lock_irqsave() is the most general and powerful locking function."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:284
+msgid "Locking Between Two Hard IRQ Handlers"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:286
+msgid ""
+"It is rare to have to share data between two IRQ handlers, but if you do, "
+"spin_lock_irqsave() should be used: it is architecture-specific whether all "
+"interrupts are disabled inside irq handlers themselves."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:292
+msgid "Cheat Sheet For Locking"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:294
+msgid "Pete Zaitcev gives the following summary:"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:296
+msgid ""
+"If you are in a process context (any syscall) and want to lock other process "
+"out, use a mutex. You can take a mutex and sleep (``copy_from_user()`` or "
+"``kmalloc(x,GFP_KERNEL)``)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:300
+msgid ""
+"Otherwise (== data can be touched in an interrupt), use spin_lock_irqsave() "
+"and spin_unlock_irqrestore()."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:304
+msgid ""
+"Avoid holding spinlock for more than 5 lines of code and across any function "
+"call (except accessors like readb())."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:308
+msgid "Table of Minimum Requirements"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:310
+msgid ""
+"The following table lists the **minimum** locking requirements between "
+"various contexts. In some cases, the same context can only be running on one "
+"CPU at a time, so no locking is required for that context (eg. a particular "
+"thread can only run on one CPU at a time, but if it needs shares data with "
+"another thread, locking is required)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:316
+msgid ""
+"Remember the advice above: you can always use spin_lock_irqsave(), which is "
+"a superset of all other spinlock primitives."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:321
+msgid "."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:321
+#: ../../../kernel-hacking/locking.rst:323
+msgid "IRQ Handler A"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:321
+#: ../../../kernel-hacking/locking.rst:324
+msgid "IRQ Handler B"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:321
+#: ../../../kernel-hacking/locking.rst:325
+msgid "Softirq A"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:321
+#: ../../../kernel-hacking/locking.rst:326
+msgid "Softirq B"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:321
+#: ../../../kernel-hacking/locking.rst:327
+msgid "Tasklet A"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:321
+#: ../../../kernel-hacking/locking.rst:328
+msgid "Tasklet B"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:321
+#: ../../../kernel-hacking/locking.rst:329
+msgid "Timer A"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:321
+#: ../../../kernel-hacking/locking.rst:330
+msgid "Timer B"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:321
+#: ../../../kernel-hacking/locking.rst:331
+msgid "User Context A"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:321
+#: ../../../kernel-hacking/locking.rst:332
+msgid "User Context B"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:323
+#: ../../../kernel-hacking/locking.rst:324
+#: ../../../kernel-hacking/locking.rst:327
+#: ../../../kernel-hacking/locking.rst:328
+#: ../../../kernel-hacking/locking.rst:329
+#: ../../../kernel-hacking/locking.rst:330
+#: ../../../kernel-hacking/locking.rst:331
+#: ../../../kernel-hacking/locking.rst:332
+msgid "None"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:324
+#: ../../../kernel-hacking/locking.rst:338
+msgid "SLIS"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:325
+#: ../../../kernel-hacking/locking.rst:326
+#: ../../../kernel-hacking/locking.rst:327
+#: ../../../kernel-hacking/locking.rst:328
+#: ../../../kernel-hacking/locking.rst:329
+#: ../../../kernel-hacking/locking.rst:330
+#: ../../../kernel-hacking/locking.rst:331
+#: ../../../kernel-hacking/locking.rst:332
+#: ../../../kernel-hacking/locking.rst:340
+msgid "SLI"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:325
+#: ../../../kernel-hacking/locking.rst:326
+#: ../../../kernel-hacking/locking.rst:327
+#: ../../../kernel-hacking/locking.rst:328
+#: ../../../kernel-hacking/locking.rst:329
+#: ../../../kernel-hacking/locking.rst:330
+#: ../../../kernel-hacking/locking.rst:342
+msgid "SL"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:331
+#: ../../../kernel-hacking/locking.rst:332
+#: ../../../kernel-hacking/locking.rst:344
+msgid "SLBH"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:332
+#: ../../../kernel-hacking/locking.rst:346
+msgid "MLI"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:335
+msgid "Table: Table of Locking Requirements"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:338
+msgid "spin_lock_irqsave"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:340
+msgid "spin_lock_irq"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:342
+msgid "spin_lock"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:344
+msgid "spin_lock_bh"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:346
+msgid "mutex_lock_interruptible"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:349
+msgid "Table: Legend for Locking Requirements Table"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:352
+msgid "The trylock Functions"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:354
+msgid ""
+"There are functions that try to acquire a lock only once and immediately "
+"return a value telling about success or failure to acquire the lock. They "
+"can be used if you need no access to the data protected with the lock when "
+"some other thread is holding the lock. You should acquire the lock later if "
+"you then need access to the data protected with the lock."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:360
+msgid ""
+"spin_trylock() does not spin but returns non-zero if it acquires the "
+"spinlock on the first try or 0 if not. This function can be used in all "
+"contexts like spin_lock(): you must have disabled the contexts that might "
+"interrupt you and acquire the spin lock."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:366
+msgid ""
+"mutex_trylock() does not suspend your task but returns non-zero if it could "
+"lock the mutex on the first try or 0 if not. This function cannot be safely "
+"used in hardware or software interrupt contexts despite not sleeping."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:372
+msgid "Common Examples"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:374
+msgid ""
+"Let's step through a simple example: a cache of number to name mappings. The "
+"cache keeps a count of how often each of the objects is used, and when it "
+"gets full, throws out the least used one."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:379
+msgid "All In User Context"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:381
+msgid ""
+"For our first example, we assume that all operations are in user context "
+"(ie. from system calls), so we can sleep. This means we can use a mutex to "
+"protect the cache and all the objects within it. Here's the code::"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:480
+msgid ""
+"Note that we always make sure we have the cache_lock when we add, delete, or "
+"look up the cache: both the cache infrastructure itself and the contents of "
+"the objects are protected by the lock. In this case it's easy, since we copy "
+"the data for the user, and never let them access the objects directly."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:486
+msgid ""
+"There is a slight (and common) optimization here: in cache_add() we set up "
+"the fields of the object before grabbing the lock. This is safe, as no-one "
+"else can access it until we put it in cache."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:492
+msgid "Accessing From Interrupt Context"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:494
+msgid ""
+"Now consider the case where cache_find() can be called from interrupt "
+"context: either a hardware interrupt or a softirq. An example would be a "
+"timer which deletes object from the cache."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:498
+msgid ""
+"The change is shown below, in standard patch format: the ``-`` are lines "
+"which are taken away, and the ``+`` are lines which are added."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:563
+msgid ""
+"Note that the spin_lock_irqsave() will turn off interrupts if they are on, "
+"otherwise does nothing (if we are already in an interrupt handler), hence "
+"these functions are safe to call from any context."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:568
+msgid ""
+"Unfortunately, cache_add() calls kmalloc() with the ``GFP_KERNEL`` flag, "
+"which is only legal in user context. I have assumed that cache_add() is "
+"still only called in user context, otherwise this should become a parameter "
+"to cache_add()."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:575
+msgid "Exposing Objects Outside This File"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:577
+msgid ""
+"If our objects contained more information, it might not be sufficient to "
+"copy the information in and out: other parts of the code might want to keep "
+"pointers to these objects, for example, rather than looking up the id every "
+"time. This produces two problems."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:582
+msgid ""
+"The first problem is that we use the ``cache_lock`` to protect objects: we'd "
+"need to make this non-static so the rest of the code can use it. This makes "
+"locking trickier, as it is no longer all in one place."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:586
+msgid ""
+"The second problem is the lifetime problem: if another structure keeps a "
+"pointer to an object, it presumably expects that pointer to remain valid. "
+"Unfortunately, this is only guaranteed while you hold the lock, otherwise "
+"someone might call cache_delete() and even worse, add another object, re-"
+"using the same address."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:592
+msgid ""
+"As there is only one lock, you can't hold it forever: no-one else would get "
+"any work done."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:595
+msgid ""
+"The solution to this problem is to use a reference count: everyone who has a "
+"pointer to the object increases it when they first get the object, and drops "
+"the reference count when they're finished with it. Whoever drops it to zero "
+"knows it is unused, and can actually delete it."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:600
+msgid "Here is the code::"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:688
+msgid ""
+"We encapsulate the reference counting in the standard 'get' and 'put' "
+"functions. Now we can return the object itself from cache_find() which has "
+"the advantage that the user can now sleep holding the object (eg. to "
+"copy_to_user() to name to userspace)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:694
+msgid ""
+"The other point to note is that I said a reference should be held for every "
+"pointer to the object: thus the reference count is 1 when first inserted "
+"into the cache. In some versions the framework does not hold a reference "
+"count, but they are more complicated."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:700
+msgid "Using Atomic Operations For The Reference Count"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:702
+msgid ""
+"In practice, :c:type:`atomic_t` would usually be used for refcnt. There are "
+"a number of atomic operations defined in ``include/asm/atomic.h``: these are "
+"guaranteed to be seen atomically from all CPUs in the system, so no lock is "
+"required. In this case, it is simpler than using spinlocks, although for "
+"anything non-trivial using spinlocks is clearer. The atomic_inc() and "
+"atomic_dec_and_test() are used instead of the standard increment and "
+"decrement operators, and the lock is no longer used to protect the reference "
+"count itself."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:790
+msgid "Protecting The Objects Themselves"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:792
+msgid ""
+"In these examples, we assumed that the objects (except the reference counts) "
+"never changed once they are created. If we wanted to allow the name to "
+"change, there are three possibilities:"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:796
+msgid ""
+"You can make ``cache_lock`` non-static, and tell people to grab that lock "
+"before changing the name in any object."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:799
+msgid ""
+"You can provide a cache_obj_rename() which grabs this lock and changes the "
+"name for the caller, and tell everyone to use that function."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:803
+msgid ""
+"You can make the ``cache_lock`` protect only the cache itself, and use "
+"another lock to protect the name."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:806
+msgid ""
+"Theoretically, you can make the locks as fine-grained as one lock for every "
+"field, for every object. In practice, the most common variants are:"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:810
+msgid ""
+"One lock which protects the infrastructure (the ``cache`` list in this "
+"example) and all the objects. This is what we have done so far."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:813
+msgid ""
+"One lock which protects the infrastructure (including the list pointers "
+"inside the objects), and one lock inside the object which protects the rest "
+"of that object."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:817
+msgid ""
+"Multiple locks to protect the infrastructure (eg. one lock per hash chain), "
+"possibly with a separate per-object lock."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:820
+msgid "Here is the \"lock-per-object\" implementation:"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:854
+msgid ""
+"Note that I decide that the popularity count should be protected by the "
+"``cache_lock`` rather than the per-object lock: this is because it (like "
+"the :c:type:`struct list_head <list_head>` inside the object) is logically "
+"part of the infrastructure. This way, I don't need to grab the lock of every "
+"object in __cache_add() when seeking the least popular."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:861
+msgid ""
+"I also decided that the id member is unchangeable, so I don't need to grab "
+"each object lock in __cache_find() to examine the id: the object lock is "
+"only used by a caller who wants to read or write the name field."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:866
+msgid ""
+"Note also that I added a comment describing what data was protected by which "
+"locks. This is extremely important, as it describes the runtime behavior of "
+"the code, and can be hard to gain from just reading. And as Alan Cox says, "
+"“Lock data, not code”."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:872
+msgid "Common Problems"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:875
+msgid "Deadlock: Simple and Advanced"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:877
+msgid ""
+"There is a coding bug where a piece of code tries to grab a spinlock twice: "
+"it will spin forever, waiting for the lock to be released (spinlocks, "
+"rwlocks and mutexes are not recursive in Linux). This is trivial to "
+"diagnose: not a stay-up-five-nights-talk-to-fluffy-code-bunnies kind of "
+"problem."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:883
+msgid ""
+"For a slightly more complex case, imagine you have a region shared by a "
+"softirq and user context. If you use a spin_lock() call to protect it, it is "
+"possible that the user context will be interrupted by the softirq while it "
+"holds the lock, and the softirq will then spin forever trying to get the "
+"same lock."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:889
+msgid ""
+"Both of these are called deadlock, and as shown above, it can occur even "
+"with a single CPU (although not on UP compiles, since spinlocks vanish on "
+"kernel compiles with ``CONFIG_SMP``\\ =n. You'll still get data corruption "
+"in the second example)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:894
+msgid ""
+"This complete lockup is easy to diagnose: on SMP boxes the watchdog timer or "
+"compiling with ``DEBUG_SPINLOCK`` set (``include/linux/spinlock.h``) will "
+"show this up immediately when it happens."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:899
+msgid ""
+"A more complex problem is the so-called 'deadly embrace', involving two or "
+"more locks. Say you have a hash table: each entry in the table is a "
+"spinlock, and a chain of hashed objects. Inside a softirq handler, you "
+"sometimes want to alter an object from one place in the hash to another: you "
+"grab the spinlock of the old hash chain and the spinlock of the new hash "
+"chain, and delete the object from the old one, and insert it in the new one."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:907
+msgid ""
+"There are two problems here. First, if your code ever tries to move the "
+"object to the same chain, it will deadlock with itself as it tries to lock "
+"it twice. Secondly, if the same softirq on another CPU is trying to move "
+"another object in the reverse direction, the following could happen:"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:914
+msgid "CPU 1"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:914
+msgid "CPU 2"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:916
+msgid "Grab lock A -> OK"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:916
+msgid "Grab lock B -> OK"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:918
+msgid "Grab lock B -> spin"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:918
+msgid "Grab lock A -> spin"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:921
+msgid "Table: Consequences"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:923
+msgid ""
+"The two CPUs will spin forever, waiting for the other to give up their lock. "
+"It will look, smell, and feel like a crash."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:927
+msgid "Preventing Deadlock"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:929
+msgid ""
+"Textbooks will tell you that if you always lock in the same order, you will "
+"never get this kind of deadlock. Practice will tell you that this approach "
+"doesn't scale: when I create a new lock, I don't understand enough of the "
+"kernel to figure out where in the 5000 lock hierarchy it will fit."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:935
+msgid ""
+"The best locks are encapsulated: they never get exposed in headers, and are "
+"never held around calls to non-trivial functions outside the same file. You "
+"can read through this code and see that it will never deadlock, because it "
+"never tries to grab another lock while it has that one. People using your "
+"code don't even need to know you are using a lock."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:942
+msgid ""
+"A classic problem here is when you provide callbacks or hooks: if you call "
+"these with the lock held, you risk simple deadlock, or a deadly embrace (who "
+"knows what the callback will do?)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:947
+msgid "Overzealous Prevention Of Deadlocks"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:949
+msgid ""
+"Deadlocks are problematic, but not as bad as data corruption. Code which "
+"grabs a read lock, searches a list, fails to find what it wants, drops the "
+"read lock, grabs a write lock and inserts the object has a race condition."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:955
+msgid "Racing Timers: A Kernel Pastime"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:957
+msgid ""
+"Timers can produce their own special problems with races. Consider a "
+"collection of objects (list, hash, etc) where each object has a timer which "
+"is due to destroy it."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:961
+msgid ""
+"If you want to destroy the entire collection (say on module removal), you "
+"might do the following::"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:978
+msgid ""
+"Sooner or later, this will crash on SMP, because a timer can have just gone "
+"off before the spin_lock_bh(), and it will only get the lock after we "
+"spin_unlock_bh(), and then try to free the element (which has already been "
+"freed!)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:983
+msgid ""
+"This can be avoided by checking the result of timer_delete(): if it returns "
+"1, the timer has been deleted. If 0, it means (in this case) that it is "
+"currently running, so we can do::"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1005
+msgid ""
+"Another common problem is deleting timers which restart themselves (by "
+"calling add_timer() at the end of their timer function). Because this is a "
+"fairly common case which is prone to races, you should use "
+"timer_delete_sync() (``include/linux/timer.h``) to handle this case."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1010
+msgid ""
+"Before freeing a timer, timer_shutdown() or timer_shutdown_sync() should be "
+"called which will keep it from being rearmed. Any subsequent attempt to "
+"rearm the timer will be silently ignored by the core code."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1016
+msgid "Locking Speed"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1018
+msgid ""
+"There are three main things to worry about when considering speed of some "
+"code which does locking. First is concurrency: how many things are going to "
+"be waiting while someone else is holding a lock. Second is the time taken to "
+"actually acquire and release an uncontended lock. Third is using fewer, or "
+"smarter locks. I'm assuming that the lock is used fairly often: otherwise, "
+"you wouldn't be concerned about efficiency."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1025
+msgid ""
+"Concurrency depends on how long the lock is usually held: you should hold "
+"the lock for as long as needed, but no longer. In the cache example, we "
+"always create the object without the lock held, and then grab the lock only "
+"when we are ready to insert it in the list."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1030
+msgid ""
+"Acquisition times depend on how much damage the lock operations do to the "
+"pipeline (pipeline stalls) and how likely it is that this CPU was the last "
+"one to grab the lock (ie. is the lock cache-hot for this CPU): on a machine "
+"with more CPUs, this likelihood drops fast. Consider a 700MHz Intel Pentium "
+"III: an instruction takes about 0.7ns, an atomic increment takes about 58ns, "
+"a lock which is cache-hot on this CPU takes 160ns, and a cacheline transfer "
+"from another CPU takes an additional 170 to 360ns. (These figures from Paul "
+"McKenney's `Linux Journal RCU article <http://www.linuxjournal.com/article."
+"php?sid=6993>`__)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1040
+msgid ""
+"These two aims conflict: holding a lock for a short time might be done by "
+"splitting locks into parts (such as in our final per-object-lock example), "
+"but this increases the number of lock acquisitions, and the results are "
+"often slower than having a single lock. This is another reason to advocate "
+"locking simplicity."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1046
+msgid ""
+"The third concern is addressed below: there are some methods to reduce the "
+"amount of locking which needs to be done."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1050
+msgid "Read/Write Lock Variants"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1052
+msgid ""
+"Both spinlocks and mutexes have read/write variants: ``rwlock_t`` and :c:"
+"type:`struct rw_semaphore <rw_semaphore>`. These divide users into two "
+"classes: the readers and the writers. If you are only reading the data, you "
+"can get a read lock, but to write to the data you need the write lock. Many "
+"people can hold a read lock, but a writer must be sole holder."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1059
+msgid ""
+"If your code divides neatly along reader/writer lines (as our cache code "
+"does), and the lock is held by readers for significant lengths of time, "
+"using these locks can help. They are slightly slower than the normal locks "
+"though, so in practice ``rwlock_t`` is not usually worthwhile."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1065
+msgid "Avoiding Locks: Read Copy Update"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1067
+msgid ""
+"There is a special method of read/write locking called Read Copy Update. "
+"Using RCU, the readers can avoid taking a lock altogether: as we expect our "
+"cache to be read more often than updated (otherwise the cache is a waste of "
+"time), it is a candidate for this optimization."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1072
+msgid ""
+"How do we get rid of read locks? Getting rid of read locks means that "
+"writers may be changing the list underneath the readers. That is actually "
+"quite simple: we can read a linked list while an element is being added if "
+"the writer adds the element very carefully. For example, adding ``new`` to a "
+"single linked list called ``list``::"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1083
+msgid ""
+"The wmb() is a write memory barrier. It ensures that the first operation "
+"(setting the new element's ``next`` pointer) is complete and will be seen by "
+"all CPUs, before the second operation is (putting the new element into the "
+"list). This is important, since modern compilers and modern CPUs can both "
+"reorder instructions unless told otherwise: we want a reader to either not "
+"see the new element at all, or see the new element with the ``next`` pointer "
+"correctly pointing at the rest of the list."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1092
+msgid ""
+"Fortunately, there is a function to do this for standard :c:type:`struct "
+"list_head <list_head>` lists: list_add_rcu() (``include/linux/list.h``)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1096
+msgid ""
+"Removing an element from the list is even simpler: we replace the pointer to "
+"the old element with a pointer to its successor, and readers will either see "
+"it, or skip over it."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1105
+msgid ""
+"There is list_del_rcu() (``include/linux/list.h``) which does this (the "
+"normal version poisons the old object, which we don't want)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1109
+msgid ""
+"The reader must also be careful: some CPUs can look through the ``next`` "
+"pointer to start reading the contents of the next element early, but don't "
+"realize that the pre-fetched contents is wrong when the ``next`` pointer "
+"changes underneath them. Once again, there is a list_for_each_entry_rcu() "
+"(``include/linux/list.h``) to help you. Of course, writers can just use "
+"list_for_each_entry(), since there cannot be two simultaneous writers."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1118
+msgid ""
+"Our final dilemma is this: when can we actually destroy the removed element? "
+"Remember, a reader might be stepping through this element in the list right "
+"now: if we free this element and the ``next`` pointer changes, the reader "
+"will jump off into garbage and crash. We need to wait until we know that all "
+"the readers who were traversing the list when we deleted the element are "
+"finished. We use call_rcu() to register a callback which will actually "
+"destroy the object once all pre-existing readers are finished. "
+"Alternatively, synchronize_rcu() may be used to block until all pre-existing "
+"are finished."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1129
+msgid ""
+"But how does Read Copy Update know when the readers are finished? The method "
+"is this: firstly, the readers always traverse the list inside "
+"rcu_read_lock()/rcu_read_unlock() pairs: these simply disable preemption so "
+"the reader won't go to sleep while reading the list."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1135
+msgid ""
+"RCU then waits until every other CPU has slept at least once: since readers "
+"cannot sleep, we know that any readers which were traversing the list during "
+"the deletion are finished, and the callback is triggered. The real Read Copy "
+"Update code is a little more optimized than this, but this is the "
+"fundamental idea."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1219
+msgid ""
+"Note that the reader will alter the popularity member in __cache_find(), and "
+"now it doesn't hold a lock. One solution would be to make it an "
+"``atomic_t``, but for this usage, we don't really care about races: an "
+"approximate result is good enough, so I didn't change it."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1225
+msgid ""
+"The result is that cache_find() requires no synchronization with any other "
+"functions, so is almost as fast on SMP as it would be on UP."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1229
+msgid ""
+"There is a further optimization possible here: remember our original cache "
+"code, where there were no reference counts and the caller simply held the "
+"lock whenever using the object? This is still possible: if you hold the "
+"lock, no one can delete the object, so you don't need to get and put the "
+"reference count."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1235
+msgid ""
+"Now, because the 'read lock' in RCU is simply disabling preemption, a caller "
+"which always has preemption disabled between calling cache_find() and "
+"object_put() does not need to actually get and put the reference count: we "
+"could expose __cache_find() by making it non-static, and such callers could "
+"simply call that."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1242
+msgid ""
+"The benefit here is that the reference count is not written to: the object "
+"is not altered in any way, which is much faster on SMP machines due to "
+"caching."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1247
+msgid "Per-CPU Data"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1249
+msgid ""
+"Another technique for avoiding locking which is used fairly widely is to "
+"duplicate information for each CPU. For example, if you wanted to keep a "
+"count of a common condition, you could use a spin lock and a single counter. "
+"Nice and simple."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1254
+msgid ""
+"If that was too slow (it's usually not, but if you've got a really big "
+"machine to test on and can show that it is), you could instead use a counter "
+"for each CPU, then none of them need an exclusive lock. See "
+"DEFINE_PER_CPU(), get_cpu_var() and put_cpu_var() (``include/linux/percpu."
+"h``)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1260
+msgid ""
+"Of particular use for simple per-cpu counters is the ``local_t`` type, and "
+"the cpu_local_inc() and related functions, which are more efficient than "
+"simple code on some architectures (``include/asm/local.h``)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1265
+msgid ""
+"Note that there is no simple, reliable way of getting an exact value of such "
+"a counter, without introducing more locks. This is not a problem for some "
+"uses."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1270
+msgid "Data Which Mostly Used By An IRQ Handler"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1272
+msgid ""
+"If data is always accessed from within the same IRQ handler, you don't need "
+"a lock at all: the kernel already guarantees that the irq handler will not "
+"run simultaneously on multiple CPUs."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1276
+msgid ""
+"Manfred Spraul points out that you can still do this, even if the data is "
+"very occasionally accessed in user context or softirqs/tasklets. The irq "
+"handler doesn't use a lock, and all other accesses are done as so::"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1286
+msgid ""
+"The disable_irq() prevents the irq handler from running (and waits for it to "
+"finish if it's currently running on other CPUs). The spinlock prevents any "
+"other accesses happening at the same time. Naturally, this is slower than "
+"just a spin_lock_irq() call, so it only makes sense if this type of access "
+"happens extremely rarely."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1294
+msgid "What Functions Are Safe To Call From Interrupts?"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1296
+msgid ""
+"Many functions in the kernel sleep (ie. call schedule()) directly or "
+"indirectly: you can never call them while holding a spinlock, or with "
+"preemption disabled. This also means you need to be in user context: calling "
+"them from an interrupt is illegal."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1302
+msgid "Some Functions Which Sleep"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1304
+msgid ""
+"The most common ones are listed below, but you usually have to read the code "
+"to find out if other calls are safe. If everyone else who calls it can "
+"sleep, you probably need to be able to sleep, too. In particular, "
+"registration and deregistration functions usually expect to be called from "
+"user context, and can sleep."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1310
+msgid "Accesses to userspace:"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1312
+msgid "copy_from_user()"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1314
+msgid "copy_to_user()"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1316
+msgid "get_user()"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1318
+msgid "put_user()"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1320
+msgid "kmalloc(GP_KERNEL) <kmalloc>`"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1322
+msgid "mutex_lock_interruptible() and mutex_lock()"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1325
+msgid ""
+"There is a mutex_trylock() which does not sleep. Still, it must not be used "
+"inside interrupt context since its implementation is not safe for that. "
+"mutex_unlock() will also never sleep. It cannot be used in interrupt context "
+"either since a mutex must be released by the same task that acquired it."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1332
+msgid "Some Functions Which Don't Sleep"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1334
+msgid ""
+"Some functions are safe to call from any context, or holding almost any lock."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1337
+msgid "printk()"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1339
+msgid "kfree()"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1341
+msgid "add_timer() and timer_delete()"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1344
+msgid "Mutex API reference"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:55
+msgid "``mutex_init (mutex)``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:53
+msgid "initialize the mutex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:57
+#: ../include/linux/mutex.h:72 ../include/linux/mutex.h:112
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:269
+#: ../kernel/locking/mutex.c:535 ../kernel/locking/mutex.c:561
+#: ../kernel/locking/mutex.c:791 ../kernel/locking/mutex.c:1000
+#: ../kernel/locking/mutex.c:1024 ../kernel/locking/mutex.c:1047
+#: ../kernel/locking/mutex.c:1103 ../kernel/locking/mutex.c:1175
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:161
+#: ../kernel/futex/core.c:408 ../kernel/futex/core.c:457
+#: ../kernel/futex/core.c:526 ../kernel/futex/core.c:777
+#: ../kernel/futex/core.c:802 ../kernel/futex/core.c:820
+#: ../kernel/futex/core.c:851 ../kernel/futex/core.c:916
+#: ../kernel/futex/core.c:1431 ../../../kernel-hacking/locking:1358:
+#: ../kernel/futex/futex.h:253 ../kernel/futex/futex.h:301
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:496
+#: ../kernel/futex/pi.c:862 ../../../kernel-hacking/locking:1364:
+#: ../kernel/futex/requeue.c:73 ../kernel/futex/requeue.c:206
+#: ../kernel/futex/requeue.c:259 ../kernel/futex/requeue.c:365
+#: ../kernel/futex/requeue.c:701 ../kernel/futex/requeue.c:744
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:341
+#: ../kernel/futex/waitwake.c:368 ../kernel/futex/waitwake.c:391
+#: ../kernel/futex/waitwake.c:504 ../kernel/futex/waitwake.c:527
+#: ../kernel/futex/waitwake.c:578
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:59
+#: ../include/linux/mutex.h:74
+msgid "``mutex``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:54
+#: ../include/linux/mutex.h:69
+msgid "the mutex to be initialized"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:56
+#: ../include/linux/mutex.h:72 ../include/linux/mutex.h:111
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:268
+#: ../kernel/locking/mutex.c:534 ../kernel/locking/mutex.c:560
+#: ../kernel/locking/mutex.c:791 ../kernel/locking/mutex.c:999
+#: ../kernel/locking/mutex.c:1023 ../kernel/locking/mutex.c:1046
+#: ../kernel/locking/mutex.c:1102 ../kernel/locking/mutex.c:1175
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:160
+#: ../kernel/futex/core.c:408 ../kernel/futex/core.c:531
+#: ../kernel/futex/core.c:776 ../kernel/futex/core.c:802
+#: ../kernel/futex/core.c:820 ../kernel/futex/core.c:850
+#: ../kernel/futex/core.c:915 ../kernel/futex/core.c:1430
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:183
+#: ../kernel/futex/futex.h:253 ../kernel/futex/futex.h:302
+#: ../kernel/futex/futex.h:423 ../../../kernel-hacking/locking:1361:
+#: ../kernel/futex/pi.c:508 ../kernel/futex/pi.c:863
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:207
+#: ../kernel/futex/requeue.c:266 ../kernel/futex/requeue.c:372
+#: ../kernel/futex/requeue.c:702 ../kernel/futex/requeue.c:749
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:368
+#: ../kernel/futex/waitwake.c:393 ../kernel/futex/waitwake.c:505
+#: ../kernel/futex/waitwake.c:528 ../kernel/futex/waitwake.c:582
+msgid "**Description**"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:55
+msgid "Initialize the mutex to unlocked state."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:57
+#: ../include/linux/mutex.h:73
+msgid "It is not allowed to initialize an already locked mutex."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:70
+msgid "``mutex_init_with_key (mutex, key)``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:68
+msgid "initialize a mutex with a given lockdep key"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:71
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:172
+msgid "``key``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:70
+msgid "the lockdep key to be associated with the mutex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:71
+msgid "Initialize the mutex to the unlocked state."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:108
+msgid "is the mutex locked"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:114
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:271
+#: ../kernel/locking/mutex.c:537 ../kernel/locking/mutex.c:1002
+#: ../kernel/locking/mutex.c:1026 ../kernel/locking/mutex.c:1049
+#: ../kernel/locking/mutex.c:1105 ../kernel/locking/mutex.c:1174
+msgid "``struct mutex *lock``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:109
+msgid "the mutex to be queried"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1346: ../include/linux/mutex.h:110
+msgid "Returns true if the mutex is locked, false if unlocked."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:265
+msgid "acquire the mutex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:266
+#: ../kernel/locking/mutex.c:1100
+msgid "the mutex to be acquired"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:267
+msgid ""
+"Lock the mutex exclusively for this task. If the mutex is not available "
+"right now, it will sleep until it can get it."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:270
+msgid ""
+"The mutex must later on be released by the same task that acquired it. "
+"Recursive locking is not allowed. The task may not exit without first "
+"unlocking the mutex. Also, kernel memory where the mutex resides must not be "
+"freed with the mutex still locked. The mutex must first be initialized (or "
+"statically defined) before it can be locked. memset()-ing the mutex to 0 is "
+"not allowed."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:278
+msgid ""
+"(The CONFIG_DEBUG_MUTEXES .config option turns on debugging checks that will "
+"enforce the restrictions and will also do deadlock debugging)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:282
+msgid "This function is similar to (but not equivalent to) down()."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:531
+msgid "release the mutex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:532
+#: ../kernel/locking/mutex.c:558
+msgid "the mutex to be released"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:533
+msgid "Unlock a mutex that has been locked by this task previously."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:535
+msgid ""
+"This function must not be used in interrupt context. Unlocking of a not "
+"locked mutex is not allowed."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:538
+msgid ""
+"The caller must ensure that the mutex stays alive until this function has "
+"returned - mutex_unlock() can NOT directly be used to release an object such "
+"that another concurrent task can free it. Mutexes are different from "
+"spinlocks & refcounts in this aspect."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:543
+msgid "This function is similar to (but not equivalent to) up()."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:557
+msgid "release the w/w mutex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:563
+msgid "``struct ww_mutex *lock``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:559
+msgid ""
+"Unlock a mutex that has been locked by this task previously with any of the "
+"ww_mutex_lock* functions (with or without an acquire context). It is "
+"forbidden to release the locks after releasing the acquire context."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:563
+msgid ""
+"This function must not be used in interrupt context. Unlocking of a unlocked "
+"mutex is not allowed."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:787
+msgid "tries to acquire the w/w mutex with optional acquire context"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:793
+msgid "``struct ww_mutex *ww``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:788
+msgid "mutex to lock"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:790
+msgid "``struct ww_acquire_ctx *ww_ctx``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:789
+msgid "optional w/w acquire context"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:790
+msgid ""
+"Trylocks a mutex with the optional acquire context; no deadlock detection is "
+"possible. Returns 1 if the mutex has been acquired successfully, 0 otherwise."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:793
+msgid ""
+"Unlike ww_mutex_lock, no deadlock handling is performed. However, if a "
+"**ctx** is specified, -EALREADY handling may happen in calls to "
+"ww_mutex_trylock."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:796
+msgid ""
+"A mutex acquired with this function must be released with ww_mutex_unlock."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:996
+msgid "Acquire the mutex, interruptible by signals."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:997
+#: ../kernel/locking/mutex.c:1021 ../kernel/locking/mutex.c:1044
+msgid "The mutex to be acquired."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:998
+msgid ""
+"Lock the mutex like mutex_lock().  If a signal is delivered while the "
+"process is sleeping, this function will return without acquiring the mutex."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1002
+#: ../kernel/locking/mutex.c:1026 ../kernel/locking/mutex.c:1049
+msgid "**Context**"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1003
+#: ../kernel/locking/mutex.c:1027 ../kernel/locking/mutex.c:1050
+msgid "Process context."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1005
+#: ../kernel/locking/mutex.c:1029 ../../../kernel-hacking/locking:1355:
+#: ../kernel/futex/core.c:459 ../kernel/futex/core.c:529
+#: ../kernel/futex/core.c:917 ../../../kernel-hacking/locking:1361:
+#: ../kernel/futex/pi.c:504 ../kernel/futex/pi.c:866
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:274
+#: ../kernel/futex/requeue.c:374 ../kernel/futex/requeue.c:703
+#: ../kernel/futex/requeue.c:774 ../../../kernel-hacking/locking:1367:
+#: ../kernel/futex/waitwake.c:369 ../kernel/futex/waitwake.c:396
+#: ../kernel/futex/waitwake.c:531 ../kernel/futex/waitwake.c:585
+msgid "**Return**"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1004
+msgid ""
+"0 if the lock was successfully acquired or ``-EINTR`` if a signal arrived."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1020
+msgid "Acquire the mutex, interruptible by fatal signals."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1022
+msgid ""
+"Lock the mutex like mutex_lock().  If a signal which will be fatal to the "
+"current process is delivered while the process is sleeping, this function "
+"will return without acquiring the mutex."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1028
+msgid ""
+"0 if the lock was successfully acquired or ``-EINTR`` if a fatal signal "
+"arrived."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1043
+msgid "Acquire the mutex and mark the process as waiting for I/O"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1045
+msgid ""
+"Lock the mutex like mutex_lock().  While the task is waiting for this mutex, "
+"it will be accounted as being in the IO wait state by the scheduler."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1099
+msgid "try to acquire the mutex, without waiting"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1101
+msgid ""
+"Try to acquire the mutex atomically. Returns 1 if the mutex has been "
+"acquired successfully, and 0 on contention."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1104
+msgid "**NOTE**"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1105
+msgid ""
+"this function follows the spin_trylock() convention, so it is negated from "
+"the down_trylock() return values! Be careful about this when converting "
+"semaphore users to mutexes."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1109
+msgid ""
+"This function must not be used in interrupt context. The mutex must be "
+"released by the same task that acquired it."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1171
+msgid "return holding mutex if we dec to 0"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1177
+msgid "``atomic_t *cnt``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1172
+msgid "the atomic which we are to dec"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1173
+msgid "the mutex to return holding if we dec to 0"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1349: ../kernel/locking/mutex.c:1174
+msgid "return true and hold lock if we dec to 0, return false otherwise"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1353
+msgid "Futex API reference"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:157
+msgid "Get an additional reference for the local hash."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:163
+#: ../kernel/futex/core.c:804 ../../../kernel-hacking/locking:1358:
+#: ../kernel/futex/futex.h:300 ../../../kernel-hacking/locking:1361:
+#: ../kernel/futex/pi.c:495 ../../../kernel-hacking/locking:1364:
+#: ../kernel/futex/requeue.c:206 ../kernel/futex/requeue.c:703
+msgid "``struct futex_hash_bucket *hb``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:158
+msgid "ptr to the private local hash."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:159
+msgid ""
+"Obtain an additional reference for the already obtained hash bucket. The "
+"caller must already own an reference."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:404
+msgid "Return the hash bucket"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:410
+#: ../kernel/futex/core.c:526 ../kernel/futex/core.c:801
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:496
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:205
+msgid "``union futex_key *key``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:405
+msgid "Pointer to the futex key for which the hash is calculated"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:407
+msgid "``struct futex_private_hash *fph``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:406
+msgid "Pointer to private hash if known"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:407
+msgid ""
+"We hash on the keys returned from get_futex_key (see below) and return the "
+"corresponding hash bucket. If the FUTEX is PROCESS_PRIVATE then a per-"
+"process hash bucket (from the private hash) is returned if existing. "
+"Otherwise a hash bucket from the global hash is returned."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:453
+msgid "set up the sleeping hrtimer."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:459
+msgid "``ktime_t *time``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:454
+msgid "ptr to the given timeout value"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:456
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:701
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:340
+msgid "``struct hrtimer_sleeper *timeout``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:455
+msgid "the hrtimer_sleeper structure to be set up"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:457
+msgid "``int flags``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:456
+msgid "futex flags"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:458
+msgid "``u64 range_ns``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:457
+msgid "optional range in ns"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:459
+msgid "Initialized hrtimer_sleeper structure or NULL if no timeout value given"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:522
+msgid "Get parameters which are the keys for a futex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:528
+#: ../kernel/futex/core.c:779 ../../../kernel-hacking/locking:1361:
+#: ../kernel/futex/pi.c:498 ../kernel/futex/pi.c:864
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:746
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:580
+msgid "``u32 __user *uaddr``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:523
+msgid "virtual address of the futex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:525
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:743
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:578
+msgid "``unsigned int flags``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:524
+msgid "FLAGS_*"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:525
+msgid "address where result is stored."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:527
+msgid "``enum futex_access rw``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:526
+msgid "mapping needs to be read/write (values: FUTEX_READ, FUTEX_WRITE)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:529
+msgid "a negative error code or 0"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:530
+msgid "The key words are stored in **key** on success."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:532
+msgid "For shared mappings (when **fshared**), the key is:"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:534
+msgid "( inode->i_sequence, page offset within mapping, offset_within_page )"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:536
+msgid "[ also see get_inode_sequence_number() ]"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:538
+msgid "For private mappings (or when **!fshared**), the key is:"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:540
+msgid "( current->mm, address, 0 )"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:542
+msgid ""
+"This allows (cross process, where applicable) identification of the futex "
+"without keeping the page pinned for the duration of the FUTEX_WAIT."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:545
+msgid "lock_page() might sleep, the caller should not hold a spinlock."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:773
+msgid "Fault in user address and verify RW access"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:774
+msgid "pointer to faulting user space address"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:775
+msgid ""
+"Slow path to fixup the fault we just took in the atomic write access to "
+"**uaddr**."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:778
+msgid ""
+"We have no generic implementation of a non-destructive write to the user "
+"address. We know that we faulted in the atomic pagefault disabled section so "
+"we can as well avoid the #PF overhead by calling get_user_pages() right away."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:798
+msgid "Return the highest priority waiter on a futex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:799
+msgid "the hash bucket the futex_q's reside in"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:800
+msgid "the futex key (to distinguish it from other futex futex_q's)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:801
+msgid "Must be called with the hb lock held."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:816
+msgid "Block until the owner has exited"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:822
+msgid "``int ret``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:817
+msgid "owner's current futex lock status"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:819
+msgid "``struct task_struct *exiting``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:818
+msgid "Pointer to the exiting task"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:819
+msgid "Caller must hold a refcount on **exiting**."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:847
+#: ../kernel/futex/core.c:912
+msgid "Remove the futex_q from its futex_hash_bucket"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:853
+#: ../kernel/futex/core.c:918 ../../../kernel-hacking/locking:1358:
+#: ../kernel/futex/futex.h:303 ../../../kernel-hacking/locking:1361:
+#: ../kernel/futex/pi.c:861 ../../../kernel-hacking/locking:1364:
+#: ../kernel/futex/requeue.c:75 ../kernel/futex/requeue.c:208
+#: ../kernel/futex/requeue.c:700 ../../../kernel-hacking/locking:1367:
+#: ../kernel/futex/waitwake.c:343 ../kernel/futex/waitwake.c:579
+msgid "``struct futex_q *q``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:848
+#: ../kernel/futex/core.c:913
+msgid "The futex_q to unqueue"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:849
+msgid "The q->lock_ptr must not be NULL and must be held by the caller."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:914
+msgid ""
+"The q->lock_ptr must not be held by the caller. A call to futex_unqueue() "
+"must be paired with exactly one earlier call to futex_queue()."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:918
+msgid "1 - if the futex_q was still queued (and we removed unqueued it);"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:919
+msgid "0 - if the futex_q was already removed by the waking thread"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:1427
+msgid "Set the tasks futex state to FUTEX_STATE_DEAD"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:1433
+msgid "``struct task_struct *tsk``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:1428
+msgid "task to set the state on"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:1429
+msgid ""
+"Set the futex exit state of the task lockless. The futex waiter code "
+"observes that state when a task is exiting and loops until the task has "
+"actually finished the futex cleanup. The worst case for this is that the "
+"waiter runs through the wait loop until the state becomes visible."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:1434
+msgid ""
+"This is called from the recursive fault handling path in make_task_dead()."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1355: ../kernel/futex/core.c:1436
+msgid ""
+"This is best effort. Either the futex exit code has run already or not. If "
+"the OWNER_DIED bit has been set on the futex then the waiter can take it "
+"over. If not, the problem is pushed back to user space. If the futex exit "
+"code did not run yet, then an already queued waiter might block forever, but "
+"there is nothing which can be done about that."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:166
+msgid "The hashed futex queue entry, one per waiting task"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:170
+#: ../kernel/futex/futex.h:421
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:190
+#: ../kernel/futex/futex.h:428
+msgid "**Members**"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:167
+msgid "``list``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:168
+msgid "priority-sorted list of tasks waiting on this futex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:168
+msgid "``task``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:169
+msgid "the task waiting on the futex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:169
+msgid "``lock_ptr``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:170
+msgid "the hash bucket lock"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:170
+msgid "``wake``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:171
+msgid "the wake handler for this queue"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:171
+msgid "``wake_data``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:172
+msgid "data associated with the wake handler"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:173
+msgid "the key the futex is hashed on"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:173
+msgid "``pi_state``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:174
+msgid "optional priority inheritance state"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:174
+msgid "``rt_waiter``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:175
+msgid "rt_waiter storage for use with requeue_pi"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:175
+msgid "``requeue_pi_key``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:176
+msgid "the requeue_pi target futex key"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:176
+msgid "``bitset``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:177
+msgid "bitset for the optional bitmasked wakeup"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:177
+msgid "``requeue_state``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:178
+msgid "State field for futex_requeue_pi()"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:178
+msgid "``drop_hb_ref``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:179
+msgid "Waiter should drop the extra hash bucket reference if true"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:179
+msgid "``requeue_wait``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:180
+msgid "RCU wait for futex_requeue_pi() (RT only)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:180
+msgid ""
+"We use this hashed waitqueue, instead of a normal wait_queue_entry_t, so we "
+"can wake only the relevant ones (hashed queues may be shared)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:183
+msgid ""
+"A futex_q has a woken state, just like tasks have TASK_RUNNING. It is "
+"considered woken when plist_node_empty(:c:type:`q->list <q>`) || q->lock_ptr "
+"== 0. The order of wakeup is always to make the first condition true, then "
+"the second."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:188
+msgid ""
+"PI futexes are typically woken before they are removed from the hash list "
+"via the rt_mutex code. See futex_unqueue_pi()."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:249
+msgid "Check whether two futex keys are equal"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:255
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:260
+msgid "``union futex_key *key1``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:250
+msgid "Pointer to key1"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:252
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:74
+#: ../kernel/futex/requeue.c:261 ../../../kernel-hacking/locking:1367:
+#: ../kernel/futex/waitwake.c:580
+msgid "``union futex_key *key2``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:251
+msgid "Pointer to key2"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:252
+msgid "Return 1 if two futex_keys are equal, 0 otherwise."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:297
+msgid "Enqueue the futex_q on the futex_hash_bucket"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:298
+msgid "The futex_q to enqueue"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:299
+msgid "The destination hash bucket"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:301
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:499
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:581
+msgid "``struct task_struct *task``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:300
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:580
+msgid "Task queueing this futex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:301
+msgid ""
+"The hb->lock must be held by the caller, and is released here. A call to "
+"futex_queue() is typically paired with exactly one call to futex_unqueue().  "
+"The exceptions involve the PI related operations, which may use "
+"futex_unqueue_pi() or nothing if the unqueue is done as part of the wake "
+"process and the unqueue state is implicit in the state of woken task (see "
+"futex_wait_requeue_pi() for an example)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:308
+msgid "Note that **task** may be NULL, for async usage of futexes."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:417
+msgid "Auxiliary struct for futex_waitv()"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:418
+msgid "``w``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:419
+msgid "Userspace provided data"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:419
+msgid "``q``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:420
+msgid "Kernel side data"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1358: ../kernel/futex/futex.h:420
+msgid "Struct used to build an array with all data need for futex_waitv()"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:492
+msgid "Atomic work required to acquire a pi aware futex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:493
+msgid "the pi futex user address"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:494
+msgid "the pi futex hash bucket"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:495
+msgid "the futex key associated with uaddr and hb"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:497
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:262
+msgid "``struct futex_pi_state **ps``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:496
+msgid "the pi_state pointer where we store the result of the lookup"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:498
+msgid ""
+"the task to perform the atomic lock work for.  This will be \"current\" "
+"except in the case of requeue pi."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:501
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:263
+msgid "``struct task_struct **exiting``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:500
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:262
+msgid ""
+"Pointer to store the task pointer of the owner task which is in the middle "
+"of exiting"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:503
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:265
+msgid "``int set_waiters``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:502
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:264
+msgid "force setting the FUTEX_WAITERS bit (1) or not (0)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:504
+msgid "0 - ready to wait;"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:505
+msgid "1 - acquired the lock;"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:506
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:277
+msgid "<0 - error"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:508
+msgid "The hb->lock must be held by the caller."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:510
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:270
+msgid ""
+"**exiting** is only set when the return value is -EBUSY. If so, this holds a "
+"refcount on the exiting task on return and the caller needs to drop it after "
+"waiting for the exit to complete."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:858
+msgid "Post lock pi_state and corner case management"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:859
+msgid "user address of the futex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:860
+msgid "futex_q (contains pi_state and access to the rt_mutex)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:862
+msgid "``int locked``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:861
+msgid "if the attempt to take the rt_mutex succeeded (1) or not (0)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:862
+msgid ""
+"After attempting to lock an rt_mutex, this function is called to cleanup the "
+"pi_state owner as well as handle race conditions that may allow us to "
+"acquire the lock. Must be called with the hb lock held."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:867
+msgid "1 - success, lock taken;"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:868
+msgid "0 - success, lock not taken;"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1361: ../kernel/futex/pi.c:869
+msgid "<0 - on error (-EFAULT)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:69
+msgid "Requeue a futex_q from one hb to another"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:70
+msgid "the futex_q to requeue"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:72
+#: ../kernel/futex/requeue.c:258
+msgid "``struct futex_hash_bucket *hb1``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:71
+msgid "the source hash_bucket"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:73
+#: ../kernel/futex/requeue.c:259
+msgid "``struct futex_hash_bucket *hb2``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:72
+msgid "the target hash_bucket"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:73
+msgid "the new key for the requeued futex_q"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:202
+msgid "Wake a task that acquired the lock during requeue"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:203
+msgid "the futex_q"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:204
+msgid "the key of the requeue target futex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:205
+msgid "the hash_bucket of the requeue target futex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:206
+msgid ""
+"During futex_requeue, with requeue_pi=1, it is possible to acquire the "
+"target futex if it is uncontended or via a lock steal."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:209
+msgid ""
+"Set **q**::key to the requeue target futex key so the waiter can detect the "
+"wakeup on the right futex."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:212
+msgid "Dequeue **q** from the hash bucket."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:214
+msgid ""
+"Set **q**::rt_waiter to NULL so the woken up task can detect atomic lock "
+"acquisition."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:217
+msgid ""
+"Set the q->lock_ptr to the requeue target hb->lock for the case that the "
+"waiter has to fixup the pi state."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:220
+msgid ""
+"Complete the requeue state so the waiter can make progress. After this point "
+"the waiter task can return from the syscall immediately in case that the pi "
+"state does not have to be fixed up."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:224
+msgid "Wake the waiter task."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:226
+msgid "Must be called with both q->lock_ptr and hb->lock held."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:255
+msgid "Attempt an atomic lock for the top waiter"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:261
+msgid "``u32 __user *pifutex``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:256
+msgid "the user address of the to futex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:257
+msgid "the from futex hash bucket, must be locked by the caller"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:258
+msgid "the to futex hash bucket, must be locked by the caller"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:259
+msgid "the from futex key"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:260
+msgid "the to futex key"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:261
+msgid "address to store the pi_state pointer"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:265
+msgid ""
+"Try and get the lock on behalf of the top waiter if we can do it atomically. "
+"Wake the top waiter if we succeed.  If the caller specified set_waiters, "
+"then direct futex_lock_pi_atomic() to force setting the FUTEX_WAITERS bit. "
+"hb1 and hb2 must be held by the caller."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:275
+msgid "0 - failed to acquire the lock atomically;"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:276
+msgid ">0 - acquired the lock, return value is vpid of the top_waiter"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:361
+msgid "Requeue waiters from uaddr1 to uaddr2"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:367
+msgid "``u32 __user *uaddr1``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:362
+msgid "source futex user address"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:364
+msgid "``unsigned int flags1``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:363
+#: ../kernel/futex/requeue.c:365 ../../../kernel-hacking/locking:1367:
+#: ../kernel/futex/waitwake.c:577
+msgid "futex flags (FLAGS_SHARED, etc.)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:365
+#: ../kernel/futex/requeue.c:748
+msgid "``u32 __user *uaddr2``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:364
+msgid "target futex user address"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:366
+msgid "``unsigned int flags2``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:367
+msgid "``int nr_wake``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:366
+msgid "number of waiters to wake (must be 1 for requeue_pi)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:368
+msgid "``int nr_requeue``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:367
+msgid "number of waiters to requeue (0-INT_MAX)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:369
+msgid "``u32 *cmpval``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:368
+msgid "**uaddr1** expected value (or ``NULL``)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:370
+msgid "``int requeue_pi``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:369
+msgid ""
+"if we are attempting to requeue from a non-pi futex to a pi futex (pi to pi "
+"requeue is not supported)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:371
+msgid ""
+"Requeue waiters on uaddr1 to uaddr2. In the requeue_pi case, try to acquire "
+"uaddr2 atomically on behalf of the top waiter."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:375
+msgid ">=0 - on success, the number of tasks requeued or woken;"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:376
+msgid "<0 - on error"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:697
+msgid "Handle early wakeup on the initial futex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:698
+msgid "the hash_bucket futex_q was original enqueued on"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:699
+msgid "the futex_q woken while waiting to be requeued"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:700
+msgid "the timeout associated with the wait (NULL if none)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:701
+msgid "Determine the cause for the early wakeup."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:704
+msgid "-EWOULDBLOCK or -ETIMEDOUT or -ERESTARTNOINTR"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:740
+msgid "Wait on uaddr and take uaddr2"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:741
+msgid "the futex we initially wait on (non-pi)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:742
+msgid ""
+"futex flags (FLAGS_SHARED, FLAGS_CLOCKRT, etc.), they must be the same type, "
+"no requeueing from private to shared, etc."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:745
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:577
+msgid "``u32 val``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:744
+msgid "the expected value of uaddr"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:746
+msgid "``ktime_t *abs_time``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:745
+msgid "absolute timeout"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:747
+msgid "``u32 bitset``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:746
+msgid "32 bit wakeup bitset set by userspace, defaults to all"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:747
+msgid "the pi futex we will take prior to returning to user-space"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:748
+msgid ""
+"The caller will wait on uaddr and will be requeued by futex_requeue() to "
+"uaddr2 which must be PI aware and unique from uaddr.  Normal wakeup will "
+"wake on uaddr2 and complete the acquisition of the rt_mutex prior to "
+"returning to userspace.  This ensures the rt_mutex maintains an owner when "
+"it has waiters; without one, the pi logic would not know which task to boost/"
+"deboost, if there was a need to."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:755
+msgid ""
+"We call schedule in futex_wait_queue() when we enqueue and return there via "
+"the following-- 1) wakeup on uaddr2 after an atomic lock acquisition by "
+"futex_requeue() 2) wakeup on uaddr2 after a requeue 3) signal 4) timeout"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:762
+msgid "If 3, cleanup and return -ERESTARTNOINTR."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:764
+msgid ""
+"If 2, we may then block on trying to take the rt_mutex and return via: 5) "
+"successful lock 6) signal 7) timeout 8) other lock acquisition failure"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:770
+msgid "If 6, return -EWOULDBLOCK (restarting the syscall would do the same)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:772
+msgid "If 4 or 7, we cleanup and return with -ETIMEDOUT."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:775
+msgid "0 - On success;"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1364: ../kernel/futex/requeue.c:776
+msgid "<0 - On error"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:337
+msgid "wait for wakeup, timeout, or signal"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:338
+msgid "the futex_q to queue up on"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:339
+msgid "the prepared hrtimer_sleeper, or null for no timeout"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:364
+msgid "Remove various futexes from their hash bucket"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:370
+msgid "``struct futex_vector *v``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:365
+msgid "The list of futexes to unqueue"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:367
+#: ../kernel/futex/waitwake.c:390
+msgid "``int count``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:366
+msgid "Number of futexes in the list"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:367
+msgid "Helper to unqueue a list of futexes. This can't fail."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:370
+msgid ">=0 - Index of the last futex that was awoken;"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:371
+msgid "No futex was awoken"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:387
+msgid "Prepare to wait and enqueue multiple futexes"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:393
+#: ../kernel/futex/waitwake.c:506 ../kernel/futex/waitwake.c:529
+msgid "``struct futex_vector *vs``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:388
+msgid "The futex list to wait on"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:389
+msgid "The size of the list"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:391
+msgid "``int *woken``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:390
+msgid ""
+"Index of the last woken futex, if any. Used to notify the caller that it can "
+"return this index to userspace (return parameter)"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:392
+msgid ""
+"Prepare multiple futexes in a single step and enqueue them. This may fail if "
+"the futex list is invalid or if any futex was already awoken. On success the "
+"task is ready to interruptible sleep."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:397
+msgid "1 - One of the futexes was woken by another thread"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:398
+msgid "0 - Success"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:399
+msgid "<0 - -EFAULT, -EWOULDBLOCK or -EINVAL"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:500
+msgid "Check sleeping conditions and sleep"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:501
+msgid "List of futexes to wait for"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:503
+#: ../kernel/futex/waitwake.c:526
+msgid "``unsigned int count``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:502
+msgid "Length of vs"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:504
+#: ../kernel/futex/waitwake.c:527
+msgid "``struct hrtimer_sleeper *to``"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:503
+msgid "Timeout"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:504
+msgid ""
+"Sleep if and only if the timeout hasn't expired and no futex on the list has "
+"been woken up."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:523
+msgid "Prepare to wait on and enqueue several futexes"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:524
+msgid "The list of futexes to wait on"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:525
+msgid "The number of objects"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:526
+msgid "Timeout before giving up and returning to userspace"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:527
+msgid ""
+"Entry point for the FUTEX_WAIT_MULTIPLE futex operation, this function "
+"sleeps on a group of futexes and returns on the first futex that is wake, or "
+"after the timeout has elapsed."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:532
+msgid ">=0 - Hint to the futex that was awoken"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:533
+msgid "<0  - On error"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:574
+msgid "Prepare to wait on a futex"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:575
+msgid "the futex userspace address"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:576
+msgid "the expected value"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:578
+msgid "the associated futex_q"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:579
+msgid "the second futex_key if used for requeue PI"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:581
+msgid ""
+"Setup the futex_q and locate the hash_bucket.  Get the futex value and "
+"compare it with the expected value.  Handle atomic faults internally. Return "
+"with the hb lock held on success, and unlocked on failure."
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:586
+msgid "0 - uaddr contains val and hb has been locked;"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:587
+msgid ""
+"<0 - On error and the hb is unlocked. A possible reason: the uaddr can not"
+msgstr ""
+
+#: ../../../kernel-hacking/locking:1367: ../kernel/futex/waitwake.c:588
+msgid ""
+"be read, does not contain the expected value or is not properly aligned."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1371
+msgid "Further reading"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1373
+msgid ""
+"``Documentation/locking/spinlocks.rst``: Linus Torvalds' spinlocking "
+"tutorial in the kernel sources."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1376
+msgid ""
+"Unix Systems for Modern Architectures: Symmetric Multiprocessing and Caching "
+"for Kernel Programmers:"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1379
+msgid ""
+"Curt Schimmel's very good introduction to kernel level locking (not written "
+"for Linux, but nearly everything applies). The book is expensive, but really "
+"worth every penny to understand SMP locking. [ISBN: 0201633388]"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1385
+msgid "Thanks"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1387
+msgid "Thanks to Telsa Gwynne for DocBooking, neatening and adding style."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1389
+msgid ""
+"Thanks to Martin Pool, Philipp Rumpf, Stephen Rothwell, Paul Mackerras, "
+"Ruedi Aschwanden, Alan Cox, Manfred Spraul, Tim Waugh, Pete Zaitcev, James "
+"Morris, Robert Love, Paul McKenney, John Ashby for proofreading, correcting, "
+"flaming, commenting."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1394
+msgid "Thanks to the cabal for having no influence on this document."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1397
+msgid "Glossary"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1399
+msgid "preemption"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1400
+msgid ""
+"Prior to 2.5, or when ``CONFIG_PREEMPT`` is unset, processes in user context "
+"inside the kernel would not preempt each other (ie. you had that CPU until "
+"you gave it up, except for interrupts). With the addition of "
+"``CONFIG_PREEMPT`` in 2.5.4, this changed: when in user context, higher "
+"priority tasks can \"cut in\": spinlocks were changed to disable preemption, "
+"even on UP."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1407
+msgid "bh"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1408
+msgid ""
+"Bottom Half: for historical reasons, functions with '_bh' in them often now "
+"refer to any software interrupt, e.g. spin_lock_bh() blocks any software "
+"interrupt on the current CPU. Bottom halves are deprecated, and will "
+"eventually be replaced by tasklets. Only one bottom half will be running at "
+"any time."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1414
+msgid "Hardware Interrupt / Hardware IRQ"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1415
+msgid ""
+"Hardware interrupt request. in_hardirq() returns true in a hardware "
+"interrupt handler."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1418
+msgid "Interrupt Context"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1419
+msgid ""
+"Not user context: processing a hardware irq or software irq. Indicated by "
+"the in_interrupt() macro returning true."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1422
+msgid "SMP"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1423
+msgid ""
+"Symmetric Multi-Processor: kernels compiled for multiple-CPU machines. "
+"(``CONFIG_SMP=y``)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1426
+msgid "Software Interrupt / softirq"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1427
+msgid ""
+"Software interrupt handler. in_hardirq() returns false; in_softirq() returns "
+"true. Tasklets and softirqs both fall into the category of 'software "
+"interrupts'."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1431
+msgid ""
+"Strictly speaking a softirq is one of up to 32 enumerated software "
+"interrupts which can run on multiple CPUs at once. Sometimes used to refer "
+"to tasklets as well (ie. all software interrupts)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1435
+msgid "tasklet"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1436
+msgid ""
+"A dynamically-registrable software interrupt, which is guaranteed to only "
+"run on one CPU at a time."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1439
+msgid "timer"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1440
+msgid ""
+"A dynamically-registrable software interrupt, which is run at (or close to) "
+"a given time. When running, it is just like a tasklet (in fact, they are "
+"called from the ``TIMER_SOFTIRQ``)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1444
+msgid "UP"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1445
+msgid "Uni-Processor: Non-SMP. (``CONFIG_SMP=n``)."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1447
+msgid "User Context"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1448
+msgid ""
+"The kernel executing on behalf of a particular process (ie. a system call or "
+"trap) or kernel thread. You can tell which process with the ``current`` "
+"macro.) Not to be confused with userspace. Can be interrupted by software or "
+"hardware interrupts."
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1453
+msgid "Userspace"
+msgstr ""
+
+#: ../../../kernel-hacking/locking.rst:1454
+msgid "A process executing its own code outside the kernel."
+msgstr ""
