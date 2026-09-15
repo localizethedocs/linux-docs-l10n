@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Architecture Page Table Helpers &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/mm/arch_pgtable_helpers.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="Memory Balancing" href="balance.html" />
+    <link rel="prev" title="MEMORY ALLOCATION PROFILING" href="allocation-profiling.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/mm/arch_pgtable_helpers.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="architecture-page-table-helpers">
+<h1>Architecture Page Table Helpers<a class="headerlink" href="#architecture-page-table-helpers" title="Link to this heading">¶</a></h1>
+<p>Generic MM expects architectures (with MMU) to provide helpers to create, access
+and modify page table entries at various level for different memory functions.
+These page table helpers need to conform to a common semantics across platforms.
+Following tables describe the expected semantics which can also be tested during
+boot via CONFIG_DEBUG_VM_PGTABLE option. All future changes in here or the debug
+test need to be in sync.</p>
+<section id="pte-page-table-helpers">
+<h2>PTE Page Table Helpers<a class="headerlink" href="#pte-page-table-helpers" title="Link to this heading">¶</a></h2>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>pte_same</p></td>
+<td><p>Tests whether both PTE entries are the same</p></td>
+</tr>
+<tr class="row-even"><td><p>pte_present</p></td>
+<td><p>Tests a valid mapped PTE</p></td>
+</tr>
+<tr class="row-odd"><td><p>pte_young</p></td>
+<td><p>Tests a young PTE</p></td>
+</tr>
+<tr class="row-even"><td><p>pte_dirty</p></td>
+<td><p>Tests a dirty PTE</p></td>
+</tr>
+<tr class="row-odd"><td><p>pte_write</p></td>
+<td><p>Tests a writable PTE</p></td>
+</tr>
+<tr class="row-even"><td><p>pte_special</p></td>
+<td><p>Tests a special PTE</p></td>
+</tr>
+<tr class="row-odd"><td><p>pte_protnone</p></td>
+<td><p>Tests a PROT_NONE PTE</p></td>
+</tr>
+<tr class="row-even"><td><p>pte_soft_dirty</p></td>
+<td><p>Tests a soft dirty PTE</p></td>
+</tr>
+<tr class="row-odd"><td><p>pte_swp_soft_dirty</p></td>
+<td><p>Tests a soft dirty swapped PTE</p></td>
+</tr>
+<tr class="row-even"><td><p>pte_mkyoung</p></td>
+<td><p>Creates a young PTE</p></td>
+</tr>
+<tr class="row-odd"><td><p>pte_mkold</p></td>
+<td><p>Creates an old PTE</p></td>
+</tr>
+<tr class="row-even"><td><p>pte_mkdirty</p></td>
+<td><p>Creates a dirty PTE</p></td>
+</tr>
+<tr class="row-odd"><td><p>pte_mkclean</p></td>
+<td><p>Creates a clean PTE</p></td>
+</tr>
+<tr class="row-even"><td><p>pte_mkwrite</p></td>
+<td><p>Creates a writable PTE of the type specified by
+the VMA.</p></td>
+</tr>
+<tr class="row-odd"><td><p>pte_mkwrite_novma</p></td>
+<td><p>Creates a writable PTE, of the conventional type
+of writable.</p></td>
+</tr>
+<tr class="row-even"><td><p>pte_wrprotect</p></td>
+<td><p>Creates a write protected PTE</p></td>
+</tr>
+<tr class="row-odd"><td><p>pte_mkspecial</p></td>
+<td><p>Creates a special PTE</p></td>
+</tr>
+<tr class="row-even"><td><p>pte_mksoft_dirty</p></td>
+<td><p>Creates a soft dirty PTE</p></td>
+</tr>
+<tr class="row-odd"><td><p>pte_clear_soft_dirty</p></td>
+<td><p>Clears a soft dirty PTE</p></td>
+</tr>
+<tr class="row-even"><td><p>pte_swp_mksoft_dirty</p></td>
+<td><p>Creates a soft dirty swapped PTE</p></td>
+</tr>
+<tr class="row-odd"><td><p>pte_swp_clear_soft_dirty</p></td>
+<td><p>Clears a soft dirty swapped PTE</p></td>
+</tr>
+<tr class="row-even"><td><p>pte_mknotpresent</p></td>
+<td><p>Invalidates a mapped PTE</p></td>
+</tr>
+<tr class="row-odd"><td><p>ptep_clear</p></td>
+<td><p>Clears a PTE</p></td>
+</tr>
+<tr class="row-even"><td><p>ptep_get_and_clear</p></td>
+<td><p>Clears and returns PTE</p></td>
+</tr>
+<tr class="row-odd"><td><p>ptep_get_and_clear_full</p></td>
+<td><p>Clears and returns PTE (batched PTE unmap)</p></td>
+</tr>
+<tr class="row-even"><td><p>ptep_test_and_clear_young</p></td>
+<td><p>Clears young from a PTE</p></td>
+</tr>
+<tr class="row-odd"><td><p>ptep_set_wrprotect</p></td>
+<td><p>Converts into a write protected PTE</p></td>
+</tr>
+<tr class="row-even"><td><p>ptep_set_access_flags</p></td>
+<td><p>Converts into a more permissive PTE</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pmd-page-table-helpers">
+<h2>PMD Page Table Helpers<a class="headerlink" href="#pmd-page-table-helpers" title="Link to this heading">¶</a></h2>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>pmd_same</p></td>
+<td><p>Tests whether both PMD entries are the same</p></td>
+</tr>
+<tr class="row-even"><td><p>pmd_bad</p></td>
+<td><p>Tests a non-table mapped PMD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmd_leaf</p></td>
+<td><p>Tests a leaf mapped PMD</p></td>
+</tr>
+<tr class="row-even"><td><p>pmd_trans_huge</p></td>
+<td><p>Tests a Transparent Huge Page (THP) at PMD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmd_present</p></td>
+<td><p>Tests whether <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pmd_page()</span></code> points to valid memory</p></td>
+</tr>
+<tr class="row-even"><td><p>pmd_young</p></td>
+<td><p>Tests a young PMD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmd_dirty</p></td>
+<td><p>Tests a dirty PMD</p></td>
+</tr>
+<tr class="row-even"><td><p>pmd_write</p></td>
+<td><p>Tests a writable PMD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmd_special</p></td>
+<td><p>Tests a special PMD</p></td>
+</tr>
+<tr class="row-even"><td><p>pmd_protnone</p></td>
+<td><p>Tests a PROT_NONE PMD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmd_soft_dirty</p></td>
+<td><p>Tests a soft dirty PMD</p></td>
+</tr>
+<tr class="row-even"><td><p>pmd_swp_soft_dirty</p></td>
+<td><p>Tests a soft dirty swapped PMD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmd_mkyoung</p></td>
+<td><p>Creates a young PMD</p></td>
+</tr>
+<tr class="row-even"><td><p>pmd_mkold</p></td>
+<td><p>Creates an old PMD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmd_mkdirty</p></td>
+<td><p>Creates a dirty PMD</p></td>
+</tr>
+<tr class="row-even"><td><p>pmd_mkclean</p></td>
+<td><p>Creates a clean PMD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmd_mkwrite</p></td>
+<td><p>Creates a writable PMD of the type specified by
+the VMA.</p></td>
+</tr>
+<tr class="row-even"><td><p>pmd_mkwrite_novma</p></td>
+<td><p>Creates a writable PMD, of the conventional type
+of writable.</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmd_wrprotect</p></td>
+<td><p>Creates a write protected PMD</p></td>
+</tr>
+<tr class="row-even"><td><p>pmd_mkspecial</p></td>
+<td><p>Creates a special PMD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmd_mksoft_dirty</p></td>
+<td><p>Creates a soft dirty PMD</p></td>
+</tr>
+<tr class="row-even"><td><p>pmd_clear_soft_dirty</p></td>
+<td><p>Clears a soft dirty PMD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmd_swp_mksoft_dirty</p></td>
+<td><p>Creates a soft dirty swapped PMD</p></td>
+</tr>
+<tr class="row-even"><td><p>pmd_swp_clear_soft_dirty</p></td>
+<td><p>Clears a soft dirty swapped PMD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmd_mkinvalid</p></td>
+<td><p>Invalidates a present PMD; do not call for
+non-present PMD [1]</p></td>
+</tr>
+<tr class="row-even"><td><p>pmd_set_huge</p></td>
+<td><p>Creates a PMD huge mapping</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmd_clear_huge</p></td>
+<td><p>Clears a PMD huge mapping</p></td>
+</tr>
+<tr class="row-even"><td><p>pmdp_get_and_clear</p></td>
+<td><p>Clears a PMD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmdp_get_and_clear_full</p></td>
+<td><p>Clears a PMD</p></td>
+</tr>
+<tr class="row-even"><td><p>pmdp_test_and_clear_young</p></td>
+<td><p>Clears young from a PMD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pmdp_set_wrprotect</p></td>
+<td><p>Converts into a write protected PMD</p></td>
+</tr>
+<tr class="row-even"><td><p>pmdp_set_access_flags</p></td>
+<td><p>Converts into a more permissive PMD</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pud-page-table-helpers">
+<h2>PUD Page Table Helpers<a class="headerlink" href="#pud-page-table-helpers" title="Link to this heading">¶</a></h2>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>pud_same</p></td>
+<td><p>Tests whether both PUD entries are the same</p></td>
+</tr>
+<tr class="row-even"><td><p>pud_bad</p></td>
+<td><p>Tests a non-table mapped PUD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pud_leaf</p></td>
+<td><p>Tests a leaf mapped PUD</p></td>
+</tr>
+<tr class="row-even"><td><p>pud_trans_huge</p></td>
+<td><p>Tests a Transparent Huge Page (THP) at PUD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pud_present</p></td>
+<td><p>Tests a valid mapped PUD</p></td>
+</tr>
+<tr class="row-even"><td><p>pud_young</p></td>
+<td><p>Tests a young PUD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pud_dirty</p></td>
+<td><p>Tests a dirty PUD</p></td>
+</tr>
+<tr class="row-even"><td><p>pud_write</p></td>
+<td><p>Tests a writable PUD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pud_mkyoung</p></td>
+<td><p>Creates a young PUD</p></td>
+</tr>
+<tr class="row-even"><td><p>pud_mkold</p></td>
+<td><p>Creates an old PUD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pud_mkdirty</p></td>
+<td><p>Creates a dirty PUD</p></td>
+</tr>
+<tr class="row-even"><td><p>pud_mkclean</p></td>
+<td><p>Creates a clean PUD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pud_mkwrite</p></td>
+<td><p>Creates a writable PUD</p></td>
+</tr>
+<tr class="row-even"><td><p>pud_wrprotect</p></td>
+<td><p>Creates a write protected PUD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pud_mkinvalid</p></td>
+<td><p>Invalidates a present PUD; do not call for
+non-present PUD [1]</p></td>
+</tr>
+<tr class="row-even"><td><p>pud_set_huge</p></td>
+<td><p>Creates a PUD huge mapping</p></td>
+</tr>
+<tr class="row-odd"><td><p>pud_clear_huge</p></td>
+<td><p>Clears a PUD huge mapping</p></td>
+</tr>
+<tr class="row-even"><td><p>pudp_get_and_clear</p></td>
+<td><p>Clears a PUD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pudp_get_and_clear_full</p></td>
+<td><p>Clears a PUD</p></td>
+</tr>
+<tr class="row-even"><td><p>pudp_test_and_clear_young</p></td>
+<td><p>Clears young from a PUD</p></td>
+</tr>
+<tr class="row-odd"><td><p>pudp_set_wrprotect</p></td>
+<td><p>Converts into a write protected PUD</p></td>
+</tr>
+<tr class="row-even"><td><p>pudp_set_access_flags</p></td>
+<td><p>Converts into a more permissive PUD</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="hugetlb-page-table-helpers">
+<h2>HugeTLB Page Table Helpers<a class="headerlink" href="#hugetlb-page-table-helpers" title="Link to this heading">¶</a></h2>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>pte_huge</p></td>
+<td><p>Tests a HugeTLB</p></td>
+</tr>
+<tr class="row-even"><td><p>arch_make_huge_pte</p></td>
+<td><p>Creates a HugeTLB</p></td>
+</tr>
+<tr class="row-odd"><td><p>huge_pte_dirty</p></td>
+<td><p>Tests a dirty HugeTLB</p></td>
+</tr>
+<tr class="row-even"><td><p>huge_pte_write</p></td>
+<td><p>Tests a writable HugeTLB</p></td>
+</tr>
+<tr class="row-odd"><td><p>huge_pte_mkdirty</p></td>
+<td><p>Creates a dirty HugeTLB</p></td>
+</tr>
+<tr class="row-even"><td><p>huge_pte_mkwrite</p></td>
+<td><p>Creates a writable HugeTLB</p></td>
+</tr>
+<tr class="row-odd"><td><p>huge_pte_wrprotect</p></td>
+<td><p>Creates a write protected HugeTLB</p></td>
+</tr>
+<tr class="row-even"><td><p>huge_ptep_get_and_clear</p></td>
+<td><p>Clears a HugeTLB</p></td>
+</tr>
+<tr class="row-odd"><td><p>huge_ptep_set_wrprotect</p></td>
+<td><p>Converts into a write protected HugeTLB</p></td>
+</tr>
+<tr class="row-even"><td colspan="2"><p>huge_ptep_set_access_flags  | Converts into a more permissive HugeTLB</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="swap-page-table-helpers">
+<h2>SWAP Page Table Helpers<a class="headerlink" href="#swap-page-table-helpers" title="Link to this heading">¶</a></h2>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>__pte_to_swp_entry</p></td>
+<td colspan="2"><p>Creates a swp_entry_t (arch) from a swap PTE</p></td>
+</tr>
+<tr class="row-even"><td><p>__swp_entry_to_pte</p></td>
+<td colspan="2"><p>Creates a swap PTE from a swp_entry_t (arch)</p></td>
+</tr>
+<tr class="row-odd"><td><p>__pmd_to_swp_entry</p></td>
+<td colspan="2"><p>Creates a swp_entry_t (arch) from a swap PMD</p></td>
+</tr>
+<tr class="row-even"><td><p>__swp_entry_to_pmd</p></td>
+<td colspan="2"><p>Creates a swap PMD from a swp_entry_t (arch)</p></td>
+</tr>
+<tr class="row-odd"><td colspan="3"><p>is_migration_entry        | Tests a migration (read or write) swapped entry</p></td>
+</tr>
+<tr class="row-even"><td colspan="2"><p>is_writable_migration_entry</p></td>
+<td><p>Tests a write migration swapped entry</p></td>
+</tr>
+<tr class="row-odd"><td colspan="2"><p>make_readable_migration_entry</p></td>
+<td><p>Creates a read migration swapped entry</p></td>
+</tr>
+<tr class="row-even"><td colspan="2"><p>make_writable_migration_entry</p></td>
+<td><p>Creates a write migration swapped entry</p></td>
+</tr>
+</tbody>
+</table>
+<p>[1] <a class="reference external" href="https://lore.kernel.org/linux-mm/20181017020930.GN30832&#64;redhat.com/">https://lore.kernel.org/linux-mm/20181017020930.GN30832&#64;redhat.com/</a></p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/mm/arch_pgtable_helpers.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

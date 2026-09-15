@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>RCU and lockdep checking &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/RCU/lockdep.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Lockdep-RCU Splat" href="lockdep-splat.html" />
+    <link rel="prev" title="Review Checklist for RCU Patches" href="checklist.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../core-api/index.html">Core API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-entry-and-exit">Low level entry and exit</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../core-api/index.html#concurrency-primitives">Concurrency primitives</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/refcount-vs-atomic.html">refcount_t API compared to atomic_t</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/irq/index.html">IRQs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/local_ops.html">Semantics and Behavior of Local Atomic Operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/padata.html">The padata parallel execution mechanism</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">RCU Handbook</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../core-api/wrappers/memory-barriers.html">Linux kernel memory barriers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#memory-management">Memory management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core-api/index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/RCU/lockdep.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="rcu-and-lockdep-checking">
+<h1>RCU and lockdep checking<a class="headerlink" href="#rcu-and-lockdep-checking" title="Link to this heading">¶</a></h1>
+<p>All flavors of RCU have lockdep checking available, so that lockdep is
+aware of when each task enters and leaves any flavor of RCU read-side
+critical section.  Each flavor of RCU is tracked separately (but note
+that this is not the case in 2.6.32 and earlier).  This allows lockdep’s
+tracking to include RCU state, which can sometimes help when debugging
+deadlocks and the like.</p>
+<p>In addition, RCU provides the following primitives that check lockdep’s
+state:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>rcu_read_lock_held() for normal RCU.
+rcu_read_lock_bh_held() for RCU-bh.
+rcu_read_lock_sched_held() for RCU-sched.
+rcu_read_lock_any_held() for any of normal RCU, RCU-bh, and RCU-sched.
+srcu_read_lock_held() for SRCU.
+rcu_read_lock_trace_held() for RCU Tasks Trace.
+</pre></div>
+</div>
+<p>These functions are conservative, and will therefore return 1 if they
+aren’t certain (for example, if CONFIG_DEBUG_LOCK_ALLOC is not set).
+This prevents things like WARN_ON(!<a class="reference internal" href="../core-api/kernel-api.html#c.rcu_read_lock_held" title="rcu_read_lock_held"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_read_lock_held()</span></code></a>) from giving false
+positives when lockdep is disabled.</p>
+<p>In addition, a separate kernel config parameter CONFIG_PROVE_RCU enables
+checking of <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a> primitives:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>rcu_dereference(p):</dt><dd><p>Check for RCU read-side critical section.</p>
+</dd>
+<dt>rcu_dereference_bh(p):</dt><dd><p>Check for RCU-bh read-side critical section.</p>
+</dd>
+<dt>rcu_dereference_sched(p):</dt><dd><p>Check for RCU-sched read-side critical section.</p>
+</dd>
+<dt>srcu_dereference(p, sp):</dt><dd><p>Check for SRCU read-side critical section.</p>
+</dd>
+<dt>rcu_dereference_check(p, c):</dt><dd><p>Use explicit check expression “c” along with
+<a class="reference internal" href="../core-api/kernel-api.html#c.rcu_read_lock_held" title="rcu_read_lock_held"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_read_lock_held()</span></code></a>.  This is useful in code that is
+invoked by both RCU readers and updaters.</p>
+</dd>
+<dt>rcu_dereference_bh_check(p, c):</dt><dd><p>Use explicit check expression “c” along with
+<a class="reference internal" href="../core-api/kernel-api.html#c.rcu_read_lock_bh_held" title="rcu_read_lock_bh_held"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_read_lock_bh_held()</span></code></a>.  This is useful in code that
+is invoked by both RCU-bh readers and updaters.</p>
+</dd>
+<dt>rcu_dereference_sched_check(p, c):</dt><dd><p>Use explicit check expression “c” along with
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">rcu_read_lock_sched_held()</span></code>.  This is useful in code that
+is invoked by both RCU-sched readers and updaters.</p>
+</dd>
+<dt>srcu_dereference_check(p, c):</dt><dd><p>Use explicit check expression “c” along with
+<a class="reference internal" href="../core-api/kernel-api.html#c.srcu_read_lock_held" title="srcu_read_lock_held"><code class="xref c c-func docutils literal notranslate"><span class="pre">srcu_read_lock_held()</span></code></a>.  This is useful in code that
+is invoked by both SRCU readers and updaters.</p>
+</dd>
+<dt>rcu_dereference_raw(p):</dt><dd><p>Don’t check.  (Use sparingly, if at all.)</p>
+</dd>
+<dt>rcu_dereference_raw_check(p):</dt><dd><p>Don’t do lockdep at all.  (Use sparingly, if at all.)</p>
+</dd>
+<dt>rcu_dereference_protected(p, c):</dt><dd><p>Use explicit check expression “c”, and omit all barriers
+and compiler constraints.  This is useful when the data
+structure cannot change, for example, in code that is
+invoked only by updaters.</p>
+</dd>
+<dt>rcu_access_pointer(p):</dt><dd><p>Return the value of the pointer and omit all barriers,
+but retain the compiler constraints that prevent duplicating
+or coalescing.  This is useful when testing the
+value of the pointer itself, for example, against NULL.</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>The <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_check" title="rcu_dereference_check"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_check()</span></code></a> check expression can be any boolean
+expression, but would normally include a lockdep expression.  For a
+moderately ornate example, consider the following:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>file = rcu_dereference_check(fdt-&gt;fd[fd],
+                             lockdep_is_held(&amp;files-&gt;file_lock) ||
+                             atomic_read(&amp;files-&gt;count) == 1);
+</pre></div>
+</div>
+<p>This expression picks up the pointer “fdt-&gt;fd[fd]” in an RCU-safe manner,
+and, if CONFIG_PROVE_RCU is configured, verifies that this expression
+is used in:</p>
+<ol class="arabic simple">
+<li><p>An RCU read-side critical section (implicit), or</p></li>
+<li><p>with files-&gt;file_lock held, or</p></li>
+<li><p>on an unshared files_struct.</p></li>
+</ol>
+<p>In case (1), the pointer is picked up in an RCU-safe manner for vanilla
+RCU read-side critical sections, in case (2) the -&gt;file_lock prevents
+any change from taking place, and finally, in case (3) the current task
+is the only task accessing the file_struct, again preventing any change
+from taking place.  If the above statement was invoked only from updater
+code, it could instead be written as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>file = rcu_dereference_protected(fdt-&gt;fd[fd],
+                                 lockdep_is_held(&amp;files-&gt;file_lock) ||
+                                 atomic_read(&amp;files-&gt;count) == 1);
+</pre></div>
+</div>
+<p>This would verify cases #2 and #3 above, and furthermore lockdep would
+complain even if this was used in an RCU read-side critical section unless
+one of these two cases held.  Because <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_protected" title="rcu_dereference_protected"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_protected()</span></code></a> omits
+all barriers and compiler constraints, it generates better code than do
+the other flavors of <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>.  On the other hand, it is illegal
+to use <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference_protected" title="rcu_dereference_protected"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference_protected()</span></code></a> if either the RCU-protected pointer
+or the RCU-protected data that it points to can change concurrently.</p>
+<p>Like <a class="reference internal" href="../core-api/kernel-api.html#c.rcu_dereference" title="rcu_dereference"><code class="xref c c-func docutils literal notranslate"><span class="pre">rcu_dereference()</span></code></a>, when lockdep is enabled, RCU list and hlist
+traversal primitives check for being called from within an RCU read-side
+critical section.  However, a lockdep expression can be passed to them
+as an additional optional argument.  With this lockdep expression, these
+traversal primitives will complain only if the lockdep expression is
+false and they are called from outside any RCU read-side critical section.</p>
+<p>For example, the workqueue <a class="reference internal" href="../core-api/workqueue.html#c.for_each_pwq" title="for_each_pwq"><code class="xref c c-func docutils literal notranslate"><span class="pre">for_each_pwq()</span></code></a> macro is intended to be used
+either within an RCU read-side critical section or with wq-&gt;mutex held.
+It is thus implemented as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#define for_each_pwq(pwq, wq)
+        list_for_each_entry_rcu((pwq), &amp;(wq)-&gt;pwqs, pwqs_node,
+                                lock_is_held(&amp;(wq-&gt;mutex).dep_map))
+</pre></div>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/RCU/lockdep.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
