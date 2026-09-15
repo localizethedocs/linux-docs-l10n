@@ -1,0 +1,104 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel 6\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-30 08:40+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../RCU/lockdep-splat.rst:5
+msgid "Lockdep-RCU Splat"
+msgstr ""
+
+#: ../../../RCU/lockdep-splat.rst:7
+msgid ""
+"Lockdep-RCU was added to the Linux kernel in early 2010 (http://lwn.net/"
+"Articles/371986/).  This facility checks for some common misuses of the RCU "
+"API, most notably using one of the rcu_dereference() family to access an RCU-"
+"protected pointer without the proper protection. When such misuse is "
+"detected, an lockdep-RCU splat is emitted."
+msgstr ""
+
+#: ../../../RCU/lockdep-splat.rst:13
+msgid ""
+"The usual cause of a lockdep-RCU splat is someone accessing an RCU-protected "
+"data structure without either (1) being in the right kind of RCU read-side "
+"critical section or (2) holding the right update-side lock. This problem can "
+"therefore be serious: it might result in random memory overwriting or "
+"worse.  There can of course be false positives, this being the real world "
+"and all that."
+msgstr ""
+
+#: ../../../RCU/lockdep-splat.rst:20
+msgid ""
+"So let's look at an example RCU lockdep splat from 3.0-rc5, one that has "
+"long since been fixed::"
+msgstr ""
+
+#: ../../../RCU/lockdep-splat.rst:28
+msgid "other info that might help us debug this::"
+msgstr ""
+
+#: ../../../RCU/lockdep-splat.rst:68
+msgid "Line 2776 of block/cfq-iosched.c in v3.0-rc5 is as follows::"
+msgstr ""
+
+#: ../../../RCU/lockdep-splat.rst:72
+msgid ""
+"This form says that it must be in a plain vanilla RCU read-side critical "
+"section, but the \"other info\" list above shows that this is not the case.  "
+"Instead, we hold three locks, one of which might be RCU related. And maybe "
+"that lock really does protect this reference.  If so, the fix is to inform "
+"RCU, perhaps by changing __cfq_exit_single_io_context() to take the struct "
+"request_queue \"q\" from cfq_exit_queue() as an argument, which would permit "
+"us to invoke rcu_dereference_protected as follows::"
+msgstr ""
+
+#: ../../../RCU/lockdep-splat.rst:83
+msgid ""
+"With this change, there would be no lockdep-RCU splat emitted if this code "
+"was invoked either from within an RCU read-side critical section or with the "
+"->queue_lock held.  In particular, this would have suppressed the above "
+"lockdep-RCU splat because ->queue_lock is held (see #2 in the list above)."
+msgstr ""
+
+#: ../../../RCU/lockdep-splat.rst:89
+msgid ""
+"On the other hand, perhaps we really do need an RCU read-side critical "
+"section.  In this case, the critical section must span the use of the return "
+"value from rcu_dereference(), or at least until there is some reference "
+"count incremented or some such.  One way to handle this is to add "
+"rcu_read_lock() and rcu_read_unlock() as follows::"
+msgstr ""
+
+#: ../../../RCU/lockdep-splat.rst:103
+msgid ""
+"With this change, the rcu_dereference() is always within an RCU read-side "
+"critical section, which again would have suppressed the above lockdep-RCU "
+"splat."
+msgstr ""
+
+#: ../../../RCU/lockdep-splat.rst:107
+msgid ""
+"But in this particular case, we don't actually dereference the pointer "
+"returned from rcu_dereference().  Instead, that pointer is just compared to "
+"the cic pointer, which means that the rcu_dereference() can be replaced by "
+"rcu_access_pointer() as follows::"
+msgstr ""
+
+#: ../../../RCU/lockdep-splat.rst:114
+msgid ""
+"Because it is legal to invoke rcu_access_pointer() without protection, this "
+"change would also suppress the above lockdep-RCU splat."
+msgstr ""
