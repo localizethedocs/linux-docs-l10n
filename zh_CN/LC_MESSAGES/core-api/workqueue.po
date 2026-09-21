@@ -1,0 +1,4209 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-07 19:04+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../core-api/workqueue.rst:3
+msgid "Workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:0
+msgid "Date"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:5
+msgid "September, 2010"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:0
+msgid "Author"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:6
+msgid "Tejun Heo <tj@kernel.org>"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:7
+msgid "Florian Mickler <florian@mickler.org>"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:11
+msgid "Introduction"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:13
+msgid ""
+"There are many cases where an asynchronous process execution context is "
+"needed and the workqueue (wq) API is the most commonly used mechanism for "
+"such cases."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:17
+msgid ""
+"When such an asynchronous execution context is needed, a work item "
+"describing which function to execute is put on a queue.  An independent "
+"thread serves as the asynchronous execution context.  The queue is called "
+"workqueue and the thread is called worker."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:22
+msgid ""
+"While there are work items on the workqueue the worker executes the "
+"functions associated with the work items one after the other.  When there is "
+"no work item left on the workqueue the worker becomes idle. When a new work "
+"item gets queued, the worker begins executing again."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:29
+msgid "Why Concurrency Managed Workqueue?"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:31
+msgid ""
+"In the original wq implementation, a multi threaded (MT) wq had one worker "
+"thread per CPU and a single threaded (ST) wq had one worker thread system-"
+"wide.  A single MT wq needed to keep around the same number of workers as "
+"the number of CPUs.  The kernel grew a lot of MT wq users over the years and "
+"with the number of CPU cores continuously rising, some systems saturated the "
+"default 32k PID space just booting up."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:39
+msgid ""
+"Although MT wq wasted a lot of resource, the level of concurrency provided "
+"was unsatisfactory.  The limitation was common to both ST and MT wq albeit "
+"less severe on MT.  Each wq maintained its own separate worker pool.  An MT "
+"wq could provide only one execution context per CPU while an ST wq one for "
+"the whole system.  Work items had to compete for those very limited "
+"execution contexts leading to various problems including proneness to "
+"deadlocks around the single execution context."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:47
+msgid ""
+"The tension between the provided level of concurrency and resource usage "
+"also forced its users to make unnecessary tradeoffs like libata choosing to "
+"use ST wq for polling PIOs and accepting an unnecessary limitation that no "
+"two polling PIOs can progress at the same time.  As MT wq don't provide much "
+"better concurrency, users which require higher level of concurrency, like "
+"async or fscache, had to implement their own thread pool."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:55
+msgid ""
+"Concurrency Managed Workqueue (cmwq) is a reimplementation of wq with focus "
+"on the following goals."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:58
+msgid "Maintain compatibility with the original workqueue API."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:60
+msgid ""
+"Use per-CPU unified worker pools shared by all wq to provide flexible level "
+"of concurrency on demand without wasting a lot of resource."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:64
+msgid ""
+"Automatically regulate worker pool and level of concurrency so that the API "
+"users don't need to worry about such details."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:69
+msgid "The Design"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:71
+msgid ""
+"In order to ease the asynchronous execution of functions a new abstraction, "
+"the work item, is introduced."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:74
+msgid ""
+"A work item is a simple struct that holds a pointer to the function that is "
+"to be executed asynchronously.  Whenever a driver or subsystem wants a "
+"function to be executed asynchronously it has to set up a work item pointing "
+"to that function and queue that work item on a workqueue."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:80
+msgid ""
+"A work item can be executed in either a thread or the BH (softirq) context."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:82
+msgid ""
+"For threaded workqueues, special purpose threads, called [k]workers, execute "
+"the functions off of the queue, one after the other. If no work is queued, "
+"the worker threads become idle. These worker threads are managed in worker-"
+"pools."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:87
+msgid ""
+"The cmwq design differentiates between the user-facing workqueues that "
+"subsystems and drivers queue work items on and the backend mechanism which "
+"manages worker-pools and processes the queued work items."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:91
+msgid ""
+"There are two worker-pools, one for normal work items and the other for high "
+"priority ones, for each possible CPU and some extra worker-pools to serve "
+"work items queued on unbound workqueues - the number of these backing pools "
+"is dynamic."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:96
+msgid ""
+"BH workqueues use the same framework. However, as there can only be one "
+"concurrent execution context, there's no need to worry about concurrency. "
+"Each per-CPU BH worker pool contains only one pseudo worker which represents "
+"the BH execution context. A BH workqueue can be considered a convenience "
+"interface to softirq."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:102
+msgid ""
+"Subsystems and drivers can create and queue work items through special "
+"workqueue API functions as they see fit. They can influence some aspects of "
+"the way the work items are executed by setting flags on the workqueue they "
+"are putting the work item on. These flags include things like CPU locality, "
+"concurrency limits, priority and more.  To get a detailed overview refer to "
+"the API description of ``alloc_workqueue()`` below."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:110
+msgid ""
+"When a work item is queued to a workqueue, the target worker-pool is "
+"determined according to the queue parameters and workqueue attributes and "
+"appended on the shared worklist of the worker-pool.  For example, unless "
+"specifically overridden, a work item of a bound workqueue will be queued on "
+"the worklist of either normal or highpri worker-pool that is associated to "
+"the CPU the issuer is running on."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:117
+msgid ""
+"For any thread pool implementation, managing the concurrency level (how many "
+"execution contexts are active) is an important issue.  cmwq tries to keep "
+"the concurrency at a minimal but sufficient level. Minimal to save resources "
+"and sufficient in that the system is used at its full capacity."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:123
+msgid ""
+"Each worker-pool bound to an actual CPU implements concurrency management by "
+"hooking into the scheduler.  The worker-pool is notified whenever an active "
+"worker wakes up or sleeps and keeps track of the number of the currently "
+"runnable workers.  Generally, work items are not expected to hog a CPU and "
+"consume many cycles.  That means maintaining just enough concurrency to "
+"prevent work processing from stalling should be optimal.  As long as there "
+"are one or more runnable workers on the CPU, the worker-pool doesn't start "
+"execution of a new work, but, when the last running worker goes to sleep, it "
+"immediately schedules a new worker so that the CPU doesn't sit idle while "
+"there are pending work items.  This allows using a minimal number of workers "
+"without losing execution bandwidth."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:136
+msgid ""
+"Keeping idle workers around doesn't cost other than the memory space for "
+"kthreads, so cmwq holds onto idle ones for a while before killing them."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:140
+msgid ""
+"For unbound workqueues, the number of backing pools is dynamic. Unbound "
+"workqueue can be assigned custom attributes using "
+"``apply_workqueue_attrs()`` and workqueue will automatically create backing "
+"worker pools matching the attributes.  The responsibility of regulating "
+"concurrency level is on the users.  There is also a flag to mark a bound wq "
+"to ignore the concurrency management.  Please refer to the API section for "
+"details."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:148
+msgid ""
+"Forward progress guarantee relies on that workers can be created when more "
+"execution contexts are necessary, which in turn is guaranteed through the "
+"use of rescue workers.  All work items which might be used on code paths "
+"that handle memory reclaim are required to be queued on wq's that have a "
+"rescue-worker reserved for execution under memory pressure.  Else it is "
+"possible that the worker-pool deadlocks waiting for execution contexts to "
+"free up."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:158
+msgid "Application Programming Interface (API)"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:160
+msgid ""
+"``alloc_workqueue()`` allocates a wq.  The original ``create_*workqueue()`` "
+"functions are deprecated and scheduled for removal.  ``alloc_workqueue()`` "
+"takes three arguments - ``@name``, ``@flags`` and ``@max_active``.  "
+"``@name`` is the name of the wq and also used as the name of the rescuer "
+"thread if there is one."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:166
+msgid ""
+"A wq no longer manages execution resources but serves as a domain for "
+"forward progress guarantee, flush and work item attributes. ``@flags`` and "
+"``@max_active`` control how work items are assigned execution resources, "
+"scheduled and executed."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:173 ../../../core-api/workqueue:793:
+#: ../include/linux/workqueue.h:569 ../include/linux/workqueue.h:588
+msgid "``flags``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:175
+msgid "``WQ_BH``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:176
+msgid ""
+"BH workqueues can be considered a convenience interface to softirq. BH "
+"workqueues are always per-CPU and all BH work items are executed in the "
+"queueing CPU's softirq context in the queueing order."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:180
+msgid ""
+"All BH workqueues must have 0 ``max_active`` and ``WQ_HIGHPRI`` is the only "
+"allowed additional flag."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:183
+msgid ""
+"BH work items cannot sleep. All other features such as delayed queueing, "
+"flushing and canceling are supported."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:186
+msgid "``WQ_PERCPU``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:187
+msgid ""
+"Work items queued to a per-cpu wq are bound to a specific CPU. This flag is "
+"the right choice when cpu locality is important."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:190
+msgid "This flag is the complement of ``WQ_UNBOUND``."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:192
+msgid "``WQ_UNBOUND``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:193
+msgid ""
+"Work items queued to an unbound wq are served by the special worker-pools "
+"which host workers which are not bound to any specific CPU.  This makes the "
+"wq behave as a simple execution context provider without concurrency "
+"management.  The unbound worker-pools try to start execution of work items "
+"as soon as possible.  Unbound wq sacrifices locality but is useful for the "
+"following cases."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:201
+msgid ""
+"Wide fluctuation in the concurrency level requirement is expected and using "
+"bound wq may end up creating large number of mostly unused workers across "
+"different CPUs as the issuer hops through different CPUs."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:206
+msgid ""
+"Long running CPU intensive workloads which can be better managed by the "
+"system scheduler."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:209
+msgid "``WQ_FREEZABLE``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:210
+msgid ""
+"A freezable wq participates in the freeze phase of the system suspend "
+"operations.  Work items on the wq are drained and no new work item starts "
+"execution until thawed."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:214
+msgid "``WQ_MEM_RECLAIM``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:215
+msgid ""
+"All wq which might be used in the memory reclaim paths **MUST** have this "
+"flag set.  The wq is guaranteed to have at least one execution context "
+"regardless of memory pressure."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:219
+msgid "``WQ_HIGHPRI``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:220
+msgid ""
+"Work items of a highpri wq are queued to the highpri worker-pool of the "
+"target cpu.  Highpri worker-pools are served by worker threads with elevated "
+"nice level."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:224
+msgid ""
+"Note that normal and highpri worker-pools don't interact with each other.  "
+"Each maintains its separate pool of workers and implements concurrency "
+"management among its workers."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:228
+msgid "``WQ_CPU_INTENSIVE``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:229
+msgid ""
+"Work items of a CPU intensive wq do not contribute to the concurrency "
+"level.  In other words, runnable CPU intensive work items will not prevent "
+"other work items in the same worker-pool from starting execution.  This is "
+"useful for bound work items which are expected to hog CPU cycles so that "
+"their execution is regulated by the system scheduler."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:236
+msgid ""
+"Although CPU intensive work items don't contribute to the concurrency level, "
+"start of their executions is still regulated by the concurrency management "
+"and runnable non-CPU-intensive work items can delay execution of CPU "
+"intensive work items."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:242
+msgid "This flag is meaningless for unbound wq."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:246
+msgid "``max_active``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:248
+msgid ""
+"``@max_active`` determines the maximum number of execution contexts per CPU "
+"which can be assigned to the work items of a wq. For example, with "
+"``@max_active`` of 16, at most 16 work items of the wq can be executing at "
+"the same time per CPU. This is always a per-CPU attribute, even for unbound "
+"workqueues."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:254
+msgid ""
+"The maximum limit for ``@max_active`` is 2048 and the default value used "
+"when 0 is specified is 1024. These values are chosen sufficiently high such "
+"that they are not the limiting factor while providing protection in runaway "
+"cases."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:259
+msgid ""
+"The number of active work items of a wq is usually regulated by the users of "
+"the wq, more specifically, by how many work items the users may queue at the "
+"same time.  Unless there is a specific need for throttling the number of "
+"active work items, specifying '0' is recommended."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:265
+msgid ""
+"Some users depend on strict execution ordering where only one work item is "
+"in flight at any given time and the work items are processed in queueing "
+"order. While the combination of ``@max_active`` of 1 and ``WQ_UNBOUND`` used "
+"to achieve this behavior, this is no longer the case. Use "
+"alloc_ordered_workqueue() instead."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:273
+msgid "Example Execution Scenarios"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:275
+msgid ""
+"The following example execution scenarios try to illustrate how cmwq behave "
+"under different configurations."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:278
+msgid ""
+"Work items w0, w1, w2 are queued to a bound wq q0 on the same CPU. w0 burns "
+"CPU for 5ms then sleeps for 10ms then burns CPU for 5ms again before "
+"finishing.  w1 and w2 burn CPU for 5ms then sleep for 10ms."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:283
+msgid ""
+"Ignoring all other tasks, works and processing overhead, and assuming simple "
+"FIFO scheduling, the following is one highly simplified version of possible "
+"sequences of events with the original wq. ::"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:299
+msgid "And with cmwq with ``@max_active`` >= 3, ::"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:313
+msgid "If ``@max_active`` == 2, ::"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:327
+msgid ""
+"Now, let's assume w1 and w2 are queued to a different wq q1 which has "
+"``WQ_CPU_INTENSIVE`` set, ::"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:343
+msgid "Guidelines"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:345
+msgid ""
+"Do not forget to use ``WQ_MEM_RECLAIM`` if a wq may process work items which "
+"are used during memory reclaim.  Each wq with ``WQ_MEM_RECLAIM`` set has an "
+"execution context reserved for it.  If there is dependency among multiple "
+"work items used during memory reclaim, they should be queued to separate wq "
+"each with ``WQ_MEM_RECLAIM``."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:352
+msgid "Unless strict ordering is required, there is no need to use ST wq."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:354
+msgid ""
+"Unless there is a specific need, using 0 for @max_active is recommended.  In "
+"most use cases, concurrency level usually stays well under the default limit."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:358
+msgid ""
+"A wq serves as a domain for forward progress guarantee (``WQ_MEM_RECLAIM``), "
+"flush and work item attributes.  Work items which are not involved in memory "
+"reclaim and don't need to be flushed as a part of a group of work items, and "
+"don't require any special attribute, can use one of the system wq.  There is "
+"no difference in execution characteristics between using a dedicated wq and "
+"a system wq."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:366
+msgid ""
+"Note: If something may generate more than @max_active outstanding work items "
+"(do stress test your producers), it may saturate a system wq and potentially "
+"lead to deadlock. It should utilize its own dedicated workqueue rather than "
+"the system wq."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:371
+msgid ""
+"Unless work items are expected to consume a huge amount of CPU cycles, using "
+"a bound wq is usually beneficial due to the increased level of locality in "
+"wq operations and work item execution."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:377
+msgid "Affinity Scopes"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:379
+msgid ""
+"An unbound workqueue groups CPUs according to its affinity scope to improve "
+"cache locality. For example, if a workqueue is using the default affinity "
+"scope of \"cache_shard\", it will group CPUs into sub-LLC shards. A work "
+"item queued on the workqueue will be assigned to a worker on one of the CPUs "
+"within the same shard as the issuing CPU. Once started, the worker may or "
+"may not be allowed to move outside the scope depending on the "
+"``affinity_strict`` setting of the scope."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:387
+msgid "Workqueue currently supports the following affinity scopes."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:389
+msgid "``default``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:390
+msgid ""
+"Use the scope in module parameter ``workqueue.default_affinity_scope`` which "
+"is always set to one of the scopes below."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:393
+msgid "``cpu``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:394
+msgid ""
+"CPUs are not grouped. A work item issued on one CPU is processed by a worker "
+"on the same CPU. This makes unbound workqueues behave as per-cpu workqueues "
+"without concurrency management."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:398
+msgid "``smt``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:399
+msgid ""
+"CPUs are grouped according to SMT boundaries. This usually means that the "
+"logical threads of each physical CPU core are grouped together."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:402
+msgid "``cache``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:403
+msgid ""
+"CPUs are grouped according to cache boundaries. Which specific cache "
+"boundary is used is determined by the arch code. L3 is used in a lot of "
+"cases."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:407
+msgid "``cache_shard``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:408
+msgid ""
+"CPUs are grouped into sub-LLC shards of at most ``wq_cache_shard_size`` "
+"cores (default 8, tunable via the ``workqueue.cache_shard_size`` boot "
+"parameter). Shards are always split on core (SMT group) boundaries. This is "
+"the default affinity scope."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:413
+msgid "``numa``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:414
+msgid "CPUs are grouped according to NUMA boundaries."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:416
+msgid "``system``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:417
+msgid ""
+"All CPUs are put in the same group. Workqueue makes no effort to process a "
+"work item on a CPU close to the issuing CPU."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:420
+msgid ""
+"The default affinity scope can be changed with the module parameter "
+"``workqueue.default_affinity_scope`` and a specific workqueue's affinity "
+"scope can be changed using ``apply_workqueue_attrs()``."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:424
+msgid ""
+"If ``WQ_SYSFS`` is set, the workqueue will have the following affinity scope "
+"related interface files under its ``/sys/devices/virtual/workqueue/WQ_NAME/"
+"`` directory."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:428
+msgid "``affinity_scope``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:429
+msgid "Read to see the current affinity scope. Write to change."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:431
+msgid ""
+"When default is the current scope, reading this file will also show the "
+"current effective scope in parentheses, for example, ``default (cache)``."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:434
+msgid "``affinity_strict``"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:435
+msgid ""
+"0 by default indicating that affinity scopes are not strict. When a work "
+"item starts execution, workqueue makes a best-effort attempt to ensure that "
+"the worker is inside its affinity scope, which is called repatriation. Once "
+"started, the scheduler is free to move the worker anywhere in the system as "
+"it sees fit. This enables benefiting from scope locality while still being "
+"able to utilize other CPUs if necessary and available."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:443
+msgid ""
+"If set to 1, all workers of the scope are guaranteed always to be in the "
+"scope. This may be useful when crossing affinity scopes has other "
+"implications, for example, in terms of power consumption or workload "
+"isolation. Strict NUMA scope can also be used to match the workqueue "
+"behavior of older kernels."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:451
+msgid "Affinity Scopes and Performance"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:453
+msgid ""
+"It'd be ideal if an unbound workqueue's behavior is optimal for vast "
+"majority of use cases without further tuning. Unfortunately, in the current "
+"kernel, there exists a pronounced trade-off between locality and utilization "
+"necessitating explicit configurations when workqueues are heavily used."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:458
+msgid ""
+"Higher locality leads to higher efficiency where more work is performed for "
+"the same number of consumed CPU cycles. However, higher locality may also "
+"cause lower overall system utilization if the work items are not spread "
+"enough across the affinity scopes by the issuers. The following performance "
+"testing with dm-crypt clearly illustrates this trade-off."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:464
+msgid ""
+"The tests are run on a CPU with 12-cores/24-threads split across four L3 "
+"caches (AMD Ryzen 9 3900x). CPU clock boost is turned off for consistency. "
+"``/dev/dm-0`` is a dm-crypt device created on NVME SSD (Samsung 990 PRO) and "
+"opened with ``cryptsetup`` with default settings."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:471
+msgid "Scenario 1: Enough issuers and work spread across the machine"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:473 ../../../core-api/workqueue.rst:515
+#: ../../../core-api/workqueue.rst:558
+msgid "The command used: ::"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:479
+msgid ""
+"There are 24 issuers, each issuing 64 IOs concurrently. ``--verify=sha512`` "
+"makes ``fio`` generate and read back the content each time which makes "
+"execution locality matter between the issuer and ``kcryptd``. The following "
+"are the read bandwidths and CPU utilizations depending on different affinity "
+"scope settings on ``kcryptd`` measured over five runs. Bandwidths are in "
+"MiBps, and CPU util in percents."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:490 ../../../core-api/workqueue.rst:529
+#: ../../../core-api/workqueue.rst:572
+msgid "Affinity"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:491 ../../../core-api/workqueue.rst:530
+#: ../../../core-api/workqueue.rst:573
+msgid "Bandwidth (MiBps)"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:492 ../../../core-api/workqueue.rst:531
+#: ../../../core-api/workqueue.rst:574
+msgid "CPU util (%)"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:494 ../../../core-api/workqueue.rst:533
+#: ../../../core-api/workqueue.rst:576
+msgid "system"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:495
+msgid "1159.40 ±1.34"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:496
+msgid "99.31 ±0.02"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:498 ../../../core-api/workqueue.rst:537
+#: ../../../core-api/workqueue.rst:580
+msgid "cache"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:499
+msgid "1166.40 ±0.89"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:500
+msgid "99.34 ±0.01"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:502 ../../../core-api/workqueue.rst:541
+#: ../../../core-api/workqueue.rst:584
+msgid "cache (strict)"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:503
+msgid "1166.00 ±0.71"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:504
+msgid "99.35 ±0.01"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:506
+msgid ""
+"With enough issuers spread across the system, there is no downside to "
+"\"cache\", strict or otherwise. All three configurations saturate the whole "
+"machine but the cache-affine ones outperform by 0.6% thanks to improved "
+"locality."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:513
+msgid "Scenario 2: Fewer issuers, enough work for saturation"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:521
+msgid ""
+"The only difference from the previous scenario is ``--numjobs=8``. There are "
+"a third of the issuers but is still enough total work to saturate the system."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:534
+msgid "1155.40 ±0.89"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:535
+msgid "97.41 ±0.05"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:538
+msgid "1154.40 ±1.14"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:539
+msgid "96.15 ±0.09"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:542
+msgid "1112.00 ±4.64"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:543
+msgid "93.26 ±0.35"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:545
+msgid ""
+"This is more than enough work to saturate the system. Both \"system\" and "
+"\"cache\" are nearly saturating the machine but not fully. \"cache\" is "
+"using less CPU but the better efficiency puts it at the same bandwidth as "
+"\"system\"."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:550
+msgid ""
+"Eight issuers moving around over four L3 cache scope still allow \"cache "
+"(strict)\" to mostly saturate the machine but the loss of work conservation "
+"is now starting to hurt with 3.7% bandwidth loss."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:556
+msgid "Scenario 3: Even fewer issuers, not enough work to saturate"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:564
+msgid ""
+"Again, the only difference is ``--numjobs=4``. With the number of issuers "
+"reduced to four, there now isn't enough work to saturate the whole system "
+"and the bandwidth becomes dependent on completion latencies."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:577
+msgid "993.60 ±1.82"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:578
+msgid "75.49 ±0.06"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:581
+msgid "973.40 ±1.52"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:582
+msgid "74.90 ±0.07"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:585
+msgid "828.20 ±4.49"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:586
+msgid "66.84 ±0.29"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:588
+msgid ""
+"Now, the tradeoff between locality and utilization is clearer. \"cache\" "
+"shows 2% bandwidth loss compared to \"system\" and \"cache (struct)\" "
+"whopping 20%."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:593
+msgid "Conclusion and Recommendations"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:595
+msgid ""
+"In the above experiments, the efficiency advantage of the \"cache\" affinity "
+"scope over \"system\" is, while consistent and noticeable, small. However, "
+"the impact is dependent on the distances between the scopes and may be more "
+"pronounced in processors with more complex topologies."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:600
+msgid ""
+"While the loss of work-conservation in certain scenarios hurts, it is a lot "
+"better than \"cache (strict)\" and maximizing workqueue utilization is "
+"unlikely to be the common case anyway. As such, \"cache\" is the default "
+"affinity scope for unbound pools."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:605
+msgid ""
+"As there is no one option which is great for most cases, workqueue usages "
+"that may consume a significant amount of CPU are recommended to configure "
+"the workqueues using ``apply_workqueue_attrs()`` and/or enable ``WQ_SYSFS``."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:610
+msgid ""
+"An unbound workqueue with strict \"cpu\" affinity scope behaves the same as "
+"``WQ_CPU_INTENSIVE`` per-cpu workqueue. There is no real advanage to the "
+"latter and an unbound workqueue provides a lot more flexibility."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:614
+msgid ""
+"Affinity scopes are introduced in Linux v6.5. To emulate the previous "
+"behavior, use strict \"numa\" affinity scope."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:617
+msgid ""
+"The loss of work-conservation in non-strict affinity scopes is likely "
+"originating from the scheduler. There is no theoretical reason why the "
+"kernel wouldn't be able to do the right thing and maintain work-conservation "
+"in most cases. As such, it is possible that future scheduler improvements "
+"may make most of these tunables unnecessary."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:625
+msgid "Examining Configuration"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:627
+msgid ""
+"Use tools/workqueue/wq_dump.py to examine unbound CPU affinity "
+"configuration, worker pools and how workqueues map to the pools: ::"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:698 ../../../core-api/workqueue.rst:729
+msgid "See the command's help message for more info."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:702
+msgid "Monitoring"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:704
+msgid "Use tools/workqueue/wq_monitor.py to monitor workqueue operations: ::"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:733
+msgid "Debugging"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:735
+msgid ""
+"Because the work functions are executed by generic worker threads there are "
+"a few tricks needed to shed some light on misbehaving workqueue users."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:739
+msgid "Worker threads show up in the process list as: ::"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:746
+msgid ""
+"If kworkers are going crazy (using too much cpu), there are two types of "
+"possible problems:"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:749
+msgid "Something being scheduled in rapid succession"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:750
+msgid "A single work item that consumes lots of cpu cycles"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:752
+msgid "The first one can be tracked using tracing: ::"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:759
+msgid ""
+"If something is busy looping on work queueing, it would be dominating the "
+"output and the offender can be determined with the work item function."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:763
+msgid ""
+"For the second type of problems it should be possible to just check the "
+"stack trace of the offending worker thread. ::"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:768
+msgid ""
+"The work item's function should be trivially visible in the stack trace."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:773
+msgid "Non-reentrance Conditions"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:775
+msgid ""
+"Workqueue guarantees that a work item cannot be re-entrant if the following "
+"conditions hold after a work item gets queued:"
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:778
+msgid "The work function hasn't been changed."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:779
+msgid "No one queues the work item to another workqueue."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:780
+msgid "The work item hasn't been reinitiated."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:782
+msgid ""
+"In other words, if the above conditions hold, the work item is guaranteed to "
+"be executed by at most one worker system-wide at any given time."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:785
+msgid ""
+"Note that requeuing the work item (to the same queue) in the self function "
+"doesn't break these conditions, so it's safe to do. Otherwise, caution is "
+"required when breaking the conditions inside a work function."
+msgstr ""
+
+#: ../../../core-api/workqueue.rst:791
+msgid "Kernel Inline Documentations Reference"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:144
+msgid "A struct for workqueue attributes."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:148
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:159
+msgid "**Members**"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:150
+msgid "``nice``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:151
+msgid "nice level"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:155
+msgid "``cpumask``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:156
+msgid "allowed CPUs"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:158
+msgid ""
+"Work items in this workqueue are affine to these CPUs and not allowed to "
+"execute on other CPUs. A pool serving a workqueue must have the same "
+"**cpumask**."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:164
+msgid "``__pod_cpumask``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:165
+msgid "internal attribute used to create per-pod pools"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:167
+msgid "Internal use only."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:169
+msgid ""
+"Per-pod unbound worker pools are used to improve locality. Always a subset "
+"of ->cpumask. A workqueue can be associated with multiple worker pools with "
+"disjoint **__pod_cpumask**'s. Whether the enforcement of a pool's "
+"**__pod_cpumask** is strict depends on **affn_strict**."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:176
+msgid "``affn_strict``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:177
+msgid "affinity scope is strict"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:179
+msgid ""
+"If clear, workqueue will make a best-effort attempt at starting the worker "
+"inside **__pod_cpumask** but the scheduler is free to migrate it outside."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:183
+msgid "If set, workers are only allowed to run inside **__pod_cpumask**."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:196
+msgid "``affn_scope``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:197
+msgid "unbound CPU affinity scope"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:199
+msgid ""
+"CPU pods are used to improve execution locality of unbound work items. There "
+"are multiple pod types, one for each wq_affn_scope, and every CPU in the "
+"system belongs to one pod in every pod type. CPUs that belong to the same "
+"pod share the worker pool. For example, selecting ``WQ_AFFN_NUMA`` makes the "
+"workqueue use a separate worker pool for each NUMA node."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:208
+msgid "``ordered``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:209
+msgid "work items must be executed one by one in queueing order"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:212
+#: ../include/linux/workqueue.h:488 ../include/linux/workqueue.h:529
+#: ../include/linux/workqueue.h:552 ../include/linux/workqueue.h:572
+#: ../include/linux/workqueue.h:590 ../include/linux/workqueue.h:679
+#: ../include/linux/workqueue.h:709 ../include/linux/workqueue.h:724
+#: ../include/linux/workqueue.h:738 ../include/linux/workqueue.h:749
+#: ../include/linux/workqueue.h:769 ../include/linux/workqueue.h:837
+#: ../include/linux/workqueue.h:851 ../../../core-api/workqueue:795:
+#: ../kernel/workqueue.c:3 ../kernel/workqueue.c:579 ../kernel/workqueue.c:596
+#: ../kernel/workqueue.c:611 ../kernel/workqueue.c:723
+#: ../kernel/workqueue.c:762 ../kernel/workqueue.c:888
+#: ../kernel/workqueue.c:990 ../kernel/workqueue.c:1012
+#: ../kernel/workqueue.c:1046 ../kernel/workqueue.c:1080
+#: ../kernel/workqueue.c:1101 ../kernel/workqueue.c:1155
+#: ../kernel/workqueue.c:1193 ../kernel/workqueue.c:1267
+#: ../kernel/workqueue.c:1335 ../kernel/workqueue.c:1448
+#: ../kernel/workqueue.c:1481 ../kernel/workqueue.c:1527
+#: ../kernel/workqueue.c:1581 ../kernel/workqueue.c:1619
+#: ../kernel/workqueue.c:1642 ../kernel/workqueue.c:1693
+#: ../kernel/workqueue.c:1707 ../kernel/workqueue.c:1726
+#: ../kernel/workqueue.c:1777 ../kernel/workqueue.c:1857
+#: ../kernel/workqueue.c:1881 ../kernel/workqueue.c:1934
+#: ../kernel/workqueue.c:2014 ../kernel/workqueue.c:2067
+#: ../kernel/workqueue.c:2114 ../kernel/workqueue.c:2231
+#: ../kernel/workqueue.c:2260 ../kernel/workqueue.c:2483
+#: ../kernel/workqueue.c:2514 ../kernel/workqueue.c:2545
+#: ../kernel/workqueue.c:2647 ../kernel/workqueue.c:2685
+#: ../kernel/workqueue.c:2779 ../kernel/workqueue.c:2833
+#: ../kernel/workqueue.c:2877 ../kernel/workqueue.c:2978
+#: ../kernel/workqueue.c:3019 ../kernel/workqueue.c:3057
+#: ../kernel/workqueue.c:3152 ../kernel/workqueue.c:3235
+#: ../kernel/workqueue.c:3276 ../kernel/workqueue.c:3460
+#: ../kernel/workqueue.c:3497 ../kernel/workqueue.c:3639
+#: ../kernel/workqueue.c:3898 ../kernel/workqueue.c:3947
+#: ../kernel/workqueue.c:4023 ../kernel/workqueue.c:4138
+#: ../kernel/workqueue.c:4295 ../kernel/workqueue.c:4459
+#: ../kernel/workqueue.c:4477 ../kernel/workqueue.c:4589
+#: ../kernel/workqueue.c:4613 ../kernel/workqueue.c:4635
+#: ../kernel/workqueue.c:4650 ../kernel/workqueue.c:4668
+#: ../kernel/workqueue.c:4687 ../kernel/workqueue.c:4714
+#: ../kernel/workqueue.c:4727 ../kernel/workqueue.c:4740
+#: ../kernel/workqueue.c:4752 ../kernel/workqueue.c:4791
+#: ../kernel/workqueue.c:4815 ../kernel/workqueue.c:4961
+#: ../kernel/workqueue.c:5127 ../kernel/workqueue.c:5206
+#: ../kernel/workqueue.c:5416 ../kernel/workqueue.c:5600
+#: ../kernel/workqueue.c:5627 ../kernel/workqueue.c:5831
+#: ../kernel/workqueue.c:6125 ../kernel/workqueue.c:6218
+#: ../kernel/workqueue.c:6252 ../kernel/workqueue.c:6334
+#: ../kernel/workqueue.c:6371 ../kernel/workqueue.c:6406
+#: ../kernel/workqueue.c:6429 ../kernel/workqueue.c:6865
+#: ../kernel/workqueue.c:6922 ../kernel/workqueue.c:7058
+#: ../kernel/workqueue.c:7243 ../kernel/workqueue.c:7589
+#: ../kernel/workqueue.c:7694 ../kernel/workqueue.c:7754
+#: ../kernel/workqueue.c:8415 ../kernel/workqueue.c:8495
+msgid "**Description**"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:145
+msgid "This can be used to change attributes of an unbound workqueue."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:355
+msgid "``work_pending (work)``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:353
+msgid "Find out whether a work item is currently pending"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:357
+#: ../include/linux/workqueue.h:364 ../include/linux/workqueue.h:486
+#: ../include/linux/workqueue.h:526 ../include/linux/workqueue.h:549
+#: ../include/linux/workqueue.h:568 ../include/linux/workqueue.h:589
+#: ../include/linux/workqueue.h:679 ../include/linux/workqueue.h:708
+#: ../include/linux/workqueue.h:723 ../include/linux/workqueue.h:738
+#: ../include/linux/workqueue.h:750 ../include/linux/workqueue.h:769
+#: ../include/linux/workqueue.h:836 ../include/linux/workqueue.h:851
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:579
+#: ../kernel/workqueue.c:596 ../kernel/workqueue.c:611
+#: ../kernel/workqueue.c:724 ../kernel/workqueue.c:763
+#: ../kernel/workqueue.c:889 ../kernel/workqueue.c:990
+#: ../kernel/workqueue.c:1012 ../kernel/workqueue.c:1047
+#: ../kernel/workqueue.c:1081 ../kernel/workqueue.c:1101
+#: ../kernel/workqueue.c:1154 ../kernel/workqueue.c:1192
+#: ../kernel/workqueue.c:1267 ../kernel/workqueue.c:1336
+#: ../kernel/workqueue.c:1449 ../kernel/workqueue.c:1482
+#: ../kernel/workqueue.c:1528 ../kernel/workqueue.c:1582
+#: ../kernel/workqueue.c:1619 ../kernel/workqueue.c:1642
+#: ../kernel/workqueue.c:1694 ../kernel/workqueue.c:1708
+#: ../kernel/workqueue.c:1727 ../kernel/workqueue.c:1777
+#: ../kernel/workqueue.c:1857 ../kernel/workqueue.c:1882
+#: ../kernel/workqueue.c:1934 ../kernel/workqueue.c:2015
+#: ../kernel/workqueue.c:2067 ../kernel/workqueue.c:2113
+#: ../kernel/workqueue.c:2230 ../kernel/workqueue.c:2258
+#: ../kernel/workqueue.c:2482 ../kernel/workqueue.c:2515
+#: ../kernel/workqueue.c:2544 ../kernel/workqueue.c:2645
+#: ../kernel/workqueue.c:2683 ../kernel/workqueue.c:2727
+#: ../kernel/workqueue.c:2779 ../kernel/workqueue.c:2834
+#: ../kernel/workqueue.c:2878 ../kernel/workqueue.c:2978
+#: ../kernel/workqueue.c:3020 ../kernel/workqueue.c:3058
+#: ../kernel/workqueue.c:3153 ../kernel/workqueue.c:3236
+#: ../kernel/workqueue.c:3276 ../kernel/workqueue.c:3461
+#: ../kernel/workqueue.c:3498 ../kernel/workqueue.c:3640
+#: ../kernel/workqueue.c:3897 ../kernel/workqueue.c:3945
+#: ../kernel/workqueue.c:4022 ../kernel/workqueue.c:4139
+#: ../kernel/workqueue.c:4296 ../kernel/workqueue.c:4460
+#: ../kernel/workqueue.c:4478 ../kernel/workqueue.c:4500
+#: ../kernel/workqueue.c:4590 ../kernel/workqueue.c:4614
+#: ../kernel/workqueue.c:4636 ../kernel/workqueue.c:4651
+#: ../kernel/workqueue.c:4669 ../kernel/workqueue.c:4688
+#: ../kernel/workqueue.c:4715 ../kernel/workqueue.c:4728
+#: ../kernel/workqueue.c:4741 ../kernel/workqueue.c:4753
+#: ../kernel/workqueue.c:4790 ../kernel/workqueue.c:4816
+#: ../kernel/workqueue.c:4831 ../kernel/workqueue.c:4962
+#: ../kernel/workqueue.c:5128 ../kernel/workqueue.c:5207
+#: ../kernel/workqueue.c:5416 ../kernel/workqueue.c:5600
+#: ../kernel/workqueue.c:5627 ../kernel/workqueue.c:5832
+#: ../kernel/workqueue.c:6126 ../kernel/workqueue.c:6218
+#: ../kernel/workqueue.c:6252 ../kernel/workqueue.c:6279
+#: ../kernel/workqueue.c:6295 ../kernel/workqueue.c:6310
+#: ../kernel/workqueue.c:6334 ../kernel/workqueue.c:6372
+#: ../kernel/workqueue.c:6406 ../kernel/workqueue.c:6429
+#: ../kernel/workqueue.c:6624 ../kernel/workqueue.c:6668
+#: ../kernel/workqueue.c:6717 ../kernel/workqueue.c:6741
+#: ../kernel/workqueue.c:6866 ../kernel/workqueue.c:6922
+#: ../kernel/workqueue.c:7056 ../kernel/workqueue.c:7084
+#: ../kernel/workqueue.c:7112 ../kernel/workqueue.c:7158
+#: ../kernel/workqueue.c:7244 ../kernel/workqueue.c:7590
+#: ../kernel/workqueue.c:7695 ../kernel/workqueue.c:7755
+#: ../kernel/workqueue.c:8135 ../kernel/workqueue.c:8292
+#: ../kernel/workqueue.c:8415 ../kernel/workqueue.c:8494
+#: ../kernel/workqueue.c:8549 ../kernel/workqueue.c:8592
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:359
+msgid "``work``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:354
+#: ../include/linux/workqueue.h:362
+msgid "The work item in question"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:362
+msgid "``delayed_work_pending (w)``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:360
+msgid "Find out whether a delayable work item is currently pending"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:366
+msgid "``w``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:482
+msgid "allocate a workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:488
+#: ../include/linux/workqueue.h:525 ../include/linux/workqueue.h:551
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6408
+msgid "``const char *fmt``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:483
+#: ../include/linux/workqueue.h:524 ../include/linux/workqueue.h:546
+#: ../include/linux/workqueue.h:567 ../include/linux/workqueue.h:586
+msgid "printf format for the name of the workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:485
+#: ../include/linux/workqueue.h:526 ../include/linux/workqueue.h:548
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:989
+#: ../kernel/workqueue.c:1011
+msgid "``unsigned int flags``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:484
+#: ../include/linux/workqueue.h:525 ../include/linux/workqueue.h:547
+msgid "WQ_* flags"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:486
+#: ../include/linux/workqueue.h:527 ../include/linux/workqueue.h:549
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6217
+msgid "``int max_active``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:485
+#: ../include/linux/workqueue.h:526 ../include/linux/workqueue.h:548
+msgid "max in-flight work items, 0 for default"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:487
+#: ../include/linux/workqueue.h:528 ../include/linux/workqueue.h:551
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6405
+msgid "``...``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:486
+#: ../include/linux/workqueue.h:527 ../include/linux/workqueue.h:550
+#: ../include/linux/workqueue.h:570 ../include/linux/workqueue.h:588
+msgid "args for **fmt**"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:487
+msgid ""
+"For a per-cpu workqueue, **max_active** limits the number of in-flight work "
+"items for each CPU. e.g. **max_active** of 1 indicates that each CPU can be "
+"executing at most one work item for the workqueue."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:491
+msgid ""
+"For unbound workqueues, **max_active** limits the number of in-flight work "
+"items for the whole system. e.g. **max_active** of 16 indicates that there "
+"can be at most 16 work items executing for the workqueue in the whole system."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:495
+msgid ""
+"As sharing the same active counter for an unbound workqueue across multiple "
+"NUMA nodes can be expensive, **max_active** is distributed to each NUMA node "
+"according to the proportion of the number of online CPUs and enforced "
+"independently."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:500
+msgid ""
+"Depending on online CPU distribution, a node may end up with per-node "
+"max_active which is significantly lower than **max_active**, which can lead "
+"to deadlocks if the per-node concurrency limit is lower than the maximum "
+"number of interdependent work items for the workqueue."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:505
+msgid ""
+"To guarantee forward progress regardless of online CPU distribution, the "
+"concurrency limit on every node is guaranteed to be equal to or greater than "
+"min_active which is set to min(**max_active**, ``WQ_DFL_MIN_ACTIVE``). This "
+"means that the sum of per-node max_active's may be larger than "
+"**max_active**."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:510
+msgid ""
+"For detailed information on ``WQ_``\\* flags, please refer to Documentation/"
+"core-api/workqueue.rst."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:513
+#: ../include/linux/workqueue.h:533 ../include/linux/workqueue.h:555
+#: ../include/linux/workqueue.h:575 ../include/linux/workqueue.h:593
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:896
+#: ../kernel/workqueue.c:1124 ../kernel/workqueue.c:1586
+#: ../kernel/workqueue.c:2488 ../kernel/workqueue.c:2556
+#: ../kernel/workqueue.c:2652 ../kernel/workqueue.c:2693
+#: ../kernel/workqueue.c:2727 ../kernel/workqueue.c:2881
+#: ../kernel/workqueue.c:3246 ../kernel/workqueue.c:3502
+#: ../kernel/workqueue.c:3653 ../kernel/workqueue.c:4043
+#: ../kernel/workqueue.c:4461 ../kernel/workqueue.c:4480
+#: ../kernel/workqueue.c:4499 ../kernel/workqueue.c:4614
+#: ../kernel/workqueue.c:4636 ../kernel/workqueue.c:4755
+#: ../kernel/workqueue.c:4793 ../kernel/workqueue.c:4831
+#: ../kernel/workqueue.c:4962 ../kernel/workqueue.c:5212
+#: ../kernel/workqueue.c:5607 ../kernel/workqueue.c:6279
+#: ../kernel/workqueue.c:6295 ../kernel/workqueue.c:6316
+#: ../kernel/workqueue.c:6344 ../kernel/workqueue.c:6374
+#: ../kernel/workqueue.c:7060 ../kernel/workqueue.c:7115
+#: ../kernel/workqueue.c:7246 ../kernel/workqueue.c:7592
+#: ../kernel/workqueue.c:7702
+msgid "**Return**"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:514
+#: ../include/linux/workqueue.h:534 ../include/linux/workqueue.h:556
+#: ../include/linux/workqueue.h:576 ../include/linux/workqueue.h:594
+msgid "Pointer to the allocated workqueue on success, ``NULL`` on failure."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:522
+msgid "Resource-managed allocate a workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:528
+msgid "``struct device *dev``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:523
+msgid "Device to allocate workqueue for"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:528
+msgid "Resource managed workqueue, see alloc_workqueue() for details."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:530
+msgid ""
+"The workqueue will be automatically destroyed on driver detach.  Typically "
+"this should be used in drivers already relying on devm interafaces."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:545
+msgid "allocate a workqueue with user-defined lockdep_map"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:550
+msgid "``struct lockdep_map *lockdep_map``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:549
+#: ../include/linux/workqueue.h:569
+msgid "user-defined lockdep_map"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:551
+msgid ""
+"Same as alloc_workqueue but with the a user-define lockdep_map. Useful for "
+"workqueues created with the same purpose and to avoid leaking a lockdep_map "
+"on each workqueue creation."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:566
+msgid ""
+"``alloc_ordered_workqueue_lockdep_map (fmt, flags, lockdep_map, args...)``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:564
+msgid "allocate an ordered workqueue with user-defined lockdep_map"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:570
+#: ../include/linux/workqueue.h:591
+msgid "``fmt``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:568
+#: ../include/linux/workqueue.h:587
+msgid "WQ_* flags (only WQ_FREEZABLE and WQ_MEM_RECLAIM are meaningful)"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:570
+msgid "``lockdep_map``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:571
+#: ../include/linux/workqueue.h:589
+msgid "``args...``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:571
+msgid ""
+"Same as alloc_ordered_workqueue but with the a user-define lockdep_map. "
+"Useful for workqueues created with the same purpose and to avoid leaking a "
+"lockdep_map on each workqueue creation."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:587
+msgid "``alloc_ordered_workqueue (fmt, flags, args...)``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:585
+msgid "allocate an ordered workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:589
+msgid ""
+"Allocate an ordered workqueue.  An ordered workqueue executes at most one "
+"work item at any given time in the queued order.  They are implemented as "
+"unbound workqueues with **max_active** of one."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:675
+msgid "queue work on a workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:681
+#: ../include/linux/workqueue.h:710 ../include/linux/workqueue.h:725
+#: ../include/linux/workqueue.h:771 ../../../core-api/workqueue:795:
+#: ../kernel/workqueue.c:765 ../kernel/workqueue.c:1621
+#: ../kernel/workqueue.c:1644 ../kernel/workqueue.c:1884
+#: ../kernel/workqueue.c:2481 ../kernel/workqueue.c:2543
+#: ../kernel/workqueue.c:2644 ../kernel/workqueue.c:2682
+#: ../kernel/workqueue.c:2729 ../kernel/workqueue.c:4024
+#: ../kernel/workqueue.c:4141 ../kernel/workqueue.c:4298
+#: ../kernel/workqueue.c:5602 ../kernel/workqueue.c:5629
+#: ../kernel/workqueue.c:5834 ../kernel/workqueue.c:6128
+#: ../kernel/workqueue.c:6220 ../kernel/workqueue.c:6254
+#: ../kernel/workqueue.c:6333 ../kernel/workqueue.c:6626
+#: ../kernel/workqueue.c:7697 ../kernel/workqueue.c:7757
+msgid "``struct workqueue_struct *wq``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:676
+#: ../include/linux/workqueue.h:705 ../include/linux/workqueue.h:720
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2480
+#: ../kernel/workqueue.c:2542 ../kernel/workqueue.c:2643
+#: ../kernel/workqueue.c:2681 ../kernel/workqueue.c:2724
+msgid "workqueue to use"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:678
+#: ../include/linux/workqueue.h:737 ../include/linux/workqueue.h:752
+#: ../include/linux/workqueue.h:768 ../../../core-api/workqueue:795:
+#: ../kernel/workqueue.c:891 ../kernel/workqueue.c:1100
+#: ../kernel/workqueue.c:1156 ../kernel/workqueue.c:1194
+#: ../kernel/workqueue.c:2115 ../kernel/workqueue.c:2232
+#: ../kernel/workqueue.c:2257 ../kernel/workqueue.c:2482
+#: ../kernel/workqueue.c:2544 ../kernel/workqueue.c:3060
+#: ../kernel/workqueue.c:3275 ../kernel/workqueue.c:4462
+#: ../kernel/workqueue.c:4592 ../kernel/workqueue.c:4653
+#: ../kernel/workqueue.c:4671 ../kernel/workqueue.c:4690
+#: ../kernel/workqueue.c:6374
+msgid "``struct work_struct *work``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:677
+#: ../include/linux/workqueue.h:721 ../../../core-api/workqueue:795:
+#: ../kernel/workqueue.c:2481 ../kernel/workqueue.c:2543
+#: ../kernel/workqueue.c:2644 ../kernel/workqueue.c:2682
+#: ../kernel/workqueue.c:2725
+msgid "work to queue"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:678
+msgid ""
+"Returns ``false`` if **work** was already on a queue, ``true`` otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:680
+msgid ""
+"We queue the work to the CPU on which it was submitted, but if the CPU dies "
+"it can be processed by another CPU."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:683
+msgid ""
+"Memory-ordering properties:  If it returns ``true``, guarantees that all "
+"stores preceding the call to queue_work() in the program order will be "
+"visible from the CPU which will execute **work** by the time such work "
+"executes, e.g.,"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:687
+msgid "{ x is initially 0 }"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:689
+msgid "CPU0                               CPU1"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:691
+msgid ""
+"WRITE_ONCE(x, 1);                  [ **work** is being executed ] r0 = "
+"queue_work(wq, work);           r1 = READ_ONCE(x);"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:694
+msgid "Forbids: r0 == true && r1 == 0"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:704
+msgid "queue work on a workqueue after delay"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:707
+#: ../include/linux/workqueue.h:722 ../include/linux/workqueue.h:835
+#: ../include/linux/workqueue.h:853 ../../../core-api/workqueue:795:
+#: ../kernel/workqueue.c:2645 ../kernel/workqueue.c:2683
+#: ../kernel/workqueue.c:4480 ../kernel/workqueue.c:4616
+#: ../kernel/workqueue.c:4638 ../kernel/workqueue.c:4717
+#: ../kernel/workqueue.c:4730 ../kernel/workqueue.c:4743
+msgid "``struct delayed_work *dwork``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:706
+msgid "delayable work to queue"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:708
+#: ../include/linux/workqueue.h:723 ../include/linux/workqueue.h:836
+#: ../include/linux/workqueue.h:850 ../../../core-api/workqueue:795:
+#: ../kernel/workqueue.c:2646 ../kernel/workqueue.c:2684
+msgid "``unsigned long delay``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:707
+#: ../include/linux/workqueue.h:722 ../../../core-api/workqueue:795:
+#: ../kernel/workqueue.c:2645 ../kernel/workqueue.c:2683
+msgid "number of jiffies to wait before queueing"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:708
+msgid "Equivalent to queue_delayed_work_on() but tries to use the local CPU."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:719
+msgid "modify delay of or queue a delayed work"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:723
+msgid "mod_delayed_work_on() on local CPU."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:734
+msgid "put work task on a specific cpu"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:740
+#: ../include/linux/workqueue.h:838 ../../../core-api/workqueue:795:
+#: ../kernel/workqueue.c:2484 ../kernel/workqueue.c:2647
+#: ../kernel/workqueue.c:2685 ../kernel/workqueue.c:5415
+#: ../kernel/workqueue.c:5626 ../kernel/workqueue.c:6336
+#: ../kernel/workqueue.c:6921 ../kernel/workqueue.c:7058
+msgid "``int cpu``"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:735
+msgid "cpu to put the work task on"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:736
+#: ../include/linux/workqueue.h:747 ../include/linux/workqueue.h:834
+#: ../include/linux/workqueue.h:848
+msgid "job to be done"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:737
+msgid "This puts a job on a specific cpu"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:746
+msgid "put work task in per-CPU workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:748
+msgid ""
+"Returns ``false`` if **work** was already on the system per-CPU workqueue "
+"and ``true`` otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:751
+msgid ""
+"This puts a job in the system per-CPU workqueue if it was not already queued "
+"and leaves it in the same position on the system per-CPU workqueue otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:755
+msgid ""
+"Shares the same memory-ordering properties of queue_work(), cf. the DocBook "
+"header of queue_work()."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:765
+msgid "Enable and queue a work item on a specific workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:766
+msgid "The target workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:767
+msgid "The work item to be enabled and queued"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:768
+msgid ""
+"This function combines the operations of enable_work() and queue_work(), "
+"providing a convenient way to enable and queue a work item in a single call. "
+"It invokes enable_work() on **work** and then queues it if the disable depth "
+"reached 0. Returns ``true`` if the disable depth reached 0 and **work** is "
+"queued, and ``false`` otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:774
+msgid ""
+"Note that **work** is always queued when disable depth reaches zero. If the "
+"desired behavior is queueing only if certain events took place while "
+"**work** is disabled, the user should implement the necessary state tracking "
+"and perform explicit conditional queueing after enable_work()."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:832
+msgid "queue work in per-CPU workqueue on CPU after delay"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:833
+msgid "cpu to use"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:835
+msgid "number of jiffies to wait"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:836
+msgid ""
+"After waiting for a given time this puts a job in the system per-CPU "
+"workqueue on the specified CPU."
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:847
+msgid "put work task in per-CPU workqueue after delay"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:849
+msgid "number of jiffies to wait or 0 for immediate execution"
+msgstr ""
+
+#: ../../../core-api/workqueue:793: ../include/linux/workqueue.h:850
+msgid ""
+"After waiting for a given time this puts a job in the system per-CPU "
+"workqueue."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:577
+msgid "``for_each_pool (pool, pi)``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:575
+msgid "iterate through all worker_pools in the system"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:581
+#: ../kernel/workqueue.c:595
+msgid "``pool``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:576
+#: ../kernel/workqueue.c:593 ../kernel/workqueue.c:608
+msgid "iteration cursor"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:578
+msgid "``pi``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:577
+msgid "integer used for iteration"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:578
+msgid ""
+"This must be called either with wq_pool_mutex held or RCU read locked.  If "
+"the pool needs to be used beyond the locking in effect, the caller is "
+"responsible for guaranteeing that the pool stays online."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:582
+#: ../kernel/workqueue.c:597 ../kernel/workqueue.c:614
+msgid ""
+"The if/else clause exists only for the lockdep assertion and can be ignored."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:594
+msgid "``for_each_pool_worker (worker, pool)``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:592
+msgid "iterate through all workers of a worker_pool"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:598
+msgid "``worker``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:594
+msgid "worker_pool to iterate workers of"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:595
+msgid "This must be called with wq_pool_attach_mutex."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:609
+msgid "``for_each_pwq (pwq, wq)``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:607
+msgid "iterate through all pool_workqueues of the specified workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:613
+msgid "``pwq``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:610
+msgid "``wq``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:609
+#: ../kernel/workqueue.c:5597 ../kernel/workqueue.c:5624
+msgid "the target workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:610
+msgid ""
+"This must be called either with wq->mutex held or RCU read locked. If the "
+"pwq needs to be used beyond the locking in effect, the caller is responsible "
+"for guaranteeing that the pwq stays online."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:720
+msgid "allocate ID and assign it to **pool**"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:726
+#: ../kernel/workqueue.c:1103 ../kernel/workqueue.c:1269
+#: ../kernel/workqueue.c:1338 ../kernel/workqueue.c:2778
+#: ../kernel/workqueue.c:2880 ../kernel/workqueue.c:3155
+#: ../kernel/workqueue.c:4964 ../kernel/workqueue.c:5130
+#: ../kernel/workqueue.c:6670 ../kernel/workqueue.c:6868
+#: ../kernel/workqueue.c:6924
+msgid "``struct worker_pool *pool``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:721
+msgid "the pool pointer of interest"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:722
+msgid ""
+"Returns 0 if ID in [0, WORK_OFFQ_POOL_NONE) is allocated and assigned "
+"successfully, -errno on failure."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:759
+msgid "effective cpumask of an unbound workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:760
+#: ../kernel/workqueue.c:1616
+msgid "workqueue of interest"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:761
+msgid ""
+"**wq->attrs->cpumask** contains the cpumask requested by the user which is "
+"masked with wq_unbound_cpumask to determine the effective cpumask. The "
+"default pwq is always mapped to the pool with the current effective cpumask."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:885
+msgid "return the worker_pool a given work was associated with"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:886
+msgid "the work item of interest"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:887
+msgid ""
+"Pools are created and destroyed under wq_pool_mutex, and allows read access "
+"under RCU read lock.  As such, this function should be called under "
+"wq_pool_mutex or inside of a rcu_read_lock() region."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:891
+msgid ""
+"All fields of the returned pool are accessible as long as the above "
+"mentioned locking is in effect.  If the returned pool needs to be used "
+"beyond the critical section, the caller is responsible for ensuring the "
+"returned pool is and stays online."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:897
+msgid "The worker_pool **work** was last associated with.  ``NULL`` if none."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:986
+msgid "set worker flags and adjust nr_running accordingly"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:992
+#: ../kernel/workqueue.c:1014 ../kernel/workqueue.c:1049
+#: ../kernel/workqueue.c:1083 ../kernel/workqueue.c:1191
+#: ../kernel/workqueue.c:2781 ../kernel/workqueue.c:2836
+#: ../kernel/workqueue.c:2980 ../kernel/workqueue.c:3238
+#: ../kernel/workqueue.c:3278 ../kernel/workqueue.c:3463
+#: ../kernel/workqueue.c:3946
+msgid "``struct worker *worker``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:987
+#: ../kernel/workqueue.c:1009 ../kernel/workqueue.c:3233
+#: ../kernel/workqueue.c:3273 ../kernel/workqueue.c:3458
+#: ../kernel/workqueue.c:3495 ../kernel/workqueue.c:3637
+msgid "self"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:988
+msgid "flags to set"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:989
+msgid "Set **flags** in **worker->flags** and adjust nr_running accordingly."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1008
+msgid "clear worker flags and adjust nr_running accordingly"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1010
+msgid "flags to clear"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1011
+msgid "Clear **flags** in **worker->flags** and adjust nr_running accordingly."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1043
+msgid "enter idle state"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1044
+msgid "worker which is entering idle state"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1045
+msgid ""
+"**worker** is entering idle state.  Update stats and idle timer if necessary."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1048
+#: ../kernel/workqueue.c:1081
+msgid "LOCKING: raw_spin_lock_irq(pool->lock)."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1077
+msgid "leave idle state"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1078
+msgid "worker which is leaving idle state"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1079
+msgid "**worker** is leaving idle state.  Update stats."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1097
+msgid "find worker which is executing a work"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1098
+#: ../kernel/workqueue.c:6863
+msgid "pool of interest"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1099
+msgid "work to find worker for"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1100
+msgid ""
+"Find a worker which is executing **work** on **pool** by searching **pool-"
+">busy_hash** which is keyed by the address of **work**.  For a worker to "
+"match, its current execution should match the address of **work** and its "
+"work function.  This is to avoid unwanted dependency between unrelated work "
+"executions through a work item being recycled while still being executed."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1107
+msgid ""
+"This is a bit tricky.  A work item may be freed once its execution starts "
+"and nothing prevents the freed area from being recycled for another work "
+"item.  If the same work item address ends up being reused before the "
+"original execution finishes, workqueue will identify the recycled work item "
+"as currently executing and make it wait until the current execution "
+"finishes, introducing an unwanted dependency."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1114
+msgid ""
+"This function checks the work item address and work function to avoid false "
+"positives.  Note that this isn't complete as one may construct a work "
+"function which can introduce dependency onto itself through a recycled work "
+"item.  Well, if somebody wants to shoot oneself in the foot that badly, "
+"there's only so much we can do, and if such deadlock actually occurs, it "
+"should be easy to locate the culprit work function."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1121
+#: ../kernel/workqueue.c:1159 ../kernel/workqueue.c:1594
+#: ../kernel/workqueue.c:2074 ../kernel/workqueue.c:2262
+#: ../kernel/workqueue.c:2878 ../kernel/workqueue.c:2980
+#: ../kernel/workqueue.c:3242 ../kernel/workqueue.c:3281
+#: ../kernel/workqueue.c:3463 ../kernel/workqueue.c:3960
+#: ../kernel/workqueue.c:4040 ../kernel/workqueue.c:6220
+#: ../kernel/workqueue.c:7085 ../kernel/workqueue.c:7112
+#: ../kernel/workqueue.c:7158
+msgid "**Context**"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1122
+#: ../kernel/workqueue.c:1160 ../kernel/workqueue.c:2075
+#: ../kernel/workqueue.c:2263 ../kernel/workqueue.c:2981
+#: ../kernel/workqueue.c:3961
+msgid "raw_spin_lock_irq(pool->lock)."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1125
+msgid ""
+"Pointer to worker which is executing **work** if found, ``NULL`` otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1150
+msgid "move linked works to a list"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1151
+msgid "start of series of works to be scheduled"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1153
+#: ../kernel/workqueue.c:2258
+msgid "``struct list_head *head``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1152
+msgid "target list to append **work** to"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1154
+#: ../kernel/workqueue.c:1192
+msgid "``struct work_struct **nextp``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1153
+#: ../kernel/workqueue.c:1191
+msgid "out parameter for nested worklist walking"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1154
+msgid ""
+"Schedule linked works starting from **work** to **head**. Work series to be "
+"scheduled starts at **work** and includes any consecutive work with "
+"WORK_STRUCT_LINKED set in its predecessor. See assign_work() for details on "
+"**nextp**."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1188
+msgid "assign a work item and its linked work items to a worker"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1189
+msgid "work to assign"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1190
+msgid "worker to assign to"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1192
+msgid ""
+"Assign **work** and its linked work items to **worker**. If **work** is "
+"already being executed by another worker in the same pool, it'll be punted "
+"there."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1195
+msgid ""
+"If **nextp** is not NULL, it's updated to point to the next work of the last "
+"scheduled work. This allows assign_work() to be nested inside "
+"list_for_each_entry_safe()."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1199
+msgid ""
+"Returns ``true`` if **work** was successfully assigned to **worker**. "
+"``false`` if **work** was punted to another worker already executing it."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1263
+msgid "select an idle worker to kick, deferring the wakeup"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1264
+#: ../kernel/workqueue.c:1333
+msgid "pool to kick"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1266
+msgid "``struct task_struct **wakep``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1265
+msgid "out-param, set to the task to wake after pool->lock is dropped"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1266
+msgid ""
+"Like kick_pool() but, for a regular (non-BH) pool, returns the picked "
+"worker's task via **wakep** instead of waking it, so the caller can issue "
+"the wakeup after dropping pool->lock (the wakeup takes rq->lock). Worker "
+"selection, wake_cpu setup and the BH kick still happen under the lock. "
+"Returns whether a worker was selected or kicked."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1272
+msgid "Must be called with **pool->lock** held."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1332
+msgid "wake up an idle worker if necessary"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1334
+msgid ""
+"**pool** may have pending work items. Wake up worker if necessary. Returns "
+"whether a worker was woken up."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1445
+msgid "a worker is running again"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1451
+#: ../kernel/workqueue.c:1484 ../kernel/workqueue.c:1530
+#: ../kernel/workqueue.c:1584 ../kernel/workqueue.c:6428
+msgid "``struct task_struct *task``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1446
+msgid "task waking up"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1447
+msgid "This function is called when a worker returns from schedule()"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1478
+msgid "a worker is going to sleep"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1479
+msgid "task going to sleep"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1480
+msgid ""
+"This function is called from schedule() when a busy worker is going to sleep."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1524
+msgid "a scheduler tick occurred while a kworker is running"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1525
+msgid "task currently running"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1526
+msgid ""
+"Called from sched_tick(). We're in the IRQ context and the current worker's "
+"fields which follow the 'K' locking rule can be accessed safely."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1578
+msgid "retrieve worker's last work function"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1579
+msgid "Task to retrieve last work function of."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1580
+msgid ""
+"Determine the last function a worker executed. This is called from the "
+"scheduler to get a worker's last known identity."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1584
+msgid ""
+"This function is called during schedule() when a kworker is going to sleep. "
+"It's used by psi to identify aggregation workers during dequeuing, to allow "
+"periodic aggregation to shut-off when that worker is the last task in the "
+"system or cgroup to go to sleep."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1589
+msgid ""
+"As this function doesn't involve any workqueue-related locking, it only "
+"returns stable values when called from inside the scheduler's queuing and "
+"dequeuing paths, when **task**, which must be a kworker, is guaranteed to "
+"not be processing any works."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1584
+msgid "raw_spin_lock_irq(rq->lock)"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1597
+msgid ""
+"The last work function ``current`` executed as a worker, NULL if it hasn't "
+"executed any work yet."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1615
+msgid "Determine wq_node_nr_active to use"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1618
+#: ../kernel/workqueue.c:2517 ../kernel/workqueue.c:2546
+msgid "``int node``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1617
+msgid "NUMA node, can be ``NUMA_NO_NODE``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1618
+msgid ""
+"Determine wq_node_nr_active to use for **wq** on **node**. **wq** must be "
+"unbound."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1620
+msgid "node_nr_active[nr_node_ids] if **node** is ``NUMA_NO_NODE``."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1622
+msgid "Otherwise, node_nr_active[**node**]."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1638
+msgid "Update per-node max_actives to use"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1639
+msgid "workqueue to update"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1641
+msgid "``int off_cpu``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1640
+msgid "CPU that's going down, -1 if a CPU is not going down"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1641
+msgid ""
+"Update **wq->node_nr_active**[]->max. **wq** must be unbound. max_active is "
+"distributed among nodes according to the proportions of numbers of online "
+"cpus. The result is always between **wq->min_active** and max_active."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1690
+msgid "get an extra reference on the specified pool_workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1696
+#: ../kernel/workqueue.c:1710 ../kernel/workqueue.c:1729
+#: ../kernel/workqueue.c:1779 ../kernel/workqueue.c:1859
+#: ../kernel/workqueue.c:2017 ../kernel/workqueue.c:2069
+#: ../kernel/workqueue.c:2260 ../kernel/workqueue.c:3947
+msgid "``struct pool_workqueue *pwq``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1691
+msgid "pool_workqueue to get"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1692
+msgid ""
+"Obtain an extra reference on **pwq**.  The caller should guarantee that "
+"**pwq** has positive refcnt and be holding the matching pool->lock."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1704
+msgid "put a pool_workqueue reference"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1705
+msgid "pool_workqueue to put"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1706
+msgid ""
+"Drop a reference of **pwq**.  If its refcnt reaches zero, schedule its "
+"destruction.  The caller should be holding the matching pool->lock."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1723
+msgid "put_pwq() with surrounding pool lock/unlock"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1724
+msgid "pool_workqueue to put (can be ``NULL``)"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1725
+msgid "put_pwq() with locking.  This function also allows ``NULL`` **pwq**."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1773
+msgid "Try to increment nr_active for a pwq"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1774
+#: ../kernel/workqueue.c:1854 ../kernel/workqueue.c:2012
+msgid "pool_workqueue of interest"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1776
+#: ../kernel/workqueue.c:1856
+msgid "``bool fill``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1775
+#: ../kernel/workqueue.c:1855
+msgid "max_active may have increased, try to increase concurrency level"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1776
+msgid ""
+"Try to increment nr_active for **pwq**. Returns ``true`` if an nr_active "
+"count is successfully obtained. ``false`` otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1853
+msgid "Activate the first inactive work item on a pwq"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1856
+msgid ""
+"Activate the first inactive work item of **pwq** if available and allowed by "
+"max_active limit."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1859
+msgid ""
+"Returns ``true`` if an inactive work item has been activated. ``false`` if "
+"no inactive work item is found or max_active limit is reached."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1878
+msgid "unplug the oldest pool_workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1879
+msgid "workqueue_struct where its oldest pwq is to be unplugged"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1880
+msgid ""
+"This function should only be called for ordered workqueues where only the "
+"oldest pwq is unplugged, the others are plugged to suspend execution to "
+"ensure proper work item ordering::"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1893
+msgid ""
+"When the oldest pwq is drained and removed, this function should be called "
+"to unplug the next oldest one to start its work item execution. Note that "
+"pwq's are linked into wq->pwqs with the oldest first, so the first one in "
+"the list is the oldest."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1930
+msgid "Activate a pending pwq on a wq_node_nr_active"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1936
+msgid "``struct wq_node_nr_active *nna``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1931
+msgid "wq_node_nr_active to activate a pending pwq for"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1933
+msgid "``struct worker_pool *caller_pool``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1932
+msgid "worker_pool the caller is locking"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1933
+msgid ""
+"Activate a pwq in **nna->pending_pwqs**. Called with **caller_pool** locked. "
+"**caller_pool** may be unlocked and relocked to lock other worker_pools."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2011
+msgid "Retire an active count"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2013
+msgid ""
+"Decrement **pwq**'s nr_active and try to activate the first inactive work "
+"item. For unbound workqueues, this function may temporarily drop **pwq->pool-"
+">lock**."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2063
+msgid "decrement pwq's nr_in_flight"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2064
+msgid "pwq of interest"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2066
+msgid "``unsigned long work_data``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2065
+msgid "work_data of work which left the queue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2066
+msgid ""
+"A work either has completed or is removed from pending queue, decrement "
+"nr_in_flight of its pwq and handle workqueue flushing."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2069
+msgid "**NOTE**"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2070
+msgid ""
+"For unbound workqueues, this function may temporarily drop **pwq->pool-"
+">lock** and thus should be called after all other state updates for the in-"
+"flight work item is complete."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2109
+#: ../kernel/workqueue.c:2226
+msgid "steal work item from worklist and disable irq"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2110
+#: ../kernel/workqueue.c:2227
+msgid "work item to steal"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2112
+#: ../kernel/workqueue.c:2229
+msgid "``u32 cflags``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2111
+#: ../kernel/workqueue.c:2228
+msgid "``WORK_CANCEL_`` flags"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2113
+#: ../kernel/workqueue.c:2230
+msgid "``unsigned long *irq_flags``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2112
+msgid "place to store irq state"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2113
+msgid ""
+"Try to grab PENDING bit of **work**.  This function can handle **work** in "
+"any stable state - idle, on timer or on worklist."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2118
+msgid "1"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2118
+msgid "if **work** was pending and we successfully stole PENDING"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2119
+#: ../kernel/workqueue.c:3503 ../kernel/workqueue.c:3654
+msgid "0"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2119
+msgid "if **work** was idle and we claimed PENDING"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2120
+msgid "-EAGAIN"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2120
+msgid "if PENDING couldn't be grabbed at the moment, safe to busy-retry"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2123
+#: ../kernel/workqueue.c:4618
+msgid "**Note**"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2125
+msgid ""
+"On >= 0 return, the caller owns **work**'s PENDING bit.  To avoid getting "
+"interrupted while holding PENDING and **work** off queue, irq must be "
+"disabled on entry.  This, combined with delayed_work->timer being irqsafe, "
+"ensures that we return -EAGAIN for finite short period of time."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2130
+msgid ""
+"On successful return, >= 0, irq is disabled and the caller is responsible "
+"for releasing it using local_irq_restore(***irq_flags**)."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2133
+#: ../kernel/workqueue.c:4622
+msgid "This function is safe to call from any context including IRQ handler."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2229
+msgid "place to store IRQ state"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2230
+msgid ""
+"Grab PENDING bit of **work**. **work** can be in any stable state - idle, on "
+"timer or on worklist."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2233
+msgid ""
+"Can be called from any context. IRQ is disabled on return with IRQ state "
+"stored in ***irq_flags**. The caller is responsible for re-enabling it using "
+"local_irq_restore()."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2237
+msgid "Returns ``true`` if **work** was pending. ``false`` if idle."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2254
+msgid "insert a work into a pool"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2255
+msgid "pwq **work** belongs to"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2256
+msgid "work to insert"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2257
+msgid "insertion point"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2259
+msgid "``unsigned int extra_flags``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2258
+msgid "extra WORK_STRUCT_* flags to set"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2259
+msgid ""
+"Insert **work** which belongs to **pwq** after **head**.  **extra_flags** is "
+"or'd to work_struct flags."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2478
+msgid "queue work on specific cpu"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2479
+#: ../kernel/workqueue.c:2642 ../kernel/workqueue.c:2680
+msgid "CPU number to execute work on"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2482
+msgid ""
+"We queue the work to a specific CPU, the caller must ensure it can't go "
+"away.  Callers that fail to ensure that the specified CPU cannot go away "
+"will execute on a randomly chosen CPU. But note well that callers specifying "
+"a CPU that never has been online will get a splat."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2489
+#: ../kernel/workqueue.c:2557
+msgid "``false`` if **work** was already on a queue, ``true`` otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2511
+msgid "Select a CPU based on NUMA node"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2512
+msgid "NUMA node ID that we want to select a CPU from"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2513
+msgid ""
+"This function will attempt to find a \"random\" cpu available on a given "
+"node. If there are no CPUs available on the given node it will return "
+"WORK_CPU_UNBOUND indicating that we should just schedule to any available "
+"CPU if we need to schedule this work."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2540
+msgid "queue work on a \"random\" cpu for a given NUMA node"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2541
+msgid "NUMA node that we are targeting the work for"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2544
+msgid ""
+"We queue the work to a \"random\" CPU within a given NUMA node. The basic "
+"idea here is to provide a way to somehow associate work with a given NUMA "
+"node."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2548
+msgid ""
+"This function will only make a best effort attempt at getting this onto the "
+"right NUMA node. If no node is requested or the requested node is offline "
+"then we just fall back to standard queue_work behavior."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2552
+msgid ""
+"Currently the \"random\" CPU ends up being the first available CPU in the "
+"intersection of cpu_online_mask and the cpumask of the node, unless we are "
+"running on the node. In that case we just use the current CPU."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2641
+msgid "queue work on specific CPU after delay"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2646
+msgid ""
+"We queue the delayed_work to a specific CPU, for non-zero delays the caller "
+"must ensure it is online and can't go away. Callers that fail to ensure "
+"this, may get **dwork->timer** queued to an offlined CPU and this will "
+"prevent queueing of **dwork->work** unless the offlined CPU becomes online "
+"again."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2653
+msgid ""
+"``false`` if **work** was already on a queue, ``true`` otherwise.  If "
+"**delay** is zero and **dwork** is idle, it will be scheduled for immediate "
+"execution."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2679
+msgid "modify delay of or queue a delayed work on specific CPU"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2684
+msgid ""
+"If **dwork** is idle, equivalent to queue_delayed_work_on(); otherwise, "
+"modify **dwork**'s timer so that it expires after **delay**.  If **delay** "
+"is zero, **work** is guaranteed to be scheduled immediately regardless of "
+"its current state."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2690
+msgid ""
+"This function is safe to call from any context including IRQ handler. See "
+"try_to_grab_pending() for details."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2690
+msgid ""
+"``false`` if **dwork** was idle and queued, ``true`` if **dwork** was "
+"pending and its timer was modified."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2723
+msgid "queue work after a RCU grace period"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2726
+#: ../kernel/workqueue.c:4502
+msgid "``struct rcu_work *rwork``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2727
+msgid ""
+"``false`` if **rwork** was already pending, ``true`` otherwise.  Note that a "
+"full RCU grace period is guaranteed only after a ``true`` return. While "
+"**rwork** is guaranteed to be executed after a ``false`` return, the "
+"execution may happen before a full RCU grace period has passed."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2775
+msgid "attach a worker to a pool"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2776
+msgid "worker to be attached"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2777
+msgid "the target pool"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2778
+msgid ""
+"Attach **worker** to **pool**.  Once attached, the ``WORKER_UNBOUND`` flag "
+"and cpu-binding of **worker** are kept coordinated with the pool across cpu-"
+"[un]hotplugs."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2830
+msgid "detach a worker from its pool"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2831
+msgid "worker which is attached to its pool"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2832
+msgid ""
+"Undo the attaching which had been done in worker_attach_to_pool().  The "
+"caller worker shouldn't access to the pool after detached except it has "
+"other reference to the pool."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2874
+msgid "create a new workqueue worker"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2875
+msgid "pool the new worker will belong to"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2876
+msgid "Create and start a new worker which is attached to **pool**."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2879
+msgid "Might sleep.  Does GFP_KERNEL allocations."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2882
+msgid "Pointer to the newly created worker."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2974
+msgid "Tag a worker for destruction"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2975
+msgid "worker to be destroyed"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2977
+msgid "``struct list_head *list``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2976
+msgid "transfer worker away from its pool->idle_list and into list"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:2977
+msgid ""
+"Tag **worker** for destruction and adjust **pool** stats accordingly.  The "
+"worker should be idle."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3016
+msgid "check if some idle workers can now be deleted."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3022
+msgid "``struct timer_list *t``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3017
+msgid "The pool's idle_timer that just expired"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3018
+msgid ""
+"The timer is armed in worker_enter_idle(). Note that it isn't disarmed in "
+"worker_leave_idle(), as a worker flicking between idle and active while its "
+"pool is at the too_many_workers() tipping point would cause too much timer "
+"housekeeping overhead. Since IDLE_WORKER_TIMEOUT is long enough, we just let "
+"it expire and re-evaluate things from there."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3054
+msgid "cull workers that have been idle for too long."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3055
+msgid "the pool's work for handling these idle workers"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3056
+msgid ""
+"This goes through a pool's idle workers and gets rid of those that have been "
+"idle for at least IDLE_WORKER_TIMEOUT seconds."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3059
+msgid ""
+"We don't want to disturb isolated CPUs because of a pcpu kworker being "
+"culled, so this also resets worker affinity. This requires a sleepable "
+"context, hence the split between timer callback and work item."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3149
+msgid "create a new worker if necessary"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3150
+msgid "pool to create a new worker for"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3151
+msgid ""
+"Create a new worker for **pool** if necessary.  **pool** is guaranteed to "
+"have at least one idle worker on return from this function.  If creating a "
+"new worker takes longer than MAYDAY_INTERVAL, mayday is sent to all rescuers "
+"with works scheduled on **pool** to resolve possible allocation deadlock."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3157
+msgid ""
+"On return, need_to_create_worker() is guaranteed to be ``false`` and "
+"may_start_working() ``true``."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3160
+msgid ""
+"LOCKING: raw_spin_lock_irq(pool->lock) which may be released and regrabbed "
+"multiple times.  Does GFP_KERNEL allocations.  Called only from manager."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3232
+msgid "manage worker pool"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3234
+msgid ""
+"Assume the manager role and manage the worker pool **worker** belongs to.  "
+"At any given time, there can be only zero or one manager per pool.  The "
+"exclusion is handled automatically by this function."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3238
+msgid ""
+"The caller can safely start processing works on false return.  On true "
+"return, it's guaranteed that need_to_create_worker() is false and "
+"may_start_working() is true."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3243
+msgid ""
+"raw_spin_lock_irq(pool->lock) which may be released and regrabbed multiple "
+"times.  Does GFP_KERNEL allocations."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3247
+msgid ""
+"``false`` if the pool doesn't need management and the caller can safely "
+"start processing works, ``true`` if management function was performed and "
+"the conditions that the caller verified before calling the function may no "
+"longer be true."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3272
+msgid "process single work"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3274
+msgid "work to process"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3275
+msgid ""
+"Process **work**.  This function contains all the logics necessary to "
+"process a single work including synchronization against and interaction with "
+"other workers on the same cpu, queueing and flushing.  As long as context "
+"requirement is met, any worker can call this function to process a work."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3282
+msgid "raw_spin_lock_irq(pool->lock) which is released and regrabbed."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3457
+msgid "process scheduled works"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3459
+msgid ""
+"Process all scheduled works.  Please note that the scheduled list may change "
+"while processing a work, so this function repeatedly fetches a work from the "
+"top and executes it."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3464
+msgid ""
+"raw_spin_lock_irq(pool->lock) which may be released and regrabbed multiple "
+"times."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3494
+msgid "the worker thread function"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3500
+msgid "``void *__worker``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3496
+msgid ""
+"The worker thread function.  All workers belong to a worker_pool - either a "
+"per-cpu one or dynamic unbound one.  These workers process all work items "
+"regardless of their specific target workqueue.  The only exception is work "
+"items which belong to workqueues with a rescuer which will be explained in "
+"rescuer_thread()."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3636
+msgid "the rescuer thread function"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3642
+msgid "``void *__rescuer``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3638
+msgid ""
+"Workqueue rescuer thread function.  There's one rescuer for each workqueue "
+"which has WQ_MEM_RECLAIM set."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3641
+msgid ""
+"Regular work processing on a pool may block trying to create a new worker "
+"which uses GFP_KERNEL allocation which has slight chance of developing into "
+"deadlock if some works currently on the same queue need to be processed to "
+"satisfy the GFP_KERNEL allocation.  This is the problem rescuer solves."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3647
+msgid ""
+"When such condition is possible, the pool summons rescuers of all workqueues "
+"which have works queued on the pool and let them process those works so that "
+"forward progress can be guaranteed."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3651
+msgid "This should happen rarely."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3893
+msgid "check for flush dependency sanity"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3899
+msgid "``struct workqueue_struct *target_wq``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3894
+#: ../kernel/workqueue.c:4019
+msgid "workqueue being flushed"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3896
+msgid "``struct work_struct *target_work``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3895
+msgid "work item being flushed (NULL for workqueue flushes)"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3897
+msgid "``bool from_cancel``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3896
+msgid "are we called from the work cancel path"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3897
+msgid ""
+"``current`` is trying to flush the whole **target_wq** or **target_work** on "
+"it. If this is not the cancel path (which implies work being flushed is "
+"either already running, or will not be at all), check if **target_wq** "
+"doesn't have ``WQ_MEM_RECLAIM`` and verify that ``current`` is not "
+"reclaiming memory or running on a workqueue which doesn't have "
+"``WQ_MEM_RECLAIM`` as that can break forward- progress guarantee leading to "
+"a deadlock."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3941
+msgid "insert a barrier work"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3942
+msgid "pwq to insert barrier into"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3944
+msgid "``struct wq_barrier *barr``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3943
+msgid "wq_barrier to insert"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3945
+msgid "``struct work_struct *target``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3944
+msgid "target work to attach **barr** to"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3945
+msgid ""
+"worker currently executing **target**, NULL if **target** is not executing"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3946
+msgid ""
+"**barr** is linked to **target** such that **barr** is completed only after "
+"**target** finishes execution.  Please note that the ordering guarantee is "
+"observed only with respect to **target** and on the local cpu."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3951
+msgid ""
+"Currently, a queued barrier can't be canceled.  This is because "
+"try_to_grab_pending() can't determine whether the work to be grabbed is at "
+"the head of the queue and thus can't clear LINKED flag of the previous work "
+"while there must be a valid next work after a work with LINKED flag set."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:3957
+msgid ""
+"Note that when **worker** is non-NULL, **target** may be modified underneath "
+"us, so we can't reliably determine pwq from **target**."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4018
+msgid "prepare pwqs for workqueue flushing"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4021
+msgid "``int flush_color``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4020
+msgid "new flush color, < 0 for no-op"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4022
+msgid "``int work_color``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4021
+msgid "new work color, < 0 for no-op"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4022
+msgid "Prepare pwqs for workqueue flushing."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4024
+msgid ""
+"If **flush_color** is non-negative, flush_color on all pwqs should be -1.  "
+"If no pwq has in-flight commands at the specified color, all pwq-"
+">flush_color's stay at -1 and ``false`` is returned.  If any pwq has in "
+"flight commands, its pwq->flush_color is set to **flush_color**, **wq-"
+">nr_pwqs_to_flush** is updated accordingly, pwq wakeup logic is armed and "
+"``true`` is returned."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4031
+msgid ""
+"The caller should have initialized **wq->first_flusher** prior to calling "
+"this function with non-negative **flush_color**.  If **flush_color** is "
+"negative, no flush color update is done and ``false`` is returned."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4036
+msgid ""
+"If **work_color** is non-negative, all pwqs should have the same work_color "
+"which is previous to **work_color** and all will be advanced to "
+"**work_color**."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4041
+msgid "mutex_lock(wq->mutex)."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4044
+msgid ""
+"``true`` if **flush_color** >= 0 and there's something to flush.  ``false`` "
+"otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4135
+msgid "ensure that any scheduled work has run to completion."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4136
+msgid "workqueue to flush"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4137
+msgid ""
+"This function sleeps until all work items which were queued on entry have "
+"finished execution, but it is not livelocked by new incoming ones."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4292
+msgid "drain a workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4293
+msgid "workqueue to drain"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4294
+msgid ""
+"Wait until the workqueue becomes empty.  While draining is in progress, only "
+"chain queueing is allowed.  IOW, only currently pending or running work "
+"items on **wq** can queue further work items on it.  **wq** is flushed "
+"repeatedly until it becomes empty.  The number of flushing is determined by "
+"the depth of chaining and should be relatively short.  Whine if it takes too "
+"long."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4456
+msgid "wait for a work to finish executing the last queueing instance"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4457
+msgid "the work to flush"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4458
+msgid ""
+"Wait until **work** has finished execution.  **work** is guaranteed to be "
+"idle on return if it hasn't been requeued since flush started."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4462
+#: ../kernel/workqueue.c:4481
+msgid ""
+"``true`` if flush_work() waited for the work to finish execution, ``false`` "
+"if it was already idle."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4474
+msgid "wait for a dwork to finish executing the last queueing"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4475
+msgid "the delayed work to flush"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4476
+msgid ""
+"Delayed timer is cancelled and the pending work is queued for immediate "
+"execution.  Like flush_work(), this function only considers the last "
+"queueing instance of **dwork**."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4496
+msgid "wait for a rwork to finish executing the last queueing"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4497
+msgid "the rcu work to flush"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4499
+msgid ""
+"``true`` if flush_rcu_work() waited for the work to finish execution, "
+"``false`` if it was already idle."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4586
+msgid "cancel a work and wait for it to finish"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4587
+msgid "the work to cancel"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4588
+msgid ""
+"Cancel **work** and wait for its execution to finish. This function can be "
+"used even if the work re-queues itself or migrates to another workqueue. On "
+"return from this function, **work** is guaranteed to be not pending or "
+"executing on any CPU as long as there aren't racing enqueues."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4593
+msgid ""
+"cancel_work_sync(:c:type:`delayed_work->work <delayed_work>`) must not be "
+"used for delayed_work's. Use cancel_delayed_work_sync() instead."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4596
+#: ../kernel/workqueue.c:4670
+msgid ""
+"Must be called from a sleepable context if **work** was last queued on a non-"
+"BH workqueue. Can also be called from non-hardirq atomic contexts including "
+"BH if **work** was last queued on a BH workqueue."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4600
+#: ../kernel/workqueue.c:4674
+msgid "Returns ``true`` if **work** was pending, ``false`` otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4610
+msgid "cancel a delayed work"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4611
+msgid "delayed_work to cancel"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4612
+msgid "Kill off a pending delayed_work."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4615
+msgid ""
+"``true`` if **dwork** was pending and canceled; ``false`` if it wasn't "
+"pending."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4618
+msgid ""
+"The work callback function may still be running on return, unless it returns "
+"``true`` and the work doesn't re-arm itself.  Explicitly flush or use "
+"cancel_delayed_work_sync() to wait on it."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4632
+msgid "cancel a delayed work and wait for it to finish"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4633
+msgid "the delayed work cancel"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4634
+msgid "This is cancel_work_sync() for delayed works."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4637
+msgid "``true`` if **dwork** was pending, ``false`` otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4647
+msgid "Disable and cancel a work item"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4648
+#: ../kernel/workqueue.c:4666
+msgid "work item to disable"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4649
+msgid ""
+"Disable **work** by incrementing its disable count and cancel it if "
+"currently pending. As long as the disable count is non-zero, any attempt to "
+"queue **work** will fail and return ``false``. The maximum supported disable "
+"depth is 2 to the power of ``WORK_OFFQ_DISABLE_BITS``, currently 65536."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4654
+msgid ""
+"Can be called from any context. Returns ``true`` if **work** was pending, "
+"``false`` otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4665
+msgid "Disable, cancel and drain a work item"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4667
+msgid ""
+"Similar to disable_work() but also wait for **work** to finish if currently "
+"executing."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4684
+msgid "Enable a work item"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4685
+msgid "work item to enable"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4686
+msgid ""
+"Undo disable_work[_sync]() by decrementing **work**'s disable count. "
+"**work** can only be queued if its disable count is 0."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4689
+msgid ""
+"Can be called from any context. Returns ``true`` if the disable count "
+"reached 0. Otherwise, ``false``."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4711
+msgid "Disable and cancel a delayed work item"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4712
+#: ../kernel/workqueue.c:4725
+msgid "delayed work item to disable"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4713
+msgid "disable_work() for delayed work items."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4724
+msgid "Disable, cancel and drain a delayed work item"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4726
+msgid "disable_work_sync() for delayed work items."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4737
+msgid "Enable a delayed work item"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4738
+msgid "delayed work item to enable"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4739
+msgid "enable_work() for delayed work items."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4749
+msgid "execute a function synchronously on each online CPU"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4755
+msgid "``work_func_t func``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4750
+msgid "the function to call"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4751
+msgid ""
+"schedule_on_each_cpu() executes **func** on each online CPU using the system "
+"workqueue and blocks until all CPUs have completed. schedule_on_each_cpu() "
+"is very slow."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4756
+#: ../kernel/workqueue.c:7703
+msgid "0 on success, -errno on failure."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4786
+msgid "reliably execute the routine with user context"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4792
+msgid "``work_func_t fn``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4787
+msgid "the function to execute"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4789
+msgid "``struct execute_work *ew``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4788
+msgid ""
+"guaranteed storage for the execute work structure (must be available when "
+"the work executes)"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4790
+msgid ""
+"Executes the function immediately if process context is available, otherwise "
+"schedules the function for delayed execution."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4794
+msgid "0 - function was executed 1 - function was scheduled for execution"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4812
+msgid "free a workqueue_attrs"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4818
+#: ../kernel/workqueue.c:5418
+msgid "``struct workqueue_attrs *attrs``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4813
+msgid "workqueue_attrs to free"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4814
+msgid "Undo alloc_workqueue_attrs()."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4827
+msgid "allocate a workqueue_attrs"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4833
+#: ../kernel/workqueue.c:6281 ../kernel/workqueue.c:6297
+#: ../kernel/workqueue.c:6312 ../kernel/workqueue.c:6719
+#: ../kernel/workqueue.c:6743 ../kernel/workqueue.c:7086
+#: ../kernel/workqueue.c:7114 ../kernel/workqueue.c:7160
+#: ../kernel/workqueue.c:8137 ../kernel/workqueue.c:8294
+#: ../kernel/workqueue.c:8551 ../kernel/workqueue.c:8594
+msgid "``void``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:1
+msgid "no arguments"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4828
+msgid ""
+"Allocate a new workqueue_attrs, initialize with default settings and return "
+"it."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4832
+msgid "The allocated new workqueue_attr on success. ``NULL`` on failure."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4958
+msgid "initialize a newly zalloc'd worker_pool"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4959
+msgid "worker_pool to initialize"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4960
+msgid ""
+"Initialize a newly zalloc'd **pool**.  It also allocates **pool->attrs**."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:4963
+msgid ""
+"0 on success, -errno on failure.  Even on failure, all fields inside "
+"**pool** proper are initialized and put_unbound_pool() can be called on "
+"**pool** safely to release it."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5124
+msgid "put a worker_pool"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5125
+msgid "worker_pool to put"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5126
+msgid ""
+"Put **pool**.  If its refcnt reaches zero, it gets destroyed in RCU safe "
+"manner.  get_unbound_pool() calls this function on its failure path and this "
+"function should be able to release pools which went through, successfully or "
+"not, init_worker_pool()."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5131
+#: ../kernel/workqueue.c:5210
+msgid "Should be called with wq_pool_mutex held."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5203
+msgid "get a worker_pool with the specified attributes"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5209
+#: ../kernel/workqueue.c:5599
+msgid "``const struct workqueue_attrs *attrs``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5204
+msgid "the attributes of the worker_pool to get"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5205
+msgid ""
+"Obtain a worker_pool which has the same attributes as **attrs**, bump the "
+"reference count and return it.  If there already is a matching worker_pool, "
+"it will be used; otherwise, this function attempts to create a new one."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5213
+msgid ""
+"On success, a worker_pool with the same attributes as **attrs**. On failure, "
+"``NULL``."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5412
+msgid "calculate a wq_attrs' cpumask for a pod"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5413
+msgid "the wq_attrs of the default pwq of the target workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5414
+msgid "the target CPU"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5415
+msgid ""
+"Calculate the cpumask a workqueue with **attrs** should use on **pod**. The "
+"result is stored in **attrs->__pod_cpumask**."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5418
+msgid ""
+"If pod affinity is not enabled, **attrs->cpumask** is always used. If "
+"enabled and **pod** has online CPUs requested by **attrs**, the returned "
+"cpumask is the intersection of the possible CPUs of **pod** and **attrs-"
+">cpumask**."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5422
+msgid ""
+"The caller is responsible for ensuring that the cpumask of **pod** stays "
+"stable."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5596
+msgid "apply new workqueue_attrs to an unbound workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5598
+msgid "the workqueue_attrs to apply, allocated with alloc_workqueue_attrs()"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5599
+msgid ""
+"Apply **attrs** to an unbound workqueue **wq**. Unless disabled, this "
+"function maps a separate pwq to each CPU pod with possibles CPUs in **attrs-"
+">cpumask** so that work items are affine to the pod it was issued on. Older "
+"pwqs are released as in-flight work items finish. Note that a work item "
+"which repeatedly requeues itself back-to-back will stay on its current pwq."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5605
+msgid "Performs GFP_KERNEL allocations."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5608
+#: ../kernel/workqueue.c:7247
+msgid "0 on success and -errno on failure."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5623
+msgid "update a pwq slot for CPU hot[un]plug"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5625
+msgid "the CPU to update the pwq slot for"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5626
+msgid ""
+"This function is to be called from ``CPU_DOWN_PREPARE``, ``CPU_ONLINE`` and "
+"``CPU_DOWN_FAILED``.  **cpu** is in the same pod of the CPU being "
+"hot[un]plugged."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5630
+msgid ""
+"If pod affinity can't be adjusted due to memory allocation failure, it falls "
+"back to **wq->dfl_pwq** which may not be optimal but is always correct."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5633
+msgid ""
+"Note that when the last allowed CPU of a pod goes offline for a workqueue "
+"with a cpumask spanning multiple pods, the workers which were already "
+"executing the work items for the workqueue will lose their CPU affinity and "
+"may execute on any CPU. This is similar to how per-cpu workqueues behave on "
+"CPU_DOWN. If a workqueue user wants strict affinity, it's the user's "
+"responsibility to flush the work item from CPU_DOWN_PREPARE."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5828
+msgid "update a wq's max_active to the current setting"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5829
+#: ../kernel/workqueue.c:6123 ../kernel/workqueue.c:6215
+#: ../kernel/workqueue.c:6332
+msgid "target workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:5830
+msgid ""
+"If **wq** isn't freezing, set **wq->max_active** to the saved_max_active and "
+"activate inactive work items accordingly. If **wq** is freezing, clear **wq-"
+">max_active** to zero."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6122
+msgid "safely terminate a workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6124
+msgid ""
+"Safely destroy a workqueue. All work currently pending will be done first."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6126
+msgid ""
+"This function does NOT guarantee that non-pending work that has been "
+"submitted with queue_delayed_work() and similar functions will be done "
+"before destroying the workqueue. The fundamental problem is that, currently, "
+"the workqueue has no way of accessing non-pending delayed_work. delayed_work "
+"is only linked on the timer-side. All delayed_work must, therefore, be "
+"canceled before calling this function."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6133
+msgid ""
+"TODO: It would be better if the problem described above wouldn't exist and "
+"destroy_workqueue() would cleanly cancel all pending and non-pending "
+"delayed_work."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6214
+msgid "adjust max_active of a workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6216
+msgid "new max_active value."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6217
+msgid ""
+"Set max_active of **wq** to **max_active**. See the alloc_workqueue() "
+"function comment."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6221
+msgid "Don't call from IRQ context."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6248
+msgid "adjust min_active of an unbound workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6249
+msgid "target unbound workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6251
+msgid "``int min_active``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6250
+msgid "new min_active value"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6251
+msgid ""
+"Set min_active of an unbound workqueue. Unlike other types of workqueues, an "
+"unbound workqueue is not guaranteed to be able to process max_active "
+"interdependent work items. Instead, an unbound workqueue is guaranteed to be "
+"able to process min_active number of interdependent work items which is "
+"``WQ_DFL_MIN_ACTIVE`` by default."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6257
+msgid ""
+"Use this function to adjust the min_active value between 0 and the current "
+"max_active."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6275
+msgid "retrieve ``current`` task's work struct"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6276
+msgid ""
+"Determine if ``current`` task is a workqueue worker and what it's working "
+"on. Useful to find out the context that the ``current`` task is running in."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6280
+msgid ""
+"work struct if ``current`` task is a workqueue worker, ``NULL`` otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6291
+msgid "is ``current`` workqueue rescuer?"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6292
+msgid ""
+"Determine whether ``current`` is a workqueue rescuer.  Can be used from work "
+"functions to determine whether it's being run off the rescuer task."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6296
+msgid "``true`` if ``current`` is a workqueue rescuer. ``false`` otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6306
+msgid "is ``current`` a ``WQ_MEM_RECLAIM`` worker?"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6307
+msgid ""
+"Determine whether ``current`` is a workqueue worker executing on a workqueue "
+"created with ``WQ_MEM_RECLAIM``.  This mirrors the condition that "
+"check_flush_dependency() warns on: flushing (or otherwise waiting on) a !"
+"WQ_MEM_RECLAIM workqueue from such a context breaks the forward-progress "
+"guarantee and can deadlock.  Callers that may recurse into such a flush -- e."
+"g. NFS LOCALIO submitting into a stacked filesystem that flushes its own !"
+"WQ_MEM_RECLAIM workqueue -- can use this to decide whether they must defer "
+"the work to a !WQ_MEM_RECLAIM workqueue rather than run it inline."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6317
+msgid ""
+"``true`` if ``current`` is a ``WQ_MEM_RECLAIM`` worker.  ``false`` otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6330
+msgid "test whether a workqueue is congested"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6331
+msgid "CPU in question"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6333
+msgid ""
+"Test whether **wq**'s cpu workqueue for **cpu** is congested.  There is no "
+"synchronization around this function and the test result is unreliable and "
+"only useful as advisory hints or for debugging."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6337
+msgid "If **cpu** is WORK_CPU_UNBOUND, the test is performed on the local CPU."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6339
+msgid ""
+"With the exception of ordered workqueues, all workqueues have per-cpu "
+"pool_workqueues, each with its own congested state. A workqueue being "
+"congested on one CPU doesn't mean that the workqueue is contested on any "
+"other CPUs."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6345
+msgid "``true`` if congested, ``false`` otherwise."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6368
+msgid "test whether a work is currently pending or running"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6369
+msgid "the work to be tested"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6370
+msgid ""
+"Test whether **work** is currently pending or running.  There is no "
+"synchronization around this function and the test result is unreliable and "
+"only useful as advisory hints or for debugging."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6375
+msgid "OR'd bitmask of WORK_BUSY_* bits."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6402
+msgid "set description for the current work item"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6403
+msgid "printf-style format string"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6404
+msgid "arguments for the format string"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6405
+msgid ""
+"This function can be called by a running work function to describe what the "
+"work item is about.  If the worker task gets dumped, this information will "
+"be printed out together to help debugging.  The description can be at most "
+"WORKER_DESC_LEN including the trailing '\\0'."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6425
+msgid "print out worker information and description"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6431
+msgid "``const char *log_lvl``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6426
+msgid "the log level to use when printing"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6427
+msgid "target task"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6428
+msgid ""
+"If **task** is a worker and currently executing a work item, print out the "
+"name of the workqueue being serviced and worker description set with "
+"set_worker_desc() by the currently executing work item."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6432
+msgid ""
+"This function can be safely called on any task as long as the task_struct "
+"itself is accessible.  While safe, this function isn't synchronized and may "
+"print out mixups or garbages of limited length."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6620
+msgid "dump state of specified workqueue"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6621
+msgid "workqueue whose state will be printed"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6664
+msgid "dump state of specified worker pool"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6665
+msgid "worker pool whose state will be printed"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6713
+msgid "dump workqueue state"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6714
+msgid ""
+"Called from a sysrq handler and prints out all busy workqueues and pools."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6737
+msgid "dump freezable workqueue state"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6738
+msgid ""
+"Called from try_to_freeze_tasks() and prints out all freezable workqueues "
+"still busy."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6862
+msgid "rebind all workers of a pool to the associated CPU"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6864
+msgid "**pool->cpu** is coming online.  Rebind all workers to the CPU."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6918
+msgid "restore cpumask of unbound workers"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6919
+msgid "unbound pool of interest"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6920
+msgid "the CPU which is coming up"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:6921
+msgid ""
+"An unbound pool may end up with a cpumask which doesn't have any online "
+"CPUs.  When a worker of such pool get scheduled, the scheduler resets its "
+"cpus_allowed.  If **cpu** is in **pool**'s cpumask which didn't have any "
+"online CPU before, cpus_allowed of all its workers should be restored."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7052
+msgid "run a function in thread context on a particular cpu"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7053
+msgid "the cpu to run on"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7055
+msgid "``long (*fn)(void *)``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7054
+msgid "the function to run"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7056
+msgid "``void *arg``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7055
+msgid "the function arg"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7057
+msgid "``struct lock_class_key *key``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7056
+msgid "The lock class key for lock debugging purposes"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7057
+msgid ""
+"It is up to the caller to ensure that the cpu doesn't go offline. The caller "
+"must not hold any locks which would prevent **fn** from completing."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7061
+msgid "The value **fn** returns."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7080
+msgid "begin freezing workqueues"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7081
+msgid ""
+"Start freezing workqueues.  After this function returns, all freezable "
+"workqueues will queue new works to their inactive_works list instead of pool-"
+">worklist."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7086
+#: ../kernel/workqueue.c:7159
+msgid "Grabs and releases wq_pool_mutex, wq->mutex and pool->lock's."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7108
+msgid "are freezable workqueues still busy?"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7109
+msgid ""
+"Check whether freezing is complete.  This function must be called between "
+"freeze_workqueues_begin() and thaw_workqueues()."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7113
+msgid "Grabs and releases wq_pool_mutex."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7116
+msgid ""
+"``true`` if some freezable workqueues are still busy.  ``false`` if freezing "
+"is complete."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7154
+msgid "thaw workqueues"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7155
+msgid ""
+"Thaw workqueues.  Normal queueing is restored and all collected frozen works "
+"are transferred to their respective pool worklists."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7240
+msgid "Propagate housekeeping cpumask update"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7246
+msgid "``const struct cpumask *hk``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7241
+msgid "the new housekeeping cpumask"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7242
+msgid ""
+"Update the unbound workqueue cpumask on top of the new housekeeping cpumask "
+"such that the effective unbound affinity is the intersection of the new "
+"housekeeping with the requested affinity set via nohz_full=/isolcpus= or "
+"sysfs."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7586
+msgid "Set the low-level unbound cpumask"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7592
+msgid "``cpumask_var_t cpumask``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7587
+msgid "the cpumask to set"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7588
+msgid ""
+"The low-level workqueues cpumask is a global cpumask that limits the "
+"affinity of all unbound workqueues.  This function check the **cpumask** and "
+"apply it to all unbound workqueues and updates all pwqs of them."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7593
+msgid ""
+"0       - Success -EINVAL - Invalid **cpumask** -ENOMEM - Failed to allocate "
+"memory for attrs or pwqs."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7691
+msgid "make a workqueue visible in sysfs"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7692
+msgid "the workqueue to register"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7693
+msgid ""
+"Expose **wq** in sysfs under /sys/bus/workqueue/devices. alloc_workqueue*() "
+"automatically calls this function if WQ_SYSFS is set which is the preferred "
+"method."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7697
+msgid ""
+"Workqueue user should use this function directly iff it wants to apply "
+"workqueue_attrs before making the workqueue visible in sysfs; otherwise, "
+"apply_workqueue_attrs() may race against userland updating the attributes."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7751
+msgid "undo workqueue_sysfs_register()"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7752
+msgid "the workqueue to unregister"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:7753
+msgid ""
+"If **wq** is registered to sysfs by workqueue_sysfs_register(), unregister."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8131
+msgid "early init for workqueue subsystem"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8132
+msgid ""
+"This is the first step of three-staged workqueue subsystem initialization "
+"and invoked as soon as the bare basics - memory allocation, cpumasks and idr "
+"are up. It sets up all the data structures and system workqueues and allows "
+"early boot code to create workqueues and queue/cancel work items. Actual "
+"work item execution starts only after kthreads can be created and scheduled "
+"right before early initcalls."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8288
+msgid "bring workqueue subsystem fully online"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8289
+msgid ""
+"This is the second step of three-staged workqueue subsystem initialization "
+"and invoked as soon as kthreads can be created and scheduled. Workqueues "
+"have been created and work items queued on them, but there are no kworkers "
+"executing the work items yet. Populate the worker pools with the initial "
+"workers and enable future kworker creations."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8411
+msgid "count distinct cores (SMT groups) within an LLC pod"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8417
+#: ../kernel/workqueue.c:8496
+msgid "``const struct cpumask *pod_cpus``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8412
+#: ../kernel/workqueue.c:8491
+msgid "the cpumask of CPUs in the LLC pod"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8414
+#: ../kernel/workqueue.c:8493
+msgid "``struct wq_pod_type *smt_pods``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8413
+#: ../kernel/workqueue.c:8492
+msgid "the SMT pod type, used to identify sibling groups"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8414
+msgid ""
+"A core is represented by the lowest-numbered CPU in its SMT group. Returns "
+"the number of distinct cores found in **pod_cpus**."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8490
+msgid "populate cpu_shard_id[] for each CPU in an LLC pod"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8494
+msgid "``int nr_cores``"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8493
+msgid "number of distinct cores in **pod_cpus** (from llc_count_cores())"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8494
+msgid ""
+"Walks **pod_cpus** in order. At each SMT group leader, advances to the next "
+"shard once the current shard is full. Results are written to cpu_shard_id[]."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8545
+msgid "assign each CPU its shard index within its LLC"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8546
+msgid ""
+"Iterates over all LLC pods. For each pod, counts distinct cores then assigns "
+"shard indices to all CPUs in the pod. Must be called after WQ_AFFN_CACHE and "
+"WQ_AFFN_SMT have been initialized."
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8588
+msgid "initialize CPU pods for unbound workqueues"
+msgstr ""
+
+#: ../../../core-api/workqueue:795: ../kernel/workqueue.c:8589
+msgid ""
+"This is the third step of three-staged workqueue subsystem initialization "
+"and invoked after SMP and topology information are fully initialized. It "
+"initializes the unbound CPU pods accordingly."
+msgstr ""
