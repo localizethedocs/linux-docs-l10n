@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>3. IRQ chip model (hierarchy) of LoongArch &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/arch/loongarch/irq-chip-model.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜索" href="../../search.html" />
+    <link rel="next" title="4. Feature status on loongarch architecture" href="features.html" />
+    <link rel="prev" title="2. Booting Linux/LoongArch" href="booting.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">CPU architectures</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../arc/index.html">ARC architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../arm/index.html">ARM Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../arm64/index.html">ARM64 Architecture</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html">LoongArch Architecture</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="introduction.html">1. Introduction to LoongArch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="booting.html">2. Booting Linux/LoongArch</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">3. IRQ chip model (hierarchy) of LoongArch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="features.html">4. Feature status on loongarch architecture</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../m68k/index.html">m68k Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../mips/index.html">MIPS-specific Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../nios2/index.html">Nios II Specific Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../openrisc/index.html">OpenRISC Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../parisc/index.html">PA-RISC Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../powerpc/index.html">powerpc</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../riscv/index.html">RISC-V architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../s390/index.html">s390 Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../sh/index.html">SuperH Interfaces Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../sparc/index.html">Sparc Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../x86/index.html">x86-specific Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../xtensa/index.html">Xtensa Architecture</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/arch/loongarch/irq-chip-model.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="irq-chip-model-hierarchy-of-loongarch">
+<h1><span class="section-number">3. </span>IRQ chip model (hierarchy) of LoongArch<a class="headerlink" href="#irq-chip-model-hierarchy-of-loongarch" title="Link to this heading">¶</a></h1>
+<p>Currently, LoongArch based processors (e.g. Loongson-3A5000) can only work together
+with LS7A chipsets. The irq chips in LoongArch computers include CPUINTC (CPU Core
+Interrupt Controller), LIOINTC (Legacy I/O Interrupt Controller), EIOINTC (Extended
+I/O Interrupt Controller), HTVECINTC (Hyper-Transport Vector Interrupt Controller),
+PCH-PIC (Main Interrupt Controller in LS7A chipset), PCH-LPC (LPC Interrupt Controller
+in LS7A chipset) and PCH-MSI (MSI Interrupt Controller).</p>
+<p>CPUINTC is a per-core controller (in CPU), LIOINTC/EIOINTC/HTVECINTC are per-package
+controllers (in CPU), while PCH-PIC/PCH-LPC/PCH-MSI are controllers out of CPU (i.e.,
+in chipsets). These controllers (in other words, irqchips) are linked in a hierarchy,
+and there are two models of hierarchy (legacy model and extended model).</p>
+<section id="legacy-irq-model">
+<h2><span class="section-number">3.1. </span>Legacy IRQ model<a class="headerlink" href="#legacy-irq-model" title="Link to this heading">¶</a></h2>
+<p>In this model, IPI (Inter-Processor Interrupt) and CPU Local Timer interrupt go
+to CPUINTC directly, CPU UARTS interrupts go to LIOINTC, while all other devices
+interrupts go to PCH-PIC/PCH-LPC/PCH-MSI and gathered by HTVECINTC, and then go
+to LIOINTC, and then CPUINTC:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>+-----+     +---------+     +-------+
+| IPI | --&gt; | CPUINTC | &lt;-- | Timer |
++-----+     +---------+     +-------+
+                 ^
+                 |
+            +---------+     +-------+
+            | LIOINTC | &lt;-- | UARTs |
+            +---------+     +-------+
+                 ^
+                 |
+           +-----------+
+           | HTVECINTC |
+           +-----------+
+            ^         ^
+            |         |
+      +---------+ +---------+
+      | PCH-PIC | | PCH-MSI |
+      +---------+ +---------+
+        ^     ^           ^
+        |     |           |
++---------+ +---------+ +---------+
+| PCH-LPC | | Devices | | Devices |
++---------+ +---------+ +---------+
+     ^
+     |
++---------+
+| Devices |
++---------+
+</pre></div>
+</div>
+</section>
+<section id="extended-irq-model">
+<h2><span class="section-number">3.2. </span>Extended IRQ model<a class="headerlink" href="#extended-irq-model" title="Link to this heading">¶</a></h2>
+<p>In this model, IPI (Inter-Processor Interrupt) and CPU Local Timer interrupt go
+to CPUINTC directly, CPU UARTS interrupts go to LIOINTC, while all other devices
+interrupts go to PCH-PIC/PCH-LPC/PCH-MSI and gathered by EIOINTC, and then go to
+to CPUINTC directly:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>      +-----+     +---------+     +-------+
+      | IPI | --&gt; | CPUINTC | &lt;-- | Timer |
+      +-----+     +---------+     +-------+
+                   ^       ^
+                   |       |
+            +---------+ +---------+     +-------+
+            | EIOINTC | | LIOINTC | &lt;-- | UARTs |
+            +---------+ +---------+     +-------+
+             ^       ^
+             |       |
+      +---------+ +---------+
+      | PCH-PIC | | PCH-MSI |
+      +---------+ +---------+
+        ^     ^           ^
+        |     |           |
++---------+ +---------+ +---------+
+| PCH-LPC | | Devices | | Devices |
++---------+ +---------+ +---------+
+     ^
+     |
++---------+
+| Devices |
++---------+
+</pre></div>
+</div>
+</section>
+<section id="virtual-extended-irq-model">
+<h2><span class="section-number">3.3. </span>Virtual Extended IRQ model<a class="headerlink" href="#virtual-extended-irq-model" title="Link to this heading">¶</a></h2>
+<p>In this model, IPI (Inter-Processor Interrupt) and CPU Local Timer interrupt
+go to CPUINTC directly, CPU UARTS interrupts go to PCH-PIC, while all other
+devices interrupts go to PCH-PIC/PCH-MSI and gathered by V-EIOINTC (Virtual
+Extended I/O Interrupt Controller), and then go to CPUINTC directly:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>+-----+    +-------------------+     +-------+
+| IPI |--&gt; | CPUINTC(0-255vcpu)| &lt;-- | Timer |
++-----+    +-------------------+     +-------+
+                     ^
+                     |
+               +-----------+
+               | V-EIOINTC |
+               +-----------+
+                ^         ^
+                |         |
+         +---------+ +---------+
+         | PCH-PIC | | PCH-MSI |
+         +---------+ +---------+
+           ^      ^          ^
+           |      |          |
+    +--------+ +---------+ +---------+
+    | UARTs  | | Devices | | Devices |
+    +--------+ +---------+ +---------+
+</pre></div>
+</div>
+<section id="description">
+<h3><span class="section-number">3.3.1. </span>Description<a class="headerlink" href="#description" title="Link to this heading">¶</a></h3>
+<p>V-EIOINTC (Virtual Extended I/O Interrupt Controller) is an extension of
+EIOINTC, it only works in VM mode which runs in KVM hypervisor. Interrupts can
+be routed to up to four vCPUs via standard EIOINTC, however with V-EIOINTC
+interrupts can be routed to up to 256 virtual cpus.</p>
+<p>With standard EIOINTC, interrupt routing setting includes two parts: eight
+bits for CPU selection and four bits for CPU IP (Interrupt Pin) selection.
+For CPU selection there is four bits for EIOINTC node selection, four bits
+for EIOINTC CPU selection. Bitmap method is used for CPU selection and
+CPU IP selection, so interrupt can only route to CPU0 - CPU3 and IP0-IP3 in
+one EIOINTC node.</p>
+<p>With V-EIOINTC it supports to route more CPUs and CPU IP (Interrupt Pin),
+there are two newly added registers with V-EIOINTC.</p>
+</section>
+<section id="extioi-virt-features">
+<h3><span class="section-number">3.3.2. </span>EXTIOI_VIRT_FEATURES<a class="headerlink" href="#extioi-virt-features" title="Link to this heading">¶</a></h3>
+<p>This register is read-only register, which indicates supported features with
+V-EIOINTC. Feature EXTIOI_HAS_INT_ENCODE and EXTIOI_HAS_CPU_ENCODE is added.</p>
+<p>Feature EXTIOI_HAS_INT_ENCODE is part of standard EIOINTC. If it is 1, it
+indicates that CPU Interrupt Pin selection can be normal method rather than
+bitmap method, so interrupt can be routed to IP0 - IP15.</p>
+<p>Feature EXTIOI_HAS_CPU_ENCODE is extension of V-EIOINTC. If it is 1, it
+indicates that CPU selection can be normal method rather than bitmap method,
+so interrupt can be routed to CPU0 - CPU255.</p>
+</section>
+<section id="extioi-virt-config">
+<h3><span class="section-number">3.3.3. </span>EXTIOI_VIRT_CONFIG<a class="headerlink" href="#extioi-virt-config" title="Link to this heading">¶</a></h3>
+<p>This register is read-write register, for compatibility interrupt routed uses
+the default method which is the same with standard EIOINTC. If the bit is set
+with 1, it indicated HW to use normal method rather than bitmap method.</p>
+</section>
+</section>
+<section id="advanced-extended-irq-model">
+<h2><span class="section-number">3.4. </span>Advanced Extended IRQ model<a class="headerlink" href="#advanced-extended-irq-model" title="Link to this heading">¶</a></h2>
+<p>In this model, IPI (Inter-Processor Interrupt) and CPU Local Timer interrupt go
+to CPUINTC directly, CPU UARTS interrupts go to LIOINTC, PCH-MSI interrupts go
+to AVECINTC, and then go to CPUINTC directly, while all other devices interrupts
+go to PCH-PIC/PCH-LPC and gathered by EIOINTC, and then go to CPUINTC directly:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>+-----+     +-----------------------+     +-------+
+| IPI | --&gt; |        CPUINTC        | &lt;-- | Timer |
++-----+     +-----------------------+     +-------+
+             ^          ^          ^
+             |          |          |
+      +---------+ +----------+ +---------+     +-------+
+      | EIOINTC | | AVECINTC | | LIOINTC | &lt;-- | UARTs |
+      +---------+ +----------+ +---------+     +-------+
+           ^            ^
+           |            |
+      +---------+  +---------+
+      | PCH-PIC |  | PCH-MSI |
+      +---------+  +---------+
+        ^     ^           ^
+        |     |           |
++---------+ +---------+ +---------+
+| Devices | | PCH-LPC | | Devices |
++---------+ +---------+ +---------+
+                 ^
+                 |
+            +---------+
+            | Devices |
+            +---------+
+</pre></div>
+</div>
+</section>
+<section id="acpi-related-definitions">
+<h2><span class="section-number">3.5. </span>ACPI-related definitions<a class="headerlink" href="#acpi-related-definitions" title="Link to this heading">¶</a></h2>
+<p>CPUINTC:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ACPI_MADT_TYPE_CORE_PIC;
+struct acpi_madt_core_pic;
+enum acpi_madt_core_pic_version;
+</pre></div>
+</div>
+<p>LIOINTC:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ACPI_MADT_TYPE_LIO_PIC;
+struct acpi_madt_lio_pic;
+enum acpi_madt_lio_pic_version;
+</pre></div>
+</div>
+<p>EIOINTC:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ACPI_MADT_TYPE_EIO_PIC;
+struct acpi_madt_eio_pic;
+enum acpi_madt_eio_pic_version;
+</pre></div>
+</div>
+<p>HTVECINTC:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ACPI_MADT_TYPE_HT_PIC;
+struct acpi_madt_ht_pic;
+enum acpi_madt_ht_pic_version;
+</pre></div>
+</div>
+<p>PCH-PIC:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ACPI_MADT_TYPE_BIO_PIC;
+struct acpi_madt_bio_pic;
+enum acpi_madt_bio_pic_version;
+</pre></div>
+</div>
+<p>PCH-MSI:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ACPI_MADT_TYPE_MSI_PIC;
+struct acpi_madt_msi_pic;
+enum acpi_madt_msi_pic_version;
+</pre></div>
+</div>
+<p>PCH-LPC:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ACPI_MADT_TYPE_LPC_PIC;
+struct acpi_madt_lpc_pic;
+enum acpi_madt_lpc_pic_version;
+</pre></div>
+</div>
+</section>
+<section id="references">
+<h2><span class="section-number">3.6. </span>References<a class="headerlink" href="#references" title="Link to this heading">¶</a></h2>
+<p>Documentation of Loongson-3A5000:</p>
+<blockquote>
+<div><p><a class="reference external" href="https://github.com/loongson/LoongArch-Documentation/releases/latest/download/Loongson-3A5000-usermanual-1.02-CN.pdf">https://github.com/loongson/LoongArch-Documentation/releases/latest/download/Loongson-3A5000-usermanual-1.02-CN.pdf</a> (in Chinese)</p>
+<p><a class="reference external" href="https://github.com/loongson/LoongArch-Documentation/releases/latest/download/Loongson-3A5000-usermanual-1.02-EN.pdf">https://github.com/loongson/LoongArch-Documentation/releases/latest/download/Loongson-3A5000-usermanual-1.02-EN.pdf</a> (in English)</p>
+</div></blockquote>
+<p>Documentation of Loongson's LS7A chipset:</p>
+<blockquote>
+<div><p><a class="reference external" href="https://github.com/loongson/LoongArch-Documentation/releases/latest/download/Loongson-7A1000-usermanual-2.00-CN.pdf">https://github.com/loongson/LoongArch-Documentation/releases/latest/download/Loongson-7A1000-usermanual-2.00-CN.pdf</a> (in Chinese)</p>
+<p><a class="reference external" href="https://github.com/loongson/LoongArch-Documentation/releases/latest/download/Loongson-7A1000-usermanual-2.00-EN.pdf">https://github.com/loongson/LoongArch-Documentation/releases/latest/download/Loongson-7A1000-usermanual-2.00-EN.pdf</a> (in English)</p>
+</div></blockquote>
+<div class="admonition note">
+<p class="admonition-title">备注</p>
+<ul class="simple">
+<li><p>CPUINTC is CSR.ECFG/CSR.ESTAT and its interrupt controller described
+in Section 7.4 of &quot;LoongArch Reference Manual, Vol 1&quot;;</p></li>
+<li><p>LIOINTC is &quot;Legacy I/OInterrupts&quot; described in Section 11.1 of
+&quot;Loongson 3A5000 Processor Reference Manual&quot;;</p></li>
+<li><p>EIOINTC is &quot;Extended I/O Interrupts&quot; described in Section 11.2 of
+&quot;Loongson 3A5000 Processor Reference Manual&quot;;</p></li>
+<li><p>HTVECINTC is &quot;HyperTransport Interrupts&quot; described in Section 14.3 of
+&quot;Loongson 3A5000 Processor Reference Manual&quot;;</p></li>
+<li><p>PCH-PIC/PCH-MSI is &quot;Interrupt Controller&quot; described in Section 5 of
+&quot;Loongson 7A1000 Bridge User Manual&quot;;</p></li>
+<li><p>PCH-LPC is &quot;LPC Interrupts&quot; described in Section 24.3 of
+&quot;Loongson 7A1000 Bridge User Manual&quot;.</p></li>
+</ul>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/arch/loongarch/irq-chip-model.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
