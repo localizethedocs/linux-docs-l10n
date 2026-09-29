@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>A description of what robust futexes are &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/locking/robust-futexes.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="The robust futex ABI" href="robust-futex-ABI.html" />
+    <link rel="prev" title="Percpu rw semaphores" href="percpu-rw-semaphore.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Locking</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="locktypes.html">Lock types and their rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockdep-design.html">Runtime locking correctness validator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockstat.html">Lock Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="locktorture.html">Kernel Lock Torture Test Operation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mutex-design.html">Generic Mutex Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex-design.html">RT-mutex implementation design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex.html">RT-mutex subsystem with PI support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seqlock.html">Sequence counters and sequential locks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spinlocks.html">Locking lessons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ww-mutex-design.html">Wound/Wait Deadlock-Proof Mutex Design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="preempt-locking.html">Proper Locking Under a Preemptible Kernel: Keeping Kernel Code Preempt-Safe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pi-futex.html">Lightweight PI-futexes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="futex-requeue-pi.html">Futex Requeue PI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hwspinlock.html">Hardware Spinlock Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="percpu-rw-semaphore.html">Percpu rw semaphores</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">A description of what robust futexes are</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#background">Background</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#new-approach-to-robust-futexes">New approach to robust futexes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#performance">Performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#implementation-details">Implementation details</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#testing-architecture-support">Testing, architecture support</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futex-ABI.html">The robust futex ABI</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/locking/robust-futexes.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="a-description-of-what-robust-futexes-are">
+<h1>A description of what robust futexes are<a class="headerlink" href="#a-description-of-what-robust-futexes-are" title="Link to this heading">¶</a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">Started by<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Ingo Molnar &lt;<a class="reference external" href="mailto:mingo&#37;&#52;&#48;redhat&#46;com">mingo<span>&#64;</span>redhat<span>&#46;</span>com</a>&gt;</p>
+</dd>
+</dl>
+<section id="background">
+<h2>Background<a class="headerlink" href="#background" title="Link to this heading">¶</a></h2>
+<p>what are robust futexes? To answer that, we first need to understand
+what futexes are: normal futexes are special types of locks that in the
+noncontended case can be acquired/released from userspace without having
+to enter the kernel.</p>
+<p>A futex is in essence a user-space address, e.g. a 32-bit lock variable
+field. If userspace notices contention (the lock is already owned and
+someone else wants to grab it too) then the lock is marked with a value
+that says “there’s a waiter pending”, and the sys_futex(FUTEX_WAIT)
+syscall is used to wait for the other guy to release it. The kernel
+creates a ‘futex queue’ internally, so that it can later on match up the
+waiter with the waker - without them having to know about each other.
+When the owner thread releases the futex, it notices (via the variable
+value) that there were waiter(s) pending, and does the
+sys_futex(FUTEX_WAKE) syscall to wake them up.  Once all waiters have
+taken and released the lock, the futex is again back to ‘uncontended’
+state, and there’s no in-kernel state associated with it. The kernel
+completely forgets that there ever was a futex at that address. This
+method makes futexes very lightweight and scalable.</p>
+<p>“Robustness” is about dealing with crashes while holding a lock: if a
+process exits prematurely while holding a pthread_mutex_t lock that is
+also shared with some other process (e.g. yum segfaults while holding a
+pthread_mutex_t, or yum is kill -9-ed), then waiters for that lock need
+to be notified that the last owner of the lock exited in some irregular
+way.</p>
+<p>To solve such types of problems, “robust mutex” userspace APIs were
+created: <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_mutex_lock()</span></code> returns an error value if the owner exits
+prematurely - and the new owner can decide whether the data protected by
+the lock can be recovered safely.</p>
+<p>There is a big conceptual problem with futex based mutexes though: it is
+the kernel that destroys the owner task (e.g. due to a SEGFAULT), but
+the kernel cannot help with the cleanup: if there is no ‘futex queue’
+(and in most cases there is none, futexes being fast lightweight locks)
+then the kernel has no information to clean up after the held lock!
+Userspace has no chance to clean up after the lock either - userspace is
+the one that crashes, so it has no opportunity to clean up. Catch-22.</p>
+<p>In practice, when e.g. yum is kill -9-ed (or segfaults), a system reboot
+is needed to release that futex based lock. This is one of the leading
+bugreports against yum.</p>
+<p>To solve this problem, the traditional approach was to extend the vma
+(virtual memory area descriptor) concept to have a notion of ‘pending
+robust futexes attached to this area’. This approach requires 3 new
+syscall variants to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">sys_futex()</span></code>: FUTEX_REGISTER, FUTEX_DEREGISTER and
+FUTEX_RECOVER. At <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">do_exit()</span></code> time, all vmas are searched to see whether
+they have a robust_head set. This approach has two fundamental problems
+left:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>it has quite complex locking and race scenarios. The vma-based
+approach had been pending for years, but they are still not completely
+reliable.</p></li>
+<li><p>they have to scan _every_ vma at <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">sys_exit()</span></code> time, per thread!</p></li>
+</ul>
+</div></blockquote>
+<p>The second disadvantage is a real killer: <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_exit()</span></code> takes around 1
+microsecond on Linux, but with thousands (or tens of thousands) of vmas
+every <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">pthread_exit()</span></code> takes a millisecond or more, also totally
+destroying the CPU’s L1 and L2 caches!</p>
+<p>This is very much noticeable even for normal process <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">sys_exit_group()</span></code>
+calls: the kernel has to do the vma scanning unconditionally! (this is
+because the kernel has no knowledge about how many robust futexes there
+are to be cleaned up, because a robust futex might have been registered
+in another task, and the futex variable might have been simply mmap()-ed
+into this process’s address space).</p>
+<p>This huge overhead forced the creation of CONFIG_FUTEX_ROBUST so that
+normal kernels can turn it off, but worse than that: the overhead makes
+robust futexes impractical for any type of generic Linux distribution.</p>
+<p>So something had to be done.</p>
+</section>
+<section id="new-approach-to-robust-futexes">
+<h2>New approach to robust futexes<a class="headerlink" href="#new-approach-to-robust-futexes" title="Link to this heading">¶</a></h2>
+<p>At the heart of this new approach there is a per-thread private list of
+robust locks that userspace is holding (maintained by glibc) - which
+userspace list is registered with the kernel via a new syscall [this
+registration happens at most once per thread lifetime]. At <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">do_exit()</span></code>
+time, the kernel checks this user-space list: are there any robust futex
+locks to be cleaned up?</p>
+<p>In the common case, at <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">do_exit()</span></code> time, there is no list registered, so
+the cost of robust futexes is just a simple current-&gt;robust_list != NULL
+comparison. If the thread has registered a list, then normally the list
+is empty. If the thread/process crashed or terminated in some incorrect
+way then the list might be non-empty: in this case the kernel carefully
+walks the list [not trusting it], and marks all locks that are owned by
+this thread with the FUTEX_OWNER_DIED bit, and wakes up one waiter (if
+any).</p>
+<p>The list is guaranteed to be private and per-thread at <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">do_exit()</span></code> time,
+so it can be accessed by the kernel in a lockless way.</p>
+<p>There is one race possible though: since adding to and removing from the
+list is done after the futex is acquired by glibc, there is a few
+instructions window for the thread (or process) to die there, leaving
+the futex hung. To protect against this possibility, userspace (glibc)
+also maintains a simple per-thread ‘list_op_pending’ field, to allow the
+kernel to clean up if the thread dies after acquiring the lock, but just
+before it could have added itself to the list. Glibc sets this
+list_op_pending field before it tries to acquire the futex, and clears
+it after the list-add (or list-remove) has finished.</p>
+<p>That’s all that is needed - all the rest of robust-futex cleanup is done
+in userspace [just like with the previous patches].</p>
+<p>Ulrich Drepper has implemented the necessary glibc support for this new
+mechanism, which fully enables robust mutexes.</p>
+<p>Key differences of this userspace-list based approach, compared to the
+vma based method:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>it’s much, much faster: at thread exit time, there’s no need to loop
+over every vma (!), which the VM-based method has to do. Only a very
+simple ‘is the list empty’ op is done.</p></li>
+<li><p>no VM changes are needed - ‘<a class="reference internal" href="../filesystems/api-summary.html#c.address_space" title="address_space"><code class="xref c c-struct docutils literal notranslate"><span class="pre">struct</span> <span class="pre">address_space</span></code></a>’ is left alone.</p></li>
+<li><p>no registration of individual locks is needed: robust mutexes don’t
+need any extra per-lock syscalls. Robust mutexes thus become a very
+lightweight primitive - so they don’t force the application designer
+to do a hard choice between performance and robustness - robust
+mutexes are just as fast.</p></li>
+<li><p>no per-lock kernel allocation happens.</p></li>
+<li><p>no resource limits are needed.</p></li>
+<li><p>no kernel-space recovery call (FUTEX_RECOVER) is needed.</p></li>
+<li><p>the implementation and the locking is “obvious”, and there are no
+interactions with the VM.</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="performance">
+<h2>Performance<a class="headerlink" href="#performance" title="Link to this heading">¶</a></h2>
+<p>I have benchmarked the time needed for the kernel to process a list of 1
+million (!) held locks, using the new method [on a 2GHz CPU]:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>with FUTEX_WAIT set [contended mutex]: 130 msecs</p></li>
+<li><p>without FUTEX_WAIT set [uncontended mutex]: 30 msecs</p></li>
+</ul>
+</div></blockquote>
+<p>I have also measured an approach where glibc does the lock notification
+[which it currently does for !pshared robust mutexes], and that took 256
+msecs - clearly slower, due to the 1 million FUTEX_WAKE syscalls
+userspace had to do.</p>
+<p>(1 million held locks are unheard of - we expect at most a handful of
+locks to be held at a time. Nevertheless it’s nice to know that this
+approach scales nicely.)</p>
+</section>
+<section id="implementation-details">
+<h2>Implementation details<a class="headerlink" href="#implementation-details" title="Link to this heading">¶</a></h2>
+<p>The patch adds two new syscalls: one to register the userspace list, and
+one to query the registered list pointer:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>asmlinkage long
+sys_set_robust_list(struct robust_list_head __user *head,
+                    size_t len);
+
+asmlinkage long
+sys_get_robust_list(int pid, struct robust_list_head __user **head_ptr,
+                    size_t __user *len_ptr);
+</pre></div>
+</div>
+<p>List registration is very fast: the pointer is simply stored in
+current-&gt;robust_list. [Note that in the future, if robust futexes become
+widespread, we could extend <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">sys_clone()</span></code> to register a robust-list head
+for new threads, without the need of another syscall.]</p>
+<p>So there is virtually zero overhead for tasks not using robust futexes,
+and even for robust futex users, there is only one extra syscall per
+thread lifetime, and the cleanup operation, if it happens, is fast and
+straightforward. The kernel doesn’t have any internal distinction between
+robust and normal futexes.</p>
+<p>If a futex is found to be held at exit time, the kernel sets the
+following bit of the futex word:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#define FUTEX_OWNER_DIED        0x40000000
+</pre></div>
+</div>
+<p>and wakes up the next futex waiter (if any). User-space does the rest of
+the cleanup.</p>
+<p>Otherwise, robust futexes are acquired by glibc by putting the TID into
+the futex field atomically. Waiters set the FUTEX_WAITERS bit:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>#define FUTEX_WAITERS           0x80000000
+</pre></div>
+</div>
+<p>and the remaining bits are for the TID.</p>
+</section>
+<section id="testing-architecture-support">
+<h2>Testing, architecture support<a class="headerlink" href="#testing-architecture-support" title="Link to this heading">¶</a></h2>
+<p>I’ve tested the new syscalls on x86 and x86_64, and have made sure the
+parsing of the userspace list is robust [ ;-) ] even if the list is
+deliberately corrupted.</p>
+<p>i386 and x86_64 syscalls are wired up at the moment, and Ulrich has
+tested the new glibc code (on x86_64 and i386), and it works for his
+robust-mutex testcases.</p>
+<p>All other architectures should build just fine too - but they won’t have
+the new syscalls yet.</p>
+<p>Architectures need to implement the new <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">futex_atomic_cmpxchg_inatomic()</span></code>
+inline function before writing up the syscalls.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/locking/robust-futexes.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
