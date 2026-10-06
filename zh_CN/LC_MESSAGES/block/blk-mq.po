@@ -1,0 +1,1504 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel 6\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-06 07:31+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../block/blk-mq.rst:5
+msgid "Multi-Queue Block IO Queueing Mechanism (blk-mq)"
+msgstr ""
+
+#: ../../../block/blk-mq.rst:7
+msgid ""
+"The Multi-Queue Block IO Queueing Mechanism is an API to enable fast storage "
+"devices to achieve a huge number of input/output operations per second "
+"(IOPS) through queueing and submitting IO requests to block devices "
+"simultaneously, benefiting from the parallelism offered by modern storage "
+"devices."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:13
+msgid "Introduction"
+msgstr ""
+
+#: ../../../block/blk-mq.rst:16
+msgid "Background"
+msgstr ""
+
+#: ../../../block/blk-mq.rst:18
+msgid ""
+"Magnetic hard disks have been the de facto standard from the beginning of "
+"the development of the kernel. The Block IO subsystem aimed to achieve the "
+"best performance possible for those devices with a high penalty when doing "
+"random access, and the bottleneck was the mechanical moving parts, a lot "
+"slower than any layer on the storage stack. One example of such optimization "
+"technique involves ordering read/write requests according to the current "
+"position of the hard disk head."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:26
+msgid ""
+"However, with the development of Solid State Drives and Non-Volatile "
+"Memories without mechanical parts nor random access penalty and capable of "
+"performing high parallel access, the bottleneck of the stack had moved from "
+"the storage device to the operating system. In order to take advantage of "
+"the parallelism in those devices' design, the multi-queue mechanism was "
+"introduced."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:32
+msgid ""
+"The former design had a single queue to store block IO requests with a "
+"single lock. That did not scale well in SMP systems due to dirty data in "
+"cache and the bottleneck of having a single lock for multiple processors. "
+"This setup also suffered with congestion when different processes (or the "
+"same process, moving to different CPUs) wanted to perform block IO. Instead "
+"of this, the blk-mq API spawns multiple queues with individual entry points "
+"local to the CPU, removing the need for a lock. A deeper explanation on how "
+"this works is covered in the following section (`Operation`_)."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:42
+msgid "Operation"
+msgstr ""
+
+#: ../../../block/blk-mq.rst:44
+msgid ""
+"When the userspace performs IO to a block device (reading or writing a file, "
+"for instance), blk-mq takes action: it will store and manage IO requests to "
+"the block device, acting as middleware between the userspace (and a file "
+"system, if present) and the block device driver."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:49
+msgid ""
+"blk-mq has two group of queues: software staging queues and hardware "
+"dispatch queues. When the request arrives at the block layer, it will try "
+"the shortest path possible: send it directly to the hardware queue. However, "
+"there are two cases that it might not do that: if there's an IO scheduler "
+"attached at the layer or if we want to try to merge requests. In both cases, "
+"requests will be sent to the software queue."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:56
+msgid ""
+"Then, after the requests are processed by software queues, they will be "
+"placed at the hardware queue, a second stage queue where the hardware has "
+"direct access to process those requests. However, if the hardware does not "
+"have enough resources to accept more requests, blk-mq will place requests on "
+"a temporary queue, to be sent in the future, when the hardware is able."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:63
+msgid "Software staging queues"
+msgstr ""
+
+#: ../../../block/blk-mq.rst:65
+msgid ""
+"The block IO subsystem adds requests in the software staging queues "
+"(represented by struct blk_mq_ctx) in case that they weren't sent directly "
+"to the driver. A request is one or more BIOs. They arrived at the block "
+"layer through the data structure struct bio. The block layer will then build "
+"a new structure from it, the struct request that will be used to communicate "
+"with the device driver. Each queue has its own lock and the number of queues "
+"is defined by a per-CPU or per-node basis."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:73
+msgid ""
+"The staging queue can be used to merge requests for adjacent sectors. For "
+"instance, requests for sector 3-6, 6-7, 7-9 can become one request for 3-9. "
+"Even if random access to SSDs and NVMs have the same time of response "
+"compared to sequential access, grouped requests for sequential access "
+"decreases the number of individual requests. This technique of merging "
+"requests is called plugging."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:80
+msgid ""
+"Along with that, the requests can be reordered to ensure fairness of system "
+"resources (e.g. to ensure that no application suffers from starvation) and/"
+"or to improve IO performance, by an IO scheduler."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:85
+msgid "IO Schedulers"
+msgstr ""
+
+#: ../../../block/blk-mq.rst:87
+msgid ""
+"There are several schedulers implemented by the block layer, each one "
+"following a heuristic to improve the IO performance. They are "
+"\"pluggable\" (as in plug and play), in the sense of they can be selected at "
+"run time using sysfs. You can read more about Linux's IO schedulers `here "
+"<https://www.kernel.org/doc/html/latest/block/index.html>`_. The scheduling "
+"happens only between requests in the same queue, so it is not possible to "
+"merge requests from different queues, otherwise there would be cache "
+"trashing and a need to have a lock for each queue. After the scheduling, the "
+"requests are eligible to be sent to the hardware. One of the possible "
+"schedulers to be selected is the NONE scheduler, the most straightforward "
+"one. It will just place requests on whatever software queue the process is "
+"running on, without any reordering. When the device starts processing "
+"requests in the hardware queue (a.k.a. run the hardware queue), the software "
+"queues mapped to that hardware queue will be drained in sequence according "
+"to their mapping."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:103
+msgid "Hardware dispatch queues"
+msgstr ""
+
+#: ../../../block/blk-mq.rst:105
+msgid ""
+"The hardware queue (represented by struct blk_mq_hw_ctx) is a struct used by "
+"device drivers to map the device submission queues (or device DMA ring "
+"buffer), and are the last step of the block layer submission code before the "
+"low level device driver taking ownership of the request. To run this queue, "
+"the block layer removes requests from the associated software queues and "
+"tries to dispatch to the hardware."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:112
+msgid ""
+"If it's not possible to send the requests directly to hardware, they will be "
+"added to a linked list (``hctx->dispatch``) of requests. Then, next time the "
+"block layer runs a queue, it will send the requests laying at the "
+"``dispatch`` list first, to ensure a fairness dispatch with those requests "
+"that were ready to be sent first. The number of hardware queues depends on "
+"the number of hardware contexts supported by the hardware and its device "
+"driver, but it will not be more than the number of cores of the system. "
+"There is no reordering at this stage, and each software queue has a set of "
+"hardware queues to send requests for."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:124
+msgid ""
+"Neither the block layer nor the device protocols guarantee the order of "
+"completion of requests. This must be handled by higher layers, like the "
+"filesystem."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:129
+msgid "Tag-based completion"
+msgstr ""
+
+#: ../../../block/blk-mq.rst:131
+msgid ""
+"In order to indicate which request has been completed, every request is "
+"identified by an integer, ranging from 0 to the dispatch queue size. This "
+"tag is generated by the block layer and later reused by the device driver, "
+"removing the need to create a redundant identifier. When a request is "
+"completed in the driver, the tag is sent back to the block layer to notify "
+"it of the finalization. This removes the need to do a linear search to find "
+"out which IO has been completed."
+msgstr ""
+
+#: ../../../block/blk-mq.rst:140
+msgid "Further reading"
+msgstr ""
+
+#: ../../../block/blk-mq.rst:142
+msgid ""
+"`Linux Block IO: Introducing Multi-queue SSD Access on Multi-core Systems "
+"<http://kernel.dk/blk-mq.pdf>`_"
+msgstr ""
+
+#: ../../../block/blk-mq.rst:144
+msgid "`NOOP scheduler <https://en.wikipedia.org/wiki/Noop_scheduler>`_"
+msgstr ""
+
+#: ../../../block/blk-mq.rst:146
+msgid ""
+"`Null block device driver <https://www.kernel.org/doc/html/latest/block/"
+"null_blk.html>`_"
+msgstr ""
+
+#: ../../../block/blk-mq.rst:149
+msgid "Source code documentation"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:305
+msgid "How the timeout handler should proceed"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:309
+#: ../include/linux/blk-mq.h:484
+msgid "**Constants**"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:311
+msgid "``BLK_EH_DONE``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:312
+msgid ""
+"The block driver completed the command or will complete it at a later time."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:315
+msgid "``BLK_EH_RESET_TIMER``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:316
+msgid ""
+"Reset the request timer and continue waiting for the request to complete."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:317
+msgid "State for a hardware queue facing the hardware block device"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:321
+#: ../include/linux/blk-mq.h:468 ../include/linux/blk-mq.h:499
+#: ../include/linux/blk-mq.h:562 ../include/linux/blk-mq.h:575
+msgid "**Definition**::"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:362
+#: ../include/linux/blk-mq.h:476 ../include/linux/blk-mq.h:522
+#: ../include/linux/blk-mq.h:569 ../include/linux/blk-mq.h:600
+msgid "**Members**"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:1
+msgid "``{unnamed_struct}``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:2
+msgid "anonymous"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:322
+msgid "``lock``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:323
+msgid "Protects the dispatch list."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:325
+msgid "``dispatch``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:326
+msgid ""
+"Used for requests that are ready to be dispatched to the hardware but for "
+"some reason (e.g. lack of resources) could not be sent to the hardware. As "
+"soon as the driver can send new requests, requests at this list will be sent "
+"first for a fairer dispatch."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:333
+msgid "``state``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:334
+msgid ""
+"BLK_MQ_S_* flags. Defines the state of the hw queue (active, scheduled to "
+"restart, stopped)."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:340
+msgid "``run_work``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:341
+msgid "Used for scheduling a hardware queue run at a later time."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:343
+msgid "``cpumask``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:344
+msgid "Map of available CPUs where this hctx can run."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:346
+msgid "``next_cpu``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:347
+msgid ""
+"Used by blk_mq_hctx_next_cpu() for round-robin CPU selection from "
+"**cpumask**."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:351
+msgid "``next_cpu_batch``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:352
+msgid ""
+"Counter of how many works left in the batch before changing to the next CPU."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:356
+#: ../include/linux/blk-mq.h:513
+msgid "``flags``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:357
+msgid "BLK_MQ_F_* flags. Defines the behaviour of the queue."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:360
+msgid "``sched_data``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:361
+msgid ""
+"Pointer owned by the IO scheduler attached to a request queue. It's up to "
+"the IO scheduler how to use this pointer."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:365
+msgid "``queue``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:366
+msgid "Pointer to the request queue that owns this hardware context."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:368
+msgid "``fq``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:369
+msgid "Queue of requests that need to perform a flush operation."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:372
+#: ../include/linux/blk-mq.h:514
+msgid "``driver_data``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:373
+msgid "Pointer to data owned by the block driver that created this hctx"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:378
+msgid "``ctx_map``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:379
+msgid ""
+"Bitmap for each software queue. If bit is on, there is a pending request in "
+"that software queue."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:384
+msgid "``dispatch_from``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:385
+msgid "Software queue to be used when no scheduler was selected."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:389
+msgid "``dispatch_busy``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:390
+msgid ""
+"Number used by blk_mq_update_dispatch_busy() to decide if the hw_queue is "
+"busy using Exponential Weighted Moving Average algorithm."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:395
+msgid "``type``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:396
+msgid "HCTX_TYPE_* flags. Type of hardware queue."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:397
+msgid "``nr_ctx``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:398
+msgid "Number of software queues."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:399
+msgid "``ctxs``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:400
+msgid "Array of software queues."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:402
+msgid "``dispatch_wait_lock``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:403
+msgid "Lock for dispatch_wait queue."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:405
+msgid "``dispatch_wait``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:406
+msgid ""
+"Waitqueue to put requests when there is no tag available at the moment, to "
+"wait for another try in the future."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:411
+msgid "``wait_index``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:412
+msgid "Index of next available dispatch_wait queue to insert requests."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:417
+#: ../include/linux/blk-mq.h:516
+msgid "``tags``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:418
+msgid ""
+"Tags owned by the block driver. A tag at this set is only assigned when a "
+"request is dispatched from a hardware queue."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:422
+msgid "``sched_tags``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:423
+msgid ""
+"Tags owned by I/O scheduler. If there is an I/O scheduler associated with a "
+"request queue, a tag is assigned when that request is allocated. Else, this "
+"member is not used."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:428
+#: ../include/linux/blk-mq.h:511
+msgid "``numa_node``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:429
+#: ../include/linux/blk-mq.h:512
+msgid "NUMA node the storage adapter has been connected to."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:430
+msgid "``queue_num``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:431
+msgid "Index of this hardware queue."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:434
+msgid "``nr_active``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:435
+msgid ""
+"Number of active requests. Only used when a tag set is shared across request "
+"queues."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:439
+msgid "``cpuhp_online``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:440
+msgid "List to store request if CPU is going to die"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:441
+msgid "``cpuhp_dead``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:442
+msgid "List to store request if some CPU die."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:443
+msgid "``kobj``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:444
+msgid "Kernel object for sysfs."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:448
+msgid "``debugfs_dir``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:449
+msgid "debugfs directory for this hardware queue. Named as cpu<cpu_number>."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:452
+msgid "``sched_debugfs_dir``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:453
+msgid "debugfs directory for the scheduler."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:457
+msgid "``hctx_list``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:458
+msgid "if this hctx is not in use, this is an entry in q->unused_hctx_list."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:464
+msgid "Map software queues to hardware queues"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:465
+msgid "``mq_map``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:466
+msgid ""
+"CPU ID to hardware queue index map. This is an array with nr_cpu_ids "
+"elements. Each element has a value in the range [**queue_offset**, "
+"**queue_offset** + **nr_queues**)."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:468
+msgid "``nr_queues``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:469
+msgid "Number of hardware queues to map CPU IDs onto."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:469
+msgid "``queue_offset``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:470
+msgid ""
+"First hardware queue to map onto. Used by the PCIe NVMe driver to map each "
+"hardware queue type (enum hctx_type) onto a distinct set of hardware queues."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:480
+msgid "Type of hardware queue"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:486
+msgid "``HCTX_TYPE_DEFAULT``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:487
+msgid "All I/O not otherwise accounted for."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:489
+msgid "``HCTX_TYPE_READ``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:490
+msgid "Just for READ I/O."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:492
+msgid "``HCTX_TYPE_POLL``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:493
+msgid "Polled I/O of any kind."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:495
+msgid "``HCTX_MAX_TYPES``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:496
+msgid "Number of types of hctx."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:495
+msgid "tag set that can be shared between request queues"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:496
+msgid "``ops``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:497
+msgid "Pointers to functions that implement block driver behavior."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:497
+msgid "``map``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:498
+msgid ""
+"One or more ctx -> hctx mappings. One map exists for each hardware queue "
+"type (enum hctx_type) that the driver wishes to support. There are no "
+"restrictions on maps being of the same size, and it's perfectly legal to "
+"share maps between types."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:502
+msgid "``nr_maps``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:503
+msgid ""
+"Number of elements in the **map** array. A number in the range [1, "
+"HCTX_MAX_TYPES]."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:504
+msgid "``nr_hw_queues``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:505
+msgid ""
+"Number of hardware queues supported by the block driver that owns this data "
+"structure."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:506
+msgid "``queue_depth``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:507
+msgid "Number of tags per hardware queue, reserved tags included."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:507
+msgid "``reserved_tags``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:508
+msgid "Number of tags to set aside for BLK_MQ_REQ_RESERVED tag allocations."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:509
+msgid "``cmd_size``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:510
+msgid ""
+"Number of additional bytes to allocate per request. The block driver owns "
+"these additional bytes."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:512
+#: ../include/linux/blk-mq.h:621
+msgid "``timeout``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:513
+msgid "Request processing timeout in jiffies."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:514
+msgid "Zero or more BLK_MQ_F_* flags."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:515
+msgid "Pointer to data owned by the block driver that created this tag set."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:517
+msgid ""
+"Tag sets. One tag set per hardware queue. Has **nr_hw_queues** elements."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:518
+msgid "``shared_tags``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:519
+msgid ""
+"Shared set of tags. Has **nr_hw_queues** elements. If set, shared by all "
+"**tags**."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:521
+msgid "``tag_list_lock``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:522
+msgid "Serializes tag_list accesses."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:522
+msgid "``tag_list``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:523
+msgid ""
+"List of the request queues that use this tag set. See also request_queue."
+"tag_set_list."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:524
+msgid "``srcu``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:525
+msgid ""
+"Use as lock when type of the request queue is blocking (BLK_MQ_F_BLOCKING)."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:526
+msgid "``tags_srcu``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:527
+msgid ""
+"SRCU used to defer freeing of tags page_list to prevent use-after-free when "
+"iterating tags."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:528
+msgid "``update_nr_hwq_lock``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:529
+msgid ""
+"Synchronize updating nr_hw_queues with add/del disk & switching elevator."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:558
+msgid "Data about a request inserted in a queue"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:560
+msgid "``rq``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:561
+msgid "Request pointer."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:561
+msgid "``last``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:562
+msgid "If it is the last request in the queue."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:571
+msgid "Callback functions that implements block driver behaviour."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:576
+msgid "``queue_rq``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:577
+msgid "Queue a new request from block IO."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:582
+msgid "``commit_rqs``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:583
+msgid ""
+"If a driver uses bd->last to judge when to submit requests to hardware, it "
+"must define this function. In case of errors that make us stop issuing "
+"further requests, this hook serves the purpose of kicking the hardware "
+"(which the last request otherwise would have done)."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:591
+msgid "``queue_rqs``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:592
+msgid ""
+"Queue a list of new requests. Driver is guaranteed that each request belongs "
+"to the same queue. If the driver doesn't empty the **rqlist** completely, "
+"then the rest will be queued individually by the block layer upon return."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:599
+msgid "``get_budget``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:600
+msgid ""
+"Reserve budget before queue request, once .queue_rq is run, it is driver's "
+"responsibility to release the reserved budget. Also we have to handle "
+"failure case of .get_budget for avoiding I/O deadlock."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:607
+msgid "``put_budget``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:608
+msgid "Release the reserved budget."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:612
+msgid "``set_rq_budget_token``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:613
+msgid "store rq's budget token"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:616
+msgid "``get_rq_budget_token``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:617
+msgid "retrieve rq's budget token"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:622
+msgid "Called on request timeout."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:626
+msgid "``poll``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:627
+msgid "Called to poll for completion of a specific tag."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:631
+msgid "``complete``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:632
+msgid "Mark the request as complete."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:636
+msgid "``init_hctx``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:637
+msgid ""
+"Called when the block layer side of a hardware queue has been set up, "
+"allowing the driver to allocate/init matching structures."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:642
+msgid "``exit_hctx``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:643
+#: ../include/linux/blk-mq.h:657
+msgid "Ditto for exit/teardown."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:647
+msgid "``init_request``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:648
+msgid ""
+"Called for every command allocated by the block layer to allow the driver to "
+"set up driver specific data."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:651
+msgid ""
+"Tag greater than or equal to queue_depth is for setting up flush request."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:656
+msgid "``exit_request``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:662
+msgid "``cleanup_rq``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:663
+msgid ""
+"Called before freeing one request which isn't completed yet, and usually for "
+"freeing the driver private data."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:668
+msgid "``busy``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:669
+msgid "If set, returns whether or not this queue currently is busy."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:673
+msgid "``map_queues``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:674
+msgid ""
+"This allows drivers specify their own queue mapping by overriding the setup-"
+"time function that builds the mq_map."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:680
+msgid "``show_rq``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:681
+msgid ""
+"Used by the debugfs implementation to show driver-specific information about "
+"a request."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:821
+msgid "read the current MQ_RQ_* state of a request"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:825
+#: ../include/linux/blk-mq.h:886 ../include/linux/blk-mq.h:995
+#: ../include/linux/blk-mq.h:1009 ../include/linux/blk-mq.h:1221
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:277 ../block/blk-mq.c:295
+#: ../block/blk-mq.c:928 ../block/blk-mq.c:1342 ../block/blk-mq.c:1356
+#: ../block/blk-mq.c:1430 ../block/blk-mq.c:1493 ../block/blk-mq.c:2304
+#: ../block/blk-mq.c:2338 ../block/blk-mq.c:2407 ../block/blk-mq.c:2435
+#: ../block/blk-mq.c:2561 ../block/blk-mq.c:2753 ../block/blk-mq.c:3123
+#: ../block/blk-mq.c:3262 ../block/blk-mq.c:3325 ../block/blk-mq.c:3344
+#: ../block/blk-mq.c:4433
+msgid "**Parameters**"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:827
+#: ../include/linux/blk-mq.h:1011 ../include/linux/blk-mq.h:1223
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1344 ../block/blk-mq.c:1358
+#: ../block/blk-mq.c:1432 ../block/blk-mq.c:1495 ../block/blk-mq.c:2563
+#: ../block/blk-mq.c:2752 ../block/blk-mq.c:3264 ../block/blk-mq.c:3327
+#: ../block/blk-mq.c:3346
+msgid "``struct request *rq``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:822
+msgid "target request."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:882
+msgid "add a request to the completion batch"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:888
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:930
+msgid "``struct request *req``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:883
+msgid "The request to add to batch"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:885
+msgid "``struct io_comp_batch *iob``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:884
+msgid "The batch to add the request"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:886
+msgid "``bool is_error``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:885
+msgid "Specify true if the request failed with an error"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:887
+msgid "``void (*complete)(struct io_comp_batch *)``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:886
+msgid "The completaion handler for the request"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:888
+#: ../include/linux/blk-mq.h:996 ../include/linux/blk-mq.h:1010
+#: ../include/linux/blk-mq.h:1220 ../../../block/blk-mq:153:
+#: ../block/blk-mq.c:929 ../block/blk-mq.c:1341 ../block/blk-mq.c:1355
+#: ../block/blk-mq.c:1430 ../block/blk-mq.c:1493 ../block/blk-mq.c:2304
+#: ../block/blk-mq.c:2338 ../block/blk-mq.c:2561 ../block/blk-mq.c:2753
+#: ../block/blk-mq.c:3122 ../block/blk-mq.c:3324 ../block/blk-mq.c:3349
+#: ../block/blk-mq.c:4432
+msgid "**Description**"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:887
+msgid ""
+"Batched completions only work when there is no I/O error and no special -"
+">end_io handler."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:890
+#: ../include/linux/blk-mq.h:994 ../include/linux/blk-mq.h:1008
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:940 ../block/blk-mq.c:1496
+msgid "**Return**"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:891
+msgid "true when the request was added to the batch, otherwise false"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:991
+msgid "cast a PDU to a request"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:997
+msgid "``void *pdu``"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:992
+msgid "the PDU (Protocol Data Unit) to be casted"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:994
+msgid "request"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:995
+msgid ""
+"Driver command data is immediately after the request. So subtract request "
+"size to get back to the original request."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:1005
+msgid "cast a request to a PDU"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:1006
+msgid "the request to be casted"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:1008
+msgid "pointer to the PDU"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:1009
+msgid ""
+"Driver command data is immediately after the request. So add request to get "
+"the PDU."
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:1217
+msgid "return number of bvecs in a request"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:1218
+msgid "request to calculate bvecs for"
+msgstr ""
+
+#: ../../../block/blk-mq:151: ../include/linux/blk-mq.h:1219
+msgid "Returns the number of bvecs."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:273
+msgid "wait until in-progress quiesce is done"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:279
+msgid "``struct blk_mq_tag_set *set``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:274
+msgid "tag_set to wait on"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:276 ../block/blk-mq.c:294
+#: ../block/blk-mq.c:936 ../block/blk-mq.c:1433
+msgid "**Note**"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:276
+msgid ""
+"it is driver's responsibility for making sure that quiesce has been started "
+"on or more of the request_queues of the tag_set.  This function only waits "
+"for the quiesce on those request_queues that had the quiesce flag set using "
+"blk_mq_quiesce_queue_nowait."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:291
+msgid "wait until all ongoing dispatches have finished"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:297 ../block/blk-mq.c:2409
+#: ../block/blk-mq.c:2437 ../block/blk-mq.c:4435
+msgid "``struct request_queue *q``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:292
+msgid "request queue."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:294
+msgid ""
+"this function does not prevent that the struct request end_io() callback "
+"function is invoked. Once this function is returned, we make sure no "
+"dispatch can happen until the queue is unquiesced via "
+"blk_mq_unquiesce_queue()."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:924
+msgid "Complete multiple bytes without completing the request"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:925 ../block/blk-mq.c:1339
+msgid "the request being processed"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:927
+msgid "``blk_status_t error``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:926
+msgid "block status code"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:928
+msgid "``unsigned int nr_bytes``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:927
+msgid "number of bytes to complete for **req**"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:929
+msgid ""
+"Ends I/O on a number of bytes attached to **req**, but doesn't complete the "
+"request structure even if **req** doesn't have leftover. If **req** has "
+"leftover, sets it up for the next range of segments."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:933
+msgid ""
+"Passing the result of blk_rq_bytes() as **nr_bytes** guarantees ``false`` "
+"return from this function."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:937
+msgid ""
+"The RQF_SPECIAL_PAYLOAD flag is ignored on purpose in this function except "
+"in the consistency check at the end of this function."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:941
+msgid ""
+"``false`` - this request doesn't have any more data ``true``  - this request "
+"has more data"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1338
+msgid "end I/O on a request"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1341
+msgid "Complete a request by scheduling the ->complete_rq operation."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1352
+msgid "Start processing a request"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1353
+msgid "Pointer to request to be started"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1354
+msgid ""
+"Function used by device drivers to notify the block layer that a request is "
+"going to be processed now, so blk layer can do proper initializations such "
+"as starting the timeout timer."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1426
+msgid "insert a request to I/O scheduler for execution"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1427 ../block/blk-mq.c:1490
+msgid "request to insert"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1429 ../block/blk-mq.c:1492
+msgid "``bool at_head``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1428 ../block/blk-mq.c:1491
+msgid "insert request at head or tail of queue"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1430
+msgid ""
+"Insert a fully prepared request at the back of the I/O scheduler queue for "
+"execution.  Don't wait for completion."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1434
+msgid "This function will invoke **done** directly if the queue is dead."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1489
+msgid "insert a request into queue for execution"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1493
+msgid ""
+"Insert a fully prepared request at the back of the I/O scheduler queue for "
+"execution and wait for completion."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:1496
+msgid "The blk_status_t result provided to blk_mq_end_request()."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2300
+msgid "Run a hardware queue asynchronously."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2306 ../block/blk-mq.c:2340
+#: ../block/blk-mq.c:2755
+msgid "``struct blk_mq_hw_ctx *hctx``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2301 ../block/blk-mq.c:2335
+msgid "Pointer to the hardware queue to run."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2303 ../block/blk-mq.c:2434
+msgid "``unsigned long msecs``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2302
+msgid "Milliseconds of delay to wait before running the queue."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2303
+msgid "Run a hardware queue asynchronously with a delay of **msecs**."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2334
+msgid "Start to run a hardware queue."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2337 ../block/blk-mq.c:2406
+msgid "``bool async``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2336 ../block/blk-mq.c:2405
+msgid "If we want to run the queue asynchronously."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2337
+msgid ""
+"Check if the request queue is not in a quiesced state and if there are "
+"pending requests to be sent. If this is true, run the queue to send requests "
+"to hardware."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2403
+msgid "Run all hardware queues in a request queue."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2404 ../block/blk-mq.c:2432
+msgid "Pointer to the request queue to run."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2431
+msgid "Run all hardware queues asynchronously."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2433
+msgid "Milliseconds of delay to wait before running the queues."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2557
+msgid "Insert a request at dispatch list."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2558
+msgid "Pointer to request to be inserted."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2560
+msgid "``blk_insert_t flags``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2559
+msgid "BLK_MQ_INSERT_*"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2560
+msgid ""
+"Should only be used carefully, when the caller knows we want to bypass a "
+"potential IO scheduler on the target device."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2749
+msgid "Try to send a request directly to device driver."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2750
+msgid "Pointer of the associated hardware queue."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2751
+msgid "Pointer to request to be sent."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:2752
+msgid ""
+"If the device has enough resources to accept a new request now, send the "
+"request directly to device driver. Else, insert at hctx->dispatch queue, so "
+"we can try send it another time in the future. Requests inserted at this "
+"queue have higher priority."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3119
+msgid "Create and send a request to block device."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3125
+msgid "``struct bio *bio``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3120
+msgid "Bio pointer."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3121
+msgid ""
+"Builds up a request structure from **q** and **bio** and send to the device. "
+"The request may not be queued directly to hardware if: * This request can be "
+"merged with another one * We want to place request at plug queue for "
+"possible future merging * There is an IO scheduler active at this queue"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3127
+msgid ""
+"It will not queue the request if there is an error with the bio, or at the "
+"request creation."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3258
+msgid "Helper for stacking drivers to submit a request"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3259
+msgid "the request being queued"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3321
+msgid "Helper function to free all bios in a cloned request"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3322
+msgid "the clone request to be cleaned up"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3324
+msgid "Free all bios in **rq** for a cloned request."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3340
+msgid "Helper function to setup clone request"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3341
+msgid "the request to be setup"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3343
+msgid "``struct request *rq_src``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3342
+msgid "original request to be cloned"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3344
+msgid "``struct bio_set *bs``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3343
+msgid "bio_set that bios for clone are allocated from"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3345
+msgid "``gfp_t gfp_mask``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3344
+msgid "memory allocation mask for bio"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3346
+msgid "``int (*bio_ctr)(struct bio *, struct bio *, void *)``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3345
+msgid ""
+"setup function to be called for each clone bio. Returns ``0`` for success, "
+"non ``0`` for failure."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3348
+msgid "``void *data``"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3347
+msgid "private data to be passed to **bio_ctr**"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:3349
+msgid ""
+"Clones bios in **rq_src** to **rq**, and copies attributes of **rq_src** to "
+"**rq**. Also, pages which the original bios are pointing to are not copied "
+"and the cloned bios just point same pages. So cloned bios must be completed "
+"before original bios, which means the caller must complete **rq** before "
+"**rq_src**."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:4429
+msgid "shutdown a request queue"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:4430
+msgid "request queue to shutdown"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:4431
+msgid ""
+"This shuts down a request queue allocated by blk_mq_alloc_queue(). All "
+"future requests will be failed with -ENODEV. The caller is responsible for "
+"dropping the reference from blk_mq_alloc_queue() by calling blk_put_queue()."
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:4435
+msgid "**Context**"
+msgstr ""
+
+#: ../../../block/blk-mq:153: ../block/blk-mq.c:4436
+msgid "can sleep"
+msgstr ""
