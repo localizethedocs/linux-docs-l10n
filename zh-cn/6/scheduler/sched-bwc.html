@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>CFS Bandwidth Control &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/scheduler/sched-bwc.html" />
+    <link rel="index" title="索引" href="../genindex.html" />
+    <link rel="search" title="搜索" href="../search.html" />
+    <link rel="next" title="Deadline Task Scheduling" href="sched-deadline.html" />
+    <link rel="prev" title="CPU Scheduler implementation hints for architecture specific code" href="sched-arch.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/scheduler/sched-bwc.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="cfs-bandwidth-control">
+<h1>CFS Bandwidth Control<a class="headerlink" href="#cfs-bandwidth-control" title="Link to this heading">¶</a></h1>
+<div class="admonition note">
+<p class="admonition-title">备注</p>
+<p>This document only discusses CPU bandwidth control for SCHED_NORMAL.
+The SCHED_RT case is covered in <a class="reference internal" href="sched-rt-group.html"><span class="doc">Real-Time group scheduling</span></a></p>
+</div>
+<p>CFS bandwidth control is a CONFIG_FAIR_GROUP_SCHED extension which allows the
+specification of the maximum CPU bandwidth available to a group or hierarchy.</p>
+<p>The bandwidth allowed for a group is specified using a quota and period. Within
+each given &quot;period&quot; (microseconds), a task group is allocated up to &quot;quota&quot;
+microseconds of CPU time. That quota is assigned to per-cpu run queues in
+slices as threads in the cgroup become runnable. Once all quota has been
+assigned any additional requests for quota will result in those threads being
+throttled. Throttled threads will not be able to run again until the next
+period when the quota is replenished.</p>
+<p>A group's unassigned quota is globally tracked, being refreshed back to
+cfs_quota units at each period boundary. As threads consume this bandwidth it
+is transferred to cpu-local &quot;silos&quot; on a demand basis. The amount transferred
+within each of these updates is tunable and described as the &quot;slice&quot;.</p>
+<section id="burst-feature">
+<h2>Burst feature<a class="headerlink" href="#burst-feature" title="Link to this heading">¶</a></h2>
+<p>This feature borrows time now against our future underrun, at the cost of
+increased interference against the other system users. All nicely bounded.</p>
+<p>Traditional (UP-EDF) bandwidth control is something like:</p>
+<blockquote>
+<div><p>(U = Sum u_i) &lt;= 1</p>
+</div></blockquote>
+<p>This guaranteeds both that every deadline is met and that the system is
+stable. After all, if U were &gt; 1, then for every second of walltime,
+we'd have to run more than a second of program time, and obviously miss
+our deadline, but the next deadline will be further out still, there is
+never time to catch up, unbounded fail.</p>
+<p>The burst feature observes that a workload doesn't always executes the full
+quota; this enables one to describe u_i as a statistical distribution.</p>
+<p>For example, have u_i = {x,e}_i, where x is the p(95) and x+e p(100)
+(the traditional WCET). This effectively allows u to be smaller,
+increasing the efficiency (we can pack more tasks in the system), but at
+the cost of missing deadlines when all the odds line up. However, it
+does maintain stability, since every overrun must be paired with an
+underrun as long as our x is above the average.</p>
+<p>That is, suppose we have 2 tasks, both specify a p(95) value, then we
+have a p(95)*p(95) = 90.25% chance both tasks are within their quota and
+everything is good. At the same time we have a p(5)p(5) = 0.25% chance
+both tasks will exceed their quota at the same time (guaranteed deadline
+fail). Somewhere in between there's a threshold where one exceeds and
+the other doesn't underrun enough to compensate; this depends on the
+specific CDFs.</p>
+<p>At the same time, we can say that the worst case deadline miss, will be
+Sum e_i; that is, there is a bounded tardiness (under the assumption
+that x+e is indeed WCET).</p>
+<p>The interference when using burst is valued by the possibilities for
+missing the deadline and the average WCET. Test results showed that when
+there many cgroups or CPU is under utilized, the interference is
+limited. More details are shown in:
+<a class="reference external" href="https://lore.kernel.org/lkml/5371BD36-55AE-4F71-B9D7-B86DC32E3D2B&#64;linux.alibaba.com/">https://lore.kernel.org/lkml/5371BD36-55AE-4F71-B9D7-B86DC32E3D2B&#64;linux.alibaba.com/</a></p>
+</section>
+<section id="management">
+<h2>Management<a class="headerlink" href="#management" title="Link to this heading">¶</a></h2>
+<p>Quota, period and burst are managed within the cpu subsystem via cgroupfs.</p>
+<div class="admonition note">
+<p class="admonition-title">备注</p>
+<p>The cgroupfs files described in this section are only applicable
+to cgroup v1. For cgroup v2, see
+<a class="reference internal" href="../admin-guide/cgroup-v2.html#cgroup-v2-cpu"><span class="std std-ref">Documentation/admin-guide/cgroup-v2.rst</span></a>.</p>
+</div>
+<ul class="simple">
+<li><p>cpu.cfs_quota_us: run-time replenished within a period (in microseconds)</p></li>
+<li><p>cpu.cfs_period_us: the length of a period (in microseconds)</p></li>
+<li><p>cpu.stat: exports throttling statistics [explained further below]</p></li>
+<li><p>cpu.cfs_burst_us: the maximum accumulated run-time (in microseconds)</p></li>
+</ul>
+<p>The default values are:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cpu.cfs_period_us=100ms
+cpu.cfs_quota_us=-1
+cpu.cfs_burst_us=0
+</pre></div>
+</div>
+<p>A value of -1 for cpu.cfs_quota_us indicates that the group does not have any
+bandwidth restriction in place, such a group is described as an unconstrained
+bandwidth group. This represents the traditional work-conserving behavior for
+CFS.</p>
+<p>Writing any (valid) positive value(s) no smaller than cpu.cfs_burst_us will
+enact the specified bandwidth limit. The minimum quota allowed for the quota or
+period is 1ms. There is also an upper bound on the period length of 1s.
+Additional restrictions exist when bandwidth limits are used in a hierarchical
+fashion, these are explained in more detail below.</p>
+<p>Writing any negative value to cpu.cfs_quota_us will remove the bandwidth limit
+and return the group to an unconstrained state once more.</p>
+<p>A value of 0 for cpu.cfs_burst_us indicates that the group can not accumulate
+any unused bandwidth. It makes the traditional bandwidth control behavior for
+CFS unchanged. Writing any (valid) positive value(s) no larger than
+cpu.cfs_quota_us into cpu.cfs_burst_us will enact the cap on unused bandwidth
+accumulation.</p>
+<p>Any updates to a group's bandwidth specification will result in it becoming
+unthrottled if it is in a constrained state.</p>
+</section>
+<section id="system-wide-settings">
+<h2>System wide settings<a class="headerlink" href="#system-wide-settings" title="Link to this heading">¶</a></h2>
+<p>For efficiency run-time is transferred between the global pool and CPU local
+&quot;silos&quot; in a batch fashion. This greatly reduces global accounting pressure
+on large systems. The amount transferred each time such an update is required
+is described as the &quot;slice&quot;.</p>
+<p>This is tunable via procfs:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/proc/sys/kernel/sched_cfs_bandwidth_slice_us (default=5ms)
+</pre></div>
+</div>
+<p>Larger slice values will reduce transfer overheads, while smaller values allow
+for more fine-grained consumption.</p>
+</section>
+<section id="statistics">
+<h2>Statistics<a class="headerlink" href="#statistics" title="Link to this heading">¶</a></h2>
+<p>A group's bandwidth statistics are exported via 5 fields in cpu.stat.</p>
+<p>cpu.stat:</p>
+<ul class="simple">
+<li><p>nr_periods: Number of enforcement intervals that have elapsed.</p></li>
+<li><p>nr_throttled: Number of times the group has been throttled/limited.</p></li>
+<li><p>throttled_time: The total time duration (in nanoseconds) for which entities
+of the group have been throttled.</p></li>
+<li><p>nr_bursts: Number of periods burst occurs.</p></li>
+<li><p>burst_time: Cumulative wall-time (in nanoseconds) that any CPUs has used
+above quota in respective periods.</p></li>
+</ul>
+<p>This interface is read-only.</p>
+</section>
+<section id="hierarchical-considerations">
+<h2>Hierarchical considerations<a class="headerlink" href="#hierarchical-considerations" title="Link to this heading">¶</a></h2>
+<p>The interface enforces that an individual entity's bandwidth is always
+attainable, that is: max(c_i) &lt;= C. However, over-subscription in the
+aggregate case is explicitly allowed to enable work-conserving semantics
+within a hierarchy:</p>
+<blockquote>
+<div><p>e.g. Sum (c_i) may exceed C</p>
+</div></blockquote>
+<p>[ Where C is the parent's bandwidth, and c_i its children ]</p>
+<p>There are two ways in which a group may become throttled:</p>
+<blockquote>
+<div><ol class="loweralpha simple">
+<li><p>it fully consumes its own quota within a period</p></li>
+<li><p>a parent's quota is fully consumed within its period</p></li>
+</ol>
+</div></blockquote>
+<p>In case b) above, even though the child may have runtime remaining it will not
+be allowed to until the parent's runtime is refreshed.</p>
+</section>
+<section id="cfs-bandwidth-quota-caveats">
+<h2>CFS Bandwidth Quota Caveats<a class="headerlink" href="#cfs-bandwidth-quota-caveats" title="Link to this heading">¶</a></h2>
+<p>Once a slice is assigned to a cpu it does not expire.  However all but 1ms of
+the slice may be returned to the global pool if all threads on that cpu become
+unrunnable. This is configured at compile time by the min_cfs_rq_runtime
+variable. This is a performance tweak that helps prevent added contention on
+the global lock.</p>
+<p>The fact that cpu-local slices do not expire results in some interesting corner
+cases that should be understood.</p>
+<p>For cgroup cpu constrained applications that are cpu limited this is a
+relatively moot point because they will naturally consume the entirety of their
+quota as well as the entirety of each cpu-local slice in each period. As a
+result it is expected that nr_periods roughly equal nr_throttled, and that
+cpuacct.usage will increase roughly equal to cfs_quota_us in each period.</p>
+<p>For highly-threaded, non-cpu bound applications this non-expiration nuance
+allows applications to briefly burst past their quota limits by the amount of
+unused slice on each cpu that the task group is running on (typically at most
+1ms per cpu or as defined by min_cfs_rq_runtime).  This slight burst only
+applies if quota had been assigned to a cpu and then not fully used or returned
+in previous periods. This burst amount will not be transferred between cores.
+As a result, this mechanism still strictly limits the task group to quota
+average usage, albeit over a longer time window than a single period.  This
+also limits the burst ability to no more than 1ms per cpu.  This provides
+better more predictable user experience for highly threaded applications with
+small quota limits on high core count machines. It also eliminates the
+propensity to throttle these applications while simultaneously using less than
+quota amounts of cpu. Another way to say this, is that by allowing the unused
+portion of a slice to remain valid across periods we have decreased the
+possibility of wastefully expiring quota on cpu-local silos that don't need a
+full slice's amount of cpu time.</p>
+<p>The interaction between cpu-bound and non-cpu-bound-interactive applications
+should also be considered, especially when single core usage hits 100%. If you
+gave each of these applications half of a cpu-core and they both got scheduled
+on the same CPU it is theoretically possible that the non-cpu bound application
+will use up to 1ms additional quota in some periods, thereby preventing the
+cpu-bound application from fully using its quota by that same amount. In these
+instances it will be up to the CFS algorithm (see <a class="reference internal" href="sched-design-CFS.html"><span class="doc">CFS Scheduler</span></a>) to
+decide which application is chosen to run, as they will both be runnable and
+have remaining quota. This runtime discrepancy will be made up in the following
+periods when the interactive application idles.</p>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
+<ol class="arabic">
+<li><p>Limit a group to 1 CPU worth of runtime:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>If period is 250ms and quota is also 250ms, the group will get
+1 CPU worth of runtime every 250ms.
+
+# echo 250000 &gt; cpu.cfs_quota_us /* quota = 250ms */
+# echo 250000 &gt; cpu.cfs_period_us /* period = 250ms */
+</pre></div>
+</div>
+</li>
+<li><p>Limit a group to 2 CPUs worth of runtime on a multi-CPU machine</p>
+<p>With 500ms period and 1000ms quota, the group can get 2 CPUs worth of
+runtime every 500ms:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo 1000000 &gt; cpu.cfs_quota_us /* quota = 1000ms */
+# echo 500000 &gt; cpu.cfs_period_us /* period = 500ms */
+
+The larger period here allows for increased burst capacity.
+</pre></div>
+</div>
+</li>
+<li><p>Limit a group to 20% of 1 CPU.</p>
+<p>With 50ms period, 10ms quota will be equivalent to 20% of 1 CPU:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo 10000 &gt; cpu.cfs_quota_us /* quota = 10ms */
+# echo 50000 &gt; cpu.cfs_period_us /* period = 50ms */
+</pre></div>
+</div>
+<p>By using a small period here we are ensuring a consistent latency
+response at the expense of burst capacity.</p>
+</li>
+<li><p>Limit a group to 40% of 1 CPU, and allow accumulate up to 20% of 1 CPU
+additionally, in case accumulation has been done.</p>
+<p>With 50ms period, 20ms quota will be equivalent to 40% of 1 CPU.
+And 10ms burst will be equivalent to 20% of 1 CPU:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo 20000 &gt; cpu.cfs_quota_us /* quota = 20ms */
+# echo 50000 &gt; cpu.cfs_period_us /* period = 50ms */
+# echo 10000 &gt; cpu.cfs_burst_us /* burst = 10ms */
+</pre></div>
+</div>
+<p>Larger buffer setting (no larger than quota) allows greater burst capacity.</p>
+</li>
+</ol>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/scheduler/sched-bwc.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

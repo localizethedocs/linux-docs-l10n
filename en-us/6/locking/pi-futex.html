@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Lightweight PI-futexes &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/locking/pi-futex.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Futex Requeue PI" href="futex-requeue-pi.html" />
+    <link rel="prev" title="Proper Locking Under a Preemptible Kernel: Keeping Kernel Code Preempt-Safe" href="preempt-locking.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Locking</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="locktypes.html">Lock types and their rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockdep-design.html">Runtime locking correctness validator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockstat.html">Lock Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="locktorture.html">Kernel Lock Torture Test Operation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mutex-design.html">Generic Mutex Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex-design.html">RT-mutex implementation design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex.html">RT-mutex subsystem with PI support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seqlock.html">Sequence counters and sequential locks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spinlocks.html">Locking lessons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ww-mutex-design.html">Wound/Wait Deadlock-Proof Mutex Design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="preempt-locking.html">Proper Locking Under a Preemptible Kernel: Keeping Kernel Code Preempt-Safe</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Lightweight PI-futexes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#priority-inheritance-why">Priority Inheritance - why?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#the-longer-reply">The longer reply</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#implementation">Implementation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="futex-requeue-pi.html">Futex Requeue PI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hwspinlock.html">Hardware Spinlock Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="percpu-rw-semaphore.html">Percpu rw semaphores</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futexes.html">A description of what robust futexes are</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futex-ABI.html">The robust futex ABI</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/locking/pi-futex.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="lightweight-pi-futexes">
+<h1>Lightweight PI-futexes<a class="headerlink" href="#lightweight-pi-futexes" title="Link to this heading">¶</a></h1>
+<p>We are calling them lightweight for 3 reasons:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>in the user-space fastpath a PI-enabled futex involves no kernel work
+(or any other PI complexity) at all. No registration, no extra kernel
+calls - just pure fast atomic ops in userspace.</p></li>
+<li><p>even in the slowpath, the system call and scheduling pattern is very
+similar to normal futexes.</p></li>
+<li><p>the in-kernel PI implementation is streamlined around the mutex
+abstraction, with strict rules that keep the implementation
+relatively simple: only a single owner may own a lock (i.e. no
+read-write lock support), only the owner may unlock a lock, no
+recursive locking, etc.</p></li>
+</ul>
+</div></blockquote>
+<section id="priority-inheritance-why">
+<h2>Priority Inheritance - why?<a class="headerlink" href="#priority-inheritance-why" title="Link to this heading">¶</a></h2>
+<p>The short reply: user-space PI helps achieving/improving determinism for
+user-space applications. In the best-case, it can help achieve
+determinism and well-bound latencies. Even in the worst-case, PI will
+improve the statistical distribution of locking related application
+delays.</p>
+</section>
+<section id="the-longer-reply">
+<h2>The longer reply<a class="headerlink" href="#the-longer-reply" title="Link to this heading">¶</a></h2>
+<p>Firstly, sharing locks between multiple tasks is a common programming
+technique that often cannot be replaced with lockless algorithms. As we
+can see it in the kernel [which is a quite complex program in itself],
+lockless structures are rather the exception than the norm - the current
+ratio of lockless vs. locky code for shared data structures is somewhere
+between 1:10 and 1:100. Lockless is hard, and the complexity of lockless
+algorithms often endangers to ability to do robust reviews of said code.
+I.e. critical RT apps often choose lock structures to protect critical
+data structures, instead of lockless algorithms. Furthermore, there are
+cases (like shared hardware, or other resource limits) where lockless
+access is mathematically impossible.</p>
+<p>Media players (such as Jack) are an example of reasonable application
+design with multiple tasks (with multiple priority levels) sharing
+short-held locks: for example, a highprio audio playback thread is
+combined with medium-prio construct-audio-data threads and low-prio
+display-colory-stuff threads. Add video and decoding to the mix and
+we’ve got even more priority levels.</p>
+<p>So once we accept that synchronization objects (locks) are an
+unavoidable fact of life, and once we accept that multi-task userspace
+apps have a very fair expectation of being able to use locks, we’ve got
+to think about how to offer the option of a deterministic locking
+implementation to user-space.</p>
+<p>Most of the technical counter-arguments against doing priority
+inheritance only apply to kernel-space locks. But user-space locks are
+different, there we cannot disable interrupts or make the task
+non-preemptible in a critical section, so the ‘use spinlocks’ argument
+does not apply (user-space spinlocks have the same priority inversion
+problems as other user-space locking constructs). Fact is, pretty much
+the only technique that currently enables good determinism for userspace
+locks (such as futex-based pthread mutexes) is priority inheritance:</p>
+<p>Currently (without PI), if a high-prio and a low-prio task shares a lock
+[this is a quite common scenario for most non-trivial RT applications],
+even if all critical sections are coded carefully to be deterministic
+(i.e. all critical sections are short in duration and only execute a
+limited number of instructions), the kernel cannot guarantee any
+deterministic execution of the high-prio task: any medium-priority task
+could preempt the low-prio task while it holds the shared lock and
+executes the critical section, and could delay it indefinitely.</p>
+</section>
+<section id="implementation">
+<h2>Implementation<a class="headerlink" href="#implementation" title="Link to this heading">¶</a></h2>
+<p>As mentioned before, the userspace fastpath of PI-enabled pthread
+mutexes involves no kernel work at all - they behave quite similarly to
+normal futex-based locks: a 0 value means unlocked, and a value==TID
+means locked. (This is the same method as used by list-based robust
+futexes.) Userspace uses atomic ops to lock/unlock these mutexes without
+entering the kernel.</p>
+<p>To handle the slowpath, we have added two new futex ops:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>FUTEX_LOCK_PI</p></li>
+<li><p>FUTEX_UNLOCK_PI</p></li>
+</ul>
+</div></blockquote>
+<p>If the lock-acquire fastpath fails, [i.e. an atomic transition from 0 to
+TID fails], then FUTEX_LOCK_PI is called. The kernel does all the
+remaining work: if there is no futex-queue attached to the futex address
+yet then the code looks up the task that owns the futex [it has put its
+own TID into the futex value], and attaches a ‘PI state’ structure to
+the futex-queue. The pi_state includes an rt-mutex, which is a PI-aware,
+kernel-based synchronization object. The ‘other’ task is made the owner
+of the rt-mutex, and the FUTEX_WAITERS bit is atomically set in the
+futex value. Then this task tries to lock the rt-mutex, on which it
+blocks. Once it returns, it has the mutex acquired, and it sets the
+futex value to its own TID and returns. Userspace has no other work to
+perform - it now owns the lock, and futex value contains
+FUTEX_WAITERS|TID.</p>
+<p>If the unlock side fastpath succeeds, [i.e. userspace manages to do a
+TID -&gt; 0 atomic transition of the futex value], then no kernel work is
+triggered.</p>
+<p>If the unlock fastpath fails (because the FUTEX_WAITERS bit is set),
+then FUTEX_UNLOCK_PI is called, and the kernel unlocks the futex on the
+behalf of userspace - and it also unlocks the attached
+pi_state-&gt;rt_mutex and thus wakes up any potential waiters.</p>
+<p>Note that under this approach, contrary to previous PI-futex approaches,
+there is no prior ‘registration’ of a PI-futex. [which is not quite
+possible anyway, due to existing ABI properties of pthread mutexes.]</p>
+<p>Also, under this scheme, ‘robustness’ and ‘PI’ are two orthogonal
+properties of futexes, and all four combinations are possible: futex,
+robust-futex, PI-futex, robust+PI-futex.</p>
+<p>More details about priority inheritance can be found in
+<a class="reference internal" href="rt-mutex.html"><span class="doc">RT-mutex subsystem with PI support</span></a>.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/locking/pi-futex.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

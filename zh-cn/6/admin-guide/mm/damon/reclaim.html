@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>DAMON-based Reclamation &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/mm/damon/reclaim.html" />
+    <link rel="index" title="索引" href="../../../genindex.html" />
+    <link rel="search" title="搜索" href="../../../search.html" />
+    <link rel="next" title="DAMON-based LRU-lists Sorting" href="lru_sort.html" />
+    <link rel="prev" title="Detailed Usages" href="usage.html" />
+
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html#core-kernel-subsystems">Core-kernel subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../cgroup-v2.html">Control Group v2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../cgroup-v1/index.html">Control Groups version 1</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../cpu-load.html">CPU load</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">Memory Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../module-signing.html">Kernel module signing facility</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../namespaces/index.html">Namespaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../numastat.html">Numa policy hit/miss statistics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pm/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../syscall-user-dispatch.html">Syscall User Dispatch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../binfmt-misc.html">Kernel Support for miscellaneous Binary Formats (binfmt_misc)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../java.html">Java(tm) Binary Kernel Support for Linux v1.03</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../mono.html">Mono(tm) Binary Kernel Support for Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../_sources/admin-guide/mm/damon/reclaim.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="damon-based-reclamation">
+<h1>DAMON-based Reclamation<a class="headerlink" href="#damon-based-reclamation" title="Link to this heading">¶</a></h1>
+<p>DAMON-based Reclamation (DAMON_RECLAIM) is a static kernel module that aimed to
+be used for proactive and lightweight reclamation under light memory pressure.
+It doesn't aim to replace the LRU-list based page_granularity reclamation, but
+to be selectively used for different level of memory pressure and requirements.</p>
+<section id="where-proactive-reclamation-is-required">
+<h2>Where Proactive Reclamation is Required?<a class="headerlink" href="#where-proactive-reclamation-is-required" title="Link to this heading">¶</a></h2>
+<p>On general memory over-committed systems, proactively reclaiming cold pages
+helps saving memory and reducing latency spikes that incurred by the direct
+reclaim of the process or CPU consumption of kswapd, while incurring only
+minimal performance degradation <a class="footnote-reference brackets" href="#id4" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> <a class="footnote-reference brackets" href="#id5" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a> .</p>
+<p>Free Pages Reporting <a class="footnote-reference brackets" href="#id6" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a> based memory over-commit virtualization systems are
+good example of the cases.  In such systems, the guest VMs reports their free
+memory to host, and the host reallocates the reported memory to other guests.
+As a result, the memory of the systems are fully utilized.  However, the
+guests could be not so memory-frugal, mainly because some kernel subsystems and
+user-space applications are designed to use as much memory as available.  Then,
+guests could report only small amount of memory as free to host, results in
+memory utilization drop of the systems.  Running the proactive reclamation in
+guests could mitigate this problem.</p>
+</section>
+<section id="how-it-works">
+<h2>How It Works?<a class="headerlink" href="#how-it-works" title="Link to this heading">¶</a></h2>
+<p>DAMON_RECLAIM finds memory regions that didn't accessed for specific time
+duration and page out.  To avoid it consuming too much CPU for the paging out
+operation, a speed limit can be configured.  Under the speed limit, it pages
+out memory regions that didn't accessed longer time first.  System
+administrators can also configure under what situation this scheme should
+automatically activated and deactivated with three memory pressure watermarks.</p>
+</section>
+<section id="interface-module-parameters">
+<h2>Interface: Module Parameters<a class="headerlink" href="#interface-module-parameters" title="Link to this heading">¶</a></h2>
+<p>To use this feature, you should first ensure your system is running on a kernel
+that is built with <code class="docutils literal notranslate"><span class="pre">CONFIG_DAMON_RECLAIM=y</span></code>.</p>
+<p>To let sysadmins enable or disable it and tune for the given system,
+DAMON_RECLAIM utilizes module parameters.  That is, you can put
+<code class="docutils literal notranslate"><span class="pre">damon_reclaim.&lt;parameter&gt;=&lt;value&gt;</span></code> on the kernel boot command line or write
+proper values to <code class="docutils literal notranslate"><span class="pre">/sys/module/damon_reclaim/parameters/&lt;parameter&gt;</span></code> files.</p>
+<p>Below are the description of each parameter.</p>
+<section id="enabled">
+<h3>enabled<a class="headerlink" href="#enabled" title="Link to this heading">¶</a></h3>
+<p>Enable or disable DAMON_RECLAIM.</p>
+<p>You can enable DAMON_RCLAIM by setting the value of this parameter as <code class="docutils literal notranslate"><span class="pre">Y</span></code>.
+Setting it as <code class="docutils literal notranslate"><span class="pre">N</span></code> disables DAMON_RECLAIM.  Note that DAMON_RECLAIM could do
+no real monitoring and reclamation due to the watermarks-based activation
+condition.  Refer to below descriptions for the watermarks parameter for this.</p>
+</section>
+<section id="commit-inputs">
+<h3>commit_inputs<a class="headerlink" href="#commit-inputs" title="Link to this heading">¶</a></h3>
+<p>Make DAMON_RECLAIM reads the input parameters again, except <code class="docutils literal notranslate"><span class="pre">enabled</span></code>.</p>
+<p>Input parameters that updated while DAMON_RECLAIM is running are not applied
+by default.  Once this parameter is set as <code class="docutils literal notranslate"><span class="pre">Y</span></code>, DAMON_RECLAIM reads values
+of parametrs except <code class="docutils literal notranslate"><span class="pre">enabled</span></code> again.  Once the re-reading is done, this
+parameter is set as <code class="docutils literal notranslate"><span class="pre">N</span></code>.  If invalid parameters are found while the
+re-reading, DAMON_RECLAIM will be disabled.</p>
+</section>
+<section id="min-age">
+<h3>min_age<a class="headerlink" href="#min-age" title="Link to this heading">¶</a></h3>
+<p>Time threshold for cold memory regions identification in microseconds.</p>
+<p>If a memory region is not accessed for this or longer time, DAMON_RECLAIM
+identifies the region as cold, and reclaims it.</p>
+<p>120 seconds by default.</p>
+</section>
+<section id="quota-ms">
+<h3>quota_ms<a class="headerlink" href="#quota-ms" title="Link to this heading">¶</a></h3>
+<p>Limit of time for the reclamation in milliseconds.</p>
+<p>DAMON_RECLAIM tries to use only up to this time within a time window
+(quota_reset_interval_ms) for trying reclamation of cold pages.  This can be
+used for limiting CPU consumption of DAMON_RECLAIM.  If the value is zero, the
+limit is disabled.</p>
+<p>10 ms by default.</p>
+</section>
+<section id="quota-sz">
+<h3>quota_sz<a class="headerlink" href="#quota-sz" title="Link to this heading">¶</a></h3>
+<p>Limit of size of memory for the reclamation in bytes.</p>
+<p>DAMON_RECLAIM charges amount of memory which it tried to reclaim within a time
+window (quota_reset_interval_ms) and makes no more than this limit is tried.
+This can be used for limiting consumption of CPU and IO.  If this value is
+zero, the limit is disabled.</p>
+<p>128 MiB by default.</p>
+</section>
+<section id="quota-reset-interval-ms">
+<h3>quota_reset_interval_ms<a class="headerlink" href="#quota-reset-interval-ms" title="Link to this heading">¶</a></h3>
+<p>The time/size quota charge reset interval in milliseconds.</p>
+<p>The charget reset interval for the quota of time (quota_ms) and size
+(quota_sz).  That is, DAMON_RECLAIM does not try reclamation for more than
+quota_ms milliseconds or quota_sz bytes within quota_reset_interval_ms
+milliseconds.</p>
+<p>1 second by default.</p>
+</section>
+<section id="quota-mem-pressure-us">
+<h3>quota_mem_pressure_us<a class="headerlink" href="#quota-mem-pressure-us" title="Link to this heading">¶</a></h3>
+<p>Desired level of memory pressure-stall time in microseconds.</p>
+<p>While keeping the caps that set by other quotas, DAMON_RECLAIM automatically
+increases and decreases the effective level of the quota aiming this level of
+memory pressure is incurred.  System-wide <code class="docutils literal notranslate"><span class="pre">some</span></code> memory PSI in microseconds
+per quota reset interval (<code class="docutils literal notranslate"><span class="pre">quota_reset_interval_ms</span></code>) is collected and
+compared to this value to see if the aim is satisfied.  Value zero means
+disabling this auto-tuning feature.</p>
+<p>Disabled by default.</p>
+</section>
+<section id="quota-autotune-feedback">
+<h3>quota_autotune_feedback<a class="headerlink" href="#quota-autotune-feedback" title="Link to this heading">¶</a></h3>
+<p>User-specifiable feedback for auto-tuning of the effective quota.</p>
+<p>While keeping the caps that set by other quotas, DAMON_RECLAIM automatically
+increases and decreases the effective level of the quota aiming receiving this
+feedback of value <code class="docutils literal notranslate"><span class="pre">10,000</span></code> from the user.  DAMON_RECLAIM assumes the feedback
+value and the quota are positively proportional.  Value zero means disabling
+this auto-tuning feature.</p>
+<p>Disabled by default.</p>
+</section>
+<section id="wmarks-interval">
+<h3>wmarks_interval<a class="headerlink" href="#wmarks-interval" title="Link to this heading">¶</a></h3>
+<p>Minimal time to wait before checking the watermarks, when DAMON_RECLAIM is
+enabled but inactive due to its watermarks rule.</p>
+</section>
+<section id="wmarks-high">
+<h3>wmarks_high<a class="headerlink" href="#wmarks-high" title="Link to this heading">¶</a></h3>
+<p>Free memory rate (per thousand) for the high watermark.</p>
+<p>If free memory of the system in bytes per thousand bytes is higher than this,
+DAMON_RECLAIM becomes inactive, so it does nothing but only periodically checks
+the watermarks.</p>
+</section>
+<section id="wmarks-mid">
+<h3>wmarks_mid<a class="headerlink" href="#wmarks-mid" title="Link to this heading">¶</a></h3>
+<p>Free memory rate (per thousand) for the middle watermark.</p>
+<p>If free memory of the system in bytes per thousand bytes is between this and
+the low watermark, DAMON_RECLAIM becomes active, so starts the monitoring and
+the reclaiming.</p>
+</section>
+<section id="wmarks-low">
+<h3>wmarks_low<a class="headerlink" href="#wmarks-low" title="Link to this heading">¶</a></h3>
+<p>Free memory rate (per thousand) for the low watermark.</p>
+<p>If free memory of the system in bytes per thousand bytes is lower than this,
+DAMON_RECLAIM becomes inactive, so it does nothing but periodically checks the
+watermarks.  In the case, the system falls back to the LRU-list based page
+granularity reclamation logic.</p>
+</section>
+<section id="sample-interval">
+<h3>sample_interval<a class="headerlink" href="#sample-interval" title="Link to this heading">¶</a></h3>
+<p>Sampling interval for the monitoring in microseconds.</p>
+<p>The sampling interval of DAMON for the cold memory monitoring.  Please refer to
+the DAMON documentation (<a class="reference internal" href="usage.html"><span class="doc">Detailed Usages</span></a>) for more detail.</p>
+</section>
+<section id="aggr-interval">
+<h3>aggr_interval<a class="headerlink" href="#aggr-interval" title="Link to this heading">¶</a></h3>
+<p>Aggregation interval for the monitoring in microseconds.</p>
+<p>The aggregation interval of DAMON for the cold memory monitoring.  Please
+refer to the DAMON documentation (<a class="reference internal" href="usage.html"><span class="doc">Detailed Usages</span></a>) for more detail.</p>
+</section>
+<section id="min-nr-regions">
+<h3>min_nr_regions<a class="headerlink" href="#min-nr-regions" title="Link to this heading">¶</a></h3>
+<p>Minimum number of monitoring regions.</p>
+<p>The minimal number of monitoring regions of DAMON for the cold memory
+monitoring.  This can be used to set lower-bound of the monitoring quality.
+But, setting this too high could result in increased monitoring overhead.
+Please refer to the DAMON documentation (<a class="reference internal" href="usage.html"><span class="doc">Detailed Usages</span></a>) for more detail.</p>
+</section>
+<section id="max-nr-regions">
+<h3>max_nr_regions<a class="headerlink" href="#max-nr-regions" title="Link to this heading">¶</a></h3>
+<p>Maximum number of monitoring regions.</p>
+<p>The maximum number of monitoring regions of DAMON for the cold memory
+monitoring.  This can be used to set upper-bound of the monitoring overhead.
+However, setting this too low could result in bad monitoring quality.  Please
+refer to the DAMON documentation (<a class="reference internal" href="usage.html"><span class="doc">Detailed Usages</span></a>) for more detail.</p>
+</section>
+<section id="monitor-region-start">
+<h3>monitor_region_start<a class="headerlink" href="#monitor-region-start" title="Link to this heading">¶</a></h3>
+<p>Start of target memory region in physical address.</p>
+<p>The start physical address of memory region that DAMON_RECLAIM will do work
+against.  That is, DAMON_RECLAIM will find cold memory regions in this region
+and reclaims.  By default, biggest System RAM is used as the region.</p>
+</section>
+<section id="monitor-region-end">
+<h3>monitor_region_end<a class="headerlink" href="#monitor-region-end" title="Link to this heading">¶</a></h3>
+<p>End of target memory region in physical address.</p>
+<p>The end physical address of memory region that DAMON_RECLAIM will do work
+against.  That is, DAMON_RECLAIM will find cold memory regions in this region
+and reclaims.  By default, biggest System RAM is used as the region.</p>
+</section>
+<section id="addr-unit">
+<h3>addr_unit<a class="headerlink" href="#addr-unit" title="Link to this heading">¶</a></h3>
+<p>A scale factor for memory addresses and bytes.</p>
+<p>This parameter is for setting and getting the <a class="reference internal" href="../../../mm/damon/design.html#damon-design-addr-unit"><span class="std std-ref">address unit</span></a> parameter of the DAMON instance for DAMON_RECLAIM.</p>
+<p><code class="docutils literal notranslate"><span class="pre">monitor_region_start</span></code> and <code class="docutils literal notranslate"><span class="pre">monitor_region_end</span></code> should be provided in this
+unit.  For example, let's suppose <code class="docutils literal notranslate"><span class="pre">addr_unit</span></code>, <code class="docutils literal notranslate"><span class="pre">monitor_region_start</span></code> and
+<code class="docutils literal notranslate"><span class="pre">monitor_region_end</span></code> are set as <code class="docutils literal notranslate"><span class="pre">1024</span></code>, <code class="docutils literal notranslate"><span class="pre">0</span></code> and <code class="docutils literal notranslate"><span class="pre">10</span></code>, respectively.
+Then DAMON_RECLAIM will work for 10 KiB length of physical address range that
+starts from address zero (<code class="docutils literal notranslate"><span class="pre">[0</span> <span class="pre">*</span> <span class="pre">1024,</span> <span class="pre">10</span> <span class="pre">*</span> <span class="pre">1024)</span></code> in bytes).</p>
+<p><code class="docutils literal notranslate"><span class="pre">bytes_reclaim_tried_regions</span></code> and <code class="docutils literal notranslate"><span class="pre">bytes_reclaimed_regions</span></code> are also in
+this unit.  For example, let's suppose values of <code class="docutils literal notranslate"><span class="pre">addr_unit</span></code>,
+<code class="docutils literal notranslate"><span class="pre">bytes_reclaim_tried_regions</span></code> and <code class="docutils literal notranslate"><span class="pre">bytes_reclaimed_regions</span></code> are <code class="docutils literal notranslate"><span class="pre">1024</span></code>,
+<code class="docutils literal notranslate"><span class="pre">42</span></code>, and <code class="docutils literal notranslate"><span class="pre">32</span></code>, respectively.  Then it means DAMON_RECLAIM tried to reclaim
+42 KiB memory and successfully reclaimed 32 KiB memory in total.</p>
+<p>If unsure, use only the default value (<code class="docutils literal notranslate"><span class="pre">1</span></code>) and forget about this.</p>
+</section>
+<section id="skip-anon">
+<h3>skip_anon<a class="headerlink" href="#skip-anon" title="Link to this heading">¶</a></h3>
+<p>Skip anonymous pages reclamation.</p>
+<p>If this parameter is set as <code class="docutils literal notranslate"><span class="pre">Y</span></code>, DAMON_RECLAIM does not reclaim anonymous
+pages.  By default, <code class="docutils literal notranslate"><span class="pre">N</span></code>.</p>
+</section>
+<section id="kdamond-pid">
+<h3>kdamond_pid<a class="headerlink" href="#kdamond-pid" title="Link to this heading">¶</a></h3>
+<p>PID of the DAMON thread.</p>
+<p>If DAMON_RECLAIM is enabled, this becomes the PID of the worker thread.  Else,
+-1.</p>
+</section>
+<section id="nr-reclaim-tried-regions">
+<h3>nr_reclaim_tried_regions<a class="headerlink" href="#nr-reclaim-tried-regions" title="Link to this heading">¶</a></h3>
+<p>Number of memory regions that tried to be reclaimed by DAMON_RECLAIM.</p>
+</section>
+<section id="bytes-reclaim-tried-regions">
+<h3>bytes_reclaim_tried_regions<a class="headerlink" href="#bytes-reclaim-tried-regions" title="Link to this heading">¶</a></h3>
+<p>Total bytes of memory regions that tried to be reclaimed by DAMON_RECLAIM.</p>
+</section>
+<section id="nr-reclaimed-regions">
+<h3>nr_reclaimed_regions<a class="headerlink" href="#nr-reclaimed-regions" title="Link to this heading">¶</a></h3>
+<p>Number of memory regions that successfully be reclaimed by DAMON_RECLAIM.</p>
+</section>
+<section id="bytes-reclaimed-regions">
+<h3>bytes_reclaimed_regions<a class="headerlink" href="#bytes-reclaimed-regions" title="Link to this heading">¶</a></h3>
+<p>Total bytes of memory regions that successfully be reclaimed by DAMON_RECLAIM.</p>
+</section>
+<section id="nr-quota-exceeds">
+<h3>nr_quota_exceeds<a class="headerlink" href="#nr-quota-exceeds" title="Link to this heading">¶</a></h3>
+<p>Number of times that the time/space quota limits have exceeded.</p>
+</section>
+</section>
+<section id="example">
+<h2>Example<a class="headerlink" href="#example" title="Link to this heading">¶</a></h2>
+<p>Below runtime example commands make DAMON_RECLAIM to find memory regions that
+not accessed for 30 seconds or more and pages out.  The reclamation is limited
+to be done only up to 1 GiB per second to avoid DAMON_RECLAIM consuming too
+much CPU time for the paging out operation.  It also asks DAMON_RECLAIM to do
+nothing if the system's free memory rate is more than 50%, but start the real
+works if it becomes lower than 40%.  If DAMON_RECLAIM doesn't make progress and
+therefore the free memory rate becomes lower than 20%, it asks DAMON_RECLAIM to
+do nothing again, so that we can fall back to the LRU-list based page
+granularity reclamation.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># cd /sys/module/damon_reclaim/parameters
+# echo 30000000 &gt; min_age
+# echo $((1 * 1024 * 1024 * 1024)) &gt; quota_sz
+# echo 1000 &gt; quota_reset_interval_ms
+# echo 500 &gt; wmarks_high
+# echo 400 &gt; wmarks_mid
+# echo 200 &gt; wmarks_low
+# echo Y &gt; enabled
+</pre></div>
+</div>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id4" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://research.google/pubs/pub48551/">https://research.google/pubs/pub48551/</a></p>
+</aside>
+<aside class="footnote brackets" id="id5" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://lwn.net/Articles/787611/">https://lwn.net/Articles/787611/</a></p>
+</aside>
+<aside class="footnote brackets" id="id6" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">3</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://www.kernel.org/doc/html/latest/mm/free_page_reporting.html">https://www.kernel.org/doc/html/latest/mm/free_page_reporting.html</a></p>
+</aside>
+</aside>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../../_sources/admin-guide/mm/damon/reclaim.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
