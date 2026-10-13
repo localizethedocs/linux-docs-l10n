@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>SMP primitives &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/core-api/SMP.html" />
+    <link rel="icon" href="../_static/logo.svg"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Cache and TLB Flushing Under Linux" href="cachetlb.html" />
+    <link rel="prev" title="Linux kernel memory barriers" href="wrappers/memory-barriers.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">7.3.0-rc2</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<p class="caption" role="heading"><span class="caption-text">Working with the development community</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internal API manuals</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Core API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#low-level-entry-and-exit">Low level entry and exit</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html#concurrency-primitives">Concurrency primitives</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="refcount-vs-atomic.html">refcount_t API compared to atomic_t</a></li>
+<li class="toctree-l3"><a class="reference internal" href="irq/index.html">IRQs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="local_ops.html">Semantics and Behavior of Local Atomic Operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="padata.html">The padata parallel execution mechanism</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../RCU/index.html">RCU Handbook</a></li>
+<li class="toctree-l3"><a class="reference internal" href="wrappers/memory-barriers.html">Linux kernel memory barriers</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">SMP primitives</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#memory-management">Memory management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development tools and processes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User-oriented documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Firmware-related documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Architecture-specific documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/core-api/SMP.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="smp-primitives">
+<h1>SMP primitives<a class="headerlink" href="#smp-primitives" title="Link to this heading">¶</a></h1>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.on_each_cpu_mask">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">on_each_cpu_mask</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">cpumask</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">mask</span></span>, <span class="n"><span class="pre">smp_call_func_t</span></span><span class="w"> </span><span class="n"><span class="pre">func</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">info</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">wait</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.on_each_cpu_mask" title="Link to this definition">¶</a><br /></dt>
+<dd><p>Run a function on processors specified by cpumask, which may include the local processor.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">cpumask</span> <span class="pre">*mask</span></code></dt><dd><p>The set of cpus to run on (only runs on online subset).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">smp_call_func_t</span> <span class="pre">func</span></code></dt><dd><p>The function to run. This must be fast and non-blocking.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*info</span></code></dt><dd><p>An arbitrary pointer to pass to the function.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">bool</span> <span class="pre">wait</span></code></dt><dd><p>If true, wait (atomically) until function has completed
+on other CPUs.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>If <strong>wait</strong> is true, then returns once <strong>func</strong> has returned.</p>
+<p>You must not call this function with disabled interrupts or from a
+hardware interrupt handler or from a bottom half handler.  The
+exception is that it may be used during early boot while
+early_boot_irqs_disabled is set.</p>
+</div>
+<dl class="c macro">
+<dt class="sig sig-object c" id="c.smp_processor_id">
+<span class="sig-name descname"><span class="n"><span class="pre">smp_processor_id</span></span></span><a class="headerlink" href="#c.smp_processor_id" title="Link to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">smp_processor_id</span> <span class="pre">()</span></code></p>
+<blockquote>
+<div><blockquote>
+<div><p>get the current (stable) CPU id</p>
+</div></blockquote>
+<p><strong>Description</strong></p>
+<p>This is the normal accessor to the CPU id and should be used
+whenever possible.</p>
+<p>The CPU id is stable when:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>IRQs are disabled;</p></li>
+<li><p>preemption is disabled;</p></li>
+<li><p>the task is CPU affine.</p></li>
+</ul>
+</div></blockquote>
+<p>When CONFIG_DEBUG_PREEMPT=y, we verify these assumptions and WARN
+when <a class="reference internal" href="#c.smp_processor_id" title="smp_processor_id"><code class="xref c c-func docutils literal notranslate"><span class="pre">smp_processor_id()</span></code></a> is used when the CPU id is not stable.</p>
+</div></blockquote>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.smp_call_function_single">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">smp_call_function_single</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">cpu</span></span>, <span class="n"><span class="pre">smp_call_func_t</span></span><span class="w"> </span><span class="n"><span class="pre">func</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">info</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">wait</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.smp_call_function_single" title="Link to this definition">¶</a><br /></dt>
+<dd><p>Run a function on a specific CPU</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">cpu</span></code></dt><dd><p>Specific target CPU for this function.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">smp_call_func_t</span> <span class="pre">func</span></code></dt><dd><p>The function to run. This must be fast and non-blocking.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*info</span></code></dt><dd><p>An arbitrary pointer to pass to the function.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">bool</span> <span class="pre">wait</span></code></dt><dd><p>If true, wait until function has completed on other CPUs.</p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p><code class="docutils literal notranslate"><span class="pre">0</span></code> on success, else a negative status code.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.smp_call_function_single_async">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">smp_call_function_single_async</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">cpu</span></span>, <span class="n"><span class="pre">call_single_data_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">csd</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.smp_call_function_single_async" title="Link to this definition">¶</a><br /></dt>
+<dd><p>Run an asynchronous function on a specific CPU.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">cpu</span></code></dt><dd><p>The CPU to run on.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">call_single_data_t</span> <span class="pre">*csd</span></code></dt><dd><p>Pre-allocated and setup data structure</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Like <a class="reference internal" href="#c.smp_call_function_single" title="smp_call_function_single"><code class="xref c c-func docutils literal notranslate"><span class="pre">smp_call_function_single()</span></code></a>, but the call is asynchonous and
+can thus be done from contexts with disabled interrupts.</p>
+<p>The caller passes his own pre-allocated data structure
+(ie: embedded in an object) and is responsible for synchronizing it
+such that the IPIs performed on the <strong>csd</strong> are strictly serialized.</p>
+<p>If the function is called with one csd which has not yet been
+processed by previous call to <a class="reference internal" href="#c.smp_call_function_single_async" title="smp_call_function_single_async"><code class="xref c c-func docutils literal notranslate"><span class="pre">smp_call_function_single_async()</span></code></a>, the
+function will return immediately with -EBUSY showing that the csd
+object is still in progress.</p>
+<p><strong>NOTE</strong></p>
+<p>Be careful, there is unfortunately no current debugging facility to
+validate the correctness of this serialization.</p>
+<p><strong>Return</strong></p>
+<p><code class="docutils literal notranslate"><span class="pre">0</span></code> on success or negative errno value on error</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.smp_call_function_any">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">smp_call_function_any</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">cpumask</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">mask</span></span>, <span class="n"><span class="pre">smp_call_func_t</span></span><span class="w"> </span><span class="n"><span class="pre">func</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">info</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">wait</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.smp_call_function_any" title="Link to this definition">¶</a><br /></dt>
+<dd><p>Run a function on any of the given cpus</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">cpumask</span> <span class="pre">*mask</span></code></dt><dd><p>The mask of cpus it can run on.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">smp_call_func_t</span> <span class="pre">func</span></code></dt><dd><p>The function to run. This must be fast and non-blocking.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*info</span></code></dt><dd><p>An arbitrary pointer to pass to the function.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">wait</span></code></dt><dd><p>If true, wait until function has completed.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<dl class="simple">
+<dt>Selection preference:</dt><dd><ol class="arabic simple">
+<li><p>current cpu if in <strong>mask</strong></p></li>
+<li><p>nearest cpu in <strong>mask</strong>, based on NUMA topology</p></li>
+</ol>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p><code class="docutils literal notranslate"><span class="pre">0</span></code> on success, else a negative status code (if no cpus were online).</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.smp_call_function_many">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">smp_call_function_many</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">cpumask</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">mask</span></span>, <span class="n"><span class="pre">smp_call_func_t</span></span><span class="w"> </span><span class="n"><span class="pre">func</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">info</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">wait</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.smp_call_function_many" title="Link to this definition">¶</a><br /></dt>
+<dd><p>Run a function on a set of CPUs.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">cpumask</span> <span class="pre">*mask</span></code></dt><dd><p>The set of cpus to run on (only runs on online subset).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">smp_call_func_t</span> <span class="pre">func</span></code></dt><dd><p>The function to run. This must be fast and non-blocking.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*info</span></code></dt><dd><p>An arbitrary pointer to pass to the function.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">bool</span> <span class="pre">wait</span></code></dt><dd><p>If true, wait (atomically) until function has completed
+on other CPUs.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>You must not call this function with disabled interrupts or from a
+hardware interrupt handler or from a bottom half handler.</p>
+<p><strong>func</strong> is not called on the local CPU even if <strong>mask</strong> contains it.  Consider
+using <a class="reference internal" href="#c.on_each_cpu_cond_mask" title="on_each_cpu_cond_mask"><code class="xref c c-func docutils literal notranslate"><span class="pre">on_each_cpu_cond_mask()</span></code></a> instead if this is not desirable.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.smp_call_function">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">smp_call_function</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">smp_call_func_t</span></span><span class="w"> </span><span class="n"><span class="pre">func</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">info</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">wait</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.smp_call_function" title="Link to this definition">¶</a><br /></dt>
+<dd><p>Run a function on all other CPUs.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">smp_call_func_t</span> <span class="pre">func</span></code></dt><dd><p>The function to run. This must be fast and non-blocking.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*info</span></code></dt><dd><p>An arbitrary pointer to pass to the function.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">wait</span></code></dt><dd><p>If true, wait (atomically) until function has completed
+on other CPUs.</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>If <strong>wait</strong> is true, then returns once <strong>func</strong> has returned; otherwise
+it returns just before the target cpu calls <strong>func</strong>.</p>
+<p>You must not call this function with disabled interrupts or from a
+hardware interrupt handler or from a bottom half handler.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.on_each_cpu_cond_mask">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">on_each_cpu_cond_mask</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">smp_cond_func_t</span></span><span class="w"> </span><span class="n"><span class="pre">cond_func</span></span>, <span class="n"><span class="pre">smp_call_func_t</span></span><span class="w"> </span><span class="n"><span class="pre">func</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">info</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">wait</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">cpumask</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">mask</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.on_each_cpu_cond_mask" title="Link to this definition">¶</a><br /></dt>
+<dd><p>Call a function on each processor for which the supplied function cond_func returns true, optionally waiting for all the required CPUs to finish. This may include the local processor.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">smp_cond_func_t</span> <span class="pre">cond_func</span></code></dt><dd><p>A callback function that is passed a cpu id and
+the info parameter. The function is called
+with preemption disabled. The function should
+return a boolean value indicating whether to IPI
+the specified CPU.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">smp_call_func_t</span> <span class="pre">func</span></code></dt><dd><p>The function to run on all applicable CPUs.
+This must be fast and non-blocking.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*info</span></code></dt><dd><p>An arbitrary pointer to pass to both functions.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">bool</span> <span class="pre">wait</span></code></dt><dd><p>If true, wait until function has completed on other CPUs.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">const</span> <span class="pre">struct</span> <span class="pre">cpumask</span> <span class="pre">*mask</span></code></dt><dd><p>The set of cpus to run on (only runs on online subset).</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Target CPU selection and work queueing are done with preemption
+disabled. This protects against CPUs going offline, but not against
+CPUs coming online concurrently; newly online CPUs are not guaranteed
+to be seen or sent an IPI. If <strong>wait</strong> is true, the final wait for remote
+completion happens after that preemption-disabled section.</p>
+<p>You must not call this function with disabled interrupts or
+from a hardware interrupt handler or from a bottom half handler.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.kick_all_cpus_sync">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">kick_all_cpus_sync</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.kick_all_cpus_sync" title="Link to this definition">¶</a><br /></dt>
+<dd><p>Force all cpus out of idle</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">void</span></code></dt><dd><p>no arguments</p>
+</dd>
+</dl>
+<p><strong>Description</strong></p>
+<p>Used to synchronize the update of pm_idle function pointer. It’s
+called after the pointer is updated and returns after the dummy
+callback function has been executed on all cpus. The execution of
+the function can only happen on the remote cpus after they have
+left the idle function which had been called via pm_idle function
+pointer. So it’s guaranteed that nothing uses the previous pointer
+anymore.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.wake_up_all_idle_cpus">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">wake_up_all_idle_cpus</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.wake_up_all_idle_cpus" title="Link to this definition">¶</a><br /></dt>
+<dd><p>break all cpus out of idle wake_up_all_idle_cpus try to break all cpus which is in idle state even including idle polling cpus, for non-idle cpus, we will do nothing for them.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">void</span></code></dt><dd><p>no arguments</p>
+</dd>
+</dl>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.smp_call_on_cpu">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">smp_call_on_cpu</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">unsigned</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">cpu</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">(</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">(</span></span><span class="kt"><span class="pre">void</span></span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">)</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">par</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">phys</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.smp_call_on_cpu" title="Link to this definition">¶</a><br /></dt>
+<dd><p>Call a function on a specific CPU and wait for it to return.</p>
+</dd></dl>
+
+<div class="kernelindent docutils container">
+<p><strong>Parameters</strong></p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">unsigned</span> <span class="pre">int</span> <span class="pre">cpu</span></code></dt><dd><p>The CPU to run on.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">(*func)(void</span> <span class="pre">*)</span></code></dt><dd><p>The function to run</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">*par</span></code></dt><dd><p>An arbitrary pointer parameter for <strong>func</strong>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">bool</span> <span class="pre">phys</span></code></dt><dd><p>If <strong>true</strong>, force to run on physical <strong>cpu</strong>. See
+<code class="xref c c-type docutils literal notranslate"><span class="pre">struct</span> <span class="pre">smp_call_on_cpu_struct</span></code> for more info.</p>
+</dd>
+</dl>
+<p><strong>Return</strong></p>
+<p><code class="docutils literal notranslate"><span class="pre">-ENXIO</span></code> if the <strong>cpu</strong> is invalid; otherwise the return value
+from <strong>func</strong>.</p>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/core-api/SMP.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

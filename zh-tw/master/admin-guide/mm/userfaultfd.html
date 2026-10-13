@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+
+<html lang="zh-TW" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Userfaultfd &#8212; The Linux Kernel unknown version 說明文件</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=b446b479"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=cbf116e0"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/mm/userfaultfd.html" />
+    <link rel="icon" href="../../_static/logo.svg"/>
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜尋" href="../../search.html" />
+    <link rel="next" title="zswap" href="zswap.html" />
+    <link rel="prev" title="Transparent Hugepage Support" href="transhuge.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">7.3.0-rc2</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜尋</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="前往" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<p class="caption" role="heading"><span class="caption-text">與開發社群合作</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">開發過程</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">提交補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">行為守則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">維護者手冊</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">所有開發過程文件</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">內部 API 手冊</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">核心 API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">子系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">開發工具與過程</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">授權規則</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">撰寫文件</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">開發工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">測試指南</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">即時補釘</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">使用者導向的文件</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#core-kernel-subsystems">核心內核子系統</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v2.html">Control Group v2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cgroup-v1/index.html">Control Groups version 1</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cpu-isolation.html">CPU Isolation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cpu-load.html">CPU load</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">記憶體管理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../module-signing.html">Kernel module signing facility</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../namespaces/index.html">Namespaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../numastat.html">Numa policy hit/miss statistics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../pm/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../syscall-user-dispatch.html">Syscall User Dispatch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../binfmt-misc.html">Kernel Support for miscellaneous Binary Formats (binfmt_misc)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../java.html">Java(tm) Binary Kernel Support for Linux v1.03</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mono.html">Mono(tm) Binary Kernel Support for Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">建置系統</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reporting-issues.html">回報議題</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">使用者空間工具</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">使用者空間 API</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">韌體相關的文件</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">韌體</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">韌體與裝置樹</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">架構專屬的文件</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU 架構</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">其他文件</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">未排序的文件</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本頁</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/admin-guide/mm/userfaultfd.rst.txt"
+            rel="nofollow">顯示原始碼</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="userfaultfd">
+<h1>Userfaultfd<a class="headerlink" href="#userfaultfd" title="連結到這個標頭">¶</a></h1>
+<section id="objective">
+<h2>Objective<a class="headerlink" href="#objective" title="連結到這個標頭">¶</a></h2>
+<p>Userfaults allow the implementation of on-demand paging from userland
+and more generally they allow userland to take control of various
+memory page faults, something otherwise only the kernel code could do.</p>
+<p>For example userfaults allows a proper and more optimal implementation
+of the <code class="docutils literal notranslate"><span class="pre">PROT_NONE+SIGSEGV</span></code> trick.</p>
+</section>
+<section id="design">
+<h2>Design<a class="headerlink" href="#design" title="連結到這個標頭">¶</a></h2>
+<p>Userspace creates a new userfaultfd, initializes it, and registers one or more
+regions of virtual memory with it. Then, any page faults which occur within the
+region(s) result in a message being delivered to the userfaultfd, notifying
+userspace of the fault.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> (aside from registering and unregistering virtual
+memory ranges) provides two primary functionalities:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">read/POLLIN</span></code> protocol to notify a userland thread of the faults
+happening</p></li>
+<li><p>various <code class="docutils literal notranslate"><span class="pre">UFFDIO_*</span></code> ioctls that can manage the virtual memory regions
+registered in the <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> that allows userland to efficiently
+resolve the userfaults it receives via 1) or to manage the virtual
+memory in the background</p></li>
+</ol>
+<p>The real advantage of userfaults if compared to regular virtual memory
+management of mremap/mprotect is that the userfaults in all their
+operations never involve heavyweight structures like vmas (in fact the
+<code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> runtime load never takes the mmap_lock for writing).
+Vmas are not suitable for page- (or hugepage) granular fault tracking
+when dealing with virtual address spaces that could span
+Terabytes. Too many vmas would be needed for that.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code>, once created, can also be
+passed using unix domain sockets to a manager process, so the same
+manager process could handle the userfaults of a multitude of
+different processes without them being aware about what is going on
+(well of course unless they later try to use the <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code>
+themselves on the same region the manager is already tracking, which
+is a corner case that would currently return <code class="docutils literal notranslate"><span class="pre">-EBUSY</span></code>).</p>
+</section>
+<section id="api">
+<h2>API<a class="headerlink" href="#api" title="連結到這個標頭">¶</a></h2>
+<section id="creating-a-userfaultfd">
+<h3>Creating a userfaultfd<a class="headerlink" href="#creating-a-userfaultfd" title="連結到這個標頭">¶</a></h3>
+<p>There are two ways to create a new userfaultfd, each of which provide ways to
+restrict access to this functionality (since historically userfaultfds which
+handle kernel page faults have been a useful tool for exploiting the kernel).</p>
+<p>The first way, supported since userfaultfd was introduced, is the
+userfaultfd(2) syscall. Access to this is controlled in several ways:</p>
+<ul class="simple">
+<li><p>Any user can always create a userfaultfd which traps userspace page faults
+only. Such a userfaultfd can be created using the userfaultfd(2) syscall
+with the flag UFFD_USER_MODE_ONLY.</p></li>
+<li><p>In order to also trap kernel page faults for the address space, either the
+process needs the CAP_SYS_PTRACE capability, or the system must have
+vm.unprivileged_userfaultfd set to 1. By default, vm.unprivileged_userfaultfd
+is set to 0.</p></li>
+</ul>
+<p>The second way, added to the kernel more recently, is by opening
+/dev/userfaultfd and issuing a USERFAULTFD_IOC_NEW ioctl to it. This method
+yields equivalent userfaultfds to the userfaultfd(2) syscall.</p>
+<p>Unlike userfaultfd(2), access to /dev/userfaultfd is controlled via normal
+filesystem permissions (user/group/mode), which gives fine grained access to
+userfaultfd specifically, without also granting other unrelated privileges at
+the same time (as e.g. granting CAP_SYS_PTRACE would do). Users who have access
+to /dev/userfaultfd can always create userfaultfds that trap kernel page faults;
+vm.unprivileged_userfaultfd is not considered.</p>
+</section>
+<section id="initializing-a-userfaultfd">
+<h3>Initializing a userfaultfd<a class="headerlink" href="#initializing-a-userfaultfd" title="連結到這個標頭">¶</a></h3>
+<p>When first opened the <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> must be enabled invoking the
+<code class="docutils literal notranslate"><span class="pre">UFFDIO_API</span></code> ioctl specifying a <code class="docutils literal notranslate"><span class="pre">uffdio_api.api</span></code> value set to <code class="docutils literal notranslate"><span class="pre">UFFD_API</span></code> (or
+a later API version) which will specify the <code class="docutils literal notranslate"><span class="pre">read/POLLIN</span></code> protocol
+userland intends to speak on the <code class="docutils literal notranslate"><span class="pre">UFFD</span></code> and the <code class="docutils literal notranslate"><span class="pre">uffdio_api.features</span></code>
+userland requires. The <code class="docutils literal notranslate"><span class="pre">UFFDIO_API</span></code> ioctl if successful (i.e. if the
+requested <code class="docutils literal notranslate"><span class="pre">uffdio_api.api</span></code> is spoken also by the running kernel and the
+requested features are going to be enabled) will return into
+<code class="docutils literal notranslate"><span class="pre">uffdio_api.features</span></code> and <code class="docutils literal notranslate"><span class="pre">uffdio_api.ioctls</span></code> two 64bit bitmasks of
+respectively all the available features of the read(2) protocol and
+the generic ioctl available.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">uffdio_api.features</span></code> bitmask returned by the <code class="docutils literal notranslate"><span class="pre">UFFDIO_API</span></code> ioctl
+defines what memory types are supported by the <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> and what
+events, except page fault notifications, may be generated:</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_EVENT_*</span></code> flags indicate that various other events
+other than page faults are supported. These events are described in more
+detail below in the <a class="reference internal" href="#non-cooperative-userfaultfd">Non-cooperative userfaultfd</a> section.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_MISSING_HUGETLBFS</span></code> and <code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_MISSING_SHMEM</span></code>
+indicate that the kernel supports <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_MISSING</span></code>
+registrations for hugetlbfs and shared memory (covering all shmem APIs,
+i.e. tmpfs, <code class="docutils literal notranslate"><span class="pre">IPCSHM</span></code>, <code class="docutils literal notranslate"><span class="pre">/dev/zero</span></code>, <code class="docutils literal notranslate"><span class="pre">MAP_SHARED</span></code>, <code class="docutils literal notranslate"><span class="pre">memfd_create</span></code>,
+etc) virtual memory areas, respectively.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_MINOR_HUGETLBFS</span></code> indicates that the kernel supports
+<code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_MINOR</span></code> registration for hugetlbfs virtual memory
+areas. <code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_MINOR_SHMEM</span></code> is the analogous feature indicating
+support for shmem virtual memory areas.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_MOVE</span></code> indicates that the kernel supports moving an
+existing page contents from userspace.</p></li>
+</ul>
+<p>The userland application should set the feature flags it intends to use
+when invoking the <code class="docutils literal notranslate"><span class="pre">UFFDIO_API</span></code> ioctl, to request that those features be
+enabled if supported.</p>
+<p>Once the <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> API has been enabled the <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER</span></code>
+ioctl should be invoked (if present in the returned <code class="docutils literal notranslate"><span class="pre">uffdio_api.ioctls</span></code>
+bitmask) to register a memory range in the <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> by setting the
+uffdio_register structure accordingly. The <code class="docutils literal notranslate"><span class="pre">uffdio_register.mode</span></code>
+bitmask will specify to the kernel which kind of faults to track for
+the range. The <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER</span></code> ioctl will return the
+<code class="docutils literal notranslate"><span class="pre">uffdio_register.ioctls</span></code> bitmask of ioctls that are suitable to resolve
+userfaults on the range registered. Not all ioctls will necessarily be
+supported for all memory types (e.g. anonymous memory vs. shmem vs.
+hugetlbfs), or all types of intercepted faults.</p>
+<div class="admonition note">
+<p class="admonition-title">備註</p>
+<p>Re-registering an already-registered range must not drop any of the
+modes that install per-PTE markers — currently
+<code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_WP</span></code> and <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_RWP</span></code>. Doing
+so would strand markers with no flag to describe them, so the call
+is rejected with <code class="docutils literal notranslate"><span class="pre">-EBUSY</span></code>; userspace must issue
+<code class="docutils literal notranslate"><span class="pre">UFFDIO_UNREGISTER</span></code> first. This differs from older kernels, which
+silently replaced the mode bits on re-registration.</p>
+</div>
+<p>Userland can use the <code class="docutils literal notranslate"><span class="pre">uffdio_register.ioctls</span></code> to manage the virtual
+address space in the background (to add or potentially also remove
+memory from the <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> registered range). This means a userfault
+could be triggering just before userland maps in the background the
+user-faulted page.</p>
+</section>
+<section id="resolving-userfaults">
+<h3>Resolving Userfaults<a class="headerlink" href="#resolving-userfaults" title="連結到這個標頭">¶</a></h3>
+<p>There are three basic ways to resolve userfaults:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY</span></code> atomically copies some existing page contents from
+userspace.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">UFFDIO_ZEROPAGE</span></code> atomically zeros the new page.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">UFFDIO_CONTINUE</span></code> maps an existing, previously-populated page.</p></li>
+</ul>
+<p>These operations are atomic in the sense that they guarantee nothing can
+see a half-populated page, since readers will keep userfaulting until the
+operation has finished.</p>
+<p>By default, these wake up userfaults blocked on the range in question.
+They support a <code class="docutils literal notranslate"><span class="pre">UFFDIO_*_MODE_DONTWAKE</span></code> <code class="docutils literal notranslate"><span class="pre">mode</span></code> flag, which indicates
+that waking will be done separately at some later time.</p>
+<p>Which ioctl to choose depends on the kind of page fault, and what we'd
+like to do to resolve it:</p>
+<ul class="simple">
+<li><p>For <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_MISSING</span></code> faults, the fault needs to be
+resolved by either providing a new page (<code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY</span></code>), or mapping
+the zero page (<code class="docutils literal notranslate"><span class="pre">UFFDIO_ZEROPAGE</span></code>). By default, the kernel would map
+the zero page for a missing fault. With userfaultfd, userspace can
+decide what content to provide before the faulting thread continues.</p></li>
+<li><p>For <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_MINOR</span></code> faults, there is an existing page (in
+the page cache). Userspace has the option of modifying the page's
+contents before resolving the fault. Once the contents are correct
+(modified or not), userspace asks the kernel to map the page and let the
+faulting thread continue with <code class="docutils literal notranslate"><span class="pre">UFFDIO_CONTINUE</span></code>.</p></li>
+</ul>
+<p>Notes:</p>
+<ul class="simple">
+<li><p>You can tell which kind of fault occurred by examining
+<code class="docutils literal notranslate"><span class="pre">pagefault.flags</span></code> within the <code class="docutils literal notranslate"><span class="pre">uffd_msg</span></code>, checking for the
+<code class="docutils literal notranslate"><span class="pre">UFFD_PAGEFAULT_FLAG_*</span></code> flags.</p></li>
+<li><p>None of the page-delivering ioctls default to the range that you
+registered with.  You must fill in all fields for the appropriate
+ioctl <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">including</span></code> the range.</p></li>
+<li><p>You get the address of the access that triggered the missing page
+event out of a <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">uffd_msg</span></code> that you read in the thread from the
+uffd.  You can supply as many pages as you want with these IOCTLs.
+Keep in mind that unless you used DONTWAKE then the first of any of
+those IOCTLs wakes up the faulting thread.</p></li>
+<li><p>Be sure to test for all errors including
+(<code class="docutils literal notranslate"><span class="pre">pollfd[0].revents</span> <span class="pre">&amp;</span> <span class="pre">POLLERR</span></code>).  This can happen, e.g. when ranges
+supplied were incorrect.</p></li>
+</ul>
+</section>
+<section id="write-protect-notifications">
+<h3>Write Protect Notifications<a class="headerlink" href="#write-protect-notifications" title="連結到這個標頭">¶</a></h3>
+<p>This is equivalent to (but faster than) using mprotect and a SIGSEGV
+signal handler.</p>
+<p>Firstly you need to register a range with <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_WP</span></code>.
+Instead of using mprotect(2) you use
+<code class="docutils literal notranslate"><span class="pre">ioctl(uffd,</span> <span class="pre">UFFDIO_WRITEPROTECT,</span> <span class="pre">struct</span> <span class="pre">*uffdio_writeprotect)</span></code>
+while <code class="docutils literal notranslate"><span class="pre">mode</span> <span class="pre">=</span> <span class="pre">UFFDIO_WRITEPROTECT_MODE_WP</span></code>
+in the <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">passed</span></code> in.  The range does not default to and does not
+have to be identical to the range you registered with.  You can write
+protect as many ranges as you like (inside the registered range).
+Then, in the thread reading from uffd the <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">will</span></code> have
+<code class="docutils literal notranslate"><span class="pre">msg.arg.pagefault.flags</span> <span class="pre">&amp;</span> <span class="pre">UFFD_PAGEFAULT_FLAG_WP</span></code> set. Now you send
+<code class="docutils literal notranslate"><span class="pre">ioctl(uffd,</span> <span class="pre">UFFDIO_WRITEPROTECT,</span> <span class="pre">struct</span> <span class="pre">*uffdio_writeprotect)</span></code>
+again while <code class="docutils literal notranslate"><span class="pre">pagefault.mode</span></code> does not have <code class="docutils literal notranslate"><span class="pre">UFFDIO_WRITEPROTECT_MODE_WP</span></code>
+set. This wakes up the thread which will continue to run with writes. This
+allows you to do the bookkeeping about the write in the uffd reading
+thread before the ioctl.</p>
+<p>If you registered with both <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_MISSING</span></code> and
+<code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_WP</span></code> then you need to think about the sequence in
+which you supply a page and undo write protect.  Note that there is a
+difference between writes into a WP area and into a !WP area.  The
+former will have <code class="docutils literal notranslate"><span class="pre">UFFD_PAGEFAULT_FLAG_WP</span></code> set, the latter
+<code class="docutils literal notranslate"><span class="pre">UFFD_PAGEFAULT_FLAG_WRITE</span></code>.  The latter did not fail on protection but
+you still need to supply a page when <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_MISSING</span></code> was
+used.</p>
+<p>Userfaultfd write-protect mode currently behave differently on none ptes
+(when e.g. page is missing) over different types of memories.</p>
+<p>For anonymous memory, <code class="docutils literal notranslate"><span class="pre">ioctl(UFFDIO_WRITEPROTECT)</span></code> will ignore none ptes
+(e.g. when pages are missing and not populated).  For file-backed memories
+like shmem and hugetlbfs, none ptes will be write protected just like a
+present pte.  In other words, there will be a userfaultfd write fault
+message generated when writing to a missing page on file typed memories,
+as long as the page range was write-protected before.  Such a message will
+not be generated on anonymous memories by default.</p>
+<p>If the application wants to be able to write protect none ptes on anonymous
+memory, one can pre-populate the memory with e.g. MADV_POPULATE_READ.  On
+newer kernels, one can also detect the feature UFFD_FEATURE_WP_UNPOPULATED
+and set the feature bit in advance to make sure none ptes will also be
+write protected even upon anonymous memory.</p>
+<p>When using <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_WP</span></code> in combination with either
+<code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_MISSING</span></code> or <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_MINOR</span></code>, when
+resolving missing / minor faults with <code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY</span></code> or <code class="docutils literal notranslate"><span class="pre">UFFDIO_CONTINUE</span></code>
+respectively, it may be desirable for the new page / mapping to be
+write-protected (so future writes will also result in a WP fault). These ioctls
+support a mode flag (<code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY_MODE_WP</span></code> or <code class="docutils literal notranslate"><span class="pre">UFFDIO_CONTINUE_MODE_WP</span></code>
+respectively) to configure the mapping this way.</p>
+<p>If the userfaultfd context has <code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_WP_ASYNC</span></code> feature bit set,
+any vma registered with write-protection will work in async mode rather
+than the default sync mode.</p>
+<p>In async mode, there will be no message generated when a write operation
+happens, meanwhile the write-protection will be resolved automatically by
+the kernel.  It can be seen as a more accurate version of soft-dirty
+tracking and it can be different in a few ways:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>The dirty result will not be affected by vma changes (e.g. vma
+merging) because the dirty is only tracked by the pte.</p></li>
+<li><p>It supports range operations by default, so one can enable tracking on
+any range of memory as long as page aligned.</p></li>
+<li><p>Dirty information will not get lost if the pte was zapped due to
+various reasons (e.g. during split of a shmem transparent huge page).</p></li>
+<li><p>Due to a reverted meaning of soft-dirty (page clean when the uffd bit
+is set; dirty when the uffd bit is cleared), it has different semantics
+on some of the memory operations.  For example: <code class="docutils literal notranslate"><span class="pre">MADV_DONTNEED</span></code> on
+anonymous (or <code class="docutils literal notranslate"><span class="pre">MADV_REMOVE</span></code> on a file mapping) will be treated as
+dirtying of memory by dropping the uffd bit during the procedure.</p></li>
+</ul>
+</div></blockquote>
+<p>The user app can collect the &quot;written/dirty&quot; status by looking up the
+uffd bit for the pages being interested in /proc/pagemap.</p>
+<p>The page will not be under track of userfaultfd-wp async mode until the page is
+explicitly write-protected by <code class="docutils literal notranslate"><span class="pre">ioctl(UFFDIO_WRITEPROTECT)</span></code> with the mode
+flag <code class="docutils literal notranslate"><span class="pre">UFFDIO_WRITEPROTECT_MODE_WP</span></code> set.  Trying to resolve a page fault
+that was tracked by async mode userfaultfd-wp is invalid.</p>
+<p>When userfaultfd-wp async mode is used alone, it can be applied to all
+kinds of memory.</p>
+</section>
+<section id="memory-poisioning-emulation">
+<h3>Memory Poisioning Emulation<a class="headerlink" href="#memory-poisioning-emulation" title="連結到這個標頭">¶</a></h3>
+<p>In response to a fault (either missing or minor), an action userspace can
+take to &quot;resolve&quot; it is to issue a <code class="docutils literal notranslate"><span class="pre">UFFDIO_POISON</span></code>. This will cause any
+future faulters to either get a SIGBUS, or in KVM's case the guest will
+receive an MCE as if there were hardware memory poisoning.</p>
+<p>This is used to emulate hardware memory poisoning. Imagine a VM running on a
+machine which experiences a real hardware memory error. Later, we live migrate
+the VM to another physical machine. Since we want the migration to be
+transparent to the guest, we want that same address range to act as if it was
+still poisoned, even though it's on a new physical host which ostensibly
+doesn't have a memory error in the exact same spot.</p>
+</section>
+<section id="read-write-protection">
+<h3>Read-Write Protection<a class="headerlink" href="#read-write-protection" title="連結到這個標頭">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_RWP</span></code> enables read-write protection tracking on a
+memory range. It is similar to (but faster than) <code class="docutils literal notranslate"><span class="pre">mprotect(PROT_NONE)</span></code>
+combined with a signal handler; unlike <code class="docutils literal notranslate"><span class="pre">mprotect(PROT_NONE)</span></code>, RWP only
+traps accesses to <em>present</em> PTEs, so accesses to unpopulated addresses in a
+protected range fall through to the normal missing-page path. It uses the
+PROT_NONE hinting mechanism (same as NUMA balancing) to make pages
+inaccessible while keeping them resident in memory. Works on anonymous,
+shmem, and hugetlbfs memory.</p>
+<p>RWP is designed for VM memory managers that need to track the working set
+of guest memory for cold page eviction to tiered or remote storage.</p>
+<p><strong>Setup:</strong></p>
+<ol class="arabic simple">
+<li><p>Open a userfaultfd and enable <code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_RWP</span></code> via <code class="docutils literal notranslate"><span class="pre">UFFDIO_API</span></code>.
+Optionally request <code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_RWP_ASYNC</span></code> as well — it requires
+<code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_RWP</span></code> to be set in the same <code class="docutils literal notranslate"><span class="pre">UFFDIO_API</span></code> call.</p></li>
+<li><p>Register the guest memory range with <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_RWP</span></code>
+(and <code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_MISSING</span></code> if evicted pages will need to be
+fetched back from storage).</p></li>
+</ol>
+<p><strong>Feature availability:</strong></p>
+<p>RWP is built on top of two kernel primitives: a spare PTE bit owned by
+userfaultfd (<code class="docutils literal notranslate"><span class="pre">CONFIG_HAVE_ARCH_USERFAULTFD_WP</span></code>) and architecture support
+for present-but-inaccessible PTEs (<code class="docutils literal notranslate"><span class="pre">CONFIG_ARCH_HAS_PTE_PROTNONE</span></code>). When both
+are available on a 64-bit kernel, the build selects
+<code class="docutils literal notranslate"><span class="pre">CONFIG_USERFAULTFD_RWP=y</span></code> and the <code class="docutils literal notranslate"><span class="pre">VM_UFFD_RWP</span></code> VMA flag becomes
+available.</p>
+<p><code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_RWP</span></code> and <code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_RWP_ASYNC</span></code> are unavailable when
+the running kernel or architecture does not support them — for example
+32-bit kernels (where <code class="docutils literal notranslate"><span class="pre">VM_UFFD_RWP</span></code> is unavailable), kernels built
+without <code class="docutils literal notranslate"><span class="pre">CONFIG_USERFAULTFD_RWP</span></code>, and architectures whose ptes cannot
+carry the uffd bit at runtime (e.g. riscv without the <code class="docutils literal notranslate"><span class="pre">SVRSW60T59B</span></code>
+extension). Requesting an unsupported feature in
+<code class="docutils literal notranslate"><span class="pre">uffdio_api.features</span></code> makes <code class="docutils literal notranslate"><span class="pre">UFFDIO_API</span></code> fail with <code class="docutils literal notranslate"><span class="pre">EINVAL</span></code> and
+leaves the userfaultfd context uninitialized; the structure is returned
+zeroed, so the error path cannot be used to discover what the kernel
+supports. The recommended probe sequence is therefore to open a
+throwaway userfaultfd, call <code class="docutils literal notranslate"><span class="pre">UFFDIO_API</span></code> once with <code class="docutils literal notranslate"><span class="pre">features</span> <span class="pre">=</span> <span class="pre">0</span></code>,
+inspect the returned bitmask, close that fd, then open the real one
+and call <code class="docutils literal notranslate"><span class="pre">UFFDIO_API</span></code> again with only the supported features set.</p>
+<p><strong>Protecting and Unprotecting:</strong></p>
+<p>Use <code class="docutils literal notranslate"><span class="pre">UFFDIO_RWPROTECT</span></code> to protect or unprotect a range, mirroring the
+<code class="docutils literal notranslate"><span class="pre">UFFDIO_WRITEPROTECT</span></code> interface:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct uffdio_rwprotect rwp = {
+    .range = { .start = addr, .len = len },
+    .mode = UFFDIO_RWPROTECT_MODE_RWP,  /* protect */
+};
+ioctl(uffd, UFFDIO_RWPROTECT, &amp;rwp);
+</pre></div>
+</div>
+<p>Setting <code class="docutils literal notranslate"><span class="pre">UFFDIO_RWPROTECT_MODE_RWP</span></code> sets PROT_NONE on present PTEs in the
+range. Pages stay resident and their physical frames are preserved — only
+access permissions are removed.</p>
+<p>Clearing <code class="docutils literal notranslate"><span class="pre">UFFDIO_RWPROTECT_MODE_RWP</span></code> restores normal VMA permissions and
+wakes any faulting threads (unless <code class="docutils literal notranslate"><span class="pre">UFFDIO_RWPROTECT_MODE_DONTWAKE</span></code> is set).</p>
+<p><strong>Scope of protection:</strong></p>
+<p>RWP protection is a property of <em>present</em> PTEs. <code class="docutils literal notranslate"><span class="pre">UFFDIO_RWPROTECT</span></code> only
+affects entries that are already populated. Unpopulated addresses within
+the range remain unpopulated; when first accessed they fault through the
+normal missing path (<code class="docutils literal notranslate"><span class="pre">do_anonymous_page()</span></code>, <code class="docutils literal notranslate"><span class="pre">do_swap_page()</span></code>,
+<code class="docutils literal notranslate"><span class="pre">finish_fault()</span></code>) and the resulting PTE is not RWP-protected. To observe
+the population itself, co-register the range with
+<code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_MISSING</span></code>.</p>
+<p>Protection is preserved across page reclaim: a page swapped out while
+RWP-protected carries the marker on its swap entry, and swap-in restores
+the PROT_NONE state so the first access after swap-in still faults. The
+same applies to pages temporarily replaced by migration entries.</p>
+<p>Operations that drop the PTE entirely — <code class="docutils literal notranslate"><span class="pre">MADV_DONTNEED</span></code> on anonymous
+memory, hole-punch on shmem, truncation of a file mapping — also drop the
+RWP marker: the next access re-populates the range without protection.
+Unlike WP (which persists via <code class="docutils literal notranslate"><span class="pre">PTE_MARKER_UFFD_WP</span></code>), there is no
+persistent RWP marker today. The user needs to re-arm the range with
+<code class="docutils literal notranslate"><span class="pre">UFFDIO_RWPROTECT</span></code> after any operation that explicitly frees PTEs.</p>
+<p><strong>Fault Handling:</strong></p>
+<p>When a protected page is accessed:</p>
+<ul class="simple">
+<li><p><strong>Sync mode</strong> (default): The faulting thread blocks and a
+<code class="docutils literal notranslate"><span class="pre">UFFD_PAGEFAULT_FLAG_RWP</span></code> message is delivered to the userfaultfd
+handler. The handler resolves the fault with <code class="docutils literal notranslate"><span class="pre">UFFDIO_RWPROTECT</span></code>
+(clearing <code class="docutils literal notranslate"><span class="pre">MODE_RWP</span></code>), which restores the PTE permissions and wakes
+the faulting thread.</p></li>
+<li><p><strong>Async mode</strong> (<code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_RWP_ASYNC</span></code>): The kernel automatically
+restores PTE permissions and the thread continues without blocking. No
+message is delivered to the handler.</p></li>
+</ul>
+<p><strong>Runtime Mode Switching:</strong></p>
+<p><code class="docutils literal notranslate"><span class="pre">UFFDIO_SET_MODE</span></code> toggles <code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_RWP_ASYNC</span></code> at runtime, allowing
+the VMM to switch between lightweight async detection and safe sync
+eviction without re-registering. The toggle takes <code class="docutils literal notranslate"><span class="pre">mmap_write_lock()</span></code>
+and calls <code class="docutils literal notranslate"><span class="pre">vma_start_write()</span></code> on each UFFD-armed VMA, draining
+in-flight per-VMA-locked faults before the new mode takes effect.</p>
+<p><strong>Working-set detection with PAGEMAP_SCAN:</strong></p>
+<p>RWP-protected PTEs carry the uffd PTE bit; an access (and, in async mode, its
+auto-resolution) clears it. <code class="docutils literal notranslate"><span class="pre">PAGEMAP_SCAN</span></code> reports <code class="docutils literal notranslate"><span class="pre">PAGE_IS_ACCESSED</span></code> once
+the bit is clear on a <code class="docutils literal notranslate"><span class="pre">VM_UFFD_RWP</span></code> VMA, so a <em>non-inverted</em> scan reports the
+pages that were touched during the interval -- the hot set:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct pm_scan_arg arg = {
+    .size = sizeof(arg),
+    .start = guest_mem_start,
+    .end = guest_mem_end,
+    .vec = (uint64_t)regions,
+    .vec_len = regions_len,
+    .category_mask = PAGE_IS_ACCESSED,
+    .return_mask = PAGE_IS_ACCESSED,
+};
+long n = ioctl(pagemap_fd, PAGEMAP_SCAN, &amp;arg);
+</pre></div>
+</div>
+<p>The returned <code class="docutils literal notranslate"><span class="pre">page_region</span></code> array lists the hot ranges. <code class="docutils literal notranslate"><span class="pre">PAGE_IS_ACCESSED</span></code>
+is set on an accessed page whether it is still present or has since been
+swapped out, so the hot scan needs no <code class="docutils literal notranslate"><span class="pre">PAGE_IS_PRESENT</span></code> filter -- unpopulated
+holes carry neither bit and are excluded on their own.</p>
+<p>Track the hot set and reclaim everything else from the backing file (see the
+workflow below). Do <strong>not</strong> invert the scan to enumerate &quot;cold&quot; pages
+directly: an inverted scan reports only the <code class="docutils literal notranslate"><span class="pre">VM_UFFD_RWP</span></code> PTEs that are still
+protected, i.e. the resident portion of <em>this</em> VMA. For a file mapping the
+working set spans the whole file -- pages that live in the page cache but are
+not mapped into this VMA (a pre-populated tmpfs file, or memory populated
+through another mapping) are <code class="docutils literal notranslate"><span class="pre">pte_none</span></code> here, never appear in the scan, and
+would never be considered for eviction even though they occupy memory. Driving
+eviction from &quot;file offsets minus the hot set&quot; avoids that blind spot; a cold
+PTE scan cannot. To additionally record the <em>first</em> access to a cached but
+unmapped page (e.g. pre-populated content) as hot, co-register the range with
+<code class="docutils literal notranslate"><span class="pre">UFFDIO_REGISTER_MODE_MINOR</span></code>: such accesses then fault as minor faults
+instead of mapping the page silently.</p>
+<p><strong>Cleanup:</strong></p>
+<p>When the userfaultfd is closed or the range is unregistered, all PROT_NONE
+PTEs are automatically restored to their normal VMA permissions. This
+prevents pages from becoming permanently inaccessible.</p>
+<p><strong>VMM Working Set Tracking Workflow:</strong></p>
+<p>A typical VMM lifecycle for cold page eviction to tiered storage. Two
+mappings of the same shmem (or hugetlbfs) file are used: <code class="docutils literal notranslate"><span class="pre">guest_mem</span></code> is
+the RWP-registered mapping that vCPUs access through, and <code class="docutils literal notranslate"><span class="pre">io_mem</span></code> is a
+private mapping for VMM-side I/O. Reading <code class="docutils literal notranslate"><span class="pre">io_mem</span></code> does not go through
+the RWP-protected PTEs of <code class="docutils literal notranslate"><span class="pre">guest_mem</span></code>, so the VMM's own <code class="docutils literal notranslate"><span class="pre">pwrite()</span></code>
+never traps on its own</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/* One-time setup */
+fd = memfd_create("guest", MFD_CLOEXEC);
+ftruncate(fd, guest_size);
+guest_mem = mmap(NULL, guest_size, PROT_READ | PROT_WRITE,
+                 MAP_SHARED, fd, 0);  /* vCPU view, RWP-registered */
+io_mem    = mmap(NULL, guest_size, PROT_READ | PROT_WRITE,
+                 MAP_SHARED, fd, 0);  /* VMM I/O view, unprotected */
+
+uffd = userfaultfd(O_CLOEXEC | O_NONBLOCK);
+struct uffdio_api api = {
+    .api = UFFD_API,
+    .features = UFFD_FEATURE_RWP | UFFD_FEATURE_RWP_ASYNC,
+};
+ioctl(uffd, UFFDIO_API, &amp;api);
+if (!(api.features &amp; UFFD_FEATURE_RWP))
+    /* RWP unavailable on this kernel/arch -- fall back. */
+ioctl(uffd, UFFDIO_REGISTER, &amp;(struct uffdio_register){
+    .range = { guest_mem, guest_size },
+    .mode = UFFDIO_REGISTER_MODE_RWP |
+            UFFDIO_REGISTER_MODE_MISSING,
+});
+
+/* Tracking loop */
+while (vm_running) {
+    /* 1. Detection phase (async -- no vCPU stalls) */
+    ioctl(uffd, UFFDIO_RWPROTECT, &amp;(struct uffdio_rwprotect){
+        .range = full_range,
+        .mode = UFFDIO_RWPROTECT_MODE_RWP });
+    sleep(tracking_interval);
+
+    /*
+     * 2. Switch to sync BEFORE scanning. In async mode a vCPU
+     * access races eviction: it would auto-resolve and mark the
+     * page hot just as the VMM writes it out and punches it,
+     * losing the update. Sync mode makes such accesses block and
+     * be delivered, freezing the hot snapshot for the rest of the
+     * iteration.
+     */
+    ioctl(uffd, UFFDIO_SET_MODE,
+          &amp;(struct uffdio_set_mode){
+              .disable = UFFD_FEATURE_RWP_ASYNC });
+
+    /* 3. Read the hot set: pages touched this interval. */
+    ioctl(pagemap_fd, PAGEMAP_SCAN, &amp;(struct pm_scan_arg){
+        .category_mask = PAGE_IS_ACCESSED,
+        .return_mask = PAGE_IS_ACCESSED,
+        ...
+    });
+
+    /*
+     * 4. Reclaim the file offsets that are NOT in the hot set.
+     * Driving this from the file's offset space (rather than from a
+     * cold PTE scan) also reclaims pages that are cached but not
+     * mapped into guest_mem, e.g. pre-populated content.
+     */
+    for each non-hot offset range:
+        /* Read from io_mem -- bypasses RWP, no fault. */
+        pwrite(storage_fd, (char *)io_mem + off, len, off);
+        /* Drop the page from the shared file. */
+        fallocate(fd, FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE,
+                  off, len);
+        /*
+         * Wake any vCPU blocked on the RWP fault for this range:
+         * fallocate() does not iterate ctx-&gt;fault_pending_wqh.
+         */
+        ioctl(uffd, UFFDIO_WAKE, &amp;(struct uffdio_range){
+            .start = (uintptr_t)guest_mem + off, .len = len });
+
+    /* 5. Resume async tracking */
+    ioctl(uffd, UFFDIO_SET_MODE,
+          &amp;(struct uffdio_set_mode){
+              .enable = UFFD_FEATURE_RWP_ASYNC });
+}
+</pre></div>
+</div>
+<p>During step 4, a vCPU that accesses a <code class="docutils literal notranslate"><span class="pre">guest_mem</span></code> offset being evicted
+blocks with a <code class="docutils literal notranslate"><span class="pre">UFFD_PAGEFAULT_FLAG_RWP</span></code> fault while the eviction is in
+progress. After <code class="docutils literal notranslate"><span class="pre">fallocate()</span></code> punches the page out and <code class="docutils literal notranslate"><span class="pre">UFFDIO_WAKE</span></code>
+fires, the vCPU retries the access, faults as <code class="docutils literal notranslate"><span class="pre">MISSING</span></code>, and the
+handler resolves it with <code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY</span></code> from storage.</p>
+<p>This workflow targets shmem and hugetlbfs (both support a private
+<code class="docutils literal notranslate"><span class="pre">io_mem</span></code> mapping over the same fd). Anonymous-memory backings need a
+different inner-loop strategy because the VMM has no way to read the
+page without going through the RWP-protected mapping.</p>
+</section>
+</section>
+<section id="qemu-kvm">
+<h2>QEMU/KVM<a class="headerlink" href="#qemu-kvm" title="連結到這個標頭">¶</a></h2>
+<p>QEMU/KVM is using the <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> syscall to implement postcopy live
+migration. Postcopy live migration is one form of memory
+externalization consisting of a virtual machine running with part or
+all of its memory residing on a different node in the cloud. The
+<code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> abstraction is generic enough that not a single line of
+KVM kernel code had to be modified in order to add postcopy live
+migration to QEMU.</p>
+<p>Guest async page faults, <code class="docutils literal notranslate"><span class="pre">FOLL_NOWAIT</span></code> and all other <code class="docutils literal notranslate"><span class="pre">GUP*</span></code> features work
+just fine in combination with userfaults. Userfaults trigger async
+page faults in the guest scheduler so those guest processes that
+aren't waiting for userfaults (i.e. network bound) can keep running in
+the guest vcpus.</p>
+<p>It is generally beneficial to run one pass of precopy live migration
+just before starting postcopy live migration, in order to avoid
+generating userfaults for readonly guest regions.</p>
+<p>The implementation of postcopy live migration currently uses one
+single bidirectional socket but in the future two different sockets
+will be used (to reduce the latency of the userfaults to the minimum
+possible without having to decrease <code class="docutils literal notranslate"><span class="pre">/proc/sys/net/ipv4/tcp_wmem</span></code>).</p>
+<p>The QEMU in the source node writes all pages that it knows are missing
+in the destination node, into the socket, and the migration thread of
+the QEMU running in the destination node runs <code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY|ZEROPAGE</span></code>
+ioctls on the <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> in order to map the received pages into the
+guest (<code class="docutils literal notranslate"><span class="pre">UFFDIO_ZEROCOPY</span></code> is used if the source page was a zero page).</p>
+<p>A different postcopy thread in the destination node listens with
+poll() to the <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> in parallel. When a <code class="docutils literal notranslate"><span class="pre">POLLIN</span></code> event is
+generated after a userfault triggers, the postcopy thread read() from
+the <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> and receives the fault address (or <code class="docutils literal notranslate"><span class="pre">-EAGAIN</span></code> in case the
+userfault was already resolved and waken by a <code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY|ZEROPAGE</span></code> run
+by the parallel QEMU migration thread).</p>
+<p>After the QEMU postcopy thread (running in the destination node) gets
+the userfault address it writes the information about the missing page
+into the socket. The QEMU source node receives the information and
+roughly &quot;seeks&quot; to that page address and continues sending all
+remaining missing pages from that new page offset. Soon after that
+(just the time to flush the tcp_wmem queue through the network) the
+migration thread in the QEMU running in the destination node will
+receive the page that triggered the userfault and it'll map it as
+usual with the <code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY|ZEROPAGE</span></code> (without actually knowing if it
+was spontaneously sent by the source or if it was an urgent page
+requested through a userfault).</p>
+<p>By the time the userfaults start, the QEMU in the destination node
+doesn't need to keep any per-page state bitmap relative to the live
+migration around and a single per-page bitmap has to be maintained in
+the QEMU running in the source node to know which pages are still
+missing in the destination node. The bitmap in the source node is
+checked to find which missing pages to send in round robin and we seek
+over it when receiving incoming userfaults. After sending each page of
+course the bitmap is updated accordingly. It's also useful to avoid
+sending the same page twice (in case the userfault is read by the
+postcopy thread just before <code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY|ZEROPAGE</span></code> runs in the migration
+thread).</p>
+</section>
+<section id="non-cooperative-userfaultfd">
+<h2>Non-cooperative userfaultfd<a class="headerlink" href="#non-cooperative-userfaultfd" title="連結到這個標頭">¶</a></h2>
+<p>When the <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> is monitored by an external manager, the manager
+must be able to track changes in the process virtual memory
+layout. Userfaultfd can notify the manager about such changes using
+the same read(2) protocol as for the page fault notifications. The
+manager has to explicitly enable these events by setting appropriate
+bits in <code class="docutils literal notranslate"><span class="pre">uffdio_api.features</span></code> passed to <code class="docutils literal notranslate"><span class="pre">UFFDIO_API</span></code> ioctl:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_EVENT_FORK</span></code></dt><dd><p>enable <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> hooks for fork(). When this feature is
+enabled, the <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> context of the parent process is
+duplicated into the newly created process. The manager
+receives <code class="docutils literal notranslate"><span class="pre">UFFD_EVENT_FORK</span></code> with file descriptor of the new
+<code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> context in the <code class="docutils literal notranslate"><span class="pre">uffd_msg.fork</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_EVENT_REMAP</span></code></dt><dd><p>enable notifications about <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">mremap()</span></code> calls. When the
+non-cooperative process moves a virtual memory area to a
+different location, the manager will receive
+<code class="docutils literal notranslate"><span class="pre">UFFD_EVENT_REMAP</span></code>. The <code class="docutils literal notranslate"><span class="pre">uffd_msg.remap</span></code> will contain the old and
+new addresses of the area and its original length.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_EVENT_REMOVE</span></code></dt><dd><p>enable notifications about madvise(MADV_REMOVE) and
+madvise(MADV_DONTNEED) calls. The event <code class="docutils literal notranslate"><span class="pre">UFFD_EVENT_REMOVE</span></code> will
+be generated upon these calls to <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">madvise()</span></code>. The <code class="docutils literal notranslate"><span class="pre">uffd_msg.remove</span></code>
+will contain start and end addresses of the removed area.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_EVENT_UNMAP</span></code></dt><dd><p>enable notifications about memory unmapping. The manager will
+get <code class="docutils literal notranslate"><span class="pre">UFFD_EVENT_UNMAP</span></code> with <code class="docutils literal notranslate"><span class="pre">uffd_msg.remove</span></code> containing start and
+end addresses of the unmapped area.</p>
+</dd>
+</dl>
+<p>Although the <code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_EVENT_REMOVE</span></code> and <code class="docutils literal notranslate"><span class="pre">UFFD_FEATURE_EVENT_UNMAP</span></code>
+are pretty similar, they quite differ in the action expected from the
+<code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> manager. In the former case, the virtual memory is
+removed, but the area is not, the area remains monitored by the
+<code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code>, and if a page fault occurs in that area it will be
+delivered to the manager. The proper resolution for such page fault is
+to zeromap the faulting address. However, in the latter case, when an
+area is unmapped, either explicitly (with <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">munmap()</span></code> system call), or
+implicitly (e.g. during <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">mremap()</span></code>), the area is removed and in turn the
+<code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> context for such area disappears too and the manager will
+not get further userland page faults from the removed area. Still, the
+notification is required in order to prevent manager from using
+<code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY</span></code> on the unmapped area.</p>
+<p>Unlike userland page faults which have to be synchronous and require
+explicit or implicit wakeup, all the events are delivered
+asynchronously and the non-cooperative process resumes execution as
+soon as manager executes read(). The <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> manager should
+carefully synchronize calls to <code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY</span></code> with the events
+processing. To aid the synchronization, the <code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY</span></code> ioctl will
+return <code class="docutils literal notranslate"><span class="pre">-ENOSPC</span></code> when the monitored process exits at the time of
+<code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY</span></code>, and <code class="docutils literal notranslate"><span class="pre">-ENOENT</span></code>, when the non-cooperative process has changed
+its virtual memory layout simultaneously with outstanding <code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY</span></code>
+operation.</p>
+<p>The current asynchronous model of the event delivery is optimal for
+single threaded non-cooperative <code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> manager implementations. A
+synchronous event delivery model can be added later as a new
+<code class="docutils literal notranslate"><span class="pre">userfaultfd</span></code> feature to facilitate multithreading enhancements of the
+non cooperative manager, for example to allow <code class="docutils literal notranslate"><span class="pre">UFFDIO_COPY</span></code> ioctls to
+run in parallel to the event reception. Single threaded
+implementations should continue to use the current async event
+delivery model instead.</p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/admin-guide/mm/userfaultfd.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

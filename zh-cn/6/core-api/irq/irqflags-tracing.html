@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>IRQ-flags state tracing &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/core-api/irq/irqflags-tracing.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜索" href="../../search.html" />
+    <link rel="next" title="Semantics and Behavior of Local Atomic Operations" href="../local_ops.html" />
+    <link rel="prev" title="The irq_domain Interrupt Number Mapping Library" href="irq-domain.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Core API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#core-utilities">Core utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#data-structures-and-low-level-utilities">Data structures and low-level utilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#low-level-entry-and-exit">Low level entry and exit</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#concurrency-primitives">Concurrency primitives</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../refcount-vs-atomic.html">refcount_t API compared to atomic_t</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">IRQs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../local_ops.html">Semantics and Behavior of Local Atomic Operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../padata.html">The padata parallel execution mechanism</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../RCU/index.html">RCU Handbook</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../wrappers/memory-barriers.html">Linux kernel memory barriers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#low-level-hardware-management">Low-level hardware management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#memory-management">Memory management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#interfaces-for-kernel-debugging">Interfaces for kernel debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../driver-api/index.html">Driver implementer's API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../timers/index.html">Timers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/core-api/irq/irqflags-tracing.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="irq-flags-state-tracing">
+<h1>IRQ-flags state tracing<a class="headerlink" href="#irq-flags-state-tracing" title="Link to this heading">¶</a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">Author<span class="colon">:</span></dt>
+<dd class="field-odd"><p>started by Ingo Molnar &lt;<a class="reference external" href="mailto:mingo&#37;&#52;&#48;redhat&#46;com">mingo<span>&#64;</span>redhat<span>&#46;</span>com</a>&gt;</p>
+</dd>
+</dl>
+<p>The &quot;irq-flags tracing&quot; feature &quot;traces&quot; hardirq and softirq state, in
+that it gives interested subsystems an opportunity to be notified of
+every hardirqs-off/hardirqs-on, softirqs-off/softirqs-on event that
+happens in the kernel.</p>
+<p>CONFIG_TRACE_IRQFLAGS_SUPPORT is needed for CONFIG_PROVE_SPIN_LOCKING
+and CONFIG_PROVE_RW_LOCKING to be offered by the generic lock debugging
+code. Otherwise only CONFIG_PROVE_MUTEX_LOCKING and
+CONFIG_PROVE_RWSEM_LOCKING will be offered on an architecture - these
+are locking APIs that are not used in IRQ context. (the one exception
+for rwsems is worked around)</p>
+<p>Architecture support for this is certainly not in the &quot;trivial&quot;
+category, because lots of lowlevel assembly code deal with irq-flags
+state changes. But an architecture can be irq-flags-tracing enabled in a
+rather straightforward and risk-free manner.</p>
+<p>Architectures that want to support this need to do a couple of
+code-organizational changes first:</p>
+<ul class="simple">
+<li><p>add and enable TRACE_IRQFLAGS_SUPPORT in their arch level Kconfig file</p></li>
+</ul>
+<p>and then a couple of functional changes are needed as well to implement
+irq-flags-tracing support:</p>
+<ul class="simple">
+<li><p>in lowlevel entry code add (build-conditional) calls to the
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">trace_hardirqs_off()</span></code>/<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">trace_hardirqs_on()</span></code> functions. The lock validator
+closely guards whether the 'real' irq-flags matches the 'virtual'
+irq-flags state, and complains loudly (and turns itself off) if the
+two do not match. Usually most of the time for arch support for
+irq-flags-tracing is spent in this state: look at the lockdep
+complaint, try to figure out the assembly code we did not cover yet,
+fix and repeat. Once the system has booted up and works without a
+lockdep complaint in the irq-flags-tracing functions arch support is
+complete.</p></li>
+<li><p>if the architecture has non-maskable interrupts then those need to be
+excluded from the irq-tracing [and lock validation] mechanism via
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">lockdep_off()</span></code>/<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">lockdep_on()</span></code>.</p></li>
+</ul>
+<p>In general there is no risk from having an incomplete irq-flags-tracing
+implementation in an architecture: lockdep will detect that and will
+turn itself off. I.e. the lock validator will still be reliable. There
+should be no crashes due to irq-tracing bugs. (except if the assembly
+changes break other code by modifying conditions or registers that
+shouldn't be)</p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/core-api/irq/irqflags-tracing.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
