@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-02-16 08:44+0000\n"
+"POT-Creation-Date: 2026-11-02 17:56+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -33,100 +33,214 @@ msgstr ""
 msgid "2014 Intel Corp., Rafael J. Wysocki <rafael.j.wysocki@intel.com>"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:12
+#: ../../../power/runtime_pm.rst:14
 msgid "1. Introduction"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:14
+#: ../../../power/runtime_pm.rst:16
 msgid ""
-"Support for runtime power management (runtime PM) of I/O devices is provided "
-"at the power management core (PM core) level by means of:"
+"Runtime power management (or runtime PM, sometimes also referred to as RPM) "
+"allows individual I/O devices that are not in active use to be put into low-"
+"power states, in which they may not be operational or even accessible, and "
+"go back to the fully operational state as needed.  Power can be reduced this "
+"way without waiting for a transition into a system-wide sleep state."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:17
-msgid ""
-"The power management workqueue pm_wq in which bus types and device drivers "
-"can put their PM-related work items.  It is strongly recommended that pm_wq "
-"be used for queuing all work items related to runtime PM, because this "
-"allows them to be synchronized with system-wide power transitions (suspend "
-"to RAM, hibernation and resume from system sleep states).  pm_wq is declared "
-"in include/linux/pm_runtime.h and defined in kernel/power/main.c."
+#: ../../../power/runtime_pm.rst:23
+msgid "Core Concepts"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:24
+#: ../../../power/runtime_pm.rst:25
 msgid ""
-"A number of runtime PM fields in the 'power' member of 'struct "
-"device' (which is of the type 'struct dev_pm_info', defined in include/linux/"
-"pm.h) that can be used for synchronizing runtime PM operations with one "
-"another."
+"Runtime PM operates around a few device-level concepts — whether a device is "
+"**active** or **suspended**; whether runtime PM is **enabled** or "
+"**disabled**; whether runtime PM is **allowed** or **forbidden**; and "
+"whether a device is **in use**."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:28
+#: ../../../power/runtime_pm.rst:30
+msgid ""
+"**Active**: Runtime PM tracks whether or not devices are in active use, "
+"which generally means that they are accessible and operational, and may be "
+"depended on by something (for example, other devices or user space).  This "
+"is represented by the **active** meta-state.  By contrast, the **suspended** "
+"meta-state represents a promise that the given device will not be accessed. "
+"This covers devices in low-power states, but it also may include devices "
+"that are not fully operational.  There are also two transient meta-states, "
+"**suspending** and **resuming**, representing transitions between **active** "
+"and **suspended** often referred to as *runtime suspend* and *runtime "
+"resume*, or just *suspend* and *resume*, respectively.  Every device handled "
+"by runtime PM is in one of these four meta-states at any time, and its meta-"
+"state is expected to reflect its actual physical configuration (that is, for "
+"instance, if the device is not accessible, it must not be **active**). The "
+"term \"runtime PM status\" used in what follows refers to the meta-states "
+"described above."
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:46
+msgid ""
+"**Enabled**: In order to track the runtime PM status and carry out "
+"transitions between **active** and **suspended**, runtime PM needs to be "
+"**enabled** for the given device.  If it is **disabled**, runtime PM "
+"generally leaves the device alone.  This means in particular that the "
+"runtime PM status of a device and its actual physical configuration may get "
+"out of sync after disabling runtime PM for it.  Additionally, the runtime PM "
+"status of a device may need to be explicitly adjusted to reflect its current "
+"physical configuration before enabling runtime PM for it (e.g., during "
+"device probe).  Once runtime PM is **enabled**, it begins managing PM status "
+"— performing *runtime suspend* and *runtime resume* transitions based on its "
+"understanding of whether a device is in use."
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:58
+msgid ""
+"As a rule, all devices are initialized with runtime PM **disabled**, though "
+"some bus types (such as PCI) manage some RPM initialization automatically, "
+"and therefore probe devices in an **enabled** state.  For other devices, "
+"drivers must enable runtime PM on their own to opt in."
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:63
+msgid ""
+"**Allowed**: Runtime PM may be **forbidden** even though it has been "
+"enabled. Doing so causes the given device to transition into the **active** "
+"meta-state and prevents it from being suspended.  In other words, a device "
+"with forbidden runtime PM remains **active** at least until runtime PM is "
+"**allowed** for it again.  This mechanism can be managed by in-kernel APIs, "
+"but more importantly, it is also available to user space via the ``/sys/"
+"devices/.../power/control`` sysfs attribute of the given device. Namely, "
+"writing ``on`` to that attribute forbids runtime PM, and writing ``auto`` "
+"allows it.  User space may modify that attribute at any time, so the ability "
+"to transition a device into the **suspended** meta-state via runtime PM must "
+"not be relied on for correctness."
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:75
+msgid ""
+"**In use**: Runtime PM determines whether a device should be transitioned to "
+"an **active** state by its understanding of whether a device is in use.  The "
+"first way a device is considered **in use** is by its own usage count — a "
+"reference counter driven by a variety of get()/put() APIs.  Additionally, a "
+"device may be considered **in use** by having active dependents — either "
+"child devices, or device-linked consumers.  When a device is no longer in "
+"use, runtime PM may choose to transition it to the **suspended** state."
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:83
+msgid ""
+"Thus, when a device moves from **suspended** to **active**, it may also "
+"cause its dependencies to resume, unless they are **active** already.  "
+"Conversely, suspending a device may also cause its otherwise-unused "
+"dependencies to suspend."
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:88
+msgid ""
+"**Autosuspend**: Runtime PM also supports a feature called \"autosuspend.\" "
+"This is different than the ``control`` notion of \"auto\" (i.e., "
+"**allowed**). Autosuspend is covered in `Section 9`_."
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:93
+msgid "Implementation Structure"
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:95
+msgid ""
+"Support for runtime power management is provided at the power management "
+"core (PM core) level by means of:"
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:98
 msgid ""
 "Three device runtime PM callbacks in 'struct dev_pm_ops' (defined in include/"
-"linux/pm.h)."
+"linux/pm.h). See `Section 2`_."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:31
+#: ../../../power/runtime_pm.rst:101
+msgid ""
+"A number of runtime PM fields in the 'power' member of 'struct device' that "
+"can be used for synchronizing runtime PM operations with one another. These "
+"are covered in `Section 3`_."
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:105
 msgid ""
 "A set of helper functions defined in drivers/base/power/runtime.c that can "
 "be used for carrying out runtime PM operations in such a way that the "
-"synchronization between them is taken care of by the PM core.  Bus types and "
-"device drivers are encouraged to use these functions."
+"synchronization between them is taken care of by the PM core. Bus types and "
+"device drivers are encouraged to use these functions. They are covered in "
+"`Section 4`_."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:36
+#: ../../../power/runtime_pm.rst:111
 msgid ""
-"The runtime PM callbacks present in 'struct dev_pm_ops', the device runtime "
-"PM fields of 'struct dev_pm_info' and the core helper functions provided for "
-"runtime PM are described below."
+"The power management workqueue pm_wq in which bus types and device drivers "
+"can put their PM-related work items. It is strongly recommended that pm_wq "
+"be used for queuing all work items related to runtime PM, because this "
+"allows them to be synchronized with system-wide power transitions (suspend "
+"to RAM, hibernation and resume from system sleep states). pm_wq is declared "
+"in include/linux/pm_runtime.h and defined in kernel/power/main.c."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:41
+#: ../../../power/runtime_pm.rst:121
 msgid "2. Device Runtime PM Callbacks"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:43
+#: ../../../power/runtime_pm.rst:123
 msgid ""
 "There are three device runtime PM callbacks defined in 'struct dev_pm_ops'::"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:53
+#: ../../../power/runtime_pm.rst:133
+msgid ""
+"Most device drivers only need to implement ->runtime_suspend() and "
+"->runtime_resume(). The ->runtime_idle() callback is optional and rarely "
+"implemented by peripheral device drivers, as the PM core automatically "
+"handles suspension and autosuspend when ->runtime_idle() is omitted (or "
+"returns 0)."
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:139
+msgid "Subsystem and Driver Callbacks"
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:141
 msgid ""
 "The ->runtime_suspend(), ->runtime_resume() and ->runtime_idle() callbacks "
 "are executed by the PM core for the device's subsystem that may be either of "
 "the following:"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:57
+#: ../../../power/runtime_pm.rst:145
 msgid ""
 "PM domain of the device, if the device's PM domain object, dev->pm_domain, "
 "is present."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:60
+#: ../../../power/runtime_pm.rst:148
 msgid ""
 "Device type of the device, if both dev->type and dev->type->pm are present."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:62
+#: ../../../power/runtime_pm.rst:150
 msgid ""
 "Device class of the device, if both dev->class and dev->class->pm are "
 "present."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:65
+#: ../../../power/runtime_pm.rst:153
 msgid "Bus type of the device, if both dev->bus and dev->bus->pm are present."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:67
+#: ../../../power/runtime_pm.rst:155
 msgid ""
 "If the subsystem chosen by applying the above rules doesn't provide the "
 "relevant callback, the PM core will invoke the corresponding driver callback "
 "stored in dev->driver->pm directly (if present)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:71
+#: ../../../power/runtime_pm.rst:159
 msgid ""
 "The PM core always checks which callback to use in the order given above, so "
 "the priority order of callbacks from high to low is: PM domain, device type, "
@@ -136,30 +250,35 @@ msgid ""
 "follows."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:77
+#: ../../../power/runtime_pm.rst:165
 msgid ""
 "By default, the callbacks are always invoked in process context with "
 "interrupts enabled.  However, the pm_runtime_irq_safe() helper function can "
-"be used to tell the PM core that it is safe to run the ->runtime_suspend(), -"
-">runtime_resume() and ->runtime_idle() callbacks for the given device in "
+"be used to tell the PM core that it is safe to run the ->runtime_suspend(), "
+"->runtime_resume() and ->runtime_idle() callbacks for the given device in "
 "atomic context with interrupts disabled.  This implies that the callback "
 "routines in question must not block or sleep, but it also means that the "
-"synchronous helper functions listed at the end of Section 4 may be used for "
-"that device within an interrupt handler or generally in an atomic context."
+"synchronous helper functions listed at the end of `Section 4`_ may be used "
+"for that device within an interrupt handler or generally in an atomic "
+"context."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:86
+#: ../../../power/runtime_pm.rst:175
+msgid "Callback Semantics"
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:177
 msgid ""
 "The subsystem-level suspend callback, if present, is _entirely_ "
 "_responsible_ for handling the suspend of the device as appropriate, which "
-"may, but need not include executing the device driver's own -"
-">runtime_suspend() callback (from the PM core's point of view it is not "
+"may, but need not include executing the device driver's own "
+"->runtime_suspend() callback (from the PM core's point of view it is not "
 "necessary to implement a ->runtime_suspend() callback in a device driver as "
 "long as the subsystem-level suspend callback knows what to do to handle the "
 "device)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:93
+#: ../../../power/runtime_pm.rst:184
 msgid ""
 "Once the subsystem-level suspend callback (or the driver suspend callback, "
 "if invoked directly) has completed successfully for the given device, the PM "
@@ -171,46 +290,46 @@ msgid ""
 "'suspended'."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:102
+#: ../../../power/runtime_pm.rst:193
 msgid ""
 "If the suspend callback returns -EBUSY or -EAGAIN, the device's runtime PM "
 "status remains 'active', which means that the device _must_ be fully "
 "operational afterwards."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:106
+#: ../../../power/runtime_pm.rst:197
 msgid ""
-"If the suspend callback returns an error code different from -EBUSY and -"
-"EAGAIN, the PM core regards this as a fatal error and will refuse to run the "
-"helper functions described in Section 4 for the device until its status is "
-"directly set to  either 'active', or 'suspended' (the PM core provides "
-"special helper functions for this purpose)."
+"If the suspend callback returns an error code different from -EBUSY and "
+"-EAGAIN, the PM core regards this as a fatal error and will refuse to run "
+"the helper functions described in `Section 4`_ for the device until its "
+"status is directly set to  either 'active', or 'suspended' (the PM core "
+"provides special helper functions for this purpose)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:112
+#: ../../../power/runtime_pm.rst:203
 msgid ""
 "In particular, if the driver requires remote wakeup capability (i.e. "
 "hardware mechanism allowing the device to request a change of its power "
 "state, such as PCI PME) for proper functioning and device_can_wakeup() "
-"returns 'false' for the device, then ->runtime_suspend() should return -"
-"EBUSY.  On the other hand, if device_can_wakeup() returns 'true' for the "
+"returns 'false' for the device, then ->runtime_suspend() should return "
+"-EBUSY.  On the other hand, if device_can_wakeup() returns 'true' for the "
 "device and the device is put into a low-power state during the execution of "
 "the suspend callback, it is expected that remote wakeup will be enabled for "
 "the device.  Generally, remote wakeup should be enabled for all input "
 "devices put into low-power states at run time."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:121
+#: ../../../power/runtime_pm.rst:212
 msgid ""
 "The subsystem-level resume callback, if present, is **entirely responsible** "
 "for handling the resume of the device as appropriate, which may, but need "
 "not include executing the device driver's own ->runtime_resume() callback "
-"(from the PM core's point of view it is not necessary to implement a -"
-">runtime_resume() callback in a device driver as long as the subsystem-level "
-"resume callback knows what to do to handle the device)."
+"(from the PM core's point of view it is not necessary to implement a "
+"->runtime_resume() callback in a device driver as long as the subsystem-"
+"level resume callback knows what to do to handle the device)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:128
+#: ../../../power/runtime_pm.rst:219
 msgid ""
 "Once the subsystem-level resume callback (or the driver resume callback, if "
 "invoked directly) has completed successfully, the PM core regards the device "
@@ -219,16 +338,16 @@ msgid ""
 "'active'."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:134
+#: ../../../power/runtime_pm.rst:225
 msgid ""
 "If the resume callback returns an error code, the PM core regards this as a "
-"fatal error and will refuse to run the helper functions described in Section "
-"4 for the device, until its status is directly set to either 'active', or "
-"'suspended' (by means of special helper functions provided by the PM core "
-"for this purpose)."
+"fatal error and will refuse to run the helper functions described in "
+"`Section 4`_ for the device, until its status is directly set to either "
+"'active', or 'suspended' (by means of special helper functions provided by "
+"the PM core for this purpose)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:140
+#: ../../../power/runtime_pm.rst:231
 msgid ""
 "The idle callback (a subsystem-level one, if present, or the driver one) is "
 "executed by the PM core whenever the device appears to be idle, which is "
@@ -236,7 +355,7 @@ msgid ""
 "counter of 'active' children of the device."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:145
+#: ../../../power/runtime_pm.rst:236
 msgid ""
 "If any of these counters is decreased using a helper function provided by "
 "the PM core and it turns out to be equal to zero, the other counter is "
@@ -244,7 +363,7 @@ msgid ""
 "idle callback with the device as its argument."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:150
+#: ../../../power/runtime_pm.rst:241
 msgid ""
 "The action performed by the idle callback is totally dependent on the "
 "subsystem (or driver) in question, but the expected and recommended action "
@@ -253,38 +372,49 @@ msgid ""
 "request for the device in that case.  If there is no idle callback, or if "
 "the callback returns 0, then the PM core will attempt to carry out a runtime "
 "suspend of the device, also respecting devices configured for autosuspend.  "
-"In essence this means a call to pm_runtime_autosuspend(). To prevent this "
-"(for example, if the callback routine has started a delayed suspend), the "
-"routine must return a non-zero value.  Negative error return codes are "
-"ignored by the PM core."
+"In essence this means a call to pm_runtime_autosuspend()."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:161
+#: ../../../power/runtime_pm.rst:250
 msgid ""
-"The helper functions provided by the PM core, described in Section 4, "
+"To prevent this suspension (for example, if the callback routine has "
+"scheduled a delayed suspend or determined the device cannot be idle), the "
+"routine must return a non-zero value (typically -EBUSY or -EAGAIN).  Unlike "
+"->runtime_suspend() and ->runtime_resume(), the PM core does not treat "
+"negative return codes from ->runtime_idle() as a fatal device error; any non-"
+"zero value simply stops the PM core from suspending the device."
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:258
+msgid "Core Guarantees and Synchronization Rules"
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:260
+msgid ""
+"The helper functions provided by the PM core, described in `Section 4`_, "
 "guarantee that the following constraints are met with respect to runtime PM "
 "callbacks for one device:"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:165
+#: ../../../power/runtime_pm.rst:264
 msgid ""
-"The callbacks are mutually exclusive (e.g. it is forbidden to execute -"
-">runtime_suspend() in parallel with ->runtime_resume() or with another "
+"The callbacks are mutually exclusive (e.g. it is forbidden to execute "
+"->runtime_suspend() in parallel with ->runtime_resume() or with another "
 "instance of ->runtime_suspend() for the same device) with the exception that "
-"->runtime_suspend() or ->runtime_resume() can be executed in parallel with -"
-">runtime_idle() (although ->runtime_idle() will not be started while any of "
+"->runtime_suspend() or ->runtime_resume() can be executed in parallel with "
+"->runtime_idle() (although ->runtime_idle() will not be started while any of "
 "the other callbacks is being executed for the same device)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:172
+#: ../../../power/runtime_pm.rst:271
 msgid ""
 "->runtime_idle() and ->runtime_suspend() can only be executed for 'active' "
-"devices (i.e. the PM core will only execute ->runtime_idle() or -"
-">runtime_suspend() for the devices the runtime PM status of which is "
+"devices (i.e. the PM core will only execute ->runtime_idle() or "
+"->runtime_suspend() for the devices the runtime PM status of which is "
 "'active')."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:177
+#: ../../../power/runtime_pm.rst:276
 msgid ""
 "->runtime_idle() and ->runtime_suspend() can only be executed for a device "
 "the usage counter of which is equal to zero _and_ either the counter of "
@@ -292,853 +422,1910 @@ msgid ""
 "flag of which is set."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:182
+#: ../../../power/runtime_pm.rst:281
 msgid ""
 "->runtime_resume() can only be executed for 'suspended' devices  (i.e. the "
 "PM core will only execute ->runtime_resume() for the devices the runtime PM "
 "status of which is 'suspended')."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:186
+#: ../../../power/runtime_pm.rst:285
 msgid ""
 "Additionally, the helper functions provided by the PM core obey the "
 "following rules:"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:189
+#: ../../../power/runtime_pm.rst:288
 msgid ""
 "If ->runtime_suspend() is about to be executed or there's a pending request "
 "to execute it, ->runtime_idle() will not be executed for the same device."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:192
+#: ../../../power/runtime_pm.rst:291
 msgid ""
 "A request to execute or to schedule the execution of ->runtime_suspend() "
 "will cancel any pending requests to execute ->runtime_idle() for the same "
 "device."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:196
+#: ../../../power/runtime_pm.rst:295
 msgid ""
 "If ->runtime_resume() is about to be executed or there's a pending request "
 "to execute it, the other callbacks will not be executed for the same device."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:199
+#: ../../../power/runtime_pm.rst:298
 msgid ""
 "A request to execute ->runtime_resume() will cancel any pending or scheduled "
 "requests to execute the other callbacks for the same device, except for "
 "scheduled autosuspends."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:204
+#: ../../../power/runtime_pm.rst:305
 msgid "3. Runtime PM Device Fields"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:206
+#: ../../../power/runtime_pm.rst:307
 msgid ""
-"The following device runtime PM fields are present in 'struct dev_pm_info', "
-"as defined in include/linux/pm.h:"
+"Device PM fields are found in 'struct dev_pm_info', as defined in include/"
+"linux/pm.h. Many of those fields track runtime PM configuration and state."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:209
-msgid "`struct timer_list suspend_timer;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:667
+msgid "Device power management information."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:210
-msgid "timer used for scheduling (delayed) suspend and autosuspend requests"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:671
+msgid "**Definition**::"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:212
-msgid "`unsigned long timer_expires;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:740
+msgid "**Members**"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:213
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:669
+msgid "``power_state``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:670
+msgid "Legacy power state (mostly unused in modern kernels)."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:670
+msgid "``can_wakeup``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:671
+msgid "Device is capable of generating wakeup signals."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:671
+msgid "``async_suspend``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:672
+msgid "Device can be suspended and resumed asynchronously."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:672
+msgid "``in_dpm_list``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:673
+msgid "Device is on the dpm_list."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:673
+msgid "``is_prepared``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:674
+msgid "Device's ->prepare() callback has run successfully."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:674
+msgid "``is_suspended``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:675
+msgid "Device is suspended during a system sleep transition."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:675
+msgid "``is_noirq_suspended``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:676
+msgid "Device's noirq suspend callback has run successfully."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:676
+msgid "``is_late_suspended``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:677
+msgid "Device's late suspend callback has run successfully."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:677
+msgid "``no_pm``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:678
+msgid "Device does not participate in power management transitions."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:678
+msgid "``early_init``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:679
+msgid "Device was initialized before standard PM initialization."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:679
+msgid "``direct_complete``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:680
 msgid ""
-"timer expiration time, in jiffies (if this is different from zero, the timer "
-"is running and will expire at that time, otherwise the timer is not running)"
+"Device can skip suspend/resume callbacks and remain runtime-suspended during "
+"system sleep."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:217
-msgid "`struct work_struct work;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:681
+msgid "``driver_flags``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:218
-msgid "work structure used for queuing up requests (i.e. work items in pm_wq)"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:682
+msgid "Driver flags (e.g. ``DPM_FLAG_SMART_SUSPEND``) set at probe time."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:220
-msgid "`wait_queue_head_t wait_queue;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:682
+msgid "``lock``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:221
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:683
 msgid ""
-"wait queue used if any of the helper functions needs to wait for another one "
-"to complete"
+"Spinlock used for synchronizing PM state transitions and runtime PM "
+"operations."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:224
-msgid "`spinlock_t lock;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:684
+msgid "``entry``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:225
-msgid "lock used for synchronization"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:685
+msgid "List head for device power management lists."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:227
-msgid "`atomic_t usage_count;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:685
+msgid "``completion``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:228
-msgid "the usage counter of the device"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:230
-msgid "`atomic_t child_count;`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:231
-msgid "the count of 'active' children of the device"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:233
-msgid "`unsigned int ignore_children;`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:234
-msgid "if set, the value of child_count is ignored (but still updated)"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:236
-msgid "`unsigned int disable_depth;`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:237
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:686
 msgid ""
-"used for disabling the helper functions (they work normally if this is equal "
-"to zero); the initial value of it is 1 (i.e. runtime PM is initially "
-"disabled for all devices)"
+"Completion for synchronization during asynchronous system suspend/resume."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:241
-msgid "`int runtime_error;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:687
+msgid "``wakeup``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:242
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:688
+msgid "Wakeup source object associated with the device."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:688
+msgid "``work_in_progress``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:689
+msgid "Asynchronous PM operation in progress."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:689
+msgid "``wakeup_path``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:690
+msgid "Device is in the wakeup path or can wake the system up."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:690
+msgid "``syscore``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:691
+msgid "Device participates in syscore power management operations."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:691
+msgid "``no_pm_callbacks``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:692
+msgid "Device has no PM callbacks; handled by parent or subsystem."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:692
+msgid "``smart_suspend``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:693
+msgid "Driver requested smart-suspend behavior."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:693
+msgid "``must_resume``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:694
+msgid "Device must be resumed during system resume."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:694
+msgid "``may_skip_resume``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:695
+msgid "Set by subsystems to indicate driver resume callbacks may be skipped."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:696
+msgid "``out_band_wakeup``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:697
+msgid "Out-of-band wakeup is supported."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:697
+msgid "``strict_midlayer``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:698
 msgid ""
-"if set, there was a fatal error (one of the callbacks returned error code as "
-"described in Section 2), so the helper functions will not work until this "
-"flag is cleared; this is the error code returned by the failing callback"
+"Middle layer code does not want callbacks invoked via "
+"pm_runtime_force_suspend() / pm_runtime_force_resume()."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:247
-msgid "`unsigned int idle_notification;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:699
+msgid "``should_wakeup``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:248
-msgid "if set, ->runtime_idle() is being executed"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:700
+msgid "Wakeup flag when system sleep is not enabled."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:250
-msgid "`unsigned int request_pending;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:700
+msgid "``suspend_timer``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:251
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:701
 msgid ""
-"if set, there's a pending request (i.e. a work item queued up into pm_wq)"
+"High-resolution timer used for scheduling delayed runtime suspend and "
+"autosuspend requests."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:253
-msgid "`enum rpm_request request;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:702
+msgid "``timer_expires``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:254
-msgid "type of request that's pending (valid if request_pending is set)"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:703
+msgid "Timer expiration time in nanoseconds monotonic time (runtime PM)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:256
-msgid "`unsigned int deferred_resume;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:704
+msgid "``work``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:257
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:705
+msgid "Work structure used for queuing up requests into pm_wq (runtime PM)."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:705
+msgid "``wait_queue``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:706
 msgid ""
-"set if ->runtime_resume() is about to be run while ->runtime_suspend() is "
-"being executed for that device and it is not practical to wait for the "
-"suspend to complete; means \"start a resume as soon as you've suspended\""
+"Wait queue used if any helper functions need to wait for another state "
+"change to complete (runtime PM)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:261
-msgid "`enum rpm_status runtime_status;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:707
+msgid "``wakeirq``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:262
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:708
+msgid "Dedicated wakeup interrupt for the device."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:708
+msgid "``usage_count``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:709
+msgid "Device runtime PM usage counter."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:709
+msgid "``child_count``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:710
+msgid "Count of active children of the device (runtime PM)."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:710
+msgid "``disable_depth``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:711
 msgid ""
-"the runtime PM status of the device; this field's initial value is "
-"RPM_SUSPENDED, which means that each device is initially regarded by the PM "
-"core as 'suspended', regardless of its real hardware status"
+"Disable counter for runtime PM (runtime PM is enabled when this is 0; "
+"initial value is 1)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:266
-msgid "`enum rpm_status last_status;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:712
+msgid "``idle_notification``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:267
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:713
+msgid "Set if ->runtime_idle() is being executed."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:713
+msgid "``request_pending``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:714
+msgid "Set if a work item is queued into pm_wq (runtime PM)."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:714
+msgid "``deferred_resume``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:715
 msgid ""
-"the last runtime PM status of the device captured before disabling runtime "
-"PM for it (invalid initially and when disable_depth is 0)"
+"Set if ->runtime_resume() should run as soon as ->runtime_suspend() "
+"completes."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:270
-msgid "`unsigned int runtime_auto;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:716
+msgid "``needs_force_resume``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:271
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:717
 msgid ""
-"if set, indicates that the user space has allowed the device driver to power "
-"manage the device at run time via the /sys/devices/.../power/control "
-"`interface;` it may only be modified with the help of the pm_runtime_allow() "
-"and pm_runtime_forbid() helper functions"
+"Indicates the device was forced into suspend by pm_runtime_force_suspend() "
+"and must be resumed by pm_runtime_force_resume()."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:276
-msgid "`unsigned int no_callbacks;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:719
+msgid "``runtime_auto``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:277
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:720
 msgid ""
-"indicates that the device does not use the runtime PM callbacks (see Section "
-"8); it may be modified only by the pm_runtime_no_callbacks() helper function"
+"User space has allowed the driver to power manage the device at runtime via "
+"sysfs control attribute; also can be set by pm_runtime_allow() or "
+"pm_runtime_forbid()."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:281
-msgid "`unsigned int irq_safe;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:722
+msgid "``ignore_children``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:282
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:723
 msgid ""
-"indicates that the ->runtime_suspend() and ->runtime_resume() callbacks will "
-"be invoked with the spinlock held and interrupts disabled"
+"If set, the value of child_count is ignored for runtime suspend and idle "
+"decisions."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:285
-msgid "`unsigned int use_autosuspend;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:724
+msgid "``no_callbacks``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:286
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:725
+msgid "Indicates the device does not use runtime PM callbacks."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:725
+msgid "``irq_safe``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:726
 msgid ""
-"indicates that the device's driver supports delayed autosuspend (see Section "
-"9); it may be modified only by the pm_runtime{_dont}_use_autosuspend() "
-"helper functions"
+"Indicates runtime PM callbacks will be invoked with the spinlock held and "
+"interrupts disabled."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:290
-msgid "`unsigned int timer_autosuspends;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:727
+msgid "``use_autosuspend``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:291
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:728
+msgid "Indicates the device driver supports delayed runtime autosuspend."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:729
+msgid "``timer_autosuspends``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:730
 msgid ""
-"indicates that the PM core should attempt to carry out an autosuspend when "
-"the timer expires rather than a normal suspend"
+"Indicates the runtime PM core should attempt an autosuspend rather than a "
+"normal suspend when the timer expires."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:294
-msgid "`int autosuspend_delay;`"
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:731
+msgid "``memalloc_noio``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:295
-msgid "the delay time (in milliseconds) to be used for autosuspend"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:297
-msgid "`unsigned long last_busy;`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:298
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:732
 msgid ""
-"the time (in jiffies) when the pm_runtime_mark_last_busy() helper function "
-"was last called for this device; used in calculating inactivity periods for "
-"autosuspend"
+"Indicates memory allocation during runtime PM transitions must avoid I/O "
+"(GFP_NOIO)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:302
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:733
+msgid "``links_count``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:734
+msgid "Number of device links that require runtime PM coordination."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:734
+msgid "``request``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:735
+msgid "Type of pending runtime PM request (valid if request_pending is set)."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:736
+msgid "``runtime_status``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:737
+msgid "Runtime PM status of the device."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:737
+msgid "``last_status``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:738
 msgid ""
-"All of the above fields are members of the 'power' member of 'struct device'."
+"Last status captured before disabling runtime PM, or ``RPM_BLOCKED`` / "
+"``RPM_INVALID``."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:305
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:739
+msgid "``runtime_error``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:740
+msgid ""
+"Fatal error code returned by a failing callback, blocking helpers until "
+"cleared."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:741
+msgid "``autosuspend_delay``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:742
+msgid "Delay time in milliseconds to be used for runtime autosuspend."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:743
+msgid "``last_busy``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:744
+msgid ""
+"Timestamp in nanoseconds when pm_runtime_mark_last_busy() was last called. "
+"Used in calculating inactivity periods for autosuspend."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:745
+msgid "``active_time``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:746
+msgid "Accumulated time in nanoseconds spent in ``RPM_ACTIVE`` state."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:746
+msgid "``suspended_time``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:747
+msgid "Accumulated time in nanoseconds spent in ``RPM_SUSPENDED`` state."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:748
+msgid "``accounting_timestamp``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:749
+msgid ""
+"Timestamp in nanoseconds of the last runtime PM state accounting update."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:750
+msgid "``subsys_data``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:751
+msgid "Subsystem-specific power management data."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:751
+msgid "``set_latency_tolerance``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:752
+msgid "Callback for setting latency tolerance."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:752
+msgid "``qos``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:753
+msgid "Per-device PM Quality of Service (QoS) constraints."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:753
+msgid "``detach_power_off``"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:754
+msgid "Indicates device should be detached from PM domain on power off."
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:758
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:169
+#: ../drivers/base/power/runtime.c:208 ../drivers/base/power/runtime.c:1109
+#: ../drivers/base/power/runtime.c:1146 ../drivers/base/power/runtime.c:1183
+#: ../drivers/base/power/runtime.c:1260 ../drivers/base/power/runtime.c:1278
+#: ../drivers/base/power/runtime.c:1299 ../drivers/base/power/runtime.c:1470
+#: ../drivers/base/power/runtime.c:1563 ../drivers/base/power/runtime.c:1669
+#: ../drivers/base/power/runtime.c:1695 ../drivers/base/power/runtime.c:1727
+#: ../drivers/base/power/runtime.c:1745 ../drivers/base/power/runtime.c:1807
+#: ../drivers/base/power/runtime.c:1829 ../drivers/base/power/runtime.c:2012
+#: ../drivers/base/power/runtime.c:2072 ../../../power/runtime_pm:325:
+#: ../include/linux/pm_runtime.h:107 ../include/linux/pm_runtime.h:129
+#: ../include/linux/pm_runtime.h:140 ../include/linux/pm_runtime.h:159
+#: ../include/linux/pm_runtime.h:178 ../include/linux/pm_runtime.h:195
+#: ../include/linux/pm_runtime.h:212 ../include/linux/pm_runtime.h:240
+#: ../include/linux/pm_runtime.h:358 ../include/linux/pm_runtime.h:407
+#: ../include/linux/pm_runtime.h:448 ../include/linux/pm_runtime.h:471
+#: ../include/linux/pm_runtime.h:488 ../include/linux/pm_runtime.h:513
+#: ../include/linux/pm_runtime.h:530 ../include/linux/pm_runtime.h:565
+#: ../include/linux/pm_runtime.h:581 ../include/linux/pm_runtime.h:594
+#: ../include/linux/pm_runtime.h:619 ../include/linux/pm_runtime.h:692
+#: ../include/linux/pm_runtime.h:724 ../include/linux/pm_runtime.h:757
+#: ../include/linux/pm_runtime.h:790 ../include/linux/pm_runtime.h:813
+#: ../include/linux/pm_runtime.h:833 ../include/linux/pm_runtime.h:854
+#: ../include/linux/pm_runtime.h:871 ../../../power/runtime_pm:549:
+#: ../drivers/base/power/generic_ops.c:23
+#: ../drivers/base/power/generic_ops.c:37
+msgid "**Description**"
+msgstr ""
+
+#: ../../../power/runtime_pm:311: ../include/linux/pm.h:755
+msgid ""
+"Device power management information stored in the \"power\" member of struct "
+"device."
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:317
 msgid "4. Runtime PM Device Helper Functions"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:307
+#: ../../../power/runtime_pm.rst:319
 msgid ""
 "The following runtime PM helper functions are defined in drivers/base/power/"
 "runtime.c and include/linux/pm_runtime.h:"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:310
-msgid "`void pm_runtime_init(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:166
+msgid "Get a device's autosuspend-delay expiration time."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:311
-msgid "initialize the device runtime PM fields in 'struct dev_pm_info'"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:170
+#: ../drivers/base/power/runtime.c:208 ../drivers/base/power/runtime.c:1048
+#: ../drivers/base/power/runtime.c:1109 ../drivers/base/power/runtime.c:1146
+#: ../drivers/base/power/runtime.c:1183 ../drivers/base/power/runtime.c:1261
+#: ../drivers/base/power/runtime.c:1279 ../drivers/base/power/runtime.c:1299
+#: ../drivers/base/power/runtime.c:1471 ../drivers/base/power/runtime.c:1564
+#: ../drivers/base/power/runtime.c:1612 ../drivers/base/power/runtime.c:1638
+#: ../drivers/base/power/runtime.c:1658 ../drivers/base/power/runtime.c:1670
+#: ../drivers/base/power/runtime.c:1696 ../drivers/base/power/runtime.c:1728
+#: ../drivers/base/power/runtime.c:1746 ../drivers/base/power/runtime.c:1807
+#: ../drivers/base/power/runtime.c:1829 ../drivers/base/power/runtime.c:2013
+#: ../drivers/base/power/runtime.c:2073 ../../../power/runtime_pm:325:
+#: ../include/linux/pm_runtime.h:107 ../include/linux/pm_runtime.h:121
+#: ../include/linux/pm_runtime.h:130 ../include/linux/pm_runtime.h:141
+#: ../include/linux/pm_runtime.h:160 ../include/linux/pm_runtime.h:179
+#: ../include/linux/pm_runtime.h:196 ../include/linux/pm_runtime.h:213
+#: ../include/linux/pm_runtime.h:228 ../include/linux/pm_runtime.h:241
+#: ../include/linux/pm_runtime.h:253 ../include/linux/pm_runtime.h:359
+#: ../include/linux/pm_runtime.h:385 ../include/linux/pm_runtime.h:407
+#: ../include/linux/pm_runtime.h:435 ../include/linux/pm_runtime.h:449
+#: ../include/linux/pm_runtime.h:472 ../include/linux/pm_runtime.h:489
+#: ../include/linux/pm_runtime.h:514 ../include/linux/pm_runtime.h:531
+#: ../include/linux/pm_runtime.h:566 ../include/linux/pm_runtime.h:582
+#: ../include/linux/pm_runtime.h:595 ../include/linux/pm_runtime.h:619
+#: ../include/linux/pm_runtime.h:693 ../include/linux/pm_runtime.h:725
+#: ../include/linux/pm_runtime.h:757 ../include/linux/pm_runtime.h:791
+#: ../include/linux/pm_runtime.h:814 ../include/linux/pm_runtime.h:834
+#: ../include/linux/pm_runtime.h:855 ../include/linux/pm_runtime.h:872
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:24
+#: ../drivers/base/power/generic_ops.c:38
+#: ../drivers/base/power/generic_ops.c:71
+#: ../drivers/base/power/generic_ops.c:81
+#: ../drivers/base/power/generic_ops.c:91
+#: ../drivers/base/power/generic_ops.c:101
+#: ../drivers/base/power/generic_ops.c:111
+#: ../drivers/base/power/generic_ops.c:121
+#: ../drivers/base/power/generic_ops.c:131
+#: ../drivers/base/power/generic_ops.c:141
+#: ../drivers/base/power/generic_ops.c:151
+#: ../drivers/base/power/generic_ops.c:161
+#: ../drivers/base/power/generic_ops.c:171
+#: ../drivers/base/power/generic_ops.c:181
+#: ../drivers/base/power/generic_ops.c:191
+#: ../drivers/base/power/generic_ops.c:201
+#: ../drivers/base/power/generic_ops.c:211
+#: ../drivers/base/power/generic_ops.c:221
+msgid "**Parameters**"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:313
-msgid "`void pm_runtime_remove(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:172
+#: ../drivers/base/power/runtime.c:210 ../drivers/base/power/runtime.c:1050
+#: ../drivers/base/power/runtime.c:1111 ../drivers/base/power/runtime.c:1148
+#: ../drivers/base/power/runtime.c:1185 ../drivers/base/power/runtime.c:1263
+#: ../drivers/base/power/runtime.c:1281 ../drivers/base/power/runtime.c:1301
+#: ../drivers/base/power/runtime.c:1473 ../drivers/base/power/runtime.c:1566
+#: ../drivers/base/power/runtime.c:1614 ../drivers/base/power/runtime.c:1640
+#: ../drivers/base/power/runtime.c:1660 ../drivers/base/power/runtime.c:1672
+#: ../drivers/base/power/runtime.c:1698 ../drivers/base/power/runtime.c:1730
+#: ../drivers/base/power/runtime.c:1748 ../drivers/base/power/runtime.c:1809
+#: ../drivers/base/power/runtime.c:1831 ../drivers/base/power/runtime.c:2015
+#: ../drivers/base/power/runtime.c:2075 ../../../power/runtime_pm:325:
+#: ../include/linux/pm_runtime.h:109 ../include/linux/pm_runtime.h:123
+#: ../include/linux/pm_runtime.h:132 ../include/linux/pm_runtime.h:143
+#: ../include/linux/pm_runtime.h:162 ../include/linux/pm_runtime.h:181
+#: ../include/linux/pm_runtime.h:198 ../include/linux/pm_runtime.h:215
+#: ../include/linux/pm_runtime.h:230 ../include/linux/pm_runtime.h:243
+#: ../include/linux/pm_runtime.h:255 ../include/linux/pm_runtime.h:361
+#: ../include/linux/pm_runtime.h:387 ../include/linux/pm_runtime.h:409
+#: ../include/linux/pm_runtime.h:437 ../include/linux/pm_runtime.h:451
+#: ../include/linux/pm_runtime.h:474 ../include/linux/pm_runtime.h:491
+#: ../include/linux/pm_runtime.h:516 ../include/linux/pm_runtime.h:533
+#: ../include/linux/pm_runtime.h:568 ../include/linux/pm_runtime.h:584
+#: ../include/linux/pm_runtime.h:597 ../include/linux/pm_runtime.h:621
+#: ../include/linux/pm_runtime.h:695 ../include/linux/pm_runtime.h:727
+#: ../include/linux/pm_runtime.h:759 ../include/linux/pm_runtime.h:793
+#: ../include/linux/pm_runtime.h:816 ../include/linux/pm_runtime.h:836
+#: ../include/linux/pm_runtime.h:857 ../include/linux/pm_runtime.h:874
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:26
+#: ../drivers/base/power/generic_ops.c:40
+#: ../drivers/base/power/generic_ops.c:73
+#: ../drivers/base/power/generic_ops.c:83
+#: ../drivers/base/power/generic_ops.c:93
+#: ../drivers/base/power/generic_ops.c:103
+#: ../drivers/base/power/generic_ops.c:113
+#: ../drivers/base/power/generic_ops.c:123
+#: ../drivers/base/power/generic_ops.c:133
+#: ../drivers/base/power/generic_ops.c:143
+#: ../drivers/base/power/generic_ops.c:153
+#: ../drivers/base/power/generic_ops.c:163
+#: ../drivers/base/power/generic_ops.c:173
+#: ../drivers/base/power/generic_ops.c:183
+#: ../drivers/base/power/generic_ops.c:193
+#: ../drivers/base/power/generic_ops.c:203
+#: ../drivers/base/power/generic_ops.c:213
+#: ../drivers/base/power/generic_ops.c:223
+msgid "``struct device *dev``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:314
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:167
+#: ../drivers/base/power/runtime.c:205 ../drivers/base/power/runtime.c:1296
+#: ../drivers/base/power/runtime.c:1468 ../drivers/base/power/runtime.c:1561
+#: ../drivers/base/power/runtime.c:1609 ../drivers/base/power/runtime.c:1635
+#: ../drivers/base/power/runtime.c:1655 ../drivers/base/power/runtime.c:1667
+#: ../drivers/base/power/runtime.c:1693 ../drivers/base/power/runtime.c:1725
+#: ../drivers/base/power/runtime.c:1804 ../drivers/base/power/runtime.c:1826
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:118
+#: ../drivers/base/power/generic_ops.c:128
+#: ../drivers/base/power/generic_ops.c:138
+msgid "Device to handle."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:168
 msgid ""
-"make sure that the runtime PM of the device will be disabled after removing "
-"the device from device hierarchy"
+"Compute the autosuspend-delay expiration time based on the device's "
+"power.last_busy time.  If the delay has already expired or is disabled "
+"(negative) or the power.use_autosuspend flag isn't set, return 0. Otherwise "
+"return the expiration time in nanoseconds."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:317
-msgid "`int pm_runtime_idle(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:318
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:173
 msgid ""
-"execute the subsystem-level idle callback for the device; returns an error "
-"code on failure, where -EINPROGRESS means that ->runtime_idle() is already "
-"being executed; if there is no callback or the callback returns 0 then run "
-"pm_runtime_autosuspend(dev) and return its result"
+"This function may be called either with or without dev->power.lock held. "
+"Either way it can be racy, since power.last_busy may be updated at any time."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:323
-msgid "`int pm_runtime_suspend(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:204
+msgid "Set a device's memalloc_noio flag."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:324
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:207
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:106
+msgid "``bool enable``"
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:206
+msgid "True for setting the flag and False for clearing the flag."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:207
 msgid ""
-"execute the subsystem-level suspend callback for the device; returns 0 on "
-"success, 1 if the device's runtime PM status was already 'suspended', or "
-"error code on failure, where -EAGAIN or -EBUSY means it is safe to attempt "
-"to suspend the device again in future and -EACCES means that 'power."
-"disable_depth' is different from 0"
+"Set the flag for all devices in the path from the device to the root device "
+"in the device tree if **enable** is true, otherwise clear the flag for "
+"devices in the path whose siblings don't set the flag."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:330
-msgid "`int pm_runtime_autosuspend(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:331
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:211
 msgid ""
-"same as pm_runtime_suspend() except that a call to "
-"pm_runtime_mark_last_busy() is made and an autosuspend is scheduled for the "
-"appropriate time and 0 is returned"
+"The function should only be called by block device, or network device driver "
+"for solving the deadlock problem during runtime resume/suspend:"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:335
-msgid "`int pm_runtime_resume(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:336
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:215
 msgid ""
-"execute the subsystem-level resume callback for the device; returns 0 on "
-"success, 1 if the device's runtime PM status is already 'active' (also if "
-"'power.disable_depth' is nonzero, but the status was 'active' when it was "
-"changing from 0 to 1) or error code on failure, where -EAGAIN means it may "
-"be safe to attempt to resume the device again in future, but 'power."
-"runtime_error' should be checked additionally, and -EACCES means that the "
-"callback could not be run, because 'power.disable_depth' was different from 0"
+"If memory allocation with GFP_KERNEL is called inside runtime resume/suspend "
+"callback of any one of its ancestors(or the block device itself), the "
+"deadlock may be triggered inside the memory allocation since it might not "
+"complete until the block device becomes active and the involved page I/O "
+"finishes. The situation is pointed out first by Alan Stern. Network device "
+"are involved in iSCSI kind of situation."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:345
-msgid "`int pm_runtime_resume_and_get(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:346
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:223
 msgid ""
-"run pm_runtime_resume(dev) and if successful, increment the device's usage "
-"counter; returns 0 on success (whether or not the device's runtime PM status "
-"was already 'active') or the error code from pm_runtime_resume() on failure."
+"The lock of dev_hotplug_mutex is held in the function for handling hotplug "
+"race because pm_runtime_set_memalloc_noio() may be called in async probe()."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:351
-msgid "`int pm_request_idle(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:352
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:227
 msgid ""
-"submit a request to execute the subsystem-level idle callback for the device "
-"(the request is represented by a work item in pm_wq); returns 0 on success "
-"or error code if the request has not been queued up"
+"The function should be called between device_add() and device_del() on the "
+"affected device(block/network device)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:356
-msgid "`int pm_request_autosuspend(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1044
+msgid "Set up a timer to submit a suspend request in future."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:357
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1045
+#: ../drivers/base/power/runtime.c:1143 ../drivers/base/power/runtime.c:2010
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:21
+#: ../drivers/base/power/generic_ops.c:68
+#: ../drivers/base/power/generic_ops.c:78
+#: ../drivers/base/power/generic_ops.c:88
+msgid "Device to suspend."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1047
+msgid "``unsigned int delay``"
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1046
+msgid "Time to wait before submitting a suspend request, in milliseconds."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1048
+#: ../drivers/base/power/runtime.c:1262 ../drivers/base/power/runtime.c:1282
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:144
+#: ../include/linux/pm_runtime.h:163 ../include/linux/pm_runtime.h:181
+#: ../include/linux/pm_runtime.h:198 ../include/linux/pm_runtime.h:213
+#: ../include/linux/pm_runtime.h:227 ../include/linux/pm_runtime.h:252
+#: ../include/linux/pm_runtime.h:361 ../include/linux/pm_runtime.h:384
+#: ../include/linux/pm_runtime.h:410 ../include/linux/pm_runtime.h:434
+#: ../include/linux/pm_runtime.h:450 ../include/linux/pm_runtime.h:473
+#: ../include/linux/pm_runtime.h:490 ../include/linux/pm_runtime.h:515
+#: ../include/linux/pm_runtime.h:537 ../include/linux/pm_runtime.h:567
+#: ../include/linux/pm_runtime.h:596 ../include/linux/pm_runtime.h:622
+#: ../include/linux/pm_runtime.h:701 ../include/linux/pm_runtime.h:733
+#: ../include/linux/pm_runtime.h:765 ../include/linux/pm_runtime.h:799
+#: ../include/linux/pm_runtime.h:819
+msgid "**Return**"
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1048
+msgid "``1``: Success; **dev** is already ``RPM_SUSPENDED``."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1049
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:362
+#: ../include/linux/pm_runtime.h:385 ../include/linux/pm_runtime.h:412
+#: ../include/linux/pm_runtime.h:435 ../include/linux/pm_runtime.h:451
+#: ../include/linux/pm_runtime.h:475 ../include/linux/pm_runtime.h:492
+#: ../include/linux/pm_runtime.h:539 ../include/linux/pm_runtime.h:598
+#: ../include/linux/pm_runtime.h:624 ../include/linux/pm_runtime.h:703
+#: ../include/linux/pm_runtime.h:735 ../include/linux/pm_runtime.h:767
+#: ../include/linux/pm_runtime.h:800 ../include/linux/pm_runtime.h:820
+msgid "``0``: Success."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1050
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:436
+#: ../include/linux/pm_runtime.h:476 ../include/linux/pm_runtime.h:518
+#: ../include/linux/pm_runtime.h:540 ../include/linux/pm_runtime.h:801
+#: ../include/linux/pm_runtime.h:821
+msgid "Error code on failure."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1105
+msgid "Core entry point for runtime idle operations."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1106
+msgid "Device to send idle notification for."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1108
+#: ../drivers/base/power/runtime.c:1145 ../drivers/base/power/runtime.c:1182
+msgid "``int rpmflags``"
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1107
+#: ../drivers/base/power/runtime.c:1144 ../drivers/base/power/runtime.c:1181
+msgid "Flag bits."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1108
 msgid ""
-"Call pm_runtime_mark_last_busy() and schedule the execution of the subsystem-"
-"level suspend callback for the device when the autosuspend delay expires"
+"Carry out an idle check for **dev**, either synchronous or asynchronous. If "
+"``RPM_GET_PUT`` is set in **rpmflags**, decrement the device's usage count "
+"first, proceeding with idle notification only if the counter drops to zero."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:361
-msgid "`int pm_schedule_suspend(struct device *dev, unsigned int delay);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:362
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1112
+#: ../drivers/base/power/runtime.c:1149 ../drivers/base/power/runtime.c:1186
 msgid ""
-"schedule the execution of the subsystem-level suspend callback for the "
-"device in future, where 'delay' is the time to wait before queuing up a "
-"suspend work item in pm_wq, in milliseconds (if 'delay' is zero, the work "
-"item is queued up immediately); returns 0 on success, 1 if the device's PM "
-"runtime status was already 'suspended', or error code if the request hasn't "
-"been scheduled (or queued up if 'delay' is 0); if the execution of -"
-">runtime_suspend() is already scheduled and not yet expired, the new value "
-"of 'delay' will be used as the time to wait"
+"This routine may be called in atomic context if the ``RPM_ASYNC`` flag is "
+"set, or if pm_runtime_irq_safe() has been called."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:371
-msgid "`int pm_request_resume(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1142
+msgid "Core entry point for runtime put/suspend operations."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:372
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1145
 msgid ""
-"submit a request to execute the subsystem-level resume callback for the "
-"device (the request is represented by a work item in pm_wq); returns 0 on "
-"success, 1 if the device's runtime PM status was already 'active', or error "
-"code if the request hasn't been queued up"
+"Carry out a suspend operation for **dev**, either synchronous or "
+"asynchronous. If ``RPM_GET_PUT`` is set in **rpmflags**, decrement the "
+"device's usage count first, proceeding with suspend only if the counter "
+"drops to zero."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:377
-msgid "`void pm_runtime_get_noresume(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1179
+msgid "Core entry point for runtime resume operations."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:378
-msgid "increment the device's usage counter"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1180
+#: ../drivers/base/power/runtime.c:2070 ../../../power/runtime_pm:549:
+#: ../drivers/base/power/generic_ops.c:35
+#: ../drivers/base/power/generic_ops.c:168
+#: ../drivers/base/power/generic_ops.c:178
+#: ../drivers/base/power/generic_ops.c:188
+#: ../drivers/base/power/generic_ops.c:208
+msgid "Device to resume."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:380
-msgid "`int pm_runtime_get(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:381
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1182
 msgid ""
-"increment the device's usage counter, run pm_request_resume(dev) and return "
-"its result"
+"Carry out a runtime resume operation for **dev**, either synchronous or "
+"asynchronous. If ``RPM_GET_PUT`` is set in **rpmflags**, increment the "
+"device's usage count first, then bring the device to ``RPM_ACTIVE`` state."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:384
-msgid "`int pm_runtime_get_sync(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1257
+#: ../drivers/base/power/runtime.c:1275
+msgid "Conditionally bump up runtime PM usage counter."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:385
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1258
+#: ../drivers/base/power/runtime.c:1276 ../../../power/runtime_pm:325:
+#: ../include/linux/pm_runtime.h:104 ../include/linux/pm_runtime.h:118
+#: ../include/linux/pm_runtime.h:127 ../include/linux/pm_runtime.h:138
+#: ../include/linux/pm_runtime.h:157 ../include/linux/pm_runtime.h:176
+#: ../include/linux/pm_runtime.h:193 ../include/linux/pm_runtime.h:210
+#: ../include/linux/pm_runtime.h:225 ../include/linux/pm_runtime.h:238
+#: ../include/linux/pm_runtime.h:250 ../include/linux/pm_runtime.h:356
+#: ../include/linux/pm_runtime.h:382 ../include/linux/pm_runtime.h:405
+#: ../include/linux/pm_runtime.h:432 ../include/linux/pm_runtime.h:446
+#: ../include/linux/pm_runtime.h:469 ../include/linux/pm_runtime.h:486
+#: ../include/linux/pm_runtime.h:511 ../include/linux/pm_runtime.h:528
+#: ../include/linux/pm_runtime.h:563 ../include/linux/pm_runtime.h:579
+#: ../include/linux/pm_runtime.h:592 ../include/linux/pm_runtime.h:617
+#: ../include/linux/pm_runtime.h:690 ../include/linux/pm_runtime.h:722
+#: ../include/linux/pm_runtime.h:755 ../include/linux/pm_runtime.h:788
+#: ../include/linux/pm_runtime.h:811 ../include/linux/pm_runtime.h:831
+#: ../include/linux/pm_runtime.h:852 ../include/linux/pm_runtime.h:869
+msgid "Target device."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1259
 msgid ""
-"increment the device's usage counter, run pm_runtime_resume(dev) and return "
-"its result; note that it does not drop the device's usage counter on errors, "
-"so consider using pm_runtime_resume_and_get() instead of it, especially if "
-"its return value is checked by the caller, as this is likely to result in "
-"cleaner code."
+"Increment the runtime PM usage counter of **dev** if its runtime PM status "
+"is already ``RPM_ACTIVE``."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:392
-msgid "`int pm_runtime_get_if_in_use(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:393
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1263
+#: ../drivers/base/power/runtime.c:1283
 msgid ""
-"return -EINVAL if 'power.disable_depth' is nonzero; otherwise, if the "
-"runtime PM status is RPM_ACTIVE and the runtime PM usage counter is nonzero, "
-"increment the counter and return 1; otherwise return 0 without changing the "
-"counter"
+"``-EINVAL``: Runtime PM is disabled for **dev**. The usage counter is not "
+"incremented."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:398
-msgid "`int pm_runtime_get_if_active(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1264
+#: ../drivers/base/power/runtime.c:1284
+msgid "``1``: Success; usage counter is incremented."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:399
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1265
+msgid "``0``: **dev** was not active."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1277
 msgid ""
-"return -EINVAL if 'power.disable_depth' is nonzero; otherwise, if the "
-"runtime PM status is RPM_ACTIVE, increment the counter and return 1; "
-"otherwise return 0 without changing the counter"
+"Increment the runtime PM usage counter of **dev** if it is \"in use.\" A "
+"device is considered in use if its runtime PM status is ``RPM_ACTIVE`` and "
+"its runtime PM usage counter is greater than 0, or if it is not ignoring "
+"children and its active child count is nonzero."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:403
-msgid "`void pm_runtime_put_noidle(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1285
+msgid "``0``: **dev** was not in use; usage counter is not incremented."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:404
-msgid "decrement the device's usage counter"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1295
+msgid "Set runtime PM status of a device and clear errors."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:406
-msgid "`int pm_runtime_put(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1298
+msgid "``unsigned int status``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:407
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1297
+msgid "New runtime PM status of the device."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1298
 msgid ""
-"decrement the device's usage counter; if the result is 0 then run "
-"pm_request_idle(dev) and return its result"
+"If runtime PM of the device is disabled or its power.runtime_error field is "
+"different from zero, the status may be changed either to RPM_ACTIVE, or to "
+"RPM_SUSPENDED, as long as that reflects the actual state of the device. "
+"However, if the device has a parent and the parent is not active, and the "
+"parent's power.ignore_children flag is unset, the device's status cannot be "
+"set to RPM_ACTIVE, so -EBUSY is returned in that case."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:410
-msgid "`int pm_runtime_put_autosuspend(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:411
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1305
 msgid ""
-"set the power.last_busy field to the current time and decrement the device's "
-"usage counter; if the result is 0 then run pm_request_autosuspend(dev) and "
-"return its result"
+"If successful, __pm_runtime_set_status() clears the power.runtime_error "
+"field and the device parent's counter of unsuspended children is modified to "
+"reflect the new status.  If the new status is RPM_SUSPENDED, an idle "
+"notification request for the parent is submitted."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:415
-msgid "`int __pm_runtime_put_autosuspend(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:416
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1310
 msgid ""
-"decrement the device's usage counter; if the result is 0 then run "
-"pm_request_autosuspend(dev) and return its result"
+"If **dev** has any suppliers (as reflected by device links to them), and "
+"**status** is RPM_ACTIVE, they will be activated upfront and if the "
+"activation of one of them fails, the status of **dev** will be changed to "
+"RPM_SUSPENDED (instead of the **status** value) and the suppliers will be "
+"deactivated on exit.  The error returned by the failing supplier activation "
+"will be returned in that case."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:419
-msgid "`int pm_runtime_put_sync(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1467
+msgid "Flush pending requests and wait for completions."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:420
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1469
 msgid ""
-"decrement the device's usage counter; if the result is 0 then run "
-"pm_runtime_idle(dev) and return its result"
+"If the device has a pending resume request, resume it synchronously. For all "
+"other request types, cancel any queued request, and wait for running "
+"operations to complete."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:423
-msgid "`int pm_runtime_put_sync_suspend(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:424
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1473
 msgid ""
-"decrement the device's usage counter; if the result is 0 then run "
-"pm_runtime_suspend(dev) and return its result"
+"Note that this is intentionally asymmetric, as it guarantees any queued "
+"asynchronous resume request will complete, but it may cancel asynchronous "
+"suspend requests."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:427
-msgid "`int pm_runtime_put_sync_autosuspend(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1560
+msgid "Enable runtime PM for a device."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:428
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1562
 msgid ""
-"set the power.last_busy field to the current time and decrement the device's "
-"usage counter; if the result is 0 then run pm_runtime_autosuspend(dev) and "
-"return its result"
+"Enable runtime PM transitions for **dev** by decrementing its disable "
+"counter. Once the counter reaches zero, the PM core is permitted to execute "
+"runtime PM callbacks for **dev** as power conditions change."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:432
-msgid "`void pm_runtime_enable(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:433
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1566
 msgid ""
-"decrement the device's 'power.disable_depth' field; if that field is equal "
-"to zero, the runtime PM helper functions can execute subsystem-level "
-"callbacks described in Section 2 for the device"
+"Callers should ensure that the device's runtime PM status accurately "
+"reflects its physical hardware state (via pm_runtime_set_active() or "
+"pm_runtime_set_suspended()) before enabling runtime PM."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:437
-msgid "`int pm_runtime_disable(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1608
+msgid "set_active version of devm_pm_runtime_enable."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:438
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1634
+msgid "devres-enabled version of pm_runtime_enable."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1637
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:857
+msgid "**NOTE**"
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1637
 msgid ""
-"increment the device's 'power.disable_depth' field (if the value of that "
-"field was previously zero, this prevents subsystem-level runtime PM "
-"callbacks from being run for the device), make sure that all of the pending "
-"runtime PM operations on the device are either completed or canceled; "
-"returns 1 if there was a resume request pending and it was necessary to "
-"execute the subsystem-level resume callback for the device to satisfy that "
-"request, otherwise 0 is returned"
+"this will also handle calling pm_runtime_dont_use_autosuspend() for you at "
+"driver exit time if needed."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:446
-msgid "`void pm_runtime_barrier(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1654
+msgid "devres-enabled version of pm_runtime_get_noresume."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:447
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1666
+msgid "Block runtime PM of a device."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1668
 msgid ""
-"check if there's a resume request pending for the device and resume it "
-"(synchronously) in that case, cancel any other pending runtime PM requests "
-"regarding it and wait for all runtime PM operations on it in progress to "
-"complete"
+"Resume **dev** if already suspended and block runtime suspend of **dev** in "
+"such a way that it can be unblocked via the /sys/devices/.../power/control "
+"interface, or otherwise by calling pm_runtime_allow()."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:452
-msgid "`void pm_suspend_ignore_children(struct device *dev, bool enable);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:453
-msgid "set/unset the power.ignore_children flag of the device"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:455
-msgid "`int pm_runtime_set_active(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:456
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1672
+#: ../drivers/base/power/runtime.c:1699
 msgid ""
-"clear the device's 'power.runtime_error' flag, set the device's runtime PM "
-"status to 'active' and update its parent's counter of 'active' children as "
-"appropriate (it is only valid to use this function if 'power.runtime_error' "
-"is set or 'power.disable_depth' is greater than zero); it will fail and "
-"return error code if the device has a parent which is not active and the "
-"'power.ignore_children' flag of which is unset"
+"Calling this function many times in a row has the same effect as calling it "
+"once."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:463
-msgid "`void pm_runtime_set_suspended(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1692
+msgid "Unblock runtime PM of a device."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:464
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1694
 msgid ""
-"clear the device's 'power.runtime_error' flag, set the device's runtime PM "
-"status to 'suspended' and update its parent's counter of 'active' children "
-"as appropriate (it is only valid to use this function if 'power."
-"runtime_error' is set or 'power.disable_depth' is greater than zero)"
+"Unblock runtime suspend of **dev** after it has been blocked by "
+"pm_runtime_forbid() (for instance, if it has been blocked via the /sys/"
+"devices/.../power/control interface), check if **dev** can be suspended and "
+"suspend it in that case."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:470
-msgid "`bool pm_runtime_active(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1724
+msgid "Ignore runtime PM callbacks for a device."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:471
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1726
 msgid ""
-"return true if the device's runtime PM status is 'active' or its 'power."
-"disable_depth' field is not equal to zero, or false otherwise"
+"Set the power.no_callbacks flag, which tells the PM core that this device is "
+"power-managed through its parent and has no runtime PM callbacks of its "
+"own.  The runtime sysfs attributes will be removed."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:474
-msgid "`bool pm_runtime_suspended(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1742
+msgid "Leave interrupts disabled during callbacks."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:475
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1743
+msgid "Device to handle"
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1744
 msgid ""
-"return true if the device's runtime PM status is 'suspended' and its 'power."
-"disable_depth' field is equal to zero, or false otherwise"
+"Set the power.irq_safe flag, which tells the PM core that the "
+"->runtime_suspend() and ->runtime_resume() callbacks for this device should "
+"always be invoked with the spinlock held and interrupts disabled.  It also "
+"causes the parent's usage counter to be permanently incremented, preventing "
+"the parent from runtime suspending -- otherwise an irq-safe child might have "
+"to wait for a non-irq-safe parent."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:478
-msgid "`bool pm_runtime_status_suspended(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1803
+msgid "Set a device's autosuspend_delay value."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:479
-msgid "return true if the device's runtime PM status is 'suspended'"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1806
+msgid "``int delay``"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:481
-msgid "`void pm_runtime_no_callbacks(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1805
+msgid "Value of the new delay in milliseconds."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:482
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1806
 msgid ""
-"set the power.no_callbacks flag for the device and remove the runtime PM "
-"attributes from /sys/devices/.../power (or prevent them from being added "
-"when the device is registered)"
+"Set the device's power.autosuspend_delay value.  If it changes to negative "
+"and the power.use_autosuspend flag is set, prevent runtime suspends.  If it "
+"changes the other way, allow runtime suspends."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:486
-msgid "`void pm_runtime_irq_safe(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1825
+msgid "Set a device's use_autosuspend flag."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:487
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1828
+msgid "``bool use``"
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1827
+msgid "New value for use_autosuspend."
+msgstr ""
+
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:1828
 msgid ""
-"set the power.irq_safe flag for the device, causing the runtime-PM callbacks "
-"to be invoked with interrupts off"
+"Set the device's power.use_autosuspend flag, and allow or prevent runtime "
+"suspends as needed."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:490
-msgid "`bool pm_runtime_is_irq_safe(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:2009
+msgid "Force a device into suspend state if needed."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:491
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:2011
 msgid ""
-"return true if power.irq_safe flag was set for the device, causing the "
-"runtime-PM callbacks to be invoked with interrupts off"
+"Disable runtime PM so we safely can check the device's runtime PM status and "
+"if it is active, invoke its ->runtime_suspend callback to suspend it and "
+"change its runtime PM status field to RPM_SUSPENDED.  Also, if the device's "
+"usage and children counters don't indicate that the device was in use before "
+"the system-wide transition under way, decrement its parent's children "
+"counter (if there is a parent).  Keep runtime PM disabled to preserve the "
+"state unless we encounter errors."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:494
-msgid "`void pm_runtime_mark_last_busy(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:495
-msgid "set the power.last_busy field to the current time"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:497
-msgid "`void pm_runtime_use_autosuspend(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:498
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:2019
 msgid ""
-"set the power.use_autosuspend flag, enabling autosuspend delays; call "
-"pm_runtime_get_sync if the flag was previously cleared and power."
-"autosuspend_delay is negative"
+"Typically this function may be invoked from a system suspend callback to "
+"make sure the device is put into low power state and it should only be used "
+"during system-wide PM transitions to sleep states.  It assumes that the "
+"analogous pm_runtime_force_resume() will be used to resume the device."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:502
-msgid "`void pm_runtime_dont_use_autosuspend(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:2069
+msgid "Force a device into resume state if needed."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:503
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:2071
 msgid ""
-"clear the power.use_autosuspend flag, disabling autosuspend delays; "
-"decrement the device's usage counter if the flag was previously set and "
-"power.autosuspend_delay is negative; call pm_runtime_idle"
+"This function expects that either pm_runtime_force_suspend() has put the "
+"device into a low-power state prior to calling it, or the device had been "
+"runtime-suspended before the preceding system-wide suspend transition and it "
+"was left in suspend during that transition."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:507
-msgid "`void pm_runtime_set_autosuspend_delay(struct device *dev, int delay);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:508
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:2076
 msgid ""
-"set the power.autosuspend_delay value to 'delay' (expressed in "
-"milliseconds); if 'delay' is negative then runtime suspends are prevented; "
-"if power.use_autosuspend is set, pm_runtime_get_sync may be called or the "
-"device's usage counter may be decremented and pm_runtime_idle called "
-"depending on if power.autosuspend_delay is changed to or from a negative "
-"value; if power.use_autosuspend is clear, pm_runtime_idle is called"
+"The actions carried out by pm_runtime_force_suspend(), or by a runtime "
+"suspend in general, are reversed and the device is brought back into full "
+"power if it is expected to be used on system resume, which is the case when "
+"its needs_force_resume flag is set or when its smart_suspend flag is set and "
+"its runtime PM status is \"active\"."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:516
-msgid "`unsigned long pm_runtime_autosuspend_expiration(struct device *dev);`"
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:2082
+msgid "In other cases, the resume is deferred to be managed via runtime PM."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:517
+#: ../../../power/runtime_pm:322: ../drivers/base/power/runtime.c:2084
+msgid "Typically, this function may be invoked from a system resume callback."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:103
+msgid "Set runtime PM behavior regarding children."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:105
+msgid "Whether or not to ignore possible dependencies on children."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:106
 msgid ""
-"calculate the time when the current autosuspend delay period will expire, "
-"based on power.last_busy and power.autosuspend_delay; if the delay time is "
-"1000 ms or larger then the expiration time is rounded up to the nearest "
-"second; returns 0 if the delay period has already expired or power."
-"use_autosuspend isn't set, otherwise returns the expiration time in jiffies"
+"The dependencies of **dev** on its children will not be taken into account "
+"by the runtime PM framework going forward if **enable** is ``true``, or they "
+"will be taken into account otherwise."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:524
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:117
+msgid "Bump up runtime PM usage counter of a device."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:126
+msgid "Drop runtime PM usage counter of a device."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:128
+msgid ""
+"Decrement the runtime PM usage counter of **dev** unless it is 0 already."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:137
+msgid "Check whether or not a device is runtime-suspended."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:139
+#: ../include/linux/pm_runtime.h:158
+msgid ""
+"Note that the return value of this function can only be trusted if it is "
+"called under the runtime PM lock of **dev** or under conditions in which "
+"runtime PM cannot be either disabled or enabled for **dev** and its runtime "
+"PM status cannot change."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:145
+msgid ""
+"``true``: **dev** has runtime PM enabled and its status is ``RPM_SUSPENDED``."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:146
+#: ../include/linux/pm_runtime.h:165 ../include/linux/pm_runtime.h:183
+#: ../include/linux/pm_runtime.h:200 ../include/linux/pm_runtime.h:215
+#: ../include/linux/pm_runtime.h:228 ../include/linux/pm_runtime.h:255
+msgid "``false``: Otherwise."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:156
+msgid "Check whether or not a device is runtime-active."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:164
+msgid ""
+"``true``: Runtime PM is disabled for **dev** or its status is ``RPM_ACTIVE``."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:175
+msgid "Check if runtime PM status is \"suspended\"."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:177
+msgid ""
+"Note that the return value of this function can only be trusted if it is "
+"called under the runtime PM lock of **dev** or under conditions in which the "
+"runtime PM status of **dev** cannot change."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:182
+msgid "``true``: Runtime PM status of **dev** is ``RPM_SUSPENDED``."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:192
+msgid "Check if runtime PM is enabled."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:194
+msgid ""
+"Note that the return value of this function can only be trusted if it is "
+"called under the runtime PM lock of **dev** or under conditions in which "
+"runtime PM cannot be either disabled or enabled for **dev**."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:199
+msgid "``true``: Runtime PM is enabled for **dev**."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:209
+msgid "Check if runtime PM enabling is blocked."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:211
+msgid "Do not call this function outside system suspend/resume code paths."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:214
+msgid "``true``: Runtime PM enabling is blocked for **dev**."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:224
+msgid "Check if runtime PM callbacks may be present."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:227
+msgid "``true``: **dev** is marked as having no runtime PM callbacks."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:237
+msgid "Update the last access time of a device."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:239
+msgid ""
+"Update the last access time of **dev** used by the runtime PM autosuspend "
+"mechanism to the current time as returned by ktime_get_mono_fast_ns()."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:249
+msgid "Check if runtime PM can work in interrupt context."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:252
+msgid ""
+"``true``: **dev** has been marked as an \"IRQ-safe\" device, in which case "
+"its runtime PM callbacks can be expected to work correctly from interrupt "
+"handlers."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:355
+msgid "Conditionally initiate autosuspend of a device or suspend it."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:357
+msgid ""
+"Invoke the \"idle check\" callback of **dev** and, depending on its return "
+"value, initiate autosuspend of **dev** or suspend it (depending on whether "
+"or not autosuspend has been enabled for it)."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:363
+#: ../include/linux/pm_runtime.h:386 ../include/linux/pm_runtime.h:413
+#: ../include/linux/pm_runtime.h:452 ../include/linux/pm_runtime.h:493
+#: ../include/linux/pm_runtime.h:599 ../include/linux/pm_runtime.h:625
+#: ../include/linux/pm_runtime.h:704 ../include/linux/pm_runtime.h:736
+#: ../include/linux/pm_runtime.h:768
+msgid "``-EINVAL``: Runtime PM error."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:364
+#: ../include/linux/pm_runtime.h:387 ../include/linux/pm_runtime.h:414
+#: ../include/linux/pm_runtime.h:453 ../include/linux/pm_runtime.h:494
+#: ../include/linux/pm_runtime.h:600 ../include/linux/pm_runtime.h:626
+#: ../include/linux/pm_runtime.h:705 ../include/linux/pm_runtime.h:737
+#: ../include/linux/pm_runtime.h:769
+msgid "``-EACCES``: Runtime PM disabled."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:365
+#: ../include/linux/pm_runtime.h:454
+msgid ""
+"``-EAGAIN``: Runtime PM usage counter non-zero, Runtime PM status change "
+"ongoing or device not in ``RPM_ACTIVE`` state."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:367
+#: ../include/linux/pm_runtime.h:390 ../include/linux/pm_runtime.h:417
+#: ../include/linux/pm_runtime.h:456 ../include/linux/pm_runtime.h:497
+#: ../include/linux/pm_runtime.h:603 ../include/linux/pm_runtime.h:629
+#: ../include/linux/pm_runtime.h:708 ../include/linux/pm_runtime.h:740
+#: ../include/linux/pm_runtime.h:772
+msgid "``-EBUSY``: Runtime PM child_count non-zero."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:368
+#: ../include/linux/pm_runtime.h:391 ../include/linux/pm_runtime.h:418
+#: ../include/linux/pm_runtime.h:457 ../include/linux/pm_runtime.h:498
+#: ../include/linux/pm_runtime.h:604 ../include/linux/pm_runtime.h:630
+#: ../include/linux/pm_runtime.h:709 ../include/linux/pm_runtime.h:741
+#: ../include/linux/pm_runtime.h:773
+msgid "``-EPERM``: Device PM QoS resume latency 0."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:369
+#: ../include/linux/pm_runtime.h:458 ../include/linux/pm_runtime.h:499
+#: ../include/linux/pm_runtime.h:605 ../include/linux/pm_runtime.h:631
+#: ../include/linux/pm_runtime.h:774
+msgid "``-EINPROGRESS``: Suspend already in progress."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:370
+#: ../include/linux/pm_runtime.h:392 ../include/linux/pm_runtime.h:419
+#: ../include/linux/pm_runtime.h:459 ../include/linux/pm_runtime.h:500
+#: ../include/linux/pm_runtime.h:606 ../include/linux/pm_runtime.h:632
+#: ../include/linux/pm_runtime.h:710 ../include/linux/pm_runtime.h:742
+#: ../include/linux/pm_runtime.h:775
+msgid "``-ENOSYS``: ``CONFIG_PM`` not enabled."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:371
+msgid ""
+"Other values and conditions for the above values are possible as returned by "
+"Runtime PM idle and suspend callbacks."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:381
+msgid "Suspend a device synchronously."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:384
+#: ../include/linux/pm_runtime.h:411 ../include/linux/pm_runtime.h:491
+msgid "``1``: Success; device was already suspended."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:388
+#: ../include/linux/pm_runtime.h:415 ../include/linux/pm_runtime.h:495
+msgid ""
+"``-EAGAIN``: Runtime PM usage counter non-zero or Runtime PM status change "
+"ongoing."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:393
+#: ../include/linux/pm_runtime.h:420 ../include/linux/pm_runtime.h:711
+#: ../include/linux/pm_runtime.h:743 ../include/linux/pm_runtime.h:776
+msgid ""
+"Other values and conditions for the above values are possible as returned by "
+"Runtime PM suspend callbacks."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:403
+msgid "Update the last access time and initiate autosuspend of a device."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:406
+msgid ""
+"First update the last access time, then initiate autosuspend of **dev** or "
+"suspend it (depending on whether or not autosuspend is enabled for it) "
+"without engaging its \"idle check\" callback."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:431
+msgid "Resume a device synchronously."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:434
+#: ../include/linux/pm_runtime.h:474 ../include/linux/pm_runtime.h:516
+#: ../include/linux/pm_runtime.h:538
+msgid "``1``: Success; **dev** is already ``RPM_ACTIVE``."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:445
+msgid "Request an asynchronous idle check for a device."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:447
+msgid ""
+"Asynchronously request the PM core to evaluate whether **dev** can be idled "
+"or suspended, invoking its ->runtime_idle() callback if provided."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:468
+msgid "Request an asynchronous runtime resume for a device."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:470
+msgid ""
+"Asynchronously request the PM core to resume **dev** to ``RPM_ACTIVE`` state "
+"without modifying its usage counter."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:485
+msgid "Update access time and request delayed suspension."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:487
+msgid ""
+"Update the last access time of **dev** and asynchronously request the PM "
+"core to suspend it after the autosuspend delay has elapsed."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:510
+msgid "Increment usage counter and request asynchronous resume."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:512
+msgid ""
+"Increment the runtime PM usage counter of **dev** and, if the device is "
+"currently suspended, asynchronously request the PM core to resume it."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:517
+msgid "``0``: Success; runtime-resume was queued."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:527
+#: ../include/linux/pm_runtime.h:562
+msgid "Bump up usage counter of a device and resume it."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:529
+msgid ""
+"Bump up the runtime PM usage counter of **dev** and carry out runtime-resume "
+"of it synchronously."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:532
+msgid ""
+"Note that the runtime PM usage counter of **dev** remains incremented in all "
+"cases, even if it returns an error code. Consider using "
+"pm_runtime_resume_and_get() instead, especially if the return value is "
+"checked by the caller, as this is likely to result in cleaner code."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:564
+msgid ""
+"Resume **dev** synchronously and if that is successful, increment its "
+"runtime PM usage counter."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:568
+msgid ""
+"``0``: Success; **dev** is active and its usage counter has been incremented."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:569
+msgid "Negative error code on failure; usage counter is unchanged."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:578
+msgid "Drop device usage counter and request asynchronous idle check."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:580
+msgid ""
+"Decrement the runtime PM usage counter of **dev**. If the counter reaches "
+"zero and the device has no active child dependencies, asynchronously request "
+"the PM core to idle or suspend the device."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:591
+msgid "Drop device usage counter and queue autosuspend if 0."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:593
+msgid ""
+"Decrement the runtime PM usage counter of **dev** and if it turns out to be "
+"equal to 0, queue up a work item for **dev** like in "
+"pm_request_autosuspend()."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:597
+#: ../include/linux/pm_runtime.h:623 ../include/linux/pm_runtime.h:702
+#: ../include/linux/pm_runtime.h:734 ../include/linux/pm_runtime.h:766
+msgid ""
+"``1``: Success. Usage counter dropped to zero, but device was already "
+"suspended."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:601
+#: ../include/linux/pm_runtime.h:627 ../include/linux/pm_runtime.h:706
+#: ../include/linux/pm_runtime.h:738 ../include/linux/pm_runtime.h:770
+msgid ""
+"``-EAGAIN``: Runtime PM usage counter became non-zero or Runtime PM status "
+"change ongoing."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:615
+msgid ""
+"Update the last access time, drop usage counter and request autosuspend."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:618
+msgid ""
+"Update the last access time of **dev** and decrement its runtime PM usage "
+"counter. If the counter drops to zero, asynchronously request the PM core to "
+"suspend the device once its autosuspend delay has elapsed."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:689
+msgid "Drop device usage counter and run \"idle check\" if 0."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:691
+msgid ""
+"Decrement the runtime PM usage counter of **dev**. If the counter drops to "
+"zero, synchronously evaluate and trigger idle/suspend handling."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:694
+msgid ""
+"Note that this does not update the last access time, but it does respect "
+"existing autosuspend timers. If **dev** uses autosuspend, consider using "
+"pm_runtime_put_sync_autosuspend() or pm_runtime_put_sync_suspend() instead."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:698
+#: ../include/linux/pm_runtime.h:730 ../include/linux/pm_runtime.h:762
+msgid ""
+"The runtime PM usage counter of **dev** remains decremented in all cases, "
+"even if it returns an error code."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:721
+msgid "Drop device usage counter and suspend if 0."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:723
+msgid ""
+"Decrement the runtime PM usage counter of **dev**. If the counter drops to "
+"zero, suspend the device synchronously."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:726
+msgid ""
+"This API differs from pm_runtime_put_sync() and "
+"pm_runtime_put_sync_autosuspend() in that it ignores any outstanding "
+"autosuspend delays."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:753
+msgid ""
+"Update the last access time of a device, drop device usage counter and "
+"autosuspend if 0."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:756
+msgid ""
+"Update the last access time of **dev** and decrement its runtime PM usage "
+"counter. If the counter drops to zero, synchronously suspend the device (or "
+"schedule autosuspend if the delay has not elapsed)."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:760
+msgid ""
+"Prefer this API over pm_runtime_put_sync() for devices that use autosuspend."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:787
+msgid "Set runtime PM status to \"active\" and clear errors."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:789
+msgid ""
+"Set the runtime PM status of **dev** to ``RPM_ACTIVE`` and ensure that its "
+"dependencies will be taken into account. Also clear the device's error "
+"status (**dev->power.runtime_error**)."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:793
+#: ../include/linux/pm_runtime.h:816
+msgid ""
+"It is only valid to call this function if runtime PM is disabled or if **dev-"
+">power.runtime_error** is set."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:796
+msgid ""
+"This will fail if suppliers cannot be resumed, or if the parent is not in "
+"the correct state."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:810
+msgid "Set runtime PM status to \"suspended\" and clear errors."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:812
+msgid ""
+"Set the runtime PM status of **dev** to ``RPM_SUSPENDED`` and ensure that "
+"its dependencies will be taken into account. Also clear the device's error "
+"status (**dev->power.runtime_error**)."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:830
+msgid "Disable runtime PM for a device."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:832
+msgid ""
+"Prevent the runtime PM framework from working with **dev** by incrementing "
+"its \"disable\" counter."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:835
+msgid ""
+"If the counter is zero when this function runs and there is a pending "
+"runtime resume request for **dev**, it will be resumed.  If the counter is "
+"still zero at that point, this function cancels all pending runtime PM "
+"requests for **dev** and waits for its runtime PM operations to complete (if "
+"any)."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:840
+msgid ""
+"For each invocation of this function for **dev**, there must be a matching "
+"pm_runtime_enable() call, so that runtime PM is eventually enabled for it "
+"again."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:851
+msgid "Allow autosuspend to be used for a device."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:853
+msgid ""
+"Allow the runtime PM autosuspend mechanism to be used for **dev** whenever "
+"requested (or \"autosuspend\" will be handled as direct runtime-suspend for "
+"it)."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:858
+msgid ""
+"This is undone automatically with pm_runtime_dont_use_autosuspend() on "
+"driver exit regardless of whether a driver uses managed devm_* functions or "
+"not."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:868
+msgid "Prevent autosuspend from being used."
+msgstr ""
+
+#: ../../../power/runtime_pm:325: ../include/linux/pm_runtime.h:870
+msgid ""
+"Prevent the runtime PM autosuspend mechanism from being used for **dev** "
+"which means that \"autosuspend\" will be handled as direct runtime-suspend "
+"for it going forward."
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:327
 msgid ""
 "It is safe to execute the following helper functions from interrupt context:"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:526
+#: ../../../power/runtime_pm.rst:329
 msgid "pm_request_idle()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:527
+#: ../../../power/runtime_pm.rst:330
 msgid "pm_request_autosuspend()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:528
+#: ../../../power/runtime_pm.rst:331
 msgid "pm_schedule_suspend()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:529
+#: ../../../power/runtime_pm.rst:332
 msgid "pm_request_resume()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:530
+#: ../../../power/runtime_pm.rst:333
 msgid "pm_runtime_get_noresume()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:531
+#: ../../../power/runtime_pm.rst:334
 msgid "pm_runtime_get()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:532
+#: ../../../power/runtime_pm.rst:335
+msgid "pm_runtime_get_if_active()"
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:336
+msgid "pm_runtime_get_if_in_use()"
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:337
 msgid "pm_runtime_put_noidle()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:533
+#: ../../../power/runtime_pm.rst:338
 msgid "pm_runtime_put()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:534
+#: ../../../power/runtime_pm.rst:339
 msgid "pm_runtime_put_autosuspend()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:535
+#: ../../../power/runtime_pm.rst:340
 msgid "__pm_runtime_put_autosuspend()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:536
+#: ../../../power/runtime_pm.rst:341
 msgid "pm_runtime_enable()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:537
+#: ../../../power/runtime_pm.rst:342
 msgid "pm_suspend_ignore_children()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:538
+#: ../../../power/runtime_pm.rst:343
 msgid "pm_runtime_set_active()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:539
+#: ../../../power/runtime_pm.rst:344
 msgid "pm_runtime_set_suspended()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:540
+#: ../../../power/runtime_pm.rst:345
 msgid "pm_runtime_suspended()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:541
+#: ../../../power/runtime_pm.rst:346
+msgid "pm_runtime_active()"
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:347
+msgid "pm_runtime_status_suspended()"
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:348
+msgid "pm_runtime_enabled()"
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:349
 msgid "pm_runtime_mark_last_busy()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:542
+#: ../../../power/runtime_pm.rst:350
 msgid "pm_runtime_autosuspend_expiration()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:544
+#: ../../../power/runtime_pm.rst:352
 msgid ""
 "If pm_runtime_irq_safe() has been called for a device then the following "
 "helper functions may also be used in interrupt context:"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:547
+#: ../../../power/runtime_pm.rst:355
 msgid "pm_runtime_idle()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:548
+#: ../../../power/runtime_pm.rst:356
 msgid "pm_runtime_suspend()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:549
+#: ../../../power/runtime_pm.rst:357
 msgid "pm_runtime_autosuspend()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:550
+#: ../../../power/runtime_pm.rst:358
 msgid "pm_runtime_resume()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:551
+#: ../../../power/runtime_pm.rst:359
 msgid "pm_runtime_get_sync()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:552
+#: ../../../power/runtime_pm.rst:360
+msgid "pm_runtime_resume_and_get()"
+msgstr ""
+
+#: ../../../power/runtime_pm.rst:361
 msgid "pm_runtime_put_sync()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:553
+#: ../../../power/runtime_pm.rst:362
 msgid "pm_runtime_put_sync_suspend()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:554
+#: ../../../power/runtime_pm.rst:363
 msgid "pm_runtime_put_sync_autosuspend()"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:557
+#: ../../../power/runtime_pm.rst:368
 msgid "5. Runtime PM Initialization, Device Probing and Removal"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:559
+#: ../../../power/runtime_pm.rst:370
 msgid ""
 "Initially, the runtime PM is disabled for all devices, which means that the "
-"majority of the runtime PM helper functions described in Section 4 will "
-"return -EAGAIN until pm_runtime_enable() is called for the device."
+"majority of the runtime PM helper functions described in `Section 4`_ will "
+"return -EACCES until pm_runtime_enable() is called for the device."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:563
+#: ../../../power/runtime_pm.rst:374
 msgid ""
 "In addition to that, the initial runtime PM status of all devices is "
 "'suspended', but it need not reflect the actual physical state of the "
@@ -1147,7 +2334,7 @@ msgid ""
 "pm_runtime_set_active(), before pm_runtime_enable() is called for the device."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:569
+#: ../../../power/runtime_pm.rst:380
 msgid ""
 "However, if the device has a parent and the parent's runtime PM is enabled, "
 "calling pm_runtime_set_active() for the device will affect the parent, "
@@ -1162,26 +2349,26 @@ msgid ""
 "'suspended' with the help of pm_runtime_set_suspended()."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:581
+#: ../../../power/runtime_pm.rst:392
 msgid ""
 "If the default initial runtime PM status of the device (i.e. 'suspended') "
-"reflects the actual state of the device, its bus type's or its driver's -"
-">probe() callback will likely need to wake it up using one of the PM core's "
-"helper functions described in Section 4.  In that case, pm_runtime_resume() "
-"should be used.  Of course, for this purpose the device's runtime PM has to "
-"be enabled earlier by calling pm_runtime_enable()."
+"reflects the actual state of the device, its bus type's or its driver's "
+"->probe() callback will likely need to wake it up using one of the PM core's "
+"helper functions described in `Section 4`_.  In that case, "
+"pm_runtime_resume() should be used.  Of course, for this purpose the "
+"device's runtime PM has to be enabled earlier by calling pm_runtime_enable()."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:588
+#: ../../../power/runtime_pm.rst:399
 msgid ""
 "Note, if the device may execute pm_runtime calls during the probe (such as "
 "if it is registered with a subsystem that may call back in) then the "
-"pm_runtime_get_sync() call paired with a pm_runtime_put() call will be "
+"pm_runtime_resume_and_get() call paired with a pm_runtime_put() call will be "
 "appropriate to ensure that the device is not put back to sleep during the "
 "probe. This can happen with systems such as the network device layer."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:594
+#: ../../../power/runtime_pm.rst:405
 msgid ""
 "It may be desirable to suspend the device once ->probe() has finished. "
 "Therefore the driver core uses the asynchronous pm_request_idle() to submit "
@@ -1190,7 +2377,7 @@ msgid ""
 "want to update the last busy mark before returning from ->probe()."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:600
+#: ../../../power/runtime_pm.rst:411
 msgid ""
 "Moreover, the driver core prevents runtime PM callbacks from racing with the "
 "bus notifier callback in __device_release_driver(), which is necessary "
@@ -1202,7 +2389,7 @@ msgid ""
 "routines are being executed."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:608
+#: ../../../power/runtime_pm.rst:419
 msgid ""
 "To allow bus types and drivers to put devices into the suspended state by "
 "calling pm_runtime_suspend() from their ->remove() routines, the driver core "
@@ -1213,14 +2400,17 @@ msgid ""
 "during the removal of their drivers."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:616
+#: ../../../power/runtime_pm.rst:427
 msgid ""
-"Drivers in ->remove() callback should undo the runtime PM changes done in -"
-">probe(). Usually this means calling pm_runtime_disable(), "
-"pm_runtime_dont_use_autosuspend() etc."
+"Drivers in ->remove() callback should undo the runtime PM changes done in "
+"->probe(). Usually this means calling pm_runtime_disable() etc. "
+"Alternatively, drivers can use devm_pm_runtime_enable() during probe, which "
+"automatically takes care of calling pm_runtime_disable() upon driver "
+"detachment. Any pm_runtime_use_autosuspend() calls in a driver will be "
+"automatically undone on driver exit."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:620
+#: ../../../power/runtime_pm.rst:434
 msgid ""
 "The user space can effectively disallow the driver of the device to power "
 "manage it at run time by changing the value of its /sys/devices/.../power/"
@@ -1235,11 +2425,11 @@ msgid ""
 "time, the driver may confuse it by using pm_runtime_forbid() this way."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:633
+#: ../../../power/runtime_pm.rst:449
 msgid "6. Runtime PM and System Sleep"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:635
+#: ../../../power/runtime_pm.rst:451
 msgid ""
 "Runtime PM and system sleep (i.e., system suspend and hibernation, also "
 "known as suspend-to-RAM and suspend-to-disk) interact with each other in a "
@@ -1248,7 +2438,7 @@ msgid ""
 "already suspended?"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:640
+#: ../../../power/runtime_pm.rst:456
 msgid ""
 "The device may have different wake-up settings for runtime PM and system "
 "sleep. For example, remote wake-up may be enabled for runtime suspend but "
@@ -1261,44 +2451,44 @@ msgid ""
 "sleep."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:649
+#: ../../../power/runtime_pm.rst:465
 msgid ""
 "During system resume, the simplest approach is to bring all devices back to "
 "full power, even if they had been suspended before the system suspend "
 "began.  There are several reasons for this, including:"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:653
+#: ../../../power/runtime_pm.rst:469
 msgid "The device might need to switch power levels, wake-up settings, etc."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:655
+#: ../../../power/runtime_pm.rst:471
 msgid "Remote wake-up events might have been lost by the firmware."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:657
+#: ../../../power/runtime_pm.rst:473
 msgid ""
 "The device's children may need the device to be at full power in order to "
 "resume themselves."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:660
+#: ../../../power/runtime_pm.rst:476
 msgid ""
 "The driver's idea of the device state may not agree with the device's "
 "physical state.  This can happen during resume from hibernation."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:663
+#: ../../../power/runtime_pm.rst:479
 msgid "The device might need to be reset."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:665
+#: ../../../power/runtime_pm.rst:481
 msgid ""
 "Even though the device was suspended, if its usage counter was > 0 then most "
 "likely it would need a runtime resume in the near future anyway."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:668
+#: ../../../power/runtime_pm.rst:484
 msgid ""
 "If the device had been suspended before the system suspend began and it's "
 "brought back to full power during resume, then its runtime PM status will "
@@ -1306,29 +2496,29 @@ msgid ""
 "to do this is:"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:673
+#: ../../../power/runtime_pm.rst:489
 msgid "pm_runtime_disable(dev);"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:674
+#: ../../../power/runtime_pm.rst:490
 msgid "pm_runtime_set_active(dev);"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:675
+#: ../../../power/runtime_pm.rst:491
 msgid "pm_runtime_enable(dev);"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:677
+#: ../../../power/runtime_pm.rst:493
 msgid ""
-"The PM core always increments the runtime usage counter before calling the -"
-">suspend() callback and decrements it after calling the ->resume() callback. "
-"Hence disabling runtime PM temporarily like this will not cause any runtime "
-"suspend attempts to be permanently lost.  If the usage count goes to zero "
-"following the return of the ->resume() callback, the ->runtime_idle() "
-"callback will be invoked as usual."
+"The PM core always increments the runtime usage counter before calling the "
+"->suspend() callback and decrements it after calling the ->resume() "
+"callback. Hence disabling runtime PM temporarily like this will not cause "
+"any runtime suspend attempts to be permanently lost.  If the usage count "
+"goes to zero following the return of the ->resume() callback, the "
+"->runtime_idle() callback will be invoked as usual."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:684
+#: ../../../power/runtime_pm.rst:500
 msgid ""
 "On some systems, however, system sleep is not entered through a global "
 "firmware or hardware operation.  Instead, all hardware components are put "
@@ -1344,29 +2534,29 @@ msgid ""
 "suspended state."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:696
+#: ../../../power/runtime_pm.rst:512
 msgid ""
 "To this end, the PM core provides a mechanism allowing some coordination "
-"between different levels of device hierarchy.  Namely, if a system suspend ."
-"prepare() callback returns a positive number for a device, that indicates to "
-"the PM core that the device appears to be runtime-suspended and its state is "
-"fine, so it may be left in runtime suspend provided that all of its "
-"descendants are also left in runtime suspend.  If that happens, the PM core "
-"will not execute any system suspend and resume callbacks for all of those "
-"devices, except for the .complete() callback, which is then entirely "
+"between different levels of device hierarchy.  Namely, if a system "
+"suspend .prepare() callback returns a positive number for a device, that "
+"indicates to the PM core that the device appears to be runtime-suspended and "
+"its state is fine, so it may be left in runtime suspend provided that all of "
+"its descendants are also left in runtime suspend.  If that happens, the PM "
+"core will not execute any system suspend and resume callbacks for all of "
+"those devices, except for the .complete() callback, which is then entirely "
 "responsible for handling the device as appropriate.  This only applies to "
 "system suspend transitions that are not related to hibernation (see "
 "Documentation/driver-api/pm/devices.rst for more information)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:708
+#: ../../../power/runtime_pm.rst:524
 msgid ""
 "The PM core does its best to reduce the probability of race conditions "
 "between the runtime PM and system suspend/resume (and hibernation) callbacks "
 "by carrying out the following operations:"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:712
+#: ../../../power/runtime_pm.rst:528
 msgid ""
 "During system suspend pm_runtime_get_noresume() is called for every device "
 "right before executing the subsystem-level .prepare() callback for it and "
@@ -1376,7 +2566,7 @@ msgid ""
 "subsystem-level .suspend_late() callback for it."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:719
+#: ../../../power/runtime_pm.rst:535
 msgid ""
 "During system resume pm_runtime_enable() and pm_runtime_put() are called for "
 "every device right after executing the subsystem-level .resume_early() "
@@ -1384,216 +2574,172 @@ msgid ""
 "for it, respectively."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:725
+#: ../../../power/runtime_pm.rst:543
 msgid "7. Generic subsystem callbacks"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:727
+#: ../../../power/runtime_pm.rst:545
 msgid ""
 "Subsystems may wish to conserve code space by using the set of generic power "
-"management callbacks provided by the PM core, defined in driver/base/power/"
+"management callbacks provided by the PM core, defined in drivers/base/power/"
 "generic_ops.c:"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:731
-msgid "`int pm_generic_runtime_suspend(struct device *dev);`"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:20
+msgid "Generic runtime suspend callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:732
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:22
 msgid ""
-"invoke the ->runtime_suspend() callback provided by the driver of this "
-"device and return its result, or return 0 if not defined"
+"If PM operations are defined for the **dev**'s driver and they include "
+"->runtime_suspend(), execute it and return its error code.  Otherwise, "
+"return 0."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:735
-msgid "`int pm_generic_runtime_resume(struct device *dev);`"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:34
+msgid "Generic runtime resume callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:736
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:36
 msgid ""
-"invoke the ->runtime_resume() callback provided by the driver of this device "
-"and return its result, or return 0 if not defined"
+"If PM operations are defined for the **dev**'s driver and they include "
+"->runtime_resume(), execute it and return its error code.  Otherwise, return "
+"0."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:739
-msgid "`int pm_generic_suspend(struct device *dev);`"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:67
+msgid "Generic suspend_noirq callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:740
-msgid ""
-"if the device has not been suspended at run time, invoke the ->suspend() "
-"callback provided by its driver and return its result, or return 0 if not "
-"defined"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:77
+msgid "Generic suspend_late callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:744
-msgid "`int pm_generic_suspend_noirq(struct device *dev);`"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:87
+msgid "Generic suspend callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:745
-msgid ""
-"if pm_runtime_suspended(dev) returns \"false\", invoke the ->suspend_noirq() "
-"callback provided by the device's driver and return its result, or return 0 "
-"if not defined"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:97
+msgid "Generic freeze_noirq callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:749
-msgid "`int pm_generic_resume(struct device *dev);`"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:98
+#: ../drivers/base/power/generic_ops.c:108
+msgid "Device to freeze."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:750
-msgid ""
-"invoke the ->resume() callback provided by the driver of this device and, if "
-"successful, change the device's runtime PM status to 'active'"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:107
+msgid "Generic freeze callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:753
-msgid "`int pm_generic_resume_noirq(struct device *dev);`"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:117
+msgid "Generic poweroff_noirq callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:754
-msgid ""
-"invoke the ->resume_noirq() callback provided by the driver of this device"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:127
+msgid "Generic poweroff_late callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:756
-msgid "`int pm_generic_freeze(struct device *dev);`"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:137
+msgid "Generic poweroff callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:757
-msgid ""
-"if the device has not been suspended at run time, invoke the ->freeze() "
-"callback provided by its driver and return its result, or return 0 if not "
-"defined"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:147
+msgid "Generic thaw_noirq callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:761
-msgid "`int pm_generic_freeze_noirq(struct device *dev);`"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:148
+#: ../drivers/base/power/generic_ops.c:158
+msgid "Device to thaw."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:762
-msgid ""
-"if pm_runtime_suspended(dev) returns \"false\", invoke the ->freeze_noirq() "
-"callback provided by the device's driver and return its result, or return 0 "
-"if not defined"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:157
+msgid "Generic thaw callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:766
-msgid "`int pm_generic_thaw(struct device *dev);`"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:167
+msgid "Generic resume_noirq callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:767
-msgid ""
-"if the device has not been suspended at run time, invoke the ->thaw() "
-"callback provided by its driver and return its result, or return 0 if not "
-"defined"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:177
+msgid "Generic resume_early callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:771
-msgid "`int pm_generic_thaw_noirq(struct device *dev);`"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:187
+msgid "Generic resume callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:772
-msgid ""
-"if pm_runtime_suspended(dev) returns \"false\", invoke the ->thaw_noirq() "
-"callback provided by the device's driver and return its result, or return 0 "
-"if not defined"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:197
+msgid "Generic restore_noirq callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:776
-msgid "`int pm_generic_poweroff(struct device *dev);`"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:198
+#: ../drivers/base/power/generic_ops.c:218
+msgid "Device to restore."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:777
-msgid ""
-"if the device has not been suspended at run time, invoke the ->poweroff() "
-"callback provided by its driver and return its result, or return 0 if not "
-"defined"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:207
+msgid "Generic restore_early callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:781
-msgid "`int pm_generic_poweroff_noirq(struct device *dev);`"
+#: ../../../power/runtime_pm:549: ../drivers/base/power/generic_ops.c:217
+msgid "Generic restore callback for subsystems."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:782
-msgid ""
-"if pm_runtime_suspended(dev) returns \"false\", run the ->poweroff_noirq() "
-"callback provided by the device's driver and return its result, or return 0 "
-"if not defined"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:786
-msgid "`int pm_generic_restore(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:787
-msgid ""
-"invoke the ->restore() callback provided by the driver of this device and, "
-"if successful, change the device's runtime PM status to 'active'"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:790
-msgid "`int pm_generic_restore_noirq(struct device *dev);`"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:791
-msgid "invoke the ->restore_noirq() callback provided by the device's driver"
-msgstr ""
-
-#: ../../../power/runtime_pm.rst:793
+#: ../../../power/runtime_pm.rst:552
 msgid ""
 "These functions are the defaults used by the PM core if a subsystem doesn't "
-"provide its own callbacks for ->runtime_idle(), ->runtime_suspend(), -"
-">runtime_resume(), ->suspend(), ->suspend_noirq(), ->resume(), -"
-">resume_noirq(), ->freeze(), ->freeze_noirq(), ->thaw(), ->thaw_noirq(), -"
-">poweroff(), ->poweroff_noirq(), ->restore(), ->restore_noirq() in the "
+"provide its own callbacks for ->runtime_idle(), ->runtime_suspend(), "
+"->runtime_resume(), ->suspend(), ->suspend_noirq(), ->resume(), "
+"->resume_noirq(), ->freeze(), ->freeze_noirq(), ->thaw(), ->thaw_noirq(), "
+"->poweroff(), ->poweroff_noirq(), ->restore(), ->restore_noirq() in the "
 "subsystem-level dev_pm_ops structure."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:800
+#: ../../../power/runtime_pm.rst:559
 msgid ""
 "Device drivers that wish to use the same function as a system suspend, "
 "freeze, poweroff and runtime suspend callback, and similarly for system "
 "resume, thaw, restore, and runtime resume, can achieve similar behaviour "
-"with the help of the DEFINE_RUNTIME_DEV_PM_OPS() defined in include/linux/"
-"pm_runtime.h (possibly setting its last argument to NULL)."
+"with the help of the DEFINE_RUNTIME_DEV_PM_OPS() macro defined in include/"
+"linux/pm_runtime.h (possibly setting its last argument to NULL)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:807
+#: ../../../power/runtime_pm.rst:568
 msgid "8. \"No-Callback\" Devices"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:809
+#: ../../../power/runtime_pm.rst:570
 msgid ""
 "Some \"devices\" are only logical sub-devices of their parent and cannot be "
 "power-managed on their own.  (The prototype example is a USB interface.  "
 "Entire USB devices can go into low-power mode or send wake-up requests, but "
 "neither is possible for individual interfaces.)  The drivers for these "
-"devices have no need of runtime PM callbacks; if the callbacks did exist, -"
-">runtime_suspend() and ->runtime_resume() would always return 0 without "
+"devices have no need of runtime PM callbacks; if the callbacks did exist, "
+"->runtime_suspend() and ->runtime_resume() would always return 0 without "
 "doing anything else and ->runtime_idle() would always call "
 "pm_runtime_suspend()."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:817
+#: ../../../power/runtime_pm.rst:578
 msgid ""
 "Subsystems can tell the PM core about these devices by calling "
 "pm_runtime_no_callbacks().  This should be done after the device structure "
 "is initialized and before it is registered (although after device "
-"registration is also okay).  The routine will set the device's power."
-"no_callbacks flag and prevent the non-debugging runtime PM sysfs attributes "
-"from being created."
+"registration is also okay).  The routine will set the device's "
+"power.no_callbacks flag and prevent the non-debugging runtime PM sysfs "
+"attributes from being created."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:823
+#: ../../../power/runtime_pm.rst:584
 msgid ""
-"When power.no_callbacks is set, the PM core will not invoke the -"
-">runtime_idle(), ->runtime_suspend(), or ->runtime_resume() callbacks. "
+"When power.no_callbacks is set, the PM core will not invoke the "
+"->runtime_idle(), ->runtime_suspend(), or ->runtime_resume() callbacks. "
 "Instead it will assume that suspends and resumes always succeed and that "
 "idle devices should be suspended."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:828
+#: ../../../power/runtime_pm.rst:589
 msgid ""
 "As a consequence, the PM core will never directly inform the device's "
 "subsystem or driver about runtime power changes.  Instead, the driver for "
@@ -1601,7 +2747,7 @@ msgid ""
 "when the parent's power state changes."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:833
+#: ../../../power/runtime_pm.rst:594
 msgid ""
 "Note that, in some cases it may not be desirable for subsystems/drivers to "
 "call pm_runtime_no_callbacks() for their devices. This could be because a "
@@ -1613,11 +2759,11 @@ msgid ""
 "the PM core will act as though there was a callback and it returned 0."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:843
+#: ../../../power/runtime_pm.rst:606
 msgid "9. Autosuspend, or automatically-delayed suspends"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:845
+#: ../../../power/runtime_pm.rst:608
 msgid ""
 "Changing a device's power state isn't free; it requires both time and "
 "energy. A device should be put in a low-power state only when there's some "
@@ -1630,7 +2776,7 @@ msgid ""
 "full-power states."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:854
+#: ../../../power/runtime_pm.rst:617
 msgid ""
 "The term \"autosuspend\" is an historical remnant.  It doesn't mean that the "
 "device is automatically suspended (the subsystem or driver still has to call "
@@ -1638,7 +2784,7 @@ msgid ""
 "automatically be delayed until the desired period of inactivity has elapsed."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:859
+#: ../../../power/runtime_pm.rst:622
 msgid ""
 "Inactivity is determined based on the power.last_busy field. The desired "
 "length of the inactivity period is a matter of policy.  Subsystems can set "
@@ -1647,23 +2793,23 @@ msgid ""
 "using the /sys/devices/.../power/autosuspend_delay_ms attribute."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:865
+#: ../../../power/runtime_pm.rst:628
 msgid ""
 "In order to use autosuspend, subsystems or drivers must call "
 "pm_runtime_use_autosuspend() (preferably before registering the device), and "
-"thereafter they should use the various `*_autosuspend()` helper functions "
+"thereafter they should use the various \\*_autosuspend() helper functions "
 "instead of the non-autosuspend counterparts::"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:875
+#: ../../../power/runtime_pm.rst:638
 msgid ""
 "Drivers may also continue to use the non-autosuspend helper functions; they "
 "will behave normally, which means sometimes taking the autosuspend delay "
-"into account (see pm_runtime_idle). The autosuspend variants of the "
+"into account (see pm_runtime_idle()). The autosuspend variants of the "
 "functions also call pm_runtime_mark_last_busy()."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:880
+#: ../../../power/runtime_pm.rst:643
 msgid ""
 "Under some circumstances a driver or subsystem may want to prevent a device "
 "from autosuspending immediately, even though the usage counter is zero and "
@@ -1676,7 +2822,7 @@ msgid ""
 "is suspending (i.e., while the callback is running)."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:890
+#: ../../../power/runtime_pm.rst:653
 msgid ""
 "The implementation is well suited for asynchronous use in interrupt "
 "contexts. However such use inevitably involves races, because the PM core "
@@ -1685,7 +2831,7 @@ msgid ""
 "private lock. Here is a schematic pseudo-code example::"
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:948
+#: ../../../power/runtime_pm.rst:711
 msgid ""
 "The important point is that after foo_io_completion() asks for an "
 "autosuspend, the foo_runtime_suspend() callback may race with "
@@ -1694,12 +2840,12 @@ msgid ""
 "allowing the suspend to proceed."
 msgstr ""
 
-#: ../../../power/runtime_pm.rst:954
+#: ../../../power/runtime_pm.rst:717
 msgid ""
 "In addition, the power.autosuspend_delay field can be changed by user space "
 "at any time.  If a driver cares about this, it can call "
 "pm_runtime_autosuspend_expiration() from within the ->runtime_suspend() "
 "callback while holding its private lock.  If the function returns a nonzero "
-"value then the delay has not yet expired and the callback should return -"
-"EAGAIN."
+"value then the delay has not yet expired and the callback should return "
+"-EAGAIN."
 msgstr ""

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-11 11:03+0000\n"
+"POT-Creation-Date: 2026-11-02 17:56+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -206,18 +206,29 @@ msgstr ""
 #: ../../../core-api/real-time/differences.rst:121
 msgid ""
 "On a PREEMPT_RT kernel, this behavior is reversed: hrtimers are executed in "
-"softirq context by default, typically within the ktimersd thread. This "
-"thread runs at the lowest real-time priority, ensuring it executes before "
-"any SCHED_OTHER tasks but does not interfere with higher-priority real-time "
+"softirq context by default, typically within the ktimers thread. This thread "
+"runs at the lowest real-time priority, ensuring it executes before any "
+"SCHED_OTHER tasks but does not interfere with higher-priority real-time "
 "threads. To explicitly request execution in hard interrupt context on "
 "PREEMPT_RT, the timer must be marked with the HRTIMER_MODE_HARD flag."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:129
+#: ../../../core-api/real-time/differences.rst:128
+msgid ""
+"Userland sleepers usually deploy a hrtimer to guarantee a precise wakeup "
+"time. The timer is initialized with hrtimer_setup_sleeper_on_stack(), which "
+"distinguishes between real-time and regular tasks. The hrtimer of a task "
+"without a real-time priority is handled in soft interrupt context, but for "
+"real-time priorities HRTIMER_MODE_HARD is used. This ensures that real-time "
+"tasks are woken up as soon as possible while ordinary tasks cannot block the "
+"CPU with a thundering herd of wakeups."
+msgstr ""
+
+#: ../../../core-api/real-time/differences.rst:137
 msgid "Memory allocation"
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:131
+#: ../../../core-api/real-time/differences.rst:139
 msgid ""
 "The memory allocation APIs, such as kmalloc() and alloc_pages(), require a "
 "gfp_t flag to indicate the allocation context. On non-PREEMPT_RT kernels, it "
@@ -226,7 +237,7 @@ msgid ""
 "must not sleep in these contexts waiting for memory to become available."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:137
+#: ../../../core-api/real-time/differences.rst:145
 msgid ""
 "However, this approach does not work on PREEMPT_RT kernels. The memory "
 "allocator in PREEMPT_RT uses sleeping locks internally, which cannot be "
@@ -236,25 +247,25 @@ msgid ""
 "is allowed."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:144
+#: ../../../core-api/real-time/differences.rst:152
 msgid ""
 "What remains problematic is code that explicitly disables preemption or "
 "interrupts. In such cases, memory allocation must be performed outside the "
 "critical section."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:148
+#: ../../../core-api/real-time/differences.rst:156
 msgid ""
 "This restriction also applies to memory deallocation routines such as "
 "kfree() and free_pages(), which may also involve internal locking and must "
 "not be called from non-preemptible contexts."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:153
+#: ../../../core-api/real-time/differences.rst:161
 msgid "IRQ work"
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:155
+#: ../../../core-api/real-time/differences.rst:163
 msgid ""
 "The irq_work API provides a mechanism to schedule a callback in interrupt "
 "context. It is designed for use in contexts where traditional scheduling is "
@@ -262,14 +273,14 @@ msgid ""
 "where using a workqueue would be unsafe."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:160
+#: ../../../core-api/real-time/differences.rst:168
 msgid ""
 "On non-PREEMPT_RT systems, all irq_work items are executed immediately in "
 "interrupt context. Items marked with IRQ_WORK_LAZY are deferred until the "
 "next timer tick but are still executed in interrupt context."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:164
+#: ../../../core-api/real-time/differences.rst:172
 msgid ""
 "On PREEMPT_RT systems, the execution model changes. Because irq_work "
 "callbacks may acquire sleeping locks or have unbounded execution time, they "
@@ -279,7 +290,7 @@ msgid ""
 "threads."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:170
+#: ../../../core-api/real-time/differences.rst:178
 msgid ""
 "The exception are work items marked with IRQ_WORK_HARD_IRQ, which are still "
 "executed in hard interrupt context. Lazy items (IRQ_WORK_LAZY) continue to "
@@ -287,11 +298,11 @@ msgid ""
 "thread."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:176
+#: ../../../core-api/real-time/differences.rst:184
 msgid "RCU callbacks"
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:178
+#: ../../../core-api/real-time/differences.rst:186
 msgid ""
 "RCU callbacks are invoked by default in softirq context. Their execution is "
 "important because, depending on the use case, they either free memory or "
@@ -300,7 +311,7 @@ msgid ""
 "resources with other SCHED_OTHER tasks when executed within ksoftirqd."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:184
+#: ../../../core-api/real-time/differences.rst:192
 msgid ""
 "To avoid running callbacks in softirq context, the RCU subsystem provides a "
 "mechanism to execute them in process context instead. This behavior can be "
@@ -308,11 +319,11 @@ msgid ""
 "This setting is enforced in kernels configured with PREEMPT_RT."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:190
+#: ../../../core-api/real-time/differences.rst:198
 msgid "Spin until ready"
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:192
+#: ../../../core-api/real-time/differences.rst:200
 msgid ""
 "The \"spin until ready\" pattern involves repeatedly checking (spinning on) "
 "the state of a data structure until it becomes available. This pattern "
@@ -321,7 +332,7 @@ msgid ""
 "and spinning should eventually succeed as that CPU makes progress."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:198
+#: ../../../core-api/real-time/differences.rst:206
 msgid ""
 "Some examples are hrtimer_cancel() or timer_delete_sync(). These functions "
 "cancel timers that execute with interrupts or soft interrupts disabled. If a "
@@ -330,7 +341,7 @@ msgid ""
 "and will eventually finish."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:204
+#: ../../../core-api/real-time/differences.rst:212
 msgid ""
 "On PREEMPT_RT kernels, however, timer callbacks run in thread context. This "
 "introduces a challenge: a higher-priority thread attempting to cancel the "
@@ -339,7 +350,7 @@ msgid ""
 "spinning can result in livelock even on multiprocessor systems."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:210
+#: ../../../core-api/real-time/differences.rst:218
 msgid ""
 "To avoid this, both the canceling and callback sides must use a handshake "
 "mechanism that supports priority inheritance. This allows the canceling "
@@ -347,24 +358,24 @@ msgid ""
 "without risking livelock."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:215
+#: ../../../core-api/real-time/differences.rst:223
 msgid ""
 "In order to solve the problem at the API level, the sequence locks were "
 "extended to allow a proper handover between the spinning reader and the "
 "maybe blocked writer."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:220
+#: ../../../core-api/real-time/differences.rst:228
 msgid "Sequence locks"
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:222
+#: ../../../core-api/real-time/differences.rst:230
 msgid ""
 "Sequence counters and sequential locks are documented in Documentation/"
 "locking/seqlock.rst."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:225
+#: ../../../core-api/real-time/differences.rst:233
 msgid ""
 "The interface has been extended to ensure proper preemption states for the "
 "writer and spinning reader contexts. This is achieved by embedding the "
@@ -372,14 +383,14 @@ msgid ""
 "in composite types such as seqcount_spinlock_t or seqcount_mutex_t."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:230
+#: ../../../core-api/real-time/differences.rst:238
 msgid ""
 "These composite types allow readers to detect an ongoing write and actively "
 "boost the writer’s priority to help it complete its update instead of "
 "spinning and waiting for its completion."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:234
+#: ../../../core-api/real-time/differences.rst:242
 msgid ""
 "If the plain seqcount_t is used, extra care must be taken to synchronize the "
 "reader with the writer during updates. The writer must ensure its update is "
@@ -389,7 +400,7 @@ msgid ""
 "preferred solution."
 msgstr ""
 
-#: ../../../core-api/real-time/differences.rst:240
+#: ../../../core-api/real-time/differences.rst:248
 msgid ""
 "However, if there is no spinning involved i.e., if the reader only needs to "
 "detect whether a write has started and not serialize against it then using "
