@@ -1,0 +1,285 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../locking/mutex-design.rst:3
+msgid "Generic Mutex Subsystem"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:5
+msgid "started by Ingo Molnar <mingo@redhat.com>"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:7
+msgid "updated by Davidlohr Bueso <davidlohr@hp.com>"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:10
+msgid "What are mutexes?"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:12
+msgid ""
+"In the Linux kernel, mutexes refer to a particular locking primitive that "
+"enforces serialization on shared memory systems, and not only to the generic "
+"term referring to 'mutual exclusion' found in academia or similar "
+"theoretical text books. Mutexes are sleeping locks which behave similarly to "
+"binary semaphores, and were introduced in 2006[1] as an alternative to "
+"these. This new data structure provided a number of advantages, including "
+"simpler interfaces, and at that time smaller code (see Disadvantages)."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:21
+msgid "[1] https://lwn.net/Articles/164802/"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:24
+msgid "Implementation"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:26
+msgid ""
+"Mutexes are represented by 'struct mutex', defined in include/linux/mutex.h "
+"and implemented in kernel/locking/mutex.c. These locks use an atomic "
+"variable (->owner) to keep track of the lock state during its lifetime.  "
+"Field owner actually contains `struct task_struct *` to the current lock "
+"owner and it is therefore NULL if not currently owned. Since task_struct "
+"pointers are aligned to at least L1_CACHE_BYTES, low bits (3) are used to "
+"store extra state (e.g., if waiter list is non-empty).  In its most basic "
+"form it also includes a wait-queue and a spinlock that serializes access to "
+"it. Furthermore, CONFIG_MUTEX_SPIN_ON_OWNER=y systems use a spinner MCS lock "
+"(->osq), described below in (ii)."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:37
+msgid ""
+"When acquiring a mutex, there are three possible paths that can be taken, "
+"depending on the state of the lock:"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:40
+msgid ""
+"fastpath: tries to atomically acquire the lock by cmpxchg()ing the owner "
+"with the current task. This only works in the uncontended case (cmpxchg() "
+"checks against 0UL, so all 3 state bits above have to be 0). If the lock is "
+"contended it goes to the next possible path."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:45
+msgid ""
+"midpath: aka optimistic spinning, tries to spin for acquisition while the "
+"lock owner is running and there are no other tasks ready to run that have "
+"higher priority (need_resched). The rationale is that if the lock owner is "
+"running, it is likely to release the lock soon. The mutex spinners are "
+"queued up using MCS lock so that only one spinner can compete for the mutex."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:52
+msgid ""
+"The MCS lock (proposed by Mellor-Crummey and Scott) is a simple spinlock "
+"with the desirable properties of being fair and with each cpu trying to "
+"acquire the lock spinning on a local variable. It avoids expensive cacheline "
+"bouncing that common test-and-set spinlock implementations incur. An MCS-"
+"like lock is specially tailored for optimistic spinning for sleeping lock "
+"implementation. An important feature of the customized MCS lock is that it "
+"has the extra property that spinners are able to exit the MCS spinlock queue "
+"when they need to reschedule. This further helps avoid situations where MCS "
+"spinners that need to reschedule would continue waiting to spin on mutex "
+"owner, only to go directly to slowpath upon obtaining the MCS lock."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:65
+msgid ""
+"slowpath: last resort, if the lock is still unable to be acquired, the task "
+"is added to the wait-queue and sleeps until woken up by the unlock path. "
+"Under normal circumstances it blocks as TASK_UNINTERRUPTIBLE."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:69
+msgid ""
+"While formally kernel mutexes are sleepable locks, it is path (ii) that "
+"makes them more practically a hybrid type. By simply not interrupting a task "
+"and busy-waiting for a few cycles instead of immediately sleeping, the "
+"performance of this lock has been seen to significantly improve a number of "
+"workloads. Note that this technique is also used for rw-semaphores."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:76
+msgid "Semantics"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:78
+msgid "The mutex subsystem checks and enforces the following rules:"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:80
+msgid "Only one task can hold the mutex at a time."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:81
+msgid "Only the owner can unlock the mutex."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:82
+msgid "Multiple unlocks are not permitted."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:83
+msgid "Recursive locking/unlocking is not permitted."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:84
+msgid "A mutex must only be initialized via the API (see below)."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:85
+msgid "A task may not exit with a mutex held."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:86
+msgid "Memory areas where held locks reside must not be freed."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:87
+msgid "Held mutexes must not be reinitialized."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:88
+msgid ""
+"Mutexes may not be used in hardware or software interrupt contexts such as "
+"tasklets and timers."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:91
+msgid ""
+"These semantics are fully enforced when CONFIG DEBUG_MUTEXES is enabled. In "
+"addition, the mutex debugging code also implements a number of other "
+"features that make lock debugging easier and faster:"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:95
+msgid ""
+"Uses symbolic names of mutexes, whenever they are printed in debug output."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:97
+msgid ""
+"Point-of-acquire tracking, symbolic lookup of function names, list of all "
+"locks held in the system, printout of them."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:99
+msgid "Owner tracking."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:100
+msgid "Detects self-recursing locks and prints out all relevant info."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:101
+msgid ""
+"Detects multi-task circular deadlocks and prints out all affected locks and "
+"tasks (and only those tasks)."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:104
+msgid ""
+"Mutexes - and most other sleeping locks like rwsems - do not provide an "
+"implicit reference for the memory they occupy, which reference is released "
+"with mutex_unlock()."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:108
+msgid "[ This is in contrast with spin_unlock() [or completion_done()], which"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:109
+msgid ""
+"APIs can be used to guarantee that the memory is not touched by the lock "
+"implementation after spin_unlock()/completion_done() releases the lock. ]"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:113
+msgid ""
+"mutex_unlock() may access the mutex structure even after it has internally "
+"released the lock already - so it's not safe for another context to acquire "
+"the mutex and assume that the mutex_unlock() context is not using the "
+"structure anymore."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:118
+msgid ""
+"The mutex user must ensure that the mutex is not destroyed while a release "
+"operation is still in progress - in other words, callers of mutex_unlock() "
+"must ensure that the mutex stays alive until mutex_unlock() has returned."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:124
+msgid "Interfaces"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:125
+msgid "Statically define the mutex::"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:129
+msgid "Dynamically initialize the mutex::"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:133
+msgid "Acquire the mutex, uninterruptible::"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:139
+msgid "Acquire the mutex, interruptible::"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:145
+msgid "Acquire the mutex, interruptible, if dec to 0::"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:149
+msgid "Unlock the mutex::"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:153
+msgid "Test if the mutex is taken::"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:158
+msgid "Disadvantages"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:160
+msgid ""
+"Unlike its original design and purpose, 'struct mutex' is among the largest "
+"locks in the kernel. E.g: on x86-64 it is 32 bytes, where 'struct semaphore' "
+"is 24 bytes and rw_semaphore is 40 bytes. Larger structure sizes mean more "
+"CPU cache and memory footprint."
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:166
+msgid "When to use mutexes"
+msgstr ""
+
+#: ../../../locking/mutex-design.rst:168
+msgid ""
+"Unless the strict semantics of mutexes are unsuitable and/or the critical "
+"region prevents the lock from being shared, always prefer them to any other "
+"locking primitive."
+msgstr ""
