@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-22 13:37+0000\n"
+"POT-Creation-Date: 2026-11-02 17:56+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -53,18 +53,91 @@ msgid ""
 msgstr ""
 
 #: ../../../networking/netmem.rst:23
-msgid "Driver RX Requirements"
+msgid "Design Principles"
 msgstr ""
 
 #: ../../../networking/netmem.rst:25
+msgid ""
+"Memory providers (or the default ``page_pool`` allocator) allocate "
+"underlying memory (``struct net_iov`` or ``struct page``), cast it to "
+"``netmem_ref``, and supply it to ``page_pool``. The ``page_pool``, drivers, "
+"and networking stack operate on ``netmem_ref`` as the abstract type. "
+"Existing ``page_pool`` APIs that allocate or free ``struct page`` are legacy "
+"compatibility wrappers for drivers that do not yet support ``netmem_ref``. "
+"Code that is not yet ``netmem``-aware should be converted to ``netmem_ref`` "
+"unless it will never need to support ``netmem``."
+msgstr ""
+
+#: ../../../networking/netmem.rst:34
+msgid ""
+"**Operate on netmem_ref, do not downcast**: ``page_pool``, drivers, and the "
+"core networking stack should deal with ``netmem_ref`` rather than ``struct "
+"net_iov`` or ``struct page``. Downcasting ``netmem_ref`` to ``struct "
+"net_iov`` or ``struct page`` is not allowed unless a code path strictly "
+"cannot function without knowing the underlying memory type (for example, "
+"``kmap_local_page()``). In those cases, to keep call sites simple, add a "
+"``netmem`` helper that performs the operation on behalf of the caller, "
+"cleanly handles all ``net_iov`` and ``page`` cases, and returns an error if "
+"the ``netmem`` type cannot support the requested operation."
+msgstr ""
+
+#: ../../../networking/netmem.rst:44
+msgid ""
+"**Decouple memory providers from net_iov**: Memory providers are not "
+"architecturally limited to ``struct net_iov``; a memory provider that "
+"returns ``struct page``-backed ``netmem_ref``\\ s to upper layers is "
+"allowed. Today, in-tree memory providers only supply ``struct net_iov`` and "
+"some existing code still reflects that limitation, but new code must not "
+"assume that using a memory provider implies ``net_iov`` memory and should, "
+"as much as possible, generalize existing limitations to match the design "
+"principles."
+msgstr ""
+
+#: ../../../networking/netmem.rst:52
+msgid ""
+"**Decouple net_iov from unreadability**: ``struct net_iov`` is flexible and "
+"has no inherent restrictions; it may represent either CPU-readable or "
+"unreadable memory. Today, in-tree ``net_iov`` implementations are unreadable "
+"by the CPU (``netmem_address()`` returns ``NULL``) and some existing code "
+"still reflects that limitation, but new code must not assume ``net_iov`` "
+"implies unreadable memory (check readability via ``netmem_address()`` or "
+"``skb_frags_readable()`` instead) and should, as much as possible, "
+"generalize existing limitations to match the design principles."
+msgstr ""
+
+#: ../../../networking/netmem.rst:61
+msgid ""
+"**Delegate complexity to the lowest layer**: Each layer must respect its "
+"abstraction boundary. ``page_pool`` must not implement per-memory-provider "
+"custom logic in its main code; instead, it delegates provider-specific "
+"handling to ``struct memory_provider_ops``. Similarly, core networking code "
+"should avoid per-``netmem``-type branching and instead delegate operations "
+"to ``netmem`` helpers that handle the underlying memory type."
+msgstr ""
+
+#: ../../../networking/netmem.rst:68
+msgid ""
+"**Do not mix skb fragment memory sources**: All ``frags[]`` in an "
+"``sk_buff`` must either be ``struct page``-backed or belong to the same "
+"memory provider instance (for example, the same ``devmem`` binding or "
+"``io_uring`` area). Mixing ``struct page`` and memory-provider fragments, or "
+"mixing fragments from different memory providers within a single "
+"``sk_buff``, is not allowed (including when coalescing ``sk_buff``\\ s)."
+msgstr ""
+
+#: ../../../networking/netmem.rst:76
+msgid "Driver RX Requirements"
+msgstr ""
+
+#: ../../../networking/netmem.rst:78
 msgid "The driver must support page_pool."
 msgstr ""
 
-#: ../../../networking/netmem.rst:27
+#: ../../../networking/netmem.rst:80
 msgid "The driver must support the tcp-data-split ethtool option."
 msgstr ""
 
-#: ../../../networking/netmem.rst:29
+#: ../../../networking/netmem.rst:82
 msgid ""
 "The driver must use the page_pool netmem APIs for payload memory. The netmem "
 "APIs currently 1-to-1 correspond with page APIs. Conversion to netmem should "
@@ -72,19 +145,19 @@ msgid ""
 "via netmem_refs in the driver rather than struct page * :"
 msgstr ""
 
-#: ../../../networking/netmem.rst:34
+#: ../../../networking/netmem.rst:87
 msgid "page_pool_alloc -> page_pool_alloc_netmem"
 msgstr ""
 
-#: ../../../networking/netmem.rst:35
+#: ../../../networking/netmem.rst:88
 msgid "page_pool_get_dma_addr -> page_pool_get_dma_addr_netmem"
 msgstr ""
 
-#: ../../../networking/netmem.rst:36
+#: ../../../networking/netmem.rst:89
 msgid "page_pool_put_page -> page_pool_put_netmem"
 msgstr ""
 
-#: ../../../networking/netmem.rst:38
+#: ../../../networking/netmem.rst:91
 msgid ""
 "Not all page APIs have netmem equivalents at the moment. If your driver "
 "relies on a missing netmem API, feel free to add and propose to netdev@, or "
@@ -92,31 +165,31 @@ msgid ""
 "the netmem API."
 msgstr ""
 
-#: ../../../networking/netmem.rst:43
+#: ../../../networking/netmem.rst:96
 msgid "The driver must use the following PP_FLAGS:"
 msgstr ""
 
-#: ../../../networking/netmem.rst:45
+#: ../../../networking/netmem.rst:98
 msgid ""
 "PP_FLAG_DMA_MAP: netmem is not dma-mappable by the driver. The driver must "
 "delegate the dma mapping to the page_pool, which knows when dma-mapping is "
 "(or is not) appropriate."
 msgstr ""
 
-#: ../../../networking/netmem.rst:48
+#: ../../../networking/netmem.rst:101
 msgid ""
 "PP_FLAG_DMA_SYNC_DEV: netmem dma addr is not necessarily dma-syncable by the "
 "driver. The driver must delegate the dma syncing to the page_pool, which "
 "knows when dma-syncing is (or is not) appropriate."
 msgstr ""
 
-#: ../../../networking/netmem.rst:51
+#: ../../../networking/netmem.rst:104
 msgid ""
 "PP_FLAG_ALLOW_UNREADABLE_NETMEM. The driver must specify this flag iff tcp-"
 "data-split is enabled."
 msgstr ""
 
-#: ../../../networking/netmem.rst:54
+#: ../../../networking/netmem.rst:107
 msgid ""
 "The driver must not assume the netmem is readable and/or backed by pages. "
 "The netmem returned by the page_pool may be unreadable, in which case "
@@ -125,7 +198,7 @@ msgid ""
 "netmem_address() is NULL."
 msgstr ""
 
-#: ../../../networking/netmem.rst:60
+#: ../../../networking/netmem.rst:113
 msgid ""
 "Ideally, drivers should not have to check the underlying netmem type via "
 "helpers like netmem_is_net_iov() or convert the netmem to any of its "
@@ -134,7 +207,7 @@ msgid ""
 "more can be added)."
 msgstr ""
 
-#: ../../../networking/netmem.rst:66
+#: ../../../networking/netmem.rst:119
 msgid ""
 "The driver must use page_pool_dma_sync_netmem_for_cpu() in lieu of "
 "dma_sync_single_range_for_cpu(). For some memory providers, dma_syncing for "
@@ -144,7 +217,7 @@ msgid ""
 "the page_pool which will do it correctly."
 msgstr ""
 
-#: ../../../networking/netmem.rst:73
+#: ../../../networking/netmem.rst:126
 msgid ""
 "Avoid implementing driver-specific recycling on top of the page_pool. "
 "Drivers cannot hold onto a struct page to do their own recycling as the "
@@ -155,18 +228,18 @@ msgid ""
 "reference in zerocopy scenarios."
 msgstr ""
 
-#: ../../../networking/netmem.rst:82
+#: ../../../networking/netmem.rst:135
 msgid "Driver TX Requirements"
 msgstr ""
 
-#: ../../../networking/netmem.rst:84
+#: ../../../networking/netmem.rst:137
 msgid ""
 "The Driver must not pass the netmem dma_addr to any of the dma-mapping APIs "
 "directly. This is because netmem dma_addrs may come from a source like dma-"
 "buf that is not compatible with the dma-mapping APIs."
 msgstr ""
 
-#: ../../../networking/netmem.rst:88
+#: ../../../networking/netmem.rst:141
 msgid ""
 "Helpers like netmem_dma_unmap_page_attrs() & netmem_dma_unmap_addr_set() "
 "should be used in lieu of dma_unmap_page[_attrs](), dma_unmap_addr_set(). "
@@ -174,7 +247,7 @@ msgid ""
 "source, delegating to the dma-mapping APIs when appropriate."
 msgstr ""
 
-#: ../../../networking/netmem.rst:93
+#: ../../../networking/netmem.rst:146
 msgid ""
 "Not all dma-mapping APIs have netmem equivalents at the moment. If your "
 "driver relies on a missing netmem API, feel free to add and propose to "
@@ -182,17 +255,17 @@ msgid ""
 "help adding the netmem API."
 msgstr ""
 
-#: ../../../networking/netmem.rst:98
+#: ../../../networking/netmem.rst:151
 msgid ""
 "Driver should declare support by setting `netdev->netmem_tx` to the "
 "appropriate mode:"
 msgstr ""
 
-#: ../../../networking/netmem.rst:101
+#: ../../../networking/netmem.rst:154
 msgid "`NETMEM_TX_DMA`: for physical devices that perform DMA."
 msgstr ""
 
-#: ../../../networking/netmem.rst:103
+#: ../../../networking/netmem.rst:156
 msgid ""
 "`NETMEM_TX_NO_DMA`: for virtual or passthrough devices that do not DMA, but "
 "still support handling of netmem-backed skbs."
