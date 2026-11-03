@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Lock Statistics &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/locking/lockstat.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Kernel Lock Torture Test Operation" href="locktorture.html" />
+    <link rel="prev" title="Runtime locking correctness validator" href="lockdep-design.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Locking</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="locktypes.html">Lock types and their rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockdep-design.html">Runtime locking correctness validator</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Lock Statistics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#what">What</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#why">Why</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#how">How</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="locktorture.html">Kernel Lock Torture Test Operation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mutex-design.html">Generic Mutex Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex-design.html">RT-mutex implementation design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex.html">RT-mutex subsystem with PI support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seqlock.html">Sequence counters and sequential locks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spinlocks.html">Locking lessons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ww-mutex-design.html">Wound/Wait Deadlock-Proof Mutex Design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="preempt-locking.html">Proper Locking Under a Preemptible Kernel: Keeping Kernel Code Preempt-Safe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pi-futex.html">Lightweight PI-futexes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="futex-requeue-pi.html">Futex Requeue PI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hwspinlock.html">Hardware Spinlock Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="percpu-rw-semaphore.html">Percpu rw semaphores</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futexes.html">A description of what robust futexes are</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futex-ABI.html">The robust futex ABI</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/locking/lockstat.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="lock-statistics">
+<h1>Lock Statistics<a class="headerlink" href="#lock-statistics" title="Link to this heading">¶</a></h1>
+<section id="what">
+<h2>What<a class="headerlink" href="#what" title="Link to this heading">¶</a></h2>
+<p>As the name suggests, it provides statistics on locks.</p>
+</section>
+<section id="why">
+<h2>Why<a class="headerlink" href="#why" title="Link to this heading">¶</a></h2>
+<p>Because things like lock contention can severely impact performance.</p>
+</section>
+<section id="how">
+<h2>How<a class="headerlink" href="#how" title="Link to this heading">¶</a></h2>
+<p>Lockdep already has hooks in the lock functions and maps lock instances to
+lock classes. We build on that (see <a class="reference internal" href="lockdep-design.html"><span class="doc">Runtime locking correctness validator</span></a>).
+The graph below shows the relation between the lock functions and the various
+hooks therein:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>      __acquire
+          |
+         lock _____
+          |        \
+          |    __contended
+          |         |
+          |       &lt;wait&gt;
+          | _______/
+          |/
+          |
+     __acquired
+          |
+          .
+        &lt;hold&gt;
+          .
+          |
+     __release
+          |
+       unlock
+
+lock, unlock  - the regular lock functions
+__*           - the hooks
+&lt;&gt;            - states
+</pre></div>
+</div>
+<p>With these hooks we provide the following statistics:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>con-bounces</dt><dd><ul class="simple">
+<li><p>number of lock contention that involved x-cpu data</p></li>
+</ul>
+</dd>
+<dt>contentions</dt><dd><ul class="simple">
+<li><p>number of lock acquisitions that had to wait</p></li>
+</ul>
+</dd>
+<dt>wait time</dt><dd><dl class="simple">
+<dt>min</dt><dd><ul class="simple">
+<li><p>shortest (non-0) time we ever had to wait for a lock</p></li>
+</ul>
+</dd>
+<dt>max</dt><dd><ul class="simple">
+<li><p>longest time we ever had to wait for a lock</p></li>
+</ul>
+</dd>
+<dt>total</dt><dd><ul class="simple">
+<li><p>total time we spend waiting on this lock</p></li>
+</ul>
+</dd>
+<dt>avg</dt><dd><ul class="simple">
+<li><p>average time spent waiting on this lock</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt>acq-bounces</dt><dd><ul class="simple">
+<li><p>number of lock acquisitions that involved x-cpu data</p></li>
+</ul>
+</dd>
+<dt>acquisitions</dt><dd><ul class="simple">
+<li><p>number of times we took the lock</p></li>
+</ul>
+</dd>
+<dt>hold time</dt><dd><dl class="simple">
+<dt>min</dt><dd><ul class="simple">
+<li><p>shortest (non-0) time we ever held the lock</p></li>
+</ul>
+</dd>
+<dt>max</dt><dd><ul class="simple">
+<li><p>longest time we ever held the lock</p></li>
+</ul>
+</dd>
+<dt>total</dt><dd><ul class="simple">
+<li><p>total time this lock was held</p></li>
+</ul>
+</dd>
+<dt>avg</dt><dd><ul class="simple">
+<li><p>average time this lock was held</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</div></blockquote>
+<p>These numbers are gathered per lock class, per read/write state (when
+applicable).</p>
+<p>It also tracks 4 contention points per class. A contention point is a call site
+that had to wait on lock acquisition.</p>
+<section id="configuration">
+<h3>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">¶</a></h3>
+<p>Lock statistics are enabled via CONFIG_LOCK_STAT.</p>
+</section>
+<section id="usage">
+<h3>Usage<a class="headerlink" href="#usage" title="Link to this heading">¶</a></h3>
+<p>Enable collection of statistics:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo 1 &gt;/proc/sys/kernel/lock_stat
+</pre></div>
+</div>
+<p>Disable collection of statistics:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo 0 &gt;/proc/sys/kernel/lock_stat
+</pre></div>
+</div>
+<p>Look at the current lock statistics:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>( line numbers not part of actual output, done for clarity in the explanation
+  below )
+
+# less /proc/lock_stat
+
+01 lock_stat version 0.4
+02-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03                              class name    con-bounces    contentions   waittime-min   waittime-max waittime-total   waittime-avg    acq-bounces   acquisitions   holdtime-min   holdtime-max holdtime-total   holdtime-avg
+04-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+05
+06                         &amp;mm-&gt;mmap_sem-W:            46             84           0.26         939.10       16371.53         194.90          47291        2922365           0.16     2220301.69 17464026916.32        5975.99
+07                         &amp;mm-&gt;mmap_sem-R:            37            100           1.31      299502.61      325629.52        3256.30         212344       34316685           0.10        7744.91    95016910.20           2.77
+08                         ---------------
+09                           &amp;mm-&gt;mmap_sem              1          [&lt;ffffffff811502a7&gt;] khugepaged_scan_mm_slot+0x57/0x280
+10                           &amp;mm-&gt;mmap_sem             96          [&lt;ffffffff815351c4&gt;] __do_page_fault+0x1d4/0x510
+11                           &amp;mm-&gt;mmap_sem             34          [&lt;ffffffff81113d77&gt;] vm_mmap_pgoff+0x87/0xd0
+12                           &amp;mm-&gt;mmap_sem             17          [&lt;ffffffff81127e71&gt;] vm_munmap+0x41/0x80
+13                         ---------------
+14                           &amp;mm-&gt;mmap_sem              1          [&lt;ffffffff81046fda&gt;] dup_mmap+0x2a/0x3f0
+15                           &amp;mm-&gt;mmap_sem             60          [&lt;ffffffff81129e29&gt;] SyS_mprotect+0xe9/0x250
+16                           &amp;mm-&gt;mmap_sem             41          [&lt;ffffffff815351c4&gt;] __do_page_fault+0x1d4/0x510
+17                           &amp;mm-&gt;mmap_sem             68          [&lt;ffffffff81113d77&gt;] vm_mmap_pgoff+0x87/0xd0
+18
+19.............................................................................................................................................................................................................................
+20
+21                         unix_table_lock:           110            112           0.21          49.24         163.91           1.46          21094          66312           0.12         624.42       31589.81           0.48
+22                         ---------------
+23                         unix_table_lock             45          [&lt;ffffffff8150ad8e&gt;] unix_create1+0x16e/0x1b0
+24                         unix_table_lock             47          [&lt;ffffffff8150b111&gt;] unix_release_sock+0x31/0x250
+25                         unix_table_lock             15          [&lt;ffffffff8150ca37&gt;] unix_find_other+0x117/0x230
+26                         unix_table_lock              5          [&lt;ffffffff8150a09f&gt;] unix_autobind+0x11f/0x1b0
+27                         ---------------
+28                         unix_table_lock             39          [&lt;ffffffff8150b111&gt;] unix_release_sock+0x31/0x250
+29                         unix_table_lock             49          [&lt;ffffffff8150ad8e&gt;] unix_create1+0x16e/0x1b0
+30                         unix_table_lock             20          [&lt;ffffffff8150ca37&gt;] unix_find_other+0x117/0x230
+31                         unix_table_lock              4          [&lt;ffffffff8150a09f&gt;] unix_autobind+0x11f/0x1b0
+</pre></div>
+</div>
+<p>This excerpt shows the first two lock class statistics. Line 01 shows the
+output version - each time the format changes this will be updated. Line 02-04
+show the header with column descriptions. Lines 05-18 and 20-31 show the actual
+statistics. These statistics come in two parts; the actual stats separated by a
+short separator (line 08, 13) from the contention points.</p>
+<p>Lines 09-12 show the first 4 recorded contention points (the code
+which tries to get the lock) and lines 14-17 show the first 4 recorded
+contended points (the lock holder). It is possible that the max
+con-bounces point is missing in the statistics.</p>
+<p>The first lock (05-18) is a read/write lock, and shows two lines above the
+short separator. The contention points don’t match the column descriptors,
+they have two: contentions and [&lt;IP&gt;] symbol. The second set of contention
+points are the points we’re contending with.</p>
+<p>The integer part of the time values is in us.</p>
+<p>Dealing with nested locks, subclasses may appear:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>32...........................................................................................................................................................................................................................
+33
+34                               &amp;rq-&gt;lock:       13128          13128           0.43         190.53      103881.26           7.91          97454        3453404           0.00         401.11    13224683.11           3.82
+35                               ---------
+36                               &amp;rq-&gt;lock          645          [&lt;ffffffff8103bfc4&gt;] task_rq_lock+0x43/0x75
+37                               &amp;rq-&gt;lock          297          [&lt;ffffffff8104ba65&gt;] try_to_wake_up+0x127/0x25a
+38                               &amp;rq-&gt;lock          360          [&lt;ffffffff8103c4c5&gt;] select_task_rq_fair+0x1f0/0x74a
+39                               &amp;rq-&gt;lock          428          [&lt;ffffffff81045f98&gt;] scheduler_tick+0x46/0x1fb
+40                               ---------
+41                               &amp;rq-&gt;lock           77          [&lt;ffffffff8103bfc4&gt;] task_rq_lock+0x43/0x75
+42                               &amp;rq-&gt;lock          174          [&lt;ffffffff8104ba65&gt;] try_to_wake_up+0x127/0x25a
+43                               &amp;rq-&gt;lock         4715          [&lt;ffffffff8103ed4b&gt;] double_rq_lock+0x42/0x54
+44                               &amp;rq-&gt;lock          893          [&lt;ffffffff81340524&gt;] schedule+0x157/0x7b8
+45
+46...........................................................................................................................................................................................................................
+47
+48                             &amp;rq-&gt;lock/1:        1526          11488           0.33         388.73      136294.31          11.86          21461          38404           0.00          37.93      109388.53           2.84
+49                             -----------
+50                             &amp;rq-&gt;lock/1        11526          [&lt;ffffffff8103ed58&gt;] double_rq_lock+0x4f/0x54
+51                             -----------
+52                             &amp;rq-&gt;lock/1         5645          [&lt;ffffffff8103ed4b&gt;] double_rq_lock+0x42/0x54
+53                             &amp;rq-&gt;lock/1         1224          [&lt;ffffffff81340524&gt;] schedule+0x157/0x7b8
+54                             &amp;rq-&gt;lock/1         4336          [&lt;ffffffff8103ed58&gt;] double_rq_lock+0x4f/0x54
+55                             &amp;rq-&gt;lock/1          181          [&lt;ffffffff8104ba65&gt;] try_to_wake_up+0x127/0x25a
+</pre></div>
+</div>
+<p>Line 48 shows statistics for the second subclass (/1) of &amp;rq-&gt;lock class
+(subclass starts from 0), since in this case, as line 50 suggests,
+double_rq_lock actually acquires a nested lock of two spinlocks.</p>
+<p>View the top contending locks:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># grep : /proc/lock_stat | head
+                      clockevents_lock:       2926159        2947636           0.15       46882.81  1784540466.34         605.41        3381345        3879161           0.00        2260.97    53178395.68          13.71
+                   tick_broadcast_lock:        346460         346717           0.18        2257.43    39364622.71         113.54        3642919        4242696           0.00        2263.79    49173646.60          11.59
+                &amp;mapping-&gt;i_mmap_mutex:        203896         203899           3.36      645530.05 31767507988.39      155800.21        3361776        8893984           0.17        2254.15    14110121.02           1.59
+                             &amp;rq-&gt;lock:        135014         136909           0.18         606.09      842160.68           6.15        1540728       10436146           0.00         728.72    17606683.41           1.69
+             &amp;(&amp;zone-&gt;lru_lock)-&gt;rlock:         93000          94934           0.16          59.18      188253.78           1.98        1199912        3809894           0.15         391.40     3559518.81           0.93
+                       tasklist_lock-W:         40667          41130           0.23        1189.42      428980.51          10.43         270278         510106           0.16         653.51     3939674.91           7.72
+                       tasklist_lock-R:         21298          21305           0.20        1310.05      215511.12          10.12         186204         241258           0.14        1162.33     1179779.23           4.89
+                            rcu_node_1:         47656          49022           0.16         635.41      193616.41           3.95         844888        1865423           0.00         764.26     1656226.96           0.89
+     &amp;(&amp;dentry-&gt;d_lockref.lock)-&gt;rlock:         39791          40179           0.15        1302.08       88851.96           2.21        2790851       12527025           0.10        1910.75     3379714.27           0.27
+                            rcu_node_0:         29203          30064           0.16         786.55     1555573.00          51.74          88963         244254           0.00         398.87      428872.51           1.76
+</pre></div>
+</div>
+<p>Clear the statistics:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># echo 0 &gt; /proc/lock_stat
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/locking/lockstat.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
