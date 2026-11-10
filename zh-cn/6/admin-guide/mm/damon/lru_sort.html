@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>DAMON-based LRU-lists Sorting &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/mm/damon/lru_sort.html" />
+    <link rel="index" title="索引" href="../../../genindex.html" />
+    <link rel="search" title="搜索" href="../../../search.html" />
+    <link rel="next" title="Data Access Monitoring Results Stat" href="stat.html" />
+    <link rel="prev" title="DAMON-based Reclamation" href="reclaim.html" />
+
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html#core-kernel-subsystems">Core-kernel subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../../cgroup-v2.html">Control Group v2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../cgroup-v1/index.html">Control Groups version 1</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../cpu-load.html">CPU load</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="../index.html">Memory Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../module-signing.html">Kernel module signing facility</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../namespaces/index.html">Namespaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../numastat.html">Numa policy hit/miss statistics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../pm/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../syscall-user-dispatch.html">Syscall User Dispatch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../binfmt-misc.html">Kernel Support for miscellaneous Binary Formats (binfmt_misc)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../java.html">Java(tm) Binary Kernel Support for Linux v1.03</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../mono.html">Mono(tm) Binary Kernel Support for Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../../_sources/admin-guide/mm/damon/lru_sort.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="damon-based-lru-lists-sorting">
+<h1>DAMON-based LRU-lists Sorting<a class="headerlink" href="#damon-based-lru-lists-sorting" title="Link to this heading">¶</a></h1>
+<p>DAMON-based LRU-lists Sorting (DAMON_LRU_SORT) is a static kernel module that
+aimed to be used for proactive and lightweight data access pattern based
+(de)prioritization of pages on their LRU-lists for making LRU-lists a more
+trusworthy data access pattern source.</p>
+<section id="where-proactive-lru-lists-sorting-is-required">
+<h2>Where Proactive LRU-lists Sorting is Required?<a class="headerlink" href="#where-proactive-lru-lists-sorting-is-required" title="Link to this heading">¶</a></h2>
+<p>As page-granularity access checking overhead could be significant on huge
+systems, LRU lists are normally not proactively sorted but partially and
+reactively sorted for special events including specific user requests, system
+calls and memory pressure.  As a result, LRU lists are sometimes not so
+perfectly prepared to be used as a trustworthy access pattern source for some
+situations including reclamation target pages selection under sudden memory
+pressure.</p>
+<p>Because DAMON can identify access patterns of best-effort accuracy while
+inducing only user-specified range of overhead, proactively running
+DAMON_LRU_SORT could be helpful for making LRU lists more trustworthy access
+pattern source with low and controlled overhead.</p>
+</section>
+<section id="how-it-works">
+<h2>How It Works?<a class="headerlink" href="#how-it-works" title="Link to this heading">¶</a></h2>
+<p>DAMON_LRU_SORT finds hot pages (pages of memory regions that showing access
+rates that higher than a user-specified threshold) and cold pages (pages of
+memory regions that showing no access for a time that longer than a
+user-specified threshold) using DAMON, and prioritizes hot pages while
+deprioritizing cold pages on their LRU-lists.  To avoid it consuming too much
+CPU for the prioritizations, a CPU time usage limit can be configured.  Under
+the limit, it prioritizes and deprioritizes more hot and cold pages first,
+respectively.  System administrators can also configure under what situation
+this scheme should automatically activated and deactivated with three memory
+pressure watermarks.</p>
+<p>Its default parameters for hotness/coldness thresholds and CPU quota limit are
+conservatively chosen.  That is, the module under its default parameters could
+be widely used without harm for common situations while providing a level of
+benefits for systems having clear hot/cold access patterns under memory
+pressure while consuming only a limited small portion of CPU time.</p>
+</section>
+<section id="interface-module-parameters">
+<h2>Interface: Module Parameters<a class="headerlink" href="#interface-module-parameters" title="Link to this heading">¶</a></h2>
+<p>To use this feature, you should first ensure your system is running on a kernel
+that is built with <code class="docutils literal notranslate"><span class="pre">CONFIG_DAMON_LRU_SORT=y</span></code>.</p>
+<p>To let sysadmins enable or disable it and tune for the given system,
+DAMON_LRU_SORT utilizes module parameters.  That is, you can put
+<code class="docutils literal notranslate"><span class="pre">damon_lru_sort.&lt;parameter&gt;=&lt;value&gt;</span></code> on the kernel boot command line or write
+proper values to <code class="docutils literal notranslate"><span class="pre">/sys/module/damon_lru_sort/parameters/&lt;parameter&gt;</span></code> files.</p>
+<p>Below are the description of each parameter.</p>
+<section id="enabled">
+<h3>enabled<a class="headerlink" href="#enabled" title="Link to this heading">¶</a></h3>
+<p>Enable or disable DAMON_LRU_SORT.</p>
+<p>You can enable DAMON_LRU_SORT by setting the value of this parameter as <code class="docutils literal notranslate"><span class="pre">Y</span></code>.
+Setting it as <code class="docutils literal notranslate"><span class="pre">N</span></code> disables DAMON_LRU_SORT.  Note that DAMON_LRU_SORT could do
+no real monitoring and LRU-lists sorting due to the watermarks-based activation
+condition.  Refer to below descriptions for the watermarks parameter for this.</p>
+</section>
+<section id="commit-inputs">
+<h3>commit_inputs<a class="headerlink" href="#commit-inputs" title="Link to this heading">¶</a></h3>
+<p>Make DAMON_LRU_SORT reads the input parameters again, except <code class="docutils literal notranslate"><span class="pre">enabled</span></code>.</p>
+<p>Input parameters that updated while DAMON_LRU_SORT is running are not applied
+by default.  Once this parameter is set as <code class="docutils literal notranslate"><span class="pre">Y</span></code>, DAMON_LRU_SORT reads values
+of parametrs except <code class="docutils literal notranslate"><span class="pre">enabled</span></code> again.  Once the re-reading is done, this
+parameter is set as <code class="docutils literal notranslate"><span class="pre">N</span></code>.  If invalid parameters are found while the
+re-reading, DAMON_LRU_SORT will be disabled.</p>
+</section>
+<section id="hot-thres-access-freq">
+<h3>hot_thres_access_freq<a class="headerlink" href="#hot-thres-access-freq" title="Link to this heading">¶</a></h3>
+<p>Access frequency threshold for hot memory regions identification in permil.</p>
+<p>If a memory region is accessed in frequency of this or higher, DAMON_LRU_SORT
+identifies the region as hot, and mark it as accessed on the LRU list, so that
+it could not be reclaimed under memory pressure.  50% by default.</p>
+</section>
+<section id="cold-min-age">
+<h3>cold_min_age<a class="headerlink" href="#cold-min-age" title="Link to this heading">¶</a></h3>
+<p>Time threshold for cold memory regions identification in microseconds.</p>
+<p>If a memory region is not accessed for this or longer time, DAMON_LRU_SORT
+identifies the region as cold, and mark it as unaccessed on the LRU list, so
+that it could be reclaimed first under memory pressure.  120 seconds by
+default.</p>
+</section>
+<section id="quota-ms">
+<h3>quota_ms<a class="headerlink" href="#quota-ms" title="Link to this heading">¶</a></h3>
+<p>Limit of time for trying the LRU lists sorting in milliseconds.</p>
+<p>DAMON_LRU_SORT tries to use only up to this time within a time window
+(quota_reset_interval_ms) for trying LRU lists sorting.  This can be used
+for limiting CPU consumption of DAMON_LRU_SORT.  If the value is zero, the
+limit is disabled.</p>
+<p>10 ms by default.</p>
+</section>
+<section id="quota-reset-interval-ms">
+<h3>quota_reset_interval_ms<a class="headerlink" href="#quota-reset-interval-ms" title="Link to this heading">¶</a></h3>
+<p>The time quota charge reset interval in milliseconds.</p>
+<p>The charge reset interval for the quota of time (quota_ms).  That is,
+DAMON_LRU_SORT does not try LRU-lists sorting for more than quota_ms
+milliseconds or quota_sz bytes within quota_reset_interval_ms milliseconds.</p>
+<p>1 second by default.</p>
+</section>
+<section id="wmarks-interval">
+<h3>wmarks_interval<a class="headerlink" href="#wmarks-interval" title="Link to this heading">¶</a></h3>
+<p>The watermarks check time interval in microseconds.</p>
+<p>Minimal time to wait before checking the watermarks, when DAMON_LRU_SORT is
+enabled but inactive due to its watermarks rule.  5 seconds by default.</p>
+</section>
+<section id="wmarks-high">
+<h3>wmarks_high<a class="headerlink" href="#wmarks-high" title="Link to this heading">¶</a></h3>
+<p>Free memory rate (per thousand) for the high watermark.</p>
+<p>If free memory of the system in bytes per thousand bytes is higher than this,
+DAMON_LRU_SORT becomes inactive, so it does nothing but periodically checks the
+watermarks.  200 (20%) by default.</p>
+</section>
+<section id="wmarks-mid">
+<h3>wmarks_mid<a class="headerlink" href="#wmarks-mid" title="Link to this heading">¶</a></h3>
+<p>Free memory rate (per thousand) for the middle watermark.</p>
+<p>If free memory of the system in bytes per thousand bytes is between this and
+the low watermark, DAMON_LRU_SORT becomes active, so starts the monitoring and
+the LRU-lists sorting.  150 (15%) by default.</p>
+</section>
+<section id="wmarks-low">
+<h3>wmarks_low<a class="headerlink" href="#wmarks-low" title="Link to this heading">¶</a></h3>
+<p>Free memory rate (per thousand) for the low watermark.</p>
+<p>If free memory of the system in bytes per thousand bytes is lower than this,
+DAMON_LRU_SORT becomes inactive, so it does nothing but periodically checks the
+watermarks.  50 (5%) by default.</p>
+</section>
+<section id="sample-interval">
+<h3>sample_interval<a class="headerlink" href="#sample-interval" title="Link to this heading">¶</a></h3>
+<p>Sampling interval for the monitoring in microseconds.</p>
+<p>The sampling interval of DAMON for the cold memory monitoring.  Please refer to
+the DAMON documentation (<a class="reference internal" href="usage.html"><span class="doc">Detailed Usages</span></a>) for more detail.  5ms by default.</p>
+</section>
+<section id="aggr-interval">
+<h3>aggr_interval<a class="headerlink" href="#aggr-interval" title="Link to this heading">¶</a></h3>
+<p>Aggregation interval for the monitoring in microseconds.</p>
+<p>The aggregation interval of DAMON for the cold memory monitoring.  Please
+refer to the DAMON documentation (<a class="reference internal" href="usage.html"><span class="doc">Detailed Usages</span></a>) for more detail.  100ms by
+default.</p>
+</section>
+<section id="min-nr-regions">
+<h3>min_nr_regions<a class="headerlink" href="#min-nr-regions" title="Link to this heading">¶</a></h3>
+<p>Minimum number of monitoring regions.</p>
+<p>The minimal number of monitoring regions of DAMON for the cold memory
+monitoring.  This can be used to set lower-bound of the monitoring quality.
+But, setting this too high could result in increased monitoring overhead.
+Please refer to the DAMON documentation (<a class="reference internal" href="usage.html"><span class="doc">Detailed Usages</span></a>) for more detail.  10 by
+default.</p>
+</section>
+<section id="max-nr-regions">
+<h3>max_nr_regions<a class="headerlink" href="#max-nr-regions" title="Link to this heading">¶</a></h3>
+<p>Maximum number of monitoring regions.</p>
+<p>The maximum number of monitoring regions of DAMON for the cold memory
+monitoring.  This can be used to set upper-bound of the monitoring overhead.
+However, setting this too low could result in bad monitoring quality.  Please
+refer to the DAMON documentation (<a class="reference internal" href="usage.html"><span class="doc">Detailed Usages</span></a>) for more detail.  1000 by
+defaults.</p>
+</section>
+<section id="monitor-region-start">
+<h3>monitor_region_start<a class="headerlink" href="#monitor-region-start" title="Link to this heading">¶</a></h3>
+<p>Start of target memory region in physical address.</p>
+<p>The start physical address of memory region that DAMON_LRU_SORT will do work
+against.  By default, biggest System RAM is used as the region.</p>
+</section>
+<section id="monitor-region-end">
+<h3>monitor_region_end<a class="headerlink" href="#monitor-region-end" title="Link to this heading">¶</a></h3>
+<p>End of target memory region in physical address.</p>
+<p>The end physical address of memory region that DAMON_LRU_SORT will do work
+against.  By default, biggest System RAM is used as the region.</p>
+</section>
+<section id="addr-unit">
+<h3>addr_unit<a class="headerlink" href="#addr-unit" title="Link to this heading">¶</a></h3>
+<p>A scale factor for memory addresses and bytes.</p>
+<p>This parameter is for setting and getting the <a class="reference internal" href="../../../mm/damon/design.html#damon-design-addr-unit"><span class="std std-ref">address unit</span></a> parameter of the DAMON instance for DAMON_RECLAIM.</p>
+<p><code class="docutils literal notranslate"><span class="pre">monitor_region_start</span></code> and <code class="docutils literal notranslate"><span class="pre">monitor_region_end</span></code> should be provided in this
+unit.  For example, let's suppose <code class="docutils literal notranslate"><span class="pre">addr_unit</span></code>, <code class="docutils literal notranslate"><span class="pre">monitor_region_start</span></code> and
+<code class="docutils literal notranslate"><span class="pre">monitor_region_end</span></code> are set as <code class="docutils literal notranslate"><span class="pre">1024</span></code>, <code class="docutils literal notranslate"><span class="pre">0</span></code> and <code class="docutils literal notranslate"><span class="pre">10</span></code>, respectively.
+Then DAMON_LRU_SORT will work for 10 KiB length of physical address range that
+starts from address zero (<code class="docutils literal notranslate"><span class="pre">[0</span> <span class="pre">*</span> <span class="pre">1024,</span> <span class="pre">10</span> <span class="pre">*</span> <span class="pre">1024)</span></code> in bytes).</p>
+<p>Stat parameters having <code class="docutils literal notranslate"><span class="pre">bytes_</span></code> prefix are also in this unit.  For example,
+let's suppose values of <code class="docutils literal notranslate"><span class="pre">addr_unit</span></code>, <code class="docutils literal notranslate"><span class="pre">bytes_lru_sort_tried_hot_regions</span></code> and
+<code class="docutils literal notranslate"><span class="pre">bytes_lru_sorted_hot_regions</span></code> are <code class="docutils literal notranslate"><span class="pre">1024</span></code>, <code class="docutils literal notranslate"><span class="pre">42</span></code>, and <code class="docutils literal notranslate"><span class="pre">32</span></code>,
+respectively.  Then it means DAMON_LRU_SORT tried to LRU-sort 42 KiB of hot
+memory and successfully LRU-sorted 32 KiB of the memory in total.</p>
+<p>If unsure, use only the default value (<code class="docutils literal notranslate"><span class="pre">1</span></code>) and forget about this.</p>
+</section>
+<section id="kdamond-pid">
+<h3>kdamond_pid<a class="headerlink" href="#kdamond-pid" title="Link to this heading">¶</a></h3>
+<p>PID of the DAMON thread.</p>
+<p>If DAMON_LRU_SORT is enabled, this becomes the PID of the worker thread.  Else,
+-1.</p>
+</section>
+<section id="nr-lru-sort-tried-hot-regions">
+<h3>nr_lru_sort_tried_hot_regions<a class="headerlink" href="#nr-lru-sort-tried-hot-regions" title="Link to this heading">¶</a></h3>
+<p>Number of hot memory regions that tried to be LRU-sorted.</p>
+</section>
+<section id="bytes-lru-sort-tried-hot-regions">
+<h3>bytes_lru_sort_tried_hot_regions<a class="headerlink" href="#bytes-lru-sort-tried-hot-regions" title="Link to this heading">¶</a></h3>
+<p>Total bytes of hot memory regions that tried to be LRU-sorted.</p>
+</section>
+<section id="nr-lru-sorted-hot-regions">
+<h3>nr_lru_sorted_hot_regions<a class="headerlink" href="#nr-lru-sorted-hot-regions" title="Link to this heading">¶</a></h3>
+<p>Number of hot memory regions that successfully be LRU-sorted.</p>
+</section>
+<section id="bytes-lru-sorted-hot-regions">
+<h3>bytes_lru_sorted_hot_regions<a class="headerlink" href="#bytes-lru-sorted-hot-regions" title="Link to this heading">¶</a></h3>
+<p>Total bytes of hot memory regions that successfully be LRU-sorted.</p>
+</section>
+<section id="nr-hot-quota-exceeds">
+<h3>nr_hot_quota_exceeds<a class="headerlink" href="#nr-hot-quota-exceeds" title="Link to this heading">¶</a></h3>
+<p>Number of times that the time quota limit for hot regions have exceeded.</p>
+</section>
+<section id="nr-lru-sort-tried-cold-regions">
+<h3>nr_lru_sort_tried_cold_regions<a class="headerlink" href="#nr-lru-sort-tried-cold-regions" title="Link to this heading">¶</a></h3>
+<p>Number of cold memory regions that tried to be LRU-sorted.</p>
+</section>
+<section id="bytes-lru-sort-tried-cold-regions">
+<h3>bytes_lru_sort_tried_cold_regions<a class="headerlink" href="#bytes-lru-sort-tried-cold-regions" title="Link to this heading">¶</a></h3>
+<p>Total bytes of cold memory regions that tried to be LRU-sorted.</p>
+</section>
+<section id="nr-lru-sorted-cold-regions">
+<h3>nr_lru_sorted_cold_regions<a class="headerlink" href="#nr-lru-sorted-cold-regions" title="Link to this heading">¶</a></h3>
+<p>Number of cold memory regions that successfully be LRU-sorted.</p>
+</section>
+<section id="bytes-lru-sorted-cold-regions">
+<h3>bytes_lru_sorted_cold_regions<a class="headerlink" href="#bytes-lru-sorted-cold-regions" title="Link to this heading">¶</a></h3>
+<p>Total bytes of cold memory regions that successfully be LRU-sorted.</p>
+</section>
+<section id="nr-cold-quota-exceeds">
+<h3>nr_cold_quota_exceeds<a class="headerlink" href="#nr-cold-quota-exceeds" title="Link to this heading">¶</a></h3>
+<p>Number of times that the time quota limit for cold regions have exceeded.</p>
+</section>
+</section>
+<section id="example">
+<h2>Example<a class="headerlink" href="#example" title="Link to this heading">¶</a></h2>
+<p>Below runtime example commands make DAMON_LRU_SORT to find memory regions
+having &gt;=50% access frequency and LRU-prioritize while LRU-deprioritizing
+memory regions that not accessed for 120 seconds.  The prioritization and
+deprioritization is limited to be done using only up to 1% CPU time to avoid
+DAMON_LRU_SORT consuming too much CPU time for the (de)prioritization.  It also
+asks DAMON_LRU_SORT to do nothing if the system's free memory rate is more than
+50%, but start the real works if it becomes lower than 40%.  If DAMON_RECLAIM
+doesn't make progress and therefore the free memory rate becomes lower than
+20%, it asks DAMON_LRU_SORT to do nothing again, so that we can fall back to
+the LRU-list based page granularity reclamation.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># cd /sys/module/damon_lru_sort/parameters
+# echo 500 &gt; hot_thres_access_freq
+# echo 120000000 &gt; cold_min_age
+# echo 10 &gt; quota_ms
+# echo 1000 &gt; quota_reset_interval_ms
+# echo 500 &gt; wmarks_high
+# echo 400 &gt; wmarks_mid
+# echo 200 &gt; wmarks_low
+# echo Y &gt; enabled
+</pre></div>
+</div>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../../_sources/admin-guide/mm/damon/lru_sort.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
