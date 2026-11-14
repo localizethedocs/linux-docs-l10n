@@ -1,0 +1,186 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel master\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-02 17:56+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../crypto/libcrypto-zeroization.rst:4
+msgid "Crypto Key Zeroization"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:6
+msgid ""
+"This document describes the conventions for zeroizing crypto structures in "
+"the kernel."
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:9
+msgid ""
+"Note: the kernel follows traditional cryptographic terminology by using the "
+"term \"zeroizing\" to mean erasing sensitive parameters to prevent their "
+"disclosure if the system is later compromised.  This distinguishes it from "
+"zeroing memory for other purposes such as initialization."
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:14
+msgid "Contents"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:17
+msgid "Overview"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:19
+msgid ""
+"Cryptographic key material and intermediate state (such as HMAC contexts) "
+"must be zeroized after use to prevent sensitive data from lingering on the "
+"stack or heap, where it could be leaked through memory disclosure "
+"vulnerabilities, crash dumps, or cold-boot attacks."
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:24
+msgid ""
+"For memory that has been allocated with kmalloc() or a similar function, "
+"kfree_sensitive() should be used instead of kfree() to release the memory."
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:27
+msgid ""
+"For other cases, the kernel provides memzero_explicit() for clearing the "
+"memory.  Unlike plain memset(), memzero_explicit() is guaranteed not to be "
+"optimized away by the compiler, even when the memory being cleared appears "
+"to be dead."
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:32
+msgid ""
+"The crypto library builds on memzero_explicit() by providing typed "
+"zeroization helpers for each key and context structure.  These helpers serve "
+"two purposes:"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:36
+msgid ""
+"They make __cleanup() annotations possible, so that structures on the stack "
+"are automatically zeroized when they go out of scope."
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:39
+msgid ""
+"They improve readability by replacing ``memzero_explicit(&key, "
+"sizeof(key))`` with a self-documenting call like ``aes_zeroize_key(&key)``."
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:44
+msgid "What to zeroize"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:46
+msgid ""
+"The following types of structures hold sensitive material and should be "
+"zeroized after use:"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:49
+msgid ""
+"**Key structures** (e.g. ``struct aes_key``, ``struct hmac_sha256_key``): "
+"contain expanded round keys or prepared key material."
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:52
+msgid ""
+"**HMAC/MAC context structures** (e.g. ``struct hmac_sha256_ctx``, ``struct "
+"aes_cmac_ctx``): contain inner and outer hash states derived from the key."
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:56
+msgid ""
+"**Hash context structures** (e.g. ``struct sha256_ctx``): may contain "
+"sensitive data being hashed."
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:59
+msgid ""
+"Not all of these require explicit cleanup by callers.  Many ``..._final()`` "
+"functions already zeroize their context internally (see `Automatic vs. "
+"manual zeroization`_ below)."
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:65
+msgid "Zeroization helpers"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:67
+msgid ""
+"Each crypto structure that callers may need to zeroize should have a "
+"corresponding inline helper function.  The naming convention is::"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:72
+msgid "For example::"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:80
+msgid ""
+"Each helper is a ``static inline`` function in the algorithm's header that "
+"wraps ``memzero_explicit()``, for example::"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:90
+msgid "Using __cleanup for automatic zeroization"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:92
+msgid ""
+"The preferred way to zeroize stack-allocated key and context structures is "
+"with the __cleanup() attribute.  This ensures zeroization happens on all "
+"exit paths, including error returns and early exits. For example::"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:120
+msgid ""
+"Note that __cleanup() attributes should not be used in functions that use "
+"\"goto\" statements. The benefit of cleanup helpers is the removal of "
+"\"gotos\", and that \"goto\" statements can jump between scopes, so the "
+"expectation is that usage of \"goto\" and cleanup helpers is never mixed in "
+"the same function."
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:127
+msgid "Automatic vs. manual zeroization"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:129
+msgid ""
+"Many ``..._final()`` functions in the crypto library automatically zeroize "
+"their context before returning.  When this is the case, the kernel-doc for "
+"the function documents it::"
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:135
+msgid ""
+"In these cases, callers on simple code paths (where ``..._final()`` is "
+"always reached) do not need to add __cleanup() or explicit zeroization. "
+"However, __cleanup() is still recommended whenever there are error paths "
+"that bypass ``..._final()``, as it ensures zeroization on all paths."
+msgstr ""
+
+#: ../../../crypto/libcrypto-zeroization.rst:140
+msgid ""
+"For algorithms where ``..._final()`` does *not* zeroize the context (such as "
+"the SHAKE XOFs, where ``shake_squeeze()`` can be called multiple times), "
+"callers must explicitly zeroize the context by calling the appropriate "
+"helper or using __cleanup(), for example::"
+msgstr ""
