@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-31 16:07+0000\n"
+"POT-Creation-Date: 2026-11-16 17:59+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -129,8 +129,8 @@ msgstr ""
 
 #: ../../../filesystems/iomap/design.rst:73
 msgid ""
-"At a high level, an iomap operation `looks like this <https://lore.kernel."
-"org/all/ZGbVaewzcCysclPt@dread.disaster.area/>`_:"
+"At a high level, an iomap operation `looks like this <https://"
+"lore.kernel.org/all/ZGbVaewzcCysclPt@dread.disaster.area/>`_:"
 msgstr ""
 
 #: ../../../filesystems/iomap/design.rst:76
@@ -138,62 +138,73 @@ msgid "For each byte in the operation range..."
 msgstr ""
 
 #: ../../../filesystems/iomap/design.rst:78
-msgid "Obtain a space mapping via ``->iomap_begin``"
+msgid ""
+"Obtain the next space mapping via the ``iomap_iter_next_fn`` callback. From "
+"the second iteration onwards this same callback first finishes the previous "
+"mapping (committing or unreserving space as needed) and then produces the "
+"next one."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:80
+#: ../../../filesystems/iomap/design.rst:83
 msgid "For each sub-unit of work..."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:82
+#: ../../../filesystems/iomap/design.rst:85
 msgid ""
 "Revalidate the mapping and go back to (1) above, if necessary. So far only "
 "the pagecache operations need to do this."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:85
+#: ../../../filesystems/iomap/design.rst:88
 msgid "Do the work"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:87
+#: ../../../filesystems/iomap/design.rst:90
 msgid "Increment operation cursor"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:89
-msgid "Release the mapping via ``->iomap_end``, if necessary"
+#: ../../../filesystems/iomap/design.rst:92
+msgid ""
+"iomap repeats this until the range is fully consumed.  The "
+"``iomap_iter_next_fn`` callback returns ``1`` while there is more of the "
+"range left to process, ``0`` once it is fully consumed, or a negative errno "
+"on error. Filesystems rarely implement this callback by hand. The "
+"``iomap_iter_next`` helper implements the finish-then-produce sequence in "
+"terms of two smaller callbacks, ``begin`` and ``end``. See `The Mapping "
+"Callback`_ below for more info."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:91
+#: ../../../filesystems/iomap/design.rst:100
 msgid ""
 "Each iomap operation will be covered in more detail below. This library was "
 "covered previously by an `LWN article <https://lwn.net/Articles/935934/>`_ "
 "and a `KernelNewbies page <https://kernelnewbies.org/KernelProjects/iomap>`_."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:96
+#: ../../../filesystems/iomap/design.rst:105
 msgid ""
 "The goal of this document is to provide a brief discussion of the design and "
 "capabilities of iomap, followed by a more detailed catalog of the interfaces "
 "presented by iomap. If you change iomap, please update this design document."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:102
+#: ../../../filesystems/iomap/design.rst:111
 msgid "File Range Iterator"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:105
+#: ../../../filesystems/iomap/design.rst:114
 msgid "Definitions"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:107
+#: ../../../filesystems/iomap/design.rst:116
 msgid "**buffer head**: Shattered remnants of the old buffer cache."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:109
+#: ../../../filesystems/iomap/design.rst:118
 msgid "``fsblock``: The block size of a file, also known as ``i_blocksize``."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:111
+#: ../../../filesystems/iomap/design.rst:120
 msgid ""
 "``i_rwsem``: The VFS ``struct inode`` rwsemaphore. Processes hold this in "
 "shared mode to read file state and contents. Some filesystems may allow "
@@ -201,7 +212,7 @@ msgid ""
 "change file state and contents."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:117
+#: ../../../filesystems/iomap/design.rst:126
 msgid ""
 "``invalidate_lock``: The pagecache ``struct address_space`` rwsemaphore that "
 "protects against folio insertion and removal for filesystems that support "
@@ -211,13 +222,13 @@ msgid ""
 "mode to prevent insertions. Concurrent removals are not allowed."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:126
+#: ../../../filesystems/iomap/design.rst:135
 msgid ""
 "``dax_read_lock``: The RCU read lock that dax takes to prevent a device pre-"
 "shutdown hook from returning before other threads have released resources."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:130
+#: ../../../filesystems/iomap/design.rst:139
 msgid ""
 "**filesystem mapping lock**: This synchronization primitive is internal to "
 "the filesystem and must protect the file mapping data from updates while a "
@@ -225,7 +236,7 @@ msgid ""
 "coordination should happen; it does not need to be an actual lock."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:136
+#: ../../../filesystems/iomap/design.rst:145
 msgid ""
 "**iomap internal operation lock**: This is a general term for "
 "synchronization primitives that iomap functions take while holding a "
@@ -233,7 +244,7 @@ msgid ""
 "writing the pagecache."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:142
+#: ../../../filesystems/iomap/design.rst:151
 msgid ""
 "**pure overwrite**: A write operation that does not require any metadata or "
 "zeroing operations to perform during either submission or completion. This "
@@ -243,31 +254,31 @@ msgid ""
 "(minimum I/O size and alignment, typically sector size)."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:152
+#: ../../../filesystems/iomap/design.rst:161
 msgid "``struct iomap``"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:154
+#: ../../../filesystems/iomap/design.rst:163
 msgid ""
 "The filesystem communicates to the iomap iterator the mapping of byte ranges "
 "of a file to byte ranges of a storage device with the structure below:"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:173
+#: ../../../filesystems/iomap/design.rst:182
 msgid "The fields are as follows:"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:175
+#: ../../../filesystems/iomap/design.rst:184
 msgid ""
 "``offset`` and ``length`` describe the range of file offsets, in bytes, "
 "covered by this mapping. These fields must always be set by the filesystem."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:179
+#: ../../../filesystems/iomap/design.rst:188
 msgid "``type`` describes the type of the space mapping:"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:181
+#: ../../../filesystems/iomap/design.rst:190
 msgid ""
 "**IOMAP_HOLE**: No storage has been allocated. This type must never be "
 "returned in response to an ``IOMAP_WRITE`` operation because writes must "
@@ -276,22 +287,22 @@ msgid ""
 "pagecache or direct I/O) to a hole."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:189
+#: ../../../filesystems/iomap/design.rst:198
 msgid ""
 "**IOMAP_DELALLOC**: A promise to allocate space at a later time (\"delayed "
 "allocation\"). If the filesystem returns IOMAP_F_NEW here and the write "
-"fails, the ``->iomap_end`` function must delete the reservation. The "
-"``addr`` field must be set to ``IOMAP_NULL_ADDR``."
+"fails, the ``end`` function must delete the reservation. The ``addr`` field "
+"must be set to ``IOMAP_NULL_ADDR``."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:195
+#: ../../../filesystems/iomap/design.rst:204
 msgid ""
 "**IOMAP_MAPPED**: The file range maps to specific space on the storage "
 "device. The device is returned in ``bdev`` or ``dax_dev``. The device "
 "address, in bytes, is returned via ``addr``."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:200
+#: ../../../filesystems/iomap/design.rst:209
 msgid ""
 "**IOMAP_UNWRITTEN**: The file range maps to specific space on the storage "
 "device, but the space has not yet been initialized. The device is returned "
@@ -301,28 +312,27 @@ msgid ""
 "MAPPED. Refer to the sections about ioends for more details."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:209
+#: ../../../filesystems/iomap/design.rst:218
 msgid ""
 "**IOMAP_INLINE**: The file range maps to the memory buffer specified by "
-"``inline_data``. For write operation, the ``->iomap_end`` function "
-"presumably handles persisting the data. The ``addr`` field must be set to "
-"``IOMAP_NULL_ADDR``."
+"``inline_data``. For write operation, the ``end`` function must persist the "
+"data. The ``addr`` field must be set to ``IOMAP_NULL_ADDR``."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:215
+#: ../../../filesystems/iomap/design.rst:223
 msgid ""
 "``flags`` describe the status of the space mapping. These flags should be "
-"set by the filesystem in ``->iomap_begin``:"
+"set by the filesystem in ``begin``:"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:218
+#: ../../../filesystems/iomap/design.rst:226
 msgid ""
 "**IOMAP_F_NEW**: The space under the mapping is newly allocated. Areas that "
 "will not be written to must be zeroed. If a write fails and the mapping is a "
 "space reservation, the reservation must be deleted."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:223
+#: ../../../filesystems/iomap/design.rst:231
 msgid ""
 "**IOMAP_F_DIRTY**: The inode will have uncommitted metadata needed to access "
 "any data written. fdatasync is required to commit these changes to "
@@ -330,31 +340,31 @@ msgid ""
 "*may* be made at I/O completion, such as file size updates from direct I/O."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:230
+#: ../../../filesystems/iomap/design.rst:238
 msgid ""
 "**IOMAP_F_SHARED**: The space under the mapping is shared. Copy on write is "
 "necessary to avoid corrupting other file data."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:233
+#: ../../../filesystems/iomap/design.rst:241
 msgid ""
 "**IOMAP_F_BUFFER_HEAD**: This mapping requires the use of buffer heads for "
 "pagecache operations. Do not add more uses of this."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:237
+#: ../../../filesystems/iomap/design.rst:245
 msgid ""
 "**IOMAP_F_MERGED**: Multiple contiguous block mappings were coalesced into "
 "this single mapping. This is only useful for FIEMAP."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:241
+#: ../../../filesystems/iomap/design.rst:249
 msgid ""
 "**IOMAP_F_XATTR**: The mapping is for extended attribute data, not regular "
 "file data. This is only useful for FIEMAP."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:245
+#: ../../../filesystems/iomap/design.rst:253
 msgid ""
 "**IOMAP_F_BOUNDARY**: This indicates I/O and its completion must not be "
 "merged with any other I/O or completion. Filesystems must use this when "
@@ -363,18 +373,18 @@ msgid ""
 "functions ignore it."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:251
+#: ../../../filesystems/iomap/design.rst:259
 msgid "**IOMAP_F_PRIVATE**: This flag is reserved for filesystem private use."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:253
+#: ../../../filesystems/iomap/design.rst:261
 msgid ""
 "**IOMAP_F_ANON_WRITE**: Indicates that (write) I/O does not have a target "
 "block assigned to it yet and the file system will do that in the bio "
 "submission handler, splitting the I/O as needed."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:257
+#: ../../../filesystems/iomap/design.rst:265
 msgid ""
 "**IOMAP_F_ATOMIC_BIO**: This indicates write I/O must be submitted with the "
 "``REQ_ATOMIC`` flag set in the bio. Filesystems need to set this flag to "
@@ -383,94 +393,161 @@ msgid ""
 "upon the completion of the I/O must be performed in a single metadata update."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:264
+#: ../../../filesystems/iomap/design.rst:272
 msgid ""
 "These flags can be set by iomap itself during file operations. The "
-"filesystem should supply an ``->iomap_end`` function if it needs to observe "
-"these flags:"
+"filesystem should supply an ``end`` function if it needs to observe these "
+"flags:"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:268
+#: ../../../filesystems/iomap/design.rst:276
 msgid ""
 "**IOMAP_F_SIZE_CHANGED**: The file size has changed as a result of using "
 "this mapping."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:271
+#: ../../../filesystems/iomap/design.rst:279
 msgid ""
-"**IOMAP_F_STALE**: The mapping was found to be stale. iomap will call ``-"
-">iomap_end`` on this mapping and then ``->iomap_begin`` to obtain a new "
-"mapping."
+"**IOMAP_F_STALE**: The mapping was found to be stale. iomap will call "
+"``end`` on this mapping and then ``begin`` to obtain a new mapping."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:275
+#: ../../../filesystems/iomap/design.rst:283
 msgid "Currently, these flags are only set by pagecache operations."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:277
+#: ../../../filesystems/iomap/design.rst:285
 msgid "``addr`` describes the device address, in bytes."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:279
+#: ../../../filesystems/iomap/design.rst:287
 msgid ""
 "``bdev`` describes the block device for this mapping. This only needs to be "
 "set for mapped or unwritten operations."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:282
+#: ../../../filesystems/iomap/design.rst:290
 msgid ""
 "``dax_dev`` describes the DAX device for this mapping. This only needs to be "
 "set for mapped or unwritten operations, and only for a fsdax operation."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:286
+#: ../../../filesystems/iomap/design.rst:294
 msgid ""
 "``inline_data`` points to a memory buffer for I/O involving ``IOMAP_INLINE`` "
 "mappings. This value is ignored for all other mapping types."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:290
+#: ../../../filesystems/iomap/design.rst:298
 msgid ""
-"``private`` is a pointer to `filesystem-private information <https://lore."
-"kernel.org/all/20180619164137.13720-7-hch@lst.de/>`_. This value will be "
-"passed unchanged to ``->iomap_end``."
+"``private`` is a pointer to `filesystem-private information <https://"
+"lore.kernel.org/all/20180619164137.13720-7-hch@lst.de/>`_. This value will "
+"be passed unchanged to ``end``."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:294
+#: ../../../filesystems/iomap/design.rst:302
 msgid ""
 "``validity_cookie`` is a magic freshness value set by the filesystem that "
 "should be used to detect stale mappings. For pagecache operations this is "
 "critical for correct operation because page faults can occur, which implies "
-"that filesystem locks should not be held between ``->iomap_begin`` and ``-"
-">iomap_end``. Filesystems with completely static mappings need not set this "
-"value. Only pagecache operations revalidate mappings; see the section about "
+"that filesystem locks should not be held between ``begin`` and ``end``. "
+"Filesystems with completely static mappings need not set this value. Only "
+"pagecache operations revalidate mappings; see the section about "
 "``iomap_valid`` for details."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:304
-msgid "``struct iomap_ops``"
+#: ../../../filesystems/iomap/design.rst:312
+msgid "The Mapping Callback"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:306
+#: ../../../filesystems/iomap/design.rst:314
 msgid ""
-"Every iomap function requires the filesystem to pass an operations structure "
-"to obtain a mapping and (optionally) to release the mapping:"
+"Every iomap operation takes an ``iomap_iter_next_fn`` callback from the "
+"filesystem. iomap calls it once per iteration of the file range:"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:322
-msgid "``->iomap_begin``"
+#: ../../../filesystems/iomap/design.rst:323
+msgid "``iomap_iter_next_fn``"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:324
+#: ../../../filesystems/iomap/design.rst:325
 msgid ""
-"iomap operations call ``->iomap_begin`` to obtain one file mapping for the "
-"range of bytes specified by ``pos`` and ``length`` for the file ``inode``. "
-"This mapping should be returned through the ``iomap`` pointer. The mapping "
-"must cover at least the first byte of the supplied file range, but it does "
-"not need to cover the entire requested range."
+"This must finish the previous mapping, if any, and then produce the next "
+"mapping for the current iteration position described by ``iter``. The "
+"mapping is returned through ``iomap`` (and through ``srcmap`` for operations "
+"that read from one mapping while writing to another; see ``begin`` below)."
 msgstr ""
 
 #: ../../../filesystems/iomap/design.rst:331
+msgid ""
+"The callback returns ``1`` to continue iterating, ``0`` once the file range "
+"has been fully consumed, or a negative errno on error."
+msgstr ""
+
+#: ../../../filesystems/iomap/design.rst:334
+msgid ""
+"Most filesystems are not expected to implement all of these behaviors in "
+"this callback themselves.  They should instead call ``iomap_iter_next`` as "
+"described below."
+msgstr ""
+
+#: ../../../filesystems/iomap/design.rst:339
+msgid "``iomap_iter_next``"
+msgstr ""
+
+#: ../../../filesystems/iomap/design.rst:341
+msgid ""
+"Filesystems rarely need a hand-written ``iomap_iter_next_fn`` callback.  The "
+"``iomap_iter_next`` helper implements the finish-then-produce sequence in "
+"terms of two smaller callbacks, ``begin`` and ``end``, so most "
+"``iomap_iter_next_fn`` implementations are simply:"
+msgstr ""
+
+#: ../../../filesystems/iomap/design.rst:355
+msgid ""
+"This boilerplate is normally generated with the ``DEFINE_IOMAP_ITER_NEXT()`` "
+"and ``DEFINE_IOMAP_ITER_NEXT_END()`` macros rather than written by hand.  "
+"Use ``DEFINE_IOMAP_ITER_NEXT()`` for the common case with no ``end`` "
+"callback, and ``DEFINE_IOMAP_ITER_NEXT_END()`` when an ``end`` callback is "
+"needed:"
+msgstr ""
+
+#: ../../../filesystems/iomap/design.rst:369
+msgid ""
+"The macro generates a function with external linkage.  Prefix the invocation "
+"with ``static`` for a file-local callback, or leave it non-``static`` and "
+"add a matching declaration to a header when the callback is referenced from "
+"another file."
+msgstr ""
+
+#: ../../../filesystems/iomap/design.rst:374
+msgid ""
+"``end`` may be ``NULL`` when the filesystem has nothing to finish. The two "
+"callbacks have these prototypes:"
+msgstr ""
+
+#: ../../../filesystems/iomap/design.rst:387
+msgid ""
+"``iomap_iter_next`` is an inline helper, so when it is called with fixed "
+"``begin`` and ``end`` functions the compiler can inline both into the "
+"filesystem's ``iomap_iter_next_fn`` callback, keeping indirect calls out of "
+"the iteration hot path.  The two callbacks are described next."
+msgstr ""
+
+#: ../../../filesystems/iomap/design.rst:393
+msgid "``begin``"
+msgstr ""
+
+#: ../../../filesystems/iomap/design.rst:395
+msgid ""
+"The ``begin`` callback obtains one file mapping for the range of bytes "
+"specified by ``pos`` and ``length`` for the file ``inode``. This mapping "
+"should be returned through the ``iomap`` pointer. The mapping must cover at "
+"least the first byte of the supplied file range, but it does not need to "
+"cover the entire requested range."
+msgstr ""
+
+#: ../../../filesystems/iomap/design.rst:401
 msgid ""
 "Each iomap operation describes the requested operation through the ``flags`` "
 "argument. The exact value of ``flags`` will be documented in the operation-"
@@ -478,19 +555,19 @@ msgid ""
 "generally to iomap operations:"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:338
+#: ../../../filesystems/iomap/design.rst:408
 msgid ""
 "``IOMAP_DIRECT`` is set when the caller wishes to issue file I/O to block "
 "storage."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:341
+#: ../../../filesystems/iomap/design.rst:411
 msgid ""
 "``IOMAP_DAX`` is set when the caller wishes to issue file I/O to memory-like "
 "storage."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:344
+#: ../../../filesystems/iomap/design.rst:414
 msgid ""
 "``IOMAP_NOWAIT`` is set when the caller wishes to perform a best effort "
 "attempt to avoid any operation that would result in blocking the submitting "
@@ -510,14 +587,14 @@ msgid ""
 "of ``IOCB_NOWAIT`` or ``RWF_NOWAIT``."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:368
+#: ../../../filesystems/iomap/design.rst:438
 msgid ""
 "``IOMAP_DONTCACHE`` is set when the caller wishes to perform a buffered file "
 "I/O and would like the kernel to drop the pagecache after the I/O completes, "
 "if it isn't already being used by another thread."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:373
+#: ../../../filesystems/iomap/design.rst:443
 msgid ""
 "If it is necessary to read existing file contents from a `different <https://"
 "lore.kernel.org/all/20191008071527.29304-9-hch@lst.de/>`_ device or address "
@@ -526,33 +603,33 @@ msgid ""
 "mapping and writing to another."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:381
-msgid "``->iomap_end``"
+#: ../../../filesystems/iomap/design.rst:451
+msgid "``end``"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:383
+#: ../../../filesystems/iomap/design.rst:453
 msgid ""
-"After the operation completes, the ``->iomap_end`` function, if present, is "
-"called to signal that iomap is finished with a mapping. Typically, "
-"implementations will use this function to tear down any context that were "
-"set up in ``->iomap_begin``. For example, a write might wish to commit the "
-"reservations for the bytes that were operated upon and unreserve any space "
-"that was not operated upon. ``written`` might be zero if no bytes were "
-"touched. ``flags`` will contain the same value passed to ``->iomap_begin``. "
-"iomap ops for reads are not likely to need to supply this function."
+"After the operation completes, the ``end`` callback, if present, is called "
+"to signal that iomap is finished with a mapping. Typically, implementations "
+"will use this function to tear down any context that was set up in "
+"``begin``. For example, a write might wish to commit the reservations for "
+"the bytes that were operated upon and unreserve any space that was not "
+"operated upon. ``written`` might be zero if no bytes were touched. ``flags`` "
+"will contain the same value passed to ``begin``. iomap ops for reads are not "
+"likely to need to supply this function."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:394
+#: ../../../filesystems/iomap/design.rst:464
 msgid ""
 "Both functions should return a negative errno code on error, or zero on "
 "success."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:398
+#: ../../../filesystems/iomap/design.rst:468
 msgid "Preparing for File Operations"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:400
+#: ../../../filesystems/iomap/design.rst:470
 msgid ""
 "iomap only handles mapping and I/O. Filesystems must still call out to the "
 "VFS to check input parameters and file state before initiating an I/O "
@@ -560,17 +637,17 @@ msgid ""
 "updating of timestamps, stripping privileges, or access control."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:407
+#: ../../../filesystems/iomap/design.rst:477
 msgid "Locking Hierarchy"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:409
+#: ../../../filesystems/iomap/design.rst:479
 msgid ""
 "iomap requires that filesystems supply their own locking model. There are "
 "three categories of synchronization primitives, as far as iomap is concerned:"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:413
+#: ../../../filesystems/iomap/design.rst:483
 msgid ""
 "The **upper** level primitive is provided by the filesystem to coordinate "
 "access to different iomap operations. The exact primitive is specific to the "
@@ -582,19 +659,19 @@ msgid ""
 "writeback is underway."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:423
+#: ../../../filesystems/iomap/design.rst:493
 msgid ""
-"The **lower** level primitive is taken by the filesystem in the ``-"
-">iomap_begin`` and ``->iomap_end`` functions to coordinate access to the "
-"file space mapping information. The fields of the iomap object should be "
-"filled out while holding this primitive. The upper level synchronization "
-"primitive, if any, remains held while acquiring the lower level "
-"synchronization primitive. For example, XFS takes ``ILOCK_EXCL`` and ext4 "
-"takes ``i_data_sem`` while sampling mappings. Filesystems with immutable "
-"mapping information may not require synchronization here."
+"The **lower** level primitive is taken by the filesystem in the ``begin`` "
+"and ``end`` functions to coordinate access to the file space mapping "
+"information. The fields of the iomap object should be filled out while "
+"holding this primitive. The upper level synchronization primitive, if any, "
+"remains held while acquiring the lower level synchronization primitive. For "
+"example, XFS takes ``ILOCK_EXCL`` and ext4 takes ``i_data_sem`` while "
+"sampling mappings. Filesystems with immutable mapping information may not "
+"require synchronization here."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:435
+#: ../../../filesystems/iomap/design.rst:505
 msgid ""
 "The **operation** primitive is taken by an iomap operation to coordinate "
 "access to its own internal data structures. The upper level synchronization "
@@ -605,7 +682,7 @@ msgid ""
 "to update metadata."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:445
+#: ../../../filesystems/iomap/design.rst:515
 msgid ""
 "The exact locking requirements are specific to the filesystem; for certain "
 "operations, some of these locks can be elided. All further mentions of "
@@ -613,30 +690,30 @@ msgid ""
 "figure out the locking for themself."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:451
+#: ../../../filesystems/iomap/design.rst:521
 msgid "Bugs and Limitations"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:453
+#: ../../../filesystems/iomap/design.rst:523
 msgid "No support for fscrypt."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:454
+#: ../../../filesystems/iomap/design.rst:524
 msgid "No support for compression."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:455
+#: ../../../filesystems/iomap/design.rst:525
 msgid "No support for fsverity yet."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:456
+#: ../../../filesystems/iomap/design.rst:526
 msgid "Strong assumptions that IO should work the way it does on XFS."
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:457
+#: ../../../filesystems/iomap/design.rst:527
 msgid "Does iomap *actually* work for non-regular file data?"
 msgstr ""
 
-#: ../../../filesystems/iomap/design.rst:459
+#: ../../../filesystems/iomap/design.rst:529
 msgid "Patches welcome!"
 msgstr ""

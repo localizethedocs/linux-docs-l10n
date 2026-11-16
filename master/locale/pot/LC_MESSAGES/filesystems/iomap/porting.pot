@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: The Linux Kernel master\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-29 08:26+0000\n"
+"POT-Creation-Date: 2026-11-16 17:59+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -59,8 +59,8 @@ msgstr ""
 msgid ""
 "Lower maintenance overhead for individual filesystem maintainers. iomap "
 "handles common pagecache related operations itself, such as allocating, "
-"instantiating, locking, and unlocking of folios. No ->write_begin(), -"
-">write_end() or direct_IO address_space_operations are required to be "
+"instantiating, locking, and unlocking of folios. No ->write_begin(), "
+"->write_end() or direct_IO address_space_operations are required to be "
 "implemented by filesystem using iomap."
 msgstr ""
 
@@ -79,28 +79,37 @@ msgstr ""
 
 #: ../../../filesystems/iomap/porting.rst:53
 msgid ""
-"The recommended approach is first to implement ``->iomap_begin`` (and ``-"
-">iomap_end`` if necessary) to allow iomap to obtain a read-only mapping of a "
-"file range. In most cases, this is a relatively trivial conversion of the "
-"existing ``get_block()`` function for read-only mappings. ``FS_IOC_FIEMAP`` "
-"is a good first target because it is trivial to implement support for it and "
-"then to determine that the extent map iteration is correct from userspace. "
-"If FIEMAP is returning the correct information, it's a good sign that other "
-"read-only mapping operations will do the right thing."
+"Every iomap operation is driven by an ``iomap_iter_next_fn`` callback. "
+"Filesystems normally do not write one by hand: implement ``begin`` (and "
+"``end`` if necessary) and generate the callback with the "
+"``DEFINE_IOMAP_ITER_NEXT()`` macro, or ``DEFINE_IOMAP_ITER_NEXT_END()`` if "
+"an ``end`` callback is needed."
 msgstr ""
 
-#: ../../../filesystems/iomap/porting.rst:64
+#: ../../../filesystems/iomap/porting.rst:59
+msgid ""
+"The recommended approach is first to implement ``begin`` (and ``end`` if "
+"necessary) to allow iomap to obtain a read-only mapping of a file range. In "
+"most cases, this is a relatively trivial conversion of the existing "
+"``get_block()`` function for read-only mappings. ``FS_IOC_FIEMAP`` is a good "
+"first target because it is trivial to implement support for it and then to "
+"determine that the extent map iteration is correct from userspace. If FIEMAP "
+"is returning the correct information, it's a good sign that other read-only "
+"mapping operations will do the right thing."
+msgstr ""
+
+#: ../../../filesystems/iomap/porting.rst:70
 msgid ""
 "Next, modify the filesystem's ``get_block(create = false)`` implementation "
-"to use the new ``->iomap_begin`` implementation to map file space for "
-"selected read operations. Hide behind a debugging knob the ability to switch "
-"on the iomap mapping functions for selected call paths. It is necessary to "
-"write some code to fill out the bufferhead-based mapping information from "
-"the ``iomap`` structure, but the new functions can be tested without needing "
-"to implement any iomap APIs."
+"to use the new ``begin`` implementation to map file space for selected read "
+"operations. Hide behind a debugging knob the ability to switch on the iomap "
+"mapping functions for selected call paths. It is necessary to write some "
+"code to fill out the bufferhead-based mapping information from the ``iomap`` "
+"structure, but the new functions can be tested without needing to implement "
+"any iomap APIs."
 msgstr ""
 
-#: ../../../filesystems/iomap/porting.rst:73
+#: ../../../filesystems/iomap/porting.rst:79
 msgid ""
 "Once the read-only functions are working like this, convert each high level "
 "file operation one by one to use iomap native APIs instead of going through "
@@ -113,33 +122,33 @@ msgid ""
 "should be converted in this phase."
 msgstr ""
 
-#: ../../../filesystems/iomap/porting.rst:85
-msgid ""
-"At this point, you should look over your ``->iomap_begin`` function. If it "
-"switches between large blocks of code based on dispatching of the ``flags`` "
-"argument, you should consider breaking it up into per-operation iomap ops "
-"with smaller, more cohesive functions. XFS is a good example of this."
-msgstr ""
-
 #: ../../../filesystems/iomap/porting.rst:91
 msgid ""
-"The next thing to do is implement ``get_blocks(create == true)`` "
-"functionality in the ``->iomap_begin``/``->iomap_end`` methods. It is "
-"strongly recommended to create separate mapping functions and iomap ops for "
-"write operations. Then convert the direct I/O write path to iomap, and start "
-"running fsx w/ DIO enabled in earnest on filesystem. This will flush out "
-"lots of data integrity corner case bugs that the new write mapping "
-"implementation introduces."
+"At this point, you should look over your ``begin`` function. If it switches "
+"between large blocks of code based on dispatching of the ``flags`` argument, "
+"you should consider breaking it up into per-operation iomap ops with "
+"smaller, more cohesive functions. XFS is a good example of this."
 msgstr ""
 
-#: ../../../filesystems/iomap/porting.rst:100
+#: ../../../filesystems/iomap/porting.rst:97
+msgid ""
+"The next thing to do is implement ``get_blocks(create == true)`` "
+"functionality in the ``begin``/``end`` methods. It is strongly recommended "
+"to create separate mapping functions and iomap ops for write operations. "
+"Then convert the direct I/O write path to iomap, and start running fsx w/ "
+"DIO enabled in earnest on filesystem. This will flush out lots of data "
+"integrity corner case bugs that the new write mapping implementation "
+"introduces."
+msgstr ""
+
+#: ../../../filesystems/iomap/porting.rst:106
 msgid ""
 "Now, convert any remaining file operations to call the iomap functions. This "
 "will get the entire filesystem using the new mapping functions, and they "
 "should largely be debugged and working correctly after this step."
 msgstr ""
 
-#: ../../../filesystems/iomap/porting.rst:104
+#: ../../../filesystems/iomap/porting.rst:110
 msgid ""
 "Most likely at this point, the buffered read and write paths will still need "
 "to be converted. The mapping functions should all work correctly, so all "
@@ -152,7 +161,7 @@ msgid ""
 "directories, you might also try converting their handling to iomap."
 msgstr ""
 
-#: ../../../filesystems/iomap/porting.rst:117
+#: ../../../filesystems/iomap/porting.rst:123
 msgid ""
 "The rest is left as an exercise for the reader, as it will be different for "
 "every filesystem. If you encounter problems, email the people and lists in "
