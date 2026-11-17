@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Wound/Wait Deadlock-Proof Mutex Design &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/locking/ww-mutex-design.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Proper Locking Under a Preemptible Kernel: Keeping Kernel Code Preempt-Safe" href="preempt-locking.html" />
+    <link rel="prev" title="Locking lessons" href="spinlocks.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../subsystem-apis.html#core-subsystems">Core subsystems</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../core-api/index.html">Core API Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../driver-api/index.html">Driver implementer’s API guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mm/index.html">Memory Management Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../power/index.html">Power Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../scheduler/index.html">Scheduler</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../timers/index.html">Timers</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">Locking</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#human-interfaces">Human interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#networking-interfaces">Networking interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#storage-interfaces">Storage interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../subsystem-apis.html#other-subsystems">Other subsystems</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Locking</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="locktypes.html">Lock types and their rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockdep-design.html">Runtime locking correctness validator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lockstat.html">Lock Statistics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="locktorture.html">Kernel Lock Torture Test Operation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mutex-design.html">Generic Mutex Subsystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex-design.html">RT-mutex implementation design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rt-mutex.html">RT-mutex subsystem with PI support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="seqlock.html">Sequence counters and sequential locks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spinlocks.html">Locking lessons</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Wound/Wait Deadlock-Proof Mutex Design</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#motivation-for-ww-mutexes">Motivation for WW-Mutexes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#concepts">Concepts</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#implementation-details">Implementation Details</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="preempt-locking.html">Proper Locking Under a Preemptible Kernel: Keeping Kernel Code Preempt-Safe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pi-futex.html">Lightweight PI-futexes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="futex-requeue-pi.html">Futex Requeue PI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hwspinlock.html">Hardware Spinlock Framework</a></li>
+<li class="toctree-l2"><a class="reference internal" href="percpu-rw-semaphore.html">Percpu rw semaphores</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futexes.html">A description of what robust futexes are</a></li>
+<li class="toctree-l2"><a class="reference internal" href="robust-futex-ABI.html">The robust futex ABI</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/locking/ww-mutex-design.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="wound-wait-deadlock-proof-mutex-design">
+<h1>Wound/Wait Deadlock-Proof Mutex Design<a class="headerlink" href="#wound-wait-deadlock-proof-mutex-design" title="Link to this heading">¶</a></h1>
+<p>Please read <a class="reference internal" href="mutex-design.html"><span class="doc">Generic Mutex Subsystem</span></a> first, as it applies to wait/wound mutexes too.</p>
+<section id="motivation-for-ww-mutexes">
+<h2>Motivation for WW-Mutexes<a class="headerlink" href="#motivation-for-ww-mutexes" title="Link to this heading">¶</a></h2>
+<p>GPU’s do operations that commonly involve many buffers.  Those buffers
+can be shared across contexts/processes, exist in different memory
+domains (for example VRAM vs system memory), and so on.  And with
+PRIME / dmabuf, they can even be shared across devices.  So there are
+a handful of situations where the driver needs to wait for buffers to
+become ready.  If you think about this in terms of waiting on a buffer
+mutex for it to become available, this presents a problem because
+there is no way to guarantee that buffers appear in a execbuf/batch in
+the same order in all contexts.  That is directly under control of
+userspace, and a result of the sequence of GL calls that an application
+makes.  Which results in the potential for deadlock.  The problem gets
+more complex when you consider that the kernel may need to migrate the
+buffer(s) into VRAM before the GPU operates on the buffer(s), which
+may in turn require evicting some other buffers (and you don’t want to
+evict other buffers which are already queued up to the GPU), but for a
+simplified understanding of the problem you can ignore this.</p>
+<p>The algorithm that the TTM graphics subsystem came up with for dealing with
+this problem is quite simple.  For each group of buffers (execbuf) that need
+to be locked, the caller would be assigned a unique reservation id/ticket,
+from a global counter.  In case of deadlock while locking all the buffers
+associated with a execbuf, the one with the lowest reservation ticket (i.e.
+the oldest task) wins, and the one with the higher reservation id (i.e. the
+younger task) unlocks all of the buffers that it has already locked, and then
+tries again.</p>
+<p>In the RDBMS literature, a reservation ticket is associated with a transaction.
+and the deadlock handling approach is called Wait-Die. The name is based on
+the actions of a locking thread when it encounters an already locked mutex.
+If the transaction holding the lock is younger, the locking transaction waits.
+If the transaction holding the lock is older, the locking transaction backs off
+and dies. Hence Wait-Die.
+There is also another algorithm called Wound-Wait:
+If the transaction holding the lock is younger, the locking transaction
+wounds the transaction holding the lock, requesting it to die.
+If the transaction holding the lock is older, it waits for the other
+transaction. Hence Wound-Wait.
+The two algorithms are both fair in that a transaction will eventually succeed.
+However, the Wound-Wait algorithm is typically stated to generate fewer backoffs
+compared to Wait-Die, but is, on the other hand, associated with more work than
+Wait-Die when recovering from a backoff. Wound-Wait is also a preemptive
+algorithm in that transactions are wounded by other transactions, and that
+requires a reliable way to pick up the wounded condition and preempt the
+running transaction. Note that this is not the same as process preemption. A
+Wound-Wait transaction is considered preempted when it dies (returning
+-EDEADLK) following a wound.</p>
+</section>
+<section id="concepts">
+<h2>Concepts<a class="headerlink" href="#concepts" title="Link to this heading">¶</a></h2>
+<p>Compared to normal mutexes two additional concepts/objects show up in the lock
+interface for w/w mutexes:</p>
+<p>Acquire context: To ensure eventual forward progress it is important that a task
+trying to acquire locks doesn’t grab a new reservation id, but keeps the one it
+acquired when starting the lock acquisition. This ticket is stored in the
+acquire context. Furthermore the acquire context keeps track of debugging state
+to catch w/w mutex interface abuse. An acquire context is representing a
+transaction.</p>
+<p>W/w class: In contrast to normal mutexes the lock class needs to be explicit for
+w/w mutexes, since it is required to initialize the acquire context. The lock
+class also specifies what algorithm to use, Wound-Wait or Wait-Die.</p>
+<p>Furthermore there are three different class of w/w lock acquire functions:</p>
+<ul>
+<li><p>Normal lock acquisition with a context, using ww_mutex_lock.</p></li>
+<li><p>Slowpath lock acquisition on the contending lock, used by the task that just
+killed its transaction after having dropped all already acquired locks.
+These functions have the _slow postfix.</p>
+<p>From a simple semantics point-of-view the _slow functions are not strictly
+required, since simply calling the normal ww_mutex_lock functions on the
+contending lock (after having dropped all other already acquired locks) will
+work correctly. After all if no other ww mutex has been acquired yet there’s
+no deadlock potential and hence the ww_mutex_lock call will block and not
+prematurely return -EDEADLK. The advantage of the _slow functions is in
+interface safety:</p>
+<ul class="simple">
+<li><p>ww_mutex_lock has a __must_check int return type, whereas ww_mutex_lock_slow
+has a void return type. Note that since ww mutex code needs loops/retries
+anyway the __must_check doesn’t result in spurious warnings, even though the
+very first lock operation can never fail.</p></li>
+<li><p>When full debugging is enabled ww_mutex_lock_slow checks that all acquired
+ww mutex have been released (preventing deadlocks) and makes sure that we
+block on the contending lock (preventing spinning through the -EDEADLK
+slowpath until the contended lock can be acquired).</p></li>
+</ul>
+</li>
+<li><p>Functions to only acquire a single w/w mutex, which results in the exact same
+semantics as a normal mutex. This is done by calling ww_mutex_lock with a NULL
+context.</p>
+<p>Again this is not strictly required. But often you only want to acquire a
+single lock in which case it’s pointless to set up an acquire context (and so
+better to avoid grabbing a deadlock avoidance ticket).</p>
+</li>
+</ul>
+<p>Of course, all the usual variants for handling wake-ups due to signals are also
+provided.</p>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading">¶</a></h2>
+<p>The algorithm (Wait-Die vs Wound-Wait) is chosen by using either
+<code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">DEFINE_WW_CLASS()</span></code> (Wound-Wait) or <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">DEFINE_WD_CLASS()</span></code> (Wait-Die)
+As a rough rule of thumb, use Wound-Wait iff you
+expect the number of simultaneous competing transactions to be typically small,
+and you want to reduce the number of rollbacks.</p>
+<p>Three different ways to acquire locks within the same w/w class. Common
+definitions for methods #1 and #2:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>static DEFINE_WW_CLASS(ww_class);
+
+struct obj {
+      struct ww_mutex lock;
+      /* obj data */
+};
+
+struct obj_entry {
+      struct list_head head;
+      struct obj *obj;
+};
+</pre></div>
+</div>
+<p>Method 1, using a list in execbuf-&gt;buffers that’s not allowed to be reordered.
+This is useful if a list of required objects is already tracked somewhere.
+Furthermore the lock helper can use propagate the -EALREADY return code back to
+the caller as a signal that an object is twice on the list. This is useful if
+the list is constructed from userspace input and the ABI requires userspace to
+not have duplicate entries (e.g. for a gpu commandbuffer submission ioctl):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int lock_objs(struct list_head *list, struct ww_acquire_ctx *ctx)
+{
+      struct obj *res_obj = NULL;
+      struct obj_entry *contended_entry = NULL;
+      struct obj_entry *entry;
+
+      ww_acquire_init(ctx, &amp;ww_class);
+
+retry:
+      list_for_each_entry (entry, list, head) {
+              if (entry-&gt;obj == res_obj) {
+                      res_obj = NULL;
+                      continue;
+              }
+              ret = ww_mutex_lock(&amp;entry-&gt;obj-&gt;lock, ctx);
+              if (ret &lt; 0) {
+                      contended_entry = entry;
+                      goto err;
+              }
+      }
+
+      ww_acquire_done(ctx);
+      return 0;
+
+err:
+      list_for_each_entry_continue_reverse (entry, list, head)
+              ww_mutex_unlock(&amp;entry-&gt;obj-&gt;lock);
+
+      if (res_obj)
+              ww_mutex_unlock(&amp;res_obj-&gt;lock);
+
+      if (ret == -EDEADLK) {
+              /* we lost out in a seqno race, lock and retry.. */
+              ww_mutex_lock_slow(&amp;contended_entry-&gt;obj-&gt;lock, ctx);
+              res_obj = contended_entry-&gt;obj;
+              goto retry;
+      }
+      ww_acquire_fini(ctx);
+
+      return ret;
+}
+</pre></div>
+</div>
+<p>Method 2, using a list in execbuf-&gt;buffers that can be reordered. Same semantics
+of duplicate entry detection using -EALREADY as method 1 above. But the
+list-reordering allows for a bit more idiomatic code:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>int lock_objs(struct list_head *list, struct ww_acquire_ctx *ctx)
+{
+      struct obj_entry *entry, *entry2;
+
+      ww_acquire_init(ctx, &amp;ww_class);
+
+      list_for_each_entry (entry, list, head) {
+              ret = ww_mutex_lock(&amp;entry-&gt;obj-&gt;lock, ctx);
+              if (ret &lt; 0) {
+                      entry2 = entry;
+
+                      list_for_each_entry_continue_reverse (entry2, list, head)
+                              ww_mutex_unlock(&amp;entry2-&gt;obj-&gt;lock);
+
+                      if (ret != -EDEADLK) {
+                              ww_acquire_fini(ctx);
+                              return ret;
+                      }
+
+                      /* we lost out in a seqno race, lock and retry.. */
+                      ww_mutex_lock_slow(&amp;entry-&gt;obj-&gt;lock, ctx);
+
+                      /*
+                       * Move buf to head of the list, this will point
+                       * buf-&gt;next to the first unlocked entry,
+                       * restarting the for loop.
+                       */
+                      list_del(&amp;entry-&gt;head);
+                      list_add(&amp;entry-&gt;head, list);
+              }
+      }
+
+      ww_acquire_done(ctx);
+      return 0;
+}
+</pre></div>
+</div>
+<p>Unlocking works the same way for both methods #1 and #2:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>void unlock_objs(struct list_head *list, struct ww_acquire_ctx *ctx)
+{
+      struct obj_entry *entry;
+
+      list_for_each_entry (entry, list, head)
+              ww_mutex_unlock(&amp;entry-&gt;obj-&gt;lock);
+
+      ww_acquire_fini(ctx);
+}
+</pre></div>
+</div>
+<p>Method 3 is useful if the list of objects is constructed ad-hoc and not upfront,
+e.g. when adjusting edges in a graph where each node has its own ww_mutex lock,
+and edges can only be changed when holding the locks of all involved nodes. w/w
+mutexes are a natural fit for such a case for two reasons:</p>
+<ul class="simple">
+<li><p>They can handle lock-acquisition in any order which allows us to start walking
+a graph from a starting point and then iteratively discovering new edges and
+locking down the nodes those edges connect to.</p></li>
+<li><p>Due to the -EALREADY return code signalling that a given objects is already
+held there’s no need for additional book-keeping to break cycles in the graph
+or keep track off which looks are already held (when using more than one node
+as a starting point).</p></li>
+</ul>
+<p>Note that this approach differs in two important ways from the above methods:</p>
+<ul class="simple">
+<li><p>Since the list of objects is dynamically constructed (and might very well be
+different when retrying due to hitting the -EDEADLK die condition) there’s
+no need to keep any object on a persistent list when it’s not locked. We can
+therefore move the list_head into the object itself.</p></li>
+<li><p>On the other hand the dynamic object list construction also means that the -EALREADY return
+code can’t be propagated.</p></li>
+</ul>
+<p>Note also that methods #1 and #2 and method #3 can be combined, e.g. to first lock a
+list of starting nodes (passed in from userspace) using one of the above
+methods. And then lock any additional objects affected by the operations using
+method #3 below. The backoff/retry procedure will be a bit more involved, since
+when the dynamic locking step hits -EDEADLK we also need to unlock all the
+objects acquired with the fixed list. But the w/w mutex debug checks will catch
+any interface misuse for these cases.</p>
+<p>Also, method 3 can’t fail the lock acquisition step since it doesn’t return
+-EALREADY. Of course this would be different when using the _interruptible
+variants, but that’s outside of the scope of these examples here:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct obj {
+      struct ww_mutex ww_mutex;
+      struct list_head locked_list;
+};
+
+static DEFINE_WW_CLASS(ww_class);
+
+void __unlock_objs(struct list_head *list)
+{
+      struct obj *entry, *temp;
+
+      list_for_each_entry_safe (entry, temp, list, locked_list) {
+              /* need to do that before unlocking, since only the current lock holder is
+              allowed to use object */
+              list_del(&amp;entry-&gt;locked_list);
+              ww_mutex_unlock(entry-&gt;ww_mutex)
+      }
+}
+
+void lock_objs(struct list_head *list, struct ww_acquire_ctx *ctx)
+{
+      struct obj *obj;
+
+      ww_acquire_init(ctx, &amp;ww_class);
+
+retry:
+      /* re-init loop start state */
+      loop {
+              /* magic code which walks over a graph and decides which objects
+               * to lock */
+
+              ret = ww_mutex_lock(obj-&gt;ww_mutex, ctx);
+              if (ret == -EALREADY) {
+                      /* we have that one already, get to the next object */
+                      continue;
+              }
+              if (ret == -EDEADLK) {
+                      __unlock_objs(list);
+
+                      ww_mutex_lock_slow(obj, ctx);
+                      list_add(&amp;entry-&gt;locked_list, list);
+                      goto retry;
+              }
+
+              /* locked a new object, add it to the list */
+              list_add_tail(&amp;entry-&gt;locked_list, list);
+      }
+
+      ww_acquire_done(ctx);
+      return 0;
+}
+
+void unlock_objs(struct list_head *list, struct ww_acquire_ctx *ctx)
+{
+      __unlock_objs(list);
+      ww_acquire_fini(ctx);
+}
+</pre></div>
+</div>
+<p>Method 4: Only lock one single objects. In that case deadlock detection and
+prevention is obviously overkill, since with grabbing just one lock you can’t
+produce a deadlock within just one class. To simplify this case the w/w mutex
+api can be used with a NULL context.</p>
+</section>
+<section id="implementation-details">
+<h2>Implementation Details<a class="headerlink" href="#implementation-details" title="Link to this heading">¶</a></h2>
+<section id="design">
+<h3>Design:<a class="headerlink" href="#design" title="Link to this heading">¶</a></h3>
+<blockquote>
+<div><p>ww_mutex currently encapsulates a <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">mutex</span></code>, this means no extra overhead for
+normal mutex locks, which are far more common. As such there is only a small
+increase in code size if wait/wound mutexes are not used.</p>
+<p>We maintain the following invariants for the wait list:</p>
+<ol class="arabic simple">
+<li><p>Waiters with an acquire context are sorted by stamp order; waiters
+without an acquire context are interspersed in FIFO order.</p></li>
+<li><p>For Wait-Die, among waiters with contexts, only the first one can have
+other locks acquired already (ctx-&gt;acquired &gt; 0). Note that this waiter
+may come after other waiters without contexts in the list.</p></li>
+</ol>
+<p>The Wound-Wait preemption is implemented with a lazy-preemption scheme:
+The wounded status of the transaction is checked only when there is
+contention for a new lock and hence a true chance of deadlock. In that
+situation, if the transaction is wounded, it backs off, clears the
+wounded status and retries. A great benefit of implementing preemption in
+this way is that the wounded transaction can identify a contending lock to
+wait for before restarting the transaction. Just blindly restarting the
+transaction would likely make the transaction end up in a situation where
+it would have to back off again.</p>
+<p>In general, not much contention is expected. The locks are typically used to
+serialize access to resources for devices, and optimization focus should
+therefore be directed towards the uncontended cases.</p>
+</div></blockquote>
+</section>
+<section id="lockdep">
+<h3>Lockdep:<a class="headerlink" href="#lockdep" title="Link to this heading">¶</a></h3>
+<blockquote>
+<div><p>Special care has been taken to warn for as many cases of api abuse
+as possible. Some common api abuses will be caught with
+CONFIG_DEBUG_MUTEXES, but CONFIG_PROVE_LOCKING is recommended.</p>
+<dl class="simple">
+<dt>Some of the errors which will be warned about:</dt><dd><ul class="simple">
+<li><p>Forgetting to call ww_acquire_fini or ww_acquire_init.</p></li>
+<li><p>Attempting to lock more mutexes after ww_acquire_done.</p></li>
+<li><p>Attempting to lock the wrong mutex after -EDEADLK and
+unlocking all mutexes.</p></li>
+<li><p>Attempting to lock the right mutex after -EDEADLK,
+before unlocking all mutexes.</p></li>
+<li><p>Calling ww_mutex_lock_slow before -EDEADLK was returned.</p></li>
+<li><p>Unlocking mutexes with the wrong unlock function.</p></li>
+<li><p>Calling one of the ww_acquire_* twice on the same context.</p></li>
+<li><p>Using a different ww_class for the mutex than for the ww_acquire_ctx.</p></li>
+<li><p>Normal lockdep errors that can result in deadlocks.</p></li>
+</ul>
+</dd>
+<dt>Some of the lockdep errors that can result in deadlocks:</dt><dd><ul class="simple">
+<li><p>Calling ww_acquire_init to initialize a second ww_acquire_ctx before
+having called ww_acquire_fini on the first.</p></li>
+<li><p>‘normal’ deadlocks that can occur.</p></li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="simple">
+<dt>FIXME:</dt><dd><p>Update this section once we have the TASK_DEADLOCK task state flag magic
+implemented.</p>
+</dd>
+</dl>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/locking/ww-mutex-design.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
