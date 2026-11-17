@@ -1,0 +1,334 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) The kernel development community
+# This file is distributed under the same license as the The Linux Kernel package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: The Linux Kernel 6\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-09-30 08:40+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../../../core-api/entry.rst:2
+msgid "Entry/exit handling for exceptions, interrupts, syscalls and KVM"
+msgstr ""
+
+#: ../../../core-api/entry.rst:4
+msgid ""
+"All transitions between execution domains require state updates which are "
+"subject to strict ordering constraints. State updates are required for the "
+"following:"
+msgstr ""
+
+#: ../../../core-api/entry.rst:8 ../../../core-api/entry.rst:84
+#: ../../../core-api/entry.rst:100 ../../../core-api/entry.rst:216
+msgid "Lockdep"
+msgstr ""
+
+#: ../../../core-api/entry.rst:9 ../../../core-api/entry.rst:85
+#: ../../../core-api/entry.rst:99 ../../../core-api/entry.rst:217
+msgid "RCU / Context tracking"
+msgstr ""
+
+#: ../../../core-api/entry.rst:10 ../../../core-api/entry.rst:215
+msgid "Preemption counter"
+msgstr ""
+
+#: ../../../core-api/entry.rst:11 ../../../core-api/entry.rst:86
+#: ../../../core-api/entry.rst:98 ../../../core-api/entry.rst:218
+msgid "Tracing"
+msgstr ""
+
+#: ../../../core-api/entry.rst:12
+msgid "Time accounting"
+msgstr ""
+
+#: ../../../core-api/entry.rst:14
+msgid ""
+"The update order depends on the transition type and is explained below in "
+"the transition type sections: `Syscalls`_, `KVM`_, `Interrupts and regular "
+"exceptions`_, `NMI and NMI-like exceptions`_."
+msgstr ""
+
+#: ../../../core-api/entry.rst:19
+msgid "Non-instrumentable code - noinstr"
+msgstr ""
+
+#: ../../../core-api/entry.rst:21
+msgid ""
+"Most instrumentation facilities depend on RCU, so instrumentation is "
+"prohibited for entry code before RCU starts watching and exit code after RCU "
+"stops watching. In addition, many architectures must save and restore "
+"register state, which means that (for example) a breakpoint in the "
+"breakpoint entry code would overwrite the debug registers of the initial "
+"breakpoint."
+msgstr ""
+
+#: ../../../core-api/entry.rst:27
+msgid ""
+"Such code must be marked with the 'noinstr' attribute, placing that code "
+"into a special section inaccessible to instrumentation and debug facilities. "
+"Some functions are partially instrumentable, which is handled by marking "
+"them noinstr and using instrumentation_begin() and instrumentation_end() to "
+"flag the instrumentable ranges of code:"
+msgstr ""
+
+#: ../../../core-api/entry.rst:48
+msgid ""
+"This allows verification of the 'noinstr' restrictions via objtool on "
+"supported architectures."
+msgstr ""
+
+#: ../../../core-api/entry.rst:51
+msgid ""
+"Invoking non-instrumentable functions from instrumentable context has no "
+"restrictions and is useful to protect e.g. state switching which would cause "
+"malfunction if instrumented."
+msgstr ""
+
+#: ../../../core-api/entry.rst:55
+msgid ""
+"All non-instrumentable entry/exit code sections before and after the RCU "
+"state transitions must run with interrupts disabled."
+msgstr ""
+
+#: ../../../core-api/entry.rst:59
+msgid "Syscalls"
+msgstr ""
+
+#: ../../../core-api/entry.rst:61
+msgid ""
+"Syscall-entry code starts in assembly code and calls out into low-level C "
+"code after establishing low-level architecture-specific state and stack "
+"frames. This low-level C code must not be instrumented. A typical syscall "
+"handling function invoked from low-level assembly code looks like this:"
+msgstr ""
+
+#: ../../../core-api/entry.rst:81
+msgid ""
+"syscall_enter_from_user_mode() first invokes enter_from_user_mode() which "
+"establishes state in the following order:"
+msgstr ""
+
+#: ../../../core-api/entry.rst:88
+msgid ""
+"and then invokes the various entry work functions like ptrace, seccomp, "
+"audit, syscall tracing, etc. After all that is done, the instrumentable "
+"invoke_syscall function can be invoked. The instrumentable code section then "
+"ends, after which syscall_exit_to_user_mode() is invoked."
+msgstr ""
+
+#: ../../../core-api/entry.rst:93
+msgid ""
+"syscall_exit_to_user_mode() handles all work which needs to be done before "
+"returning to user space like tracing, audit, signals, task work etc. After "
+"that it invokes exit_to_user_mode() which again handles the state transition "
+"in the reverse order:"
+msgstr ""
+
+#: ../../../core-api/entry.rst:102
+msgid ""
+"syscall_enter_from_user_mode() and syscall_exit_to_user_mode() are also "
+"available as fine grained subfunctions in cases where the architecture code "
+"has to do extra work between the various steps. In such cases it has to "
+"ensure that enter_from_user_mode() is called first on entry and "
+"exit_to_user_mode() is called last on exit."
+msgstr ""
+
+#: ../../../core-api/entry.rst:108
+msgid ""
+"Do not nest syscalls. Nested syscalls will cause RCU and/or context tracking "
+"to print a warning."
+msgstr ""
+
+#: ../../../core-api/entry.rst:112
+msgid "KVM"
+msgstr ""
+
+#: ../../../core-api/entry.rst:114
+msgid ""
+"Entering or exiting guest mode is very similar to syscalls. From the host "
+"kernel point of view the CPU goes off into user space when entering the "
+"guest and returns to the kernel on exit."
+msgstr ""
+
+#: ../../../core-api/entry.rst:118
+msgid ""
+"guest_state_enter_irqoff() is a KVM-specific variant of exit_to_user_mode() "
+"and guest_state_exit_irqoff() is the KVM variant of enter_from_user_mode(). "
+"The state operations have the same ordering."
+msgstr ""
+
+#: ../../../core-api/entry.rst:122
+msgid ""
+"Task work handling is done separately for guest at the boundary of the "
+"vcpu_run() loop via xfer_to_guest_mode_handle_work() which is a subset of "
+"the work handled on return to user space."
+msgstr ""
+
+#: ../../../core-api/entry.rst:126
+msgid "Do not nest KVM entry/exit transitions because doing so is nonsensical."
+msgstr ""
+
+#: ../../../core-api/entry.rst:129
+msgid "Interrupts and regular exceptions"
+msgstr ""
+
+#: ../../../core-api/entry.rst:131
+msgid ""
+"Interrupts entry and exit handling is slightly more complex than syscalls "
+"and KVM transitions."
+msgstr ""
+
+#: ../../../core-api/entry.rst:134
+msgid ""
+"If an interrupt is raised while the CPU executes in user space, the entry "
+"and exit handling is exactly the same as for syscalls."
+msgstr ""
+
+#: ../../../core-api/entry.rst:137
+msgid ""
+"If the interrupt is raised while the CPU executes in kernel space the entry "
+"and exit handling is slightly different. RCU state is only updated when the "
+"interrupt is raised in the context of the CPU's idle task. Otherwise, RCU "
+"will already be watching. Lockdep and tracing have to be updated "
+"unconditionally."
+msgstr ""
+
+#: ../../../core-api/entry.rst:142
+msgid ""
+"irqentry_enter() and irqentry_exit() provide the implementation for this."
+msgstr ""
+
+#: ../../../core-api/entry.rst:144
+msgid "The architecture-specific part looks similar to syscall handling:"
+msgstr ""
+
+#: ../../../core-api/entry.rst:164
+msgid ""
+"Note that the invocation of the actual interrupt handler is within a "
+"irq_enter_rcu() and irq_exit_rcu() pair."
+msgstr ""
+
+#: ../../../core-api/entry.rst:167
+msgid ""
+"irq_enter_rcu() updates the preemption count which makes in_hardirq() return "
+"true, handles NOHZ tick state and interrupt time accounting. This means that "
+"up to the point where irq_enter_rcu() is invoked in_hardirq() returns false."
+msgstr ""
+
+#: ../../../core-api/entry.rst:172
+msgid ""
+"irq_exit_rcu() handles interrupt time accounting, undoes the preemption "
+"count update and eventually handles soft interrupts and NOHZ tick state."
+msgstr ""
+
+#: ../../../core-api/entry.rst:175
+msgid ""
+"In theory, the preemption count could be updated in irqentry_enter(). In "
+"practice, deferring this update to irq_enter_rcu() allows the preemption-"
+"count code to be traced, while also maintaining symmetry with irq_exit_rcu() "
+"and irqentry_exit(), which are described in the next paragraph. The only "
+"downside is that the early entry code up to irq_enter_rcu() must be aware "
+"that the preemption count has not yet been updated with the HARDIRQ_OFFSET "
+"state."
+msgstr ""
+
+#: ../../../core-api/entry.rst:182
+msgid ""
+"Note that irq_exit_rcu() must remove HARDIRQ_OFFSET from the preemption "
+"count before it handles soft interrupts, whose handlers must run in BH "
+"context rather than irq-disabled context. In addition, irqentry_exit() might "
+"schedule, which also requires that HARDIRQ_OFFSET has been removed from the "
+"preemption count."
+msgstr ""
+
+#: ../../../core-api/entry.rst:187
+msgid ""
+"Even though interrupt handlers are expected to run with local interrupts "
+"disabled, interrupt nesting is common from an entry/exit perspective. For "
+"example, softirq handling happens within an irqentry_{enter,exit}() block "
+"with local interrupts enabled. Also, although uncommon, nothing prevents an "
+"interrupt handler from re-enabling interrupts."
+msgstr ""
+
+#: ../../../core-api/entry.rst:193
+msgid ""
+"Interrupt entry/exit code doesn't strictly need to handle reentrancy, since "
+"it runs with local interrupts disabled. But NMIs can happen anytime, and a "
+"lot of the entry code is shared between the two."
+msgstr ""
+
+#: ../../../core-api/entry.rst:198
+msgid "NMI and NMI-like exceptions"
+msgstr ""
+
+#: ../../../core-api/entry.rst:200
+msgid ""
+"NMIs and NMI-like exceptions (machine checks, double faults, debug "
+"interrupts, etc.) can hit any context and must be extra careful with the "
+"state."
+msgstr ""
+
+#: ../../../core-api/entry.rst:204
+msgid ""
+"State changes for debug exceptions and machine-check exceptions depend on "
+"whether these exceptions happened in user-space (breakpoints or watchpoints) "
+"or in kernel mode (code patching). From user-space, they are treated like "
+"interrupts, while from kernel mode they are treated like NMIs."
+msgstr ""
+
+#: ../../../core-api/entry.rst:209
+msgid ""
+"NMIs and other NMI-like exceptions handle state transitions without "
+"distinguishing between user-mode and kernel-mode origin."
+msgstr ""
+
+#: ../../../core-api/entry.rst:212
+msgid ""
+"The state update on entry is handled in irqentry_nmi_enter() which updates "
+"state in the following order:"
+msgstr ""
+
+#: ../../../core-api/entry.rst:220
+msgid ""
+"The exit counterpart irqentry_nmi_exit() does the reverse operation in the "
+"reverse order."
+msgstr ""
+
+#: ../../../core-api/entry.rst:223
+msgid ""
+"Note that the update of the preemption counter has to be the first operation "
+"on enter and the last operation on exit. The reason is that both lockdep and "
+"RCU rely on in_nmi() returning true in this case. The preemption count "
+"modification in the NMI entry/exit case must not be traced."
+msgstr ""
+
+#: ../../../core-api/entry.rst:229
+msgid "Architecture-specific code looks like this:"
+msgstr ""
+
+#: ../../../core-api/entry.rst:245
+msgid "and for e.g. a debug exception it can look like this:"
+msgstr ""
+
+#: ../../../core-api/entry.rst:274
+msgid ""
+"There is no combined irqentry_nmi_if_kernel() function available as the "
+"above cannot be handled in an exception-agnostic way."
+msgstr ""
+
+#: ../../../core-api/entry.rst:277
+msgid ""
+"NMIs can happen in any context. For example, an NMI-like exception triggered "
+"while handling an NMI. So NMI entry code has to be reentrant and state "
+"updates need to handle nesting."
+msgstr ""
