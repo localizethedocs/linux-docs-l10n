@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Setting up NFS/RDMA &#8212; The Linux Kernel unknown version 文档</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../../_static/documentation_options.js?v=c459948e"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/translations.js?v=beaddf03"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/admin-guide/nfs/nfs-rdma.html" />
+    <link rel="index" title="索引" href="../../genindex.html" />
+    <link rel="search" title="搜索" href="../../search.html" />
+    <link rel="next" title="Administrative interfaces for nfsd" href="nfsd-admin-interfaces.html" />
+    <link rel="prev" title="Mounting the root filesystem via NFS (nfsroot)" href="nfsroot.html" />
+
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../../ltd-provenance.js"></script>
+<script type="text/javascript" src="../../ltd-current.js"></script>
+<script type="text/javascript" src="../../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../index.html">
+              <img class="logo" src="../../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">快速搜索</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="提交" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../locking/index.html">Locking</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../kernel-hacking/index.html">Hacking guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../rust/index.html">Rust</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Administration</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#general-guides-to-kernel-administration">General guides to kernel administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#booting-the-kernel">Booting the kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#tracking-down-and-identifying-problems">Tracking down and identifying problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#core-kernel-subsystems">Core-kernel subsystems</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#block-layer-and-filesystem-administration">Block-layer and filesystem administration</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../bcache.html">A block layer cache (bcache)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../binderfs.html">The Android binderfs Filesystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../blockdev/index.html">Block Devices</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../cifs/index.html">CIFS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../device-mapper/index.html">Device Mapper</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ext4.html">ext4 General Information</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../filesystem-monitoring.html">File system Monitoring with fanotify</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="index.html">NFS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../iostats.html">I/O statistics fields</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../jfs.html">IBM's Journaled File System (JFS) for Linux</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../md.html">RAID arrays</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ufs.html">Using UFS</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../xfs.html">The SGI XFS Filesystem</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#device-specific-guides">Device-specific guides</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#workload-analysis">Workload analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../index.html#everything-else">Everything else</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>本页</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/admin-guide/nfs/nfs-rdma.rst.txt"
+            rel="nofollow">显示源代码</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="setting-up-nfs-rdma">
+<h1>Setting up NFS/RDMA<a class="headerlink" href="#setting-up-nfs-rdma" title="Link to this heading">¶</a></h1>
+<dl class="field-list simple">
+<dt class="field-odd">Author<span class="colon">:</span></dt>
+<dd class="field-odd"><p>NetApp and Open Grid Computing (May 29, 2008)</p>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">警告</p>
+<p>This document is probably obsolete.</p>
+</div>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>This document describes how to install and setup the Linux NFS/RDMA client
+and server software.</p>
+<p>The NFS/RDMA client was first included in Linux 2.6.24. The NFS/RDMA server
+was first included in the following release, Linux 2.6.25.</p>
+<p>In our testing, we have obtained excellent performance results (full 10Gbit
+wire bandwidth at minimal client CPU) under many workloads. The code passes
+the full Connectathon test suite and operates over both Infiniband and iWARP
+RDMA adapters.</p>
+</section>
+<section id="getting-help">
+<h2>Getting Help<a class="headerlink" href="#getting-help" title="Link to this heading">¶</a></h2>
+<p>If you get stuck, you can ask questions on the
+<a class="reference external" href="mailto:nfs-rdma-devel&#37;&#52;&#48;lists&#46;sourceforge&#46;net">nfs-rdma-devel<span>&#64;</span>lists<span>&#46;</span>sourceforge<span>&#46;</span>net</a> mailing list.</p>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h2>
+<p>These instructions are a step by step guide to building a machine for
+use with NFS/RDMA.</p>
+<ul>
+<li><p>Install an RDMA device</p>
+<p>Any device supported by the drivers in drivers/infiniband/hw is acceptable.</p>
+<p>Testing has been performed using several Mellanox-based IB cards, the
+Ammasso AMS1100 iWARP adapter, and the Chelsio cxgb3 iWARP adapter.</p>
+</li>
+<li><p>Install a Linux distribution and tools</p>
+<p>The first kernel release to contain both the NFS/RDMA client and server was
+Linux 2.6.25  Therefore, a distribution compatible with this and subsequent
+Linux kernel release should be installed.</p>
+<p>The procedures described in this document have been tested with
+distributions from Red Hat's Fedora Project (<a class="reference external" href="http://fedora.redhat.com/">http://fedora.redhat.com/</a>).</p>
+</li>
+<li><p>Install nfs-utils-1.1.2 or greater on the client</p>
+<p>An NFS/RDMA mount point can be obtained by using the mount.nfs command in
+nfs-utils-1.1.2 or greater (nfs-utils-1.1.1 was the first nfs-utils
+version with support for NFS/RDMA mounts, but for various reasons we
+recommend using nfs-utils-1.1.2 or greater). To see which version of
+mount.nfs you are using, type:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>/sbin/mount.nfs<span class="w"> </span>-V
+</pre></div>
+</div>
+<p>If the version is less than 1.1.2 or the command does not exist,
+you should install the latest version of nfs-utils.</p>
+<p>Download the latest package from: <a class="reference external" href="https://www.kernel.org/pub/linux/utils/nfs">https://www.kernel.org/pub/linux/utils/nfs</a></p>
+<p>Uncompress the package and follow the installation instructions.</p>
+<p>If you will not need the idmapper and gssd executables (you do not need
+these to create an NFS/RDMA enabled mount command), the installation
+process can be simplified by disabling these features when running
+configure:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>./configure<span class="w"> </span>--disable-gss<span class="w"> </span>--disable-nfsv4
+</pre></div>
+</div>
+<p>To build nfs-utils you will need the tcp_wrappers package installed. For
+more information on this see the package's README and INSTALL files.</p>
+<p>After building the nfs-utils package, there will be a mount.nfs binary in
+the utils/mount directory. This binary can be used to initiate NFS v2, v3,
+or v4 mounts. To initiate a v4 mount, the binary must be called
+mount.nfs4.  The standard technique is to create a symlink called
+mount.nfs4 to mount.nfs.</p>
+<p>This mount.nfs binary should be installed at /sbin/mount.nfs as follows:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>sudo<span class="w"> </span>cp<span class="w"> </span>utils/mount/mount.nfs<span class="w"> </span>/sbin/mount.nfs
+</pre></div>
+</div>
+<p>In this location, mount.nfs will be invoked automatically for NFS mounts
+by the system mount command.</p>
+<blockquote>
+<div><div class="admonition note">
+<p class="admonition-title">备注</p>
+<p>mount.nfs and therefore nfs-utils-1.1.2 or greater is only needed
+on the NFS client machine. You do not need this specific version of
+nfs-utils on the server. Furthermore, only the mount.nfs command from
+nfs-utils-1.1.2 is needed on the client.</p>
+</div>
+</div></blockquote>
+</li>
+<li><p>Install a Linux kernel with NFS/RDMA</p>
+<p>The NFS/RDMA client and server are both included in the mainline Linux
+kernel version 2.6.25 and later. This and other versions of the Linux
+kernel can be found at: <a class="reference external" href="https://www.kernel.org/pub/linux/kernel/">https://www.kernel.org/pub/linux/kernel/</a></p>
+<p>Download the sources and place them in an appropriate location.</p>
+</li>
+<li><p>Configure the RDMA stack</p>
+<p>Make sure your kernel configuration has RDMA support enabled. Under
+Device Drivers -&gt; InfiniBand support, update the kernel configuration
+to enable InfiniBand support [NOTE: the option name is misleading. Enabling
+InfiniBand support is required for all RDMA devices (IB, iWARP, etc.)].</p>
+<p>Enable the appropriate IB HCA support (mlx4, mthca, ehca, ipath, etc.) or
+iWARP adapter support (amso, cxgb3, etc.).</p>
+<p>If you are using InfiniBand, be sure to enable IP-over-InfiniBand support.</p>
+</li>
+<li><p>Configure the NFS client and server</p>
+<p>Your kernel configuration must also have NFS file system support and/or
+NFS server support enabled. These and other NFS related configuration
+options can be found under File Systems -&gt; Network File Systems.</p>
+</li>
+<li><p>Build, install, reboot</p>
+<p>The NFS/RDMA code will be enabled automatically if NFS and RDMA
+are turned on. The NFS/RDMA client and server are configured via the hidden
+SUNRPC_XPRT_RDMA config option that depends on SUNRPC and INFINIBAND. The
+value of SUNRPC_XPRT_RDMA will be:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>N if either SUNRPC or INFINIBAND are N, in this case the NFS/RDMA client
+and server will not be built</p></li>
+<li><p>M if both SUNRPC and INFINIBAND are on (M or Y) and at least one is M,
+in this case the NFS/RDMA client and server will be built as modules</p></li>
+<li><p>Y if both SUNRPC and INFINIBAND are Y, in this case the NFS/RDMA client
+and server will be built into the kernel</p></li>
+</ol>
+</div></blockquote>
+<p>Therefore, if you have followed the steps above and turned no NFS and RDMA,
+the NFS/RDMA client and server will be built.</p>
+<p>Build a new kernel, install it, boot it.</p>
+</li>
+</ul>
+</section>
+<section id="check-rdma-and-nfs-setup">
+<h2>Check RDMA and NFS Setup<a class="headerlink" href="#check-rdma-and-nfs-setup" title="Link to this heading">¶</a></h2>
+<p>Before configuring the NFS/RDMA software, it is a good idea to test
+your new kernel to ensure that the kernel is working correctly.
+In particular, it is a good idea to verify that the RDMA stack
+is functioning as expected and standard NFS over TCP/IP and/or UDP/IP
+is working properly.</p>
+<ul>
+<li><p>Check RDMA Setup</p>
+<p>If you built the RDMA components as modules, load them at
+this time. For example, if you are using a Mellanox Tavor/Sinai/Arbel
+card:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>modprobe<span class="w"> </span>ib_mthca
+$<span class="w"> </span>modprobe<span class="w"> </span>ib_ipoib
+</pre></div>
+</div>
+<p>If you are using InfiniBand, make sure there is a Subnet Manager (SM)
+running on the network. If your IB switch has an embedded SM, you can
+use it. Otherwise, you will need to run an SM, such as OpenSM, on one
+of your end nodes.</p>
+<p>If an SM is running on your network, you should see the following:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>cat<span class="w"> </span>/sys/class/infiniband/driverX/ports/1/state
+<span class="m">4</span>:<span class="w"> </span>ACTIVE
+</pre></div>
+</div>
+<p>where driverX is mthca0, ipath5, ehca3, etc.</p>
+<p>To further test the InfiniBand software stack, use IPoIB (this
+assumes you have two IB hosts named host1 and host2):</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>host1$<span class="w"> </span>ip<span class="w"> </span>link<span class="w"> </span><span class="nb">set</span><span class="w"> </span>dev<span class="w"> </span>ib0<span class="w"> </span>up
+host1$<span class="w"> </span>ip<span class="w"> </span>address<span class="w"> </span>add<span class="w"> </span>dev<span class="w"> </span>ib0<span class="w"> </span>a.b.c.x
+host2$<span class="w"> </span>ip<span class="w"> </span>link<span class="w"> </span><span class="nb">set</span><span class="w"> </span>dev<span class="w"> </span>ib0<span class="w"> </span>up
+host2$<span class="w"> </span>ip<span class="w"> </span>address<span class="w"> </span>add<span class="w"> </span>dev<span class="w"> </span>ib0<span class="w"> </span>a.b.c.y
+host1$<span class="w"> </span>ping<span class="w"> </span>a.b.c.y
+host2$<span class="w"> </span>ping<span class="w"> </span>a.b.c.x
+</pre></div>
+</div>
+<p>For other device types, follow the appropriate procedures.</p>
+</li>
+<li><p>Check NFS Setup</p>
+<p>For the NFS components enabled above (client and/or server),
+test their functionality over standard Ethernet using TCP/IP or UDP/IP.</p>
+</li>
+</ul>
+</section>
+<section id="nfs-rdma-setup">
+<h2>NFS/RDMA Setup<a class="headerlink" href="#nfs-rdma-setup" title="Link to this heading">¶</a></h2>
+<p>We recommend that you use two machines, one to act as the client and
+one to act as the server.</p>
+<section id="one-time-configuration">
+<h3>One time configuration:<a class="headerlink" href="#one-time-configuration" title="Link to this heading">¶</a></h3>
+<ul>
+<li><p>On the server system, configure the /etc/exports file and start the NFS/RDMA server.</p>
+<p>Exports entries with the following formats have been tested:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>/vol0   192.168.0.47(fsid=0,rw,async,insecure,no_root_squash)
+/vol0   192.168.0.0/255.255.255.0(fsid=0,rw,async,insecure,no_root_squash)
+</pre></div>
+</div>
+<p>The IP address(es) is(are) the client's IPoIB address for an InfiniBand
+HCA or the client's iWARP address(es) for an RNIC.</p>
+<div class="admonition note">
+<p class="admonition-title">备注</p>
+<p>The &quot;insecure&quot; option must be used because the NFS/RDMA client does
+not use a reserved port.</p>
+</div>
+</li>
+</ul>
+</section>
+<section id="each-time-a-machine-boots">
+<h3>Each time a machine boots:<a class="headerlink" href="#each-time-a-machine-boots" title="Link to this heading">¶</a></h3>
+<ul>
+<li><p>Load and configure the RDMA drivers</p>
+<p>For InfiniBand using a Mellanox adapter:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>modprobe<span class="w"> </span>ib_mthca
+$<span class="w"> </span>modprobe<span class="w"> </span>ib_ipoib
+$<span class="w"> </span>ip<span class="w"> </span>li<span class="w"> </span><span class="nb">set</span><span class="w"> </span>dev<span class="w"> </span>ib0<span class="w"> </span>up
+$<span class="w"> </span>ip<span class="w"> </span>addr<span class="w"> </span>add<span class="w"> </span>dev<span class="w"> </span>ib0<span class="w"> </span>a.b.c.d
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">备注</p>
+<p>Please use unique addresses for the client and server!</p>
+</div>
+</li>
+<li><p>Start the NFS server</p>
+<p>If the NFS/RDMA server was built as a module (CONFIG_SUNRPC_XPRT_RDMA=m in
+kernel config), load the RDMA transport module:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>modprobe<span class="w"> </span>svcrdma
+</pre></div>
+</div>
+<p>Regardless of how the server was built (module or built-in), start the
+server:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>/etc/init.d/nfs<span class="w"> </span>start
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>service<span class="w"> </span>nfs<span class="w"> </span>start
+</pre></div>
+</div>
+<p>Instruct the server to listen on the RDMA transport:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>rdma<span class="w"> </span><span class="m">20049</span><span class="w"> </span>&gt;<span class="w"> </span>/proc/fs/nfsd/portlist
+</pre></div>
+</div>
+</li>
+<li><p>On the client system</p>
+<p>If the NFS/RDMA client was built as a module (CONFIG_SUNRPC_XPRT_RDMA=m in
+kernel config), load the RDMA client module:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>modprobe<span class="w"> </span>xprtrdma.ko
+</pre></div>
+</div>
+<p>Regardless of how the client was built (module or built-in), use this
+command to mount the NFS/RDMA server:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>mount<span class="w"> </span>-o<span class="w"> </span>rdma,port<span class="o">=</span><span class="m">20049</span><span class="w"> </span>&lt;IPoIB-server-name-or-address&gt;:/&lt;export&gt;<span class="w"> </span>/mnt
+</pre></div>
+</div>
+<p>To verify that the mount is using RDMA, run &quot;cat /proc/mounts&quot; and check
+the &quot;proto&quot; field for the given mount.</p>
+<p>Congratulations! You're using NFS/RDMA!</p>
+</li>
+</ul>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../../_sources/admin-guide/nfs/nfs-rdma.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

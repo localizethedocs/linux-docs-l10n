@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+
+<html lang="en-US" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>False Sharing &#8212; The Linux Kernel unknown version documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=adfc0c0d" />
+    <script src="../_static/documentation_options.js?v=750ed68d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="canonical" href="https://projects.localizethedocs.org/linux-docs-l10n/kernel-hacking/false-sharing.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Linux Tracing Technologies Guide" href="../trace/index.html" />
+    <link rel="prev" title="Unreliable Guide To Locking" href="locking.html" />
+
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+<script type="text/javascript" src="../ltd-provenance.js"></script>
+<script type="text/javascript" src="../ltd-current.js"></script>
+<script type="text/javascript" src="../../../ltd-config.js"></script>
+<script type="text/javascript" src="../../../ltd-flyout.js"></script>
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.svg" alt="Logo of The Linux Kernel"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">The Linux Kernel</a></h1>
+
+
+
+<p class="blurb">6.19.0</p>
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+<p>
+<h3 class="kernel-toc-contents">Contents</h3>
+<input type="checkbox" class="kernel-toc-toggle" id = "kernel-toc-toggle" checked>
+<label class="kernel-toc-title" for="kernel-toc-toggle"></label>
+
+<div class="kerneltoc" id="kerneltoc">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../process/development-process.html">Development process</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/submitting-patches.html">Submitting patches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/code-of-conduct.html">Code of conduct</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../maintainer/index.html">Maintainer handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../process/index.html">All development-process docs</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../core-api/index.html">Core API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../driver-api/index.html">Driver APIs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../subsystem-apis.html">Subsystems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../locking/index.html">Locking</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../process/license-rules.html">Licensing rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-guide/index.html">Writing documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/index.html">Development tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../dev-tools/testing-overview.html">Testing guide</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Hacking guide</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="hacking.html">Unreliable Guide To Hacking The Linux Kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="locking.html">Unreliable Guide To Locking</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">False Sharing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#what-is-false-sharing">What is False Sharing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#false-sharing-pitfalls">False Sharing Pitfalls</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#how-to-detect-and-analyze-false-sharing">How to detect and analyze False Sharing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#possible-mitigations">Possible Mitigations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#miscellaneous">Miscellaneous</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../trace/index.html">Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fault-injection/index.html">Fault injection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../livepatch/index.html">Livepatching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rust/index.html">Rust</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/index.html">Administration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../kbuild/index.html">Build system</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin-guide/reporting-issues.html">Reporting issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tools/index.html">Userspace tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../userspace-api/index.html">Userspace API</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../firmware-guide/index.html">Firmware</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devicetree/index.html">Firmware and Devicetree</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../arch/index.html">CPU architectures</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../staging/index.html">Unsorted documentation</a></li>
+</ul>
+
+</div>
+
+<script type="text/javascript"> <!--
+  var sbar = document.getElementsByClassName("sphinxsidebar")[0];
+  let currents = document.getElementsByClassName("current")
+  if (currents.length) {
+    sbar.scrollTop = currents[currents.length - 1].offsetTop;
+  }
+  --> </script>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/kernel-hacking/false-sharing.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="false-sharing">
+<h1>False Sharing<a class="headerlink" href="#false-sharing" title="Link to this heading">¶</a></h1>
+<section id="what-is-false-sharing">
+<h2>What is False Sharing<a class="headerlink" href="#what-is-false-sharing" title="Link to this heading">¶</a></h2>
+<p>False sharing is related with cache mechanism of maintaining the data
+coherence of one cache line stored in multiple CPU’s caches; then
+academic definition for it is in <a class="footnote-reference brackets" href="#id4" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>. Consider a <code class="xref c c-struct broken_xref docutils literal notranslate"><span class="pre">struct</span> <span class="pre">with</span></code> a
+refcount and a string:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>struct foo {
+        refcount_t refcount;
+        ...
+        char name[16];
+} ____cacheline_internodealigned_in_smp;
+</pre></div>
+</div>
+<p>Member ‘refcount’(A) and ‘name’(B) _share_ one cache line like below:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>              +-----------+                     +-----------+
+              |   CPU 0   |                     |   CPU 1   |
+              +-----------+                     +-----------+
+             /                                        |
+            /                                         |
+           V                                          V
+       +----------------------+             +----------------------+
+       | A      B             | Cache 0     | A       B            | Cache 1
+       +----------------------+             +----------------------+
+                           |                  |
+---------------------------+------------------+-----------------------------
+                           |                  |
+                         +----------------------+
+                         |                      |
+                         +----------------------+
+            Main Memory  | A       B            |
+                         +----------------------+
+</pre></div>
+</div>
+<p>‘refcount’ is modified frequently, but ‘name’ is set once at object
+creation time and is never modified.  When many CPUs access ‘foo’ at
+the same time, with ‘refcount’ being only bumped by one CPU frequently
+and ‘name’ being read by other CPUs, all those reading CPUs have to
+reload the whole cache line over and over due to the ‘sharing’, even
+though ‘name’ is never changed.</p>
+<p>There are many real-world cases of performance regressions caused by
+false sharing.  One of these is a rw_semaphore ‘mmap_lock’ inside
+mm_struct struct, whose cache line layout change triggered a
+regression and Linus analyzed in <a class="footnote-reference brackets" href="#id5" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>.</p>
+<p>There are two key factors for a harmful false sharing:</p>
+<ul class="simple">
+<li><p>A global datum accessed (shared) by many CPUs</p></li>
+<li><p>In the concurrent accesses to the data, there is at least one write
+operation: write/write or write/read cases.</p></li>
+</ul>
+<p>The sharing could be from totally unrelated kernel components, or
+different code paths of the same kernel component.</p>
+</section>
+<section id="false-sharing-pitfalls">
+<h2>False Sharing Pitfalls<a class="headerlink" href="#false-sharing-pitfalls" title="Link to this heading">¶</a></h2>
+<p>Back in time when one platform had only one or a few CPUs, hot data
+members could be purposely put in the same cache line to make them
+cache hot and save cacheline/TLB, like a lock and the data protected
+by it.  But for recent large system with hundreds of CPUs, this may
+not work when the lock is heavily contended, as the lock owner CPU
+could write to the data, while other CPUs are busy spinning the lock.</p>
+<p>Looking at past cases, there are several frequently occurring patterns
+for false sharing:</p>
+<ul class="simple">
+<li><p>lock (spinlock/mutex/semaphore) and data protected by it are
+purposely put in one cache line.</p></li>
+<li><p>global data being put together in one cache line. Some kernel
+subsystems have many global parameters of small size (4 bytes),
+which can easily be grouped together and put into one cache line.</p></li>
+<li><p>data members of a big data structure randomly sitting together
+without being noticed (cache line is usually 64 bytes or more),
+like ‘mem_cgroup’ struct.</p></li>
+</ul>
+<p>Following ‘mitigation’ section provides real-world examples.</p>
+<p>False sharing could easily happen unless they are intentionally
+checked, and it is valuable to run specific tools for performance
+critical workloads to detect false sharing affecting performance case
+and optimize accordingly.</p>
+</section>
+<section id="how-to-detect-and-analyze-false-sharing">
+<h2>How to detect and analyze False Sharing<a class="headerlink" href="#how-to-detect-and-analyze-false-sharing" title="Link to this heading">¶</a></h2>
+<p>perf record/report/stat are widely used for performance tuning, and
+once hotspots are detected, tools like ‘perf-c2c’ and ‘pahole’ can
+be further used to detect and pinpoint the possible false sharing
+data structures.  ‘addr2line’ is also good at decoding instruction
+pointer when there are multiple layers of inline functions.</p>
+<p>perf-c2c can capture the cache lines with most false sharing hits,
+decoded functions (line number of file) accessing that cache line,
+and in-line offset of the data. Simple commands are:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ perf c2c record -ag sleep 3
+$ perf c2c report --call-graph none -k vmlinux
+</pre></div>
+</div>
+<p>When running above during testing will-it-scale’s tlb_flush1 case,
+perf reports something like:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Total records                     :    1658231
+Locked Load/Store Operations      :      89439
+Load Operations                   :     623219
+Load Local HITM                   :      92117
+Load Remote HITM                  :        139
+
+#----------------------------------------------------------------------
+    4        0     2374        0        0        0  0xff1100088366d880
+#----------------------------------------------------------------------
+  0.00%   42.29%    0.00%    0.00%    0.00%    0x8     1       1  0xffffffff81373b7b         0       231       129     5312        64  [k] __mod_lruvec_page_state    [kernel.vmlinux]  memcontrol.h:752   1
+  0.00%   13.10%    0.00%    0.00%    0.00%    0x8     1       1  0xffffffff81374718         0       226        97     3551        64  [k] folio_lruvec_lock_irqsave  [kernel.vmlinux]  memcontrol.h:752   1
+  0.00%   11.20%    0.00%    0.00%    0.00%    0x8     1       1  0xffffffff812c29bf         0       170       136      555        64  [k] lru_add_fn                 [kernel.vmlinux]  mm_inline.h:41     1
+  0.00%    7.62%    0.00%    0.00%    0.00%    0x8     1       1  0xffffffff812c3ec5         0       175       108      632        64  [k] release_pages              [kernel.vmlinux]  mm_inline.h:41     1
+  0.00%   23.29%    0.00%    0.00%    0.00%   0x10     1       1  0xffffffff81372d0a         0       234       279     1051        64  [k] __mod_memcg_lruvec_state   [kernel.vmlinux]  memcontrol.c:736   1
+</pre></div>
+</div>
+<p>A nice introduction for perf-c2c is <a class="footnote-reference brackets" href="#id6" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>.</p>
+<p>‘pahole’ decodes data structure layouts delimited in cache line
+granularity.  Users can match the offset in perf-c2c output with
+pahole’s decoding to locate the exact data members.  For global
+data, users can search the data address in System.map.</p>
+</section>
+<section id="possible-mitigations">
+<h2>Possible Mitigations<a class="headerlink" href="#possible-mitigations" title="Link to this heading">¶</a></h2>
+<p>False sharing does not always need to be mitigated.  False sharing
+mitigations should balance performance gains with complexity and
+space consumption.  Sometimes, lower performance is OK, and it’s
+unnecessary to hyper-optimize every rarely used data structure or
+a cold data path.</p>
+<p>False sharing hurting performance cases are seen more frequently with
+core count increasing.  Because of these detrimental effects, many
+patches have been proposed across variety of subsystems (like
+networking and memory management) and merged.  Some common mitigations
+(with examples) are:</p>
+<ul>
+<li><p>Separate hot global data in its own dedicated cache line, even if it
+is just a ‘short’ type. The downside is more consumption of memory,
+cache line and TLB entries.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://git.kernel.org/torvalds/c/91b6d3256356">Commit 91b6d3256356</a> (“net: cache align tcp_memory_allocated, tcp_sockets_allocated”)</p></li>
+</ul>
+</li>
+<li><p>Reorganize the data structure, separate the interfering members to
+different cache lines.  One downside is it may introduce new false
+sharing of other members.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://git.kernel.org/torvalds/c/802f1d522d5f">Commit 802f1d522d5f</a> (“mm: page_counter: re-layout structure to reduce false sharing”)</p></li>
+</ul>
+</li>
+<li><p>Replace ‘write’ with ‘read’ when possible, especially in loops.
+Like for some global variable, use compare(read)-then-write instead
+of unconditional write. For example, use:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>if (!test_bit(XXX))
+        set_bit(XXX);
+</pre></div>
+</div>
+<p>instead of directly “set_bit(XXX);”, similarly for atomic_t data:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>if (atomic_read(XXX) == AAA)
+        atomic_set(XXX, BBB);
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><a class="reference external" href="https://git.kernel.org/torvalds/c/7b1002f7cfe5">Commit 7b1002f7cfe5</a> (“bcache: fixup <code class="xref c c-func broken_xref docutils literal notranslate"><span class="pre">bcache_dev_sectors_dirty_add()</span></code> multithreaded CPU false sharing”)</p></li>
+<li><p><a class="reference external" href="https://git.kernel.org/torvalds/c/292648ac5cf1">Commit 292648ac5cf1</a> (“mm: gup: allow FOLL_PIN to scale in SMP”)</p></li>
+</ul>
+</li>
+<li><p>Turn hot global data to ‘per-cpu data + global data’ when possible,
+or reasonably increase the threshold for syncing per-cpu data to
+global data, to reduce or postpone the ‘write’ to that global data.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://git.kernel.org/torvalds/c/520f897a3554">Commit 520f897a3554</a> (“ext4: use percpu_counters for extent_status cache hits/misses”)</p></li>
+<li><p><a class="reference external" href="https://git.kernel.org/torvalds/c/56f3547bfa4d">Commit 56f3547bfa4d</a> (“mm: adjust vm_committed_as_batch according to vm overcommit policy”)</p></li>
+</ul>
+</li>
+</ul>
+<p>Surely, all mitigations should be carefully verified to not cause side
+effects.  To avoid introducing false sharing when coding, it’s better
+to:</p>
+<ul class="simple">
+<li><p>Be aware of cache line boundaries</p></li>
+<li><p>Group mostly read-only fields together</p></li>
+<li><p>Group things that are written at the same time together</p></li>
+<li><p>Separate frequently read and frequently written fields on
+different cache lines.</p></li>
+</ul>
+<p>and better add a comment stating the false sharing consideration.</p>
+<p>One note is, sometimes even after a severe false sharing is detected
+and solved, the performance may still have no obvious improvement as
+the hotspot switches to a new place.</p>
+</section>
+<section id="miscellaneous">
+<h2>Miscellaneous<a class="headerlink" href="#miscellaneous" title="Link to this heading">¶</a></h2>
+<p>One open issue is that the kernel has an optional data structure
+randomization mechanism, which also randomizes the situation of cache
+line sharing among data members.</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id4" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/False_sharing">https://en.wikipedia.org/wiki/False_sharing</a></p>
+</aside>
+<aside class="footnote brackets" id="id5" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://lore.kernel.org/lkml/CAHk-=whoqV=cX5VC80mmR9rr+Z+yQ6fiQZm36Fb-izsanHg23w&#64;mail.gmail.com/">https://lore.kernel.org/lkml/CAHk-=whoqV=cX5VC80mmR9rr+Z+yQ6fiQZm36Fb-izsanHg23w&#64;mail.gmail.com/</a></p>
+</aside>
+<aside class="footnote brackets" id="id6" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">3</a><span class="fn-bracket">]</span></span>
+<p><a class="reference external" href="https://joemario.github.io/blog/2016/09/01/c2c-blog/">https://joemario.github.io/blog/2016/09/01/c2c-blog/</a></p>
+</aside>
+</aside>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;The kernel development community.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/kernel-hacking/false-sharing.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
